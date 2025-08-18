@@ -1,0 +1,134 @@
+@model KPIMonitor.Models.KpiFiveYearTarget
+@{
+    ViewData["Title"] = "Edit Five-Year Target";
+    var kpis = ViewBag.Kpis as Microsoft.AspNetCore.Mvc.Rendering.SelectList;
+}
+
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-12 col-xl-8">
+      <div class="card shadow rounded-4">
+        <div class="card-header bg-white border-bottom">
+          <h1 class="page-title mb-0">✏️ Edit Five-Year Target</h1>
+        </div>
+        <div class="card-body">
+          <form asp-action="Edit" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="KpiFiveYearTargetId" />
+            <div asp-validation-summary="All" class="alert alert-danger rounded-4"></div>
+
+            <!-- KPI (locked or editable as you prefer) -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">KPI</label>
+              <select asp-for="KpiId" class="form-select" asp-items="kpis">
+                <option value="">-- Select KPI --</option>
+              </select>
+              <span class="text-danger" asp-validation-for="KpiId"></span>
+            </div>
+
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Base Year</label>
+                <input asp-for="BaseYear" id="BaseYear" type="number" class="form-control" />
+                <span class="text-danger" asp-validation-for="BaseYear"></span>
+              </div>
+              <div class="col-md-8 d-flex align-items-end">
+                <button type="button" class="btn btn-outline-secondary me-2" id="btnAutofillYears">
+                  Autofill Period Years = Base..Base+4
+                </button>
+                <small class="text-muted">This will overwrite the period year fields below.</small>
+              </div>
+            </div>
+
+            <!-- Years + Values -->
+            <div class="card mt-3">
+              <div class="card-header bg-white"><strong>Five-Year Plan</strong></div>
+              <div class="card-body">
+                <div class="row g-4">
+                  <div class="col-md-6">
+                    <label class="form-label">Period 1 — Year</label>
+                    <input asp-for="Period1" id="Period1" type="number" class="form-control" />
+                    <label class="form-label mt-2">Period 1 — Target Value</label>
+                    <input asp-for="Period1Value" type="number" step="0.001" class="form-control" />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Period 2 — Year</label>
+                    <input asp-for="Period2" id="Period2" type="number" class="form-control" />
+                    <label class="form-label mt-2">Period 2 — Target Value</label>
+                    <input asp-for="Period2Value" type="number" step="0.001" class="form-control" />
+                  </div>
+
+                  <div class="col-md-6">
+                    <label class="form-label">Period 3 — Year</label>
+                    <input asp-for="Period3" id="Period3" type="number" class="form-control" />
+                    <label class="form-label mt-2">Period 3 — Target Value</label>
+                    <input asp-for="Period3Value" type="number" step="0.001" class="form-control" />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Period 4 — Year</label>
+                    <input asp-for="Period4" id="Period4" type="number" class="form-control" />
+                    <label class="form-label mt-2">Period 4 — Target Value</label>
+                    <input asp-for="Period4Value" type="number" step="0.001" class="form-control" />
+                  </div>
+
+                  <div class="col-md-6">
+                    <label class="form-label">Period 5 — Year</label>
+                    <input asp-for="Period5" id="Period5" type="number" class="form-control" />
+                    <label class="form-label mt-2">Period 5 — Target Value</label>
+                    <input asp-for="Period5Value" type="number" step="0.001" class="form-control" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Audit -->
+            <div class="row mt-3">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Created By</label>
+                <input asp-for="CreatedBy" class="form-control" maxlength="50" />
+                <span class="text-danger" asp-validation-for="CreatedBy"></span>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Last Changed By</label>
+                <input asp-for="LastChangedBy" class="form-control" maxlength="50" />
+                <span class="text-danger" asp-validation-for="LastChangedBy"></span>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Active</label>
+              <select asp-for="IsActive" class="form-select">
+                <option value="1">Active</option>
+                <option value="0">Inactive</option>
+              </select>
+            </div>
+
+            <div class="d-flex gap-2 mt-2">
+              <button type="submit" class="btn btn-primary">💾 Save</button>
+              <a class="btn btn-outline-secondary" href="@Url.Action("Index")">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts{
+  @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+  <script>
+    (function(){
+      const by = document.getElementById('BaseYear');
+      const ids = ['Period1','Period2','Period3','Period4','Period5'];
+
+      document.getElementById('btnAutofillYears')?.addEventListener('click', () => {
+        const yr = parseInt(by?.value || '', 10);
+        if (!Number.isFinite(yr)) { alert('Enter a valid Base Year first.'); return; }
+        ids.forEach((id, idx) => {
+          const el = document.getElementById(id);
+          if (el) el.value = (yr + idx).toString();
+        });
+      });
+    })();
+  </script>
+}

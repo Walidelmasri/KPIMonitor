@@ -1,0 +1,45 @@
+@model KPIMonitor.Models.DimPillar
+@{
+    ViewData["Title"] = "Set Pillar Inactive";
+}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow rounded-4 border-warning">
+                <div class="card-header bg-white border-bottom">
+                    <h4 class="mb-0 text-dark fw-bold">⚠️ Set Pillar Inactive</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning rounded-4">
+                        Are you sure you want to set pillar
+                        <strong>@Model.PillarName</strong> (Code: <strong>@Model.PillarCode</strong>) to <strong>Inactive</strong>?
+                    </div>
+
+                    <dl class="row">
+                        <dt class="col-sm-3">Current Status</dt>
+                        <dd class="col-sm-9">@((Model.IsActive == 1) ? "Active" : "Inactive")</dd>
+                        <dt class="col-sm-3">Created</dt>
+                        <dd class="col-sm-9">@Model.CreatedDate?.ToString("yyyy-MM-dd HH:mm") by @Model.CreatedBy</dd>
+                    </dl>
+
+                    <form asp-action="Inactivate" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model.PillarId" />
+
+                        <div asp-validation-summary="All" class="alert alert-danger rounded-4"></div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Who is making it inactive? (Last Changed By)</label>
+                            <input name="lastChangedBy" value="@Model.LastChangedBy" class="form-control" maxlength="50" placeholder="username" />
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-warning btn-lg">Confirm Inactivate</button>
+                            <a class="btn btn-outline-secondary btn-lg" href="@Url.Action("Index")">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

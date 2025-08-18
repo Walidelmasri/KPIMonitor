@@ -1,0 +1,205 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - KPIMonitor</title>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+    <!-- Lato font -->
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+
+    <!-- App CSS -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/KPIMonitor.styles.css" asp-append-version="true" />
+</head>
+
+<body>
+    <header>
+        <!-- Fixed bar at top (72px total height, logo 60px) -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm fixed-top">
+            <div class="container-fluid">
+                <!-- Brand -->
+                <a class="navbar-brand d-flex align-items-center" asp-controller="Home" asp-action="Index">
+                    <img src="~/images/logo-en.png" alt="BADEA Logo" class="me-2" />
+                    <span class="app-name">KPIMonitor</span>
+                </a>
+
+                <!-- Toggler -->
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                    aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Nav -->
+                <div class="collapse navbar-collapse" id="mainNav">
+                    <ul class="navbar-nav me-auto" data-bs-auto-close="outside">
+                        <!-- ===== Catalog ===== -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Catalog</a>
+                            <ul class="dropdown-menu">
+                                <!-- Pillars submenu -->
+                                <li class="dropdown-submenu">
+                                    <a class="dropdown-item dropdown-toggle" href="#">Pillars</a>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" asp-controller="Pillars" asp-action="Index">All
+                                                Pillars</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Pillars" asp-action="Create">Add
+                                                Pillar</a></li>
+                                    </ul>
+                                </li>
+
+                                <!-- Objectives submenu -->
+                                <li class="dropdown-submenu">
+                                    <a class="dropdown-item dropdown-toggle" href="#">Objectives</a>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" asp-controller="Objectives" asp-action="Index">All
+                                                Objectives</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Objectives" asp-action="Create">Add
+                                                Objective</a></li>
+                                    </ul>
+                                </li>
+
+                                <!-- KPIs submenu -->
+                                <li class="dropdown-submenu">
+                                    <a class="dropdown-item dropdown-toggle" href="#">KPIs</a>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" asp-controller="Kpis" asp-action="Index">All
+                                                KPIs</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Kpis" asp-action="Create">Add
+                                                KPI</a></li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+
+                        <!-- ===== Planning ===== -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Planning</a>
+                            <ul class="dropdown-menu">
+                                <!-- KPI Periods -->
+                                <li class="dropdown-submenu">
+                                    <a class="dropdown-item dropdown-toggle" href="#">KPI Periods</a>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" asp-controller="KpiPeriods" asp-action="Index">View
+                                                KPI Periods</a></li>
+                                        <li><a class="dropdown-item" asp-controller="KpiPeriods"
+                                                asp-action="Create">Create KPI Period</a></li>
+                                    </ul>
+                                </li>
+                                <!-- KPI Year Plans -->
+                                <li class="dropdown-submenu">
+                                    <a class="dropdown-item dropdown-toggle" href="#">KPI Year Plans</a>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" asp-controller="KpiYearPlans"
+                                                asp-action="Index">View Year Plans</a></li>
+                                        <li><a class="dropdown-item" asp-controller="KpiYearPlans"
+                                                asp-action="Create">Create Year Plan</a></li>
+
+                                        <!-- Five-Year Targets (nested under KPI Year Plans) -->
+                                        <li class="dropdown-submenu">
+                                            <a class="dropdown-item dropdown-toggle" href="#">Five-Year Targets</a>
+                                            <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" asp-controller="KpiFiveYearTargets"
+                                                        asp-action="Index">View Five-Year Targets</a></li>
+                                                <li><a class="dropdown-item" asp-controller="KpiFiveYearTargets"
+                                                        asp-action="Create">Create Five-Year Target</a></li>
+                                                <li><a class="dropdown-item" asp-controller="KpiFiveYearTargets"
+                                                        asp-action="Edit" asp-route-id="">Edit (pick from list)</a></li>
+                                            </ul>
+                                        </li>
+                                        <!-- /Five-Year Targets -->
+                                    </ul>
+                                </li>
+
+                            </ul>
+                        </li>
+
+                        <!-- ===== Monitoring ===== -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Monitoring</a>
+                            <ul class="dropdown-menu">
+                                <!-- KPI Facts -->
+                                <li class="dropdown-submenu">
+                                    <a class="dropdown-item dropdown-toggle" href="#">KPI Facts</a>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" asp-controller="KpiFacts" asp-action="Index">View
+                                                All</a></li>
+                                        <li><a class="dropdown-item" asp-controller="KpiFacts"
+                                                asp-action="Create">Create</a></li>
+                                    </ul>
+                                </li>
+                                @* future: Dashboard, Reports *@
+                            </ul>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="RedBoard" asp-action="Index">RedBoard</a>
+                        </li>
+                        <!-- Right side: Login + Primary CTA -->
+                        <div class="d-flex align-items-center gap-2">
+                            <a class="nav-link" asp-controller="Account" asp-action="Login">Login</a>
+                            <a class="btn btn-primary" asp-controller="KpiData" asp-action="AddKpiData">+ Add KPI
+                                Data</a>
+                        </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container">
+        <main role="main" class="pb-3">
+            @if (IsSectionDefined("PageHeader"))
+            {
+                <div class="page-hero">
+                    @RenderSection("PageHeader", required: false)
+                </div>
+            }
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2025 - KPIMonitor - <a asp-controller="Home" asp-action="Privacy">Privacy</a>
+        </div>
+    </footer>
+
+    <!-- JS -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Bootstrap 5: enable multi-level submenu with click -->
+    <script>
+        // Allow clicking items with .dropdown-toggle inside dropdowns to open submenus (Bootstrap 5)
+        document.querySelectorAll('.dropdown-menu .dropdown-toggle').forEach(function (toggle) {
+            toggle.addEventListener('click', function (e) {
+                const nextMenu = this.nextElementSibling;
+                if (nextMenu && nextMenu.classList.contains('dropdown-menu')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    nextMenu.classList.toggle('show');
+
+                    // close siblings
+                    const siblings = this.parentElement.parentElement.querySelectorAll('.dropdown-menu.show');
+                    siblings.forEach(s => { if (s !== nextMenu) s.classList.remove('show'); });
+                }
+            });
+        });
+
+        // Close any open submenus when parent dropdown hides
+        document.querySelectorAll('.dropdown').forEach(function (dd) {
+            dd.addEventListener('hide.bs.dropdown', function () {
+                this.querySelectorAll('.dropdown-menu.show').forEach(m => m.classList.remove('show'));
+            });
+        });
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+
+</html>

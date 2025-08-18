@@ -1,0 +1,88 @@
+@model IEnumerable<KPIMonitor.Models.DimObjective>
+@{
+    ViewData["Title"] = "Objectives";
+}
+
+<div class="container py-5">
+    @if (TempData["Msg"] is string msg)
+    {
+        <div class="alert alert-success rounded-4 mb-3" role="alert">
+            @msg
+        </div>
+    }
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+                        @section PageHeader {
+            <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
+                <div class="page-hero-content">
+                    <h1 class="page-title">🎯 Objectives</h1>
+                </div>
+            </div>
+        }
+        <a class="btn btn-primary rounded-4" href="@Url.Action("Create")">➕ Add Objective</a>
+        @* If you’ve switched to the new add style: class="btn btn-add" *@
+    </div>
+
+    <div class="table-responsive shadow-sm rounded-4 border bg-white">
+        <table class="table table-striped table-bordered mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:140px;">Code</th>
+                    <th>Name</th>
+                    <th style="width:220px;">Pillar</th>
+                    <th style="width:120px;">Status</th>
+                    <th style="width:220px;">Audit</th>
+                    <th style="width:240px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var o in Model)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@o.ObjectiveCode</td>
+                            <td>@o.ObjectiveName</td>
+                            <td>@($"{o.Pillar?.PillarCode} — {o.Pillar?.PillarName}")</td>
+                            <td>
+                                @if (o.IsActive == 1)
+                                {
+                                    <span class="badge bg-success rounded-pill px-3">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary rounded-pill px-3">Inactive</span>
+                                }
+                            </td>
+                            <td class="small text-muted">
+                                Created: @o.CreatedDate?.ToString("yyyy-MM-dd HH:mm") by @o.CreatedBy
+                            </td>
+                            <td>
+                                @if (o.IsActive == 1)
+                                {
+                                    <a class="btn btn-sm btn-outline-warning rounded-3"
+                                       href="@Url.Action("Inactivate", new { id = o.ObjectiveId })">
+                                        Set Inactive
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a class="btn btn-sm btn-outline-success rounded-3"
+                                       href="@Url.Action("Activate", new { id = o.ObjectiveId })">
+                                        Set Active
+                                    </a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">No objectives yet.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

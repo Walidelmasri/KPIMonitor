@@ -1,0 +1,216 @@
+@{
+    ViewData["Title"] = "RedBoard";
+}
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const $ = (id) => document.getElementById(id);
+        const api = (p) => fetch(p, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+
+        let redList = [];   // [{kpiId, name, code, priority}]
+        let deck = [];      // [{type:'title', priority, count} or {type:'kpi', kpiId, name, code, priority}]
+        let idx = 0;
+        let kpiChart;
+
+        async function loadRedList() {
+            redList = await api('@Url.Action("GetRedKpiIds", "RedBoard")');
+
+            if (!redList || redList.length === 0) {
+                $('emptyMsg').classList.remove('d-none');
+                $('slideWrap').classList.add('d-none');
+                return;
+            }
+            $('emptyMsg').classList.add('d-none');
+            $('slideWrap').classList.remove('d-none');
+
+            buildDeck();
+            idx = 0;
+            await showCurrent();
+        }
+
+        // Build slide deck: title slide before each priority group, then its KPIs
+        function buildDeck() {
+            const groups = new Map();
+            for (const k of redList) {
+                const key = k.priority ?? 999999; // push nulls to end
+                if (!groups.has(key)) groups.set(key, []);
+                groups.get(key).push(k);
+            }
+            const orderedPriorities = Array.from(groups.keys()).sort((a, b) => a - b);
+
+            deck = [];
+            for (const p of orderedPriorities) {
+                const items = groups.get(p);
+                // title slide
+                deck.push({ type: 'title', priority: p === 999999 ? '—' : p, count: items.length });
+                // kpi slides
+                for (const k of items) deck.push({ type: 'kpi', ...k });
+            }
+        }
+
+        async function showCurrent() {
+            const slide = deck[idx];
+            $('slideCounter').innerText = `${idx + 1} / ${deck.length}`;
+
+            if (slide.type === 'title') {
+                // Header text for the deck
+                $('kpiHeading').innerText = `Priority ${slide.priority}`;
+                $('kpiSub').innerText = `${slide.count} KPI${slide.count === 1 ? '' : 's'} flagged red`;
+
+                // Big priority number (always visible on title slide)
+                const tp = $('titlePriority');
+                tp.textContent = slide.priority;
+
+                // Show title, hide KPI
+                $('titleSlide').classList.remove('d-none');
+                $('kpiSlide').classList.add('d-none');
+                return;
+            }
+
+            // KPI slide
+            $('titleSlide').classList.add('d-none');
+            $('kpiSlide').classList.remove('d-none');
+
+            $('kpiHeading').innerText = slide.name;
+            $('kpiSub').innerText = `${slide.code} • Priority ${slide.priority ?? '—'}`;
+
+            const data = await api('@Url.Action("GetKpiPresentation", "RedBoard")?kpiId=' + slide.kpiId);
+
+            // meta
+            $('m_owner').innerText = data?.meta?.owner ?? '—';
+            $('m_editor').innerText = data?.meta?.editor ?? '—';
+            $('m_frequency').innerText = data?.meta?.valueType ?? '—';
+            $('m_unit').innerText = data?.meta?.unit ?? '—';
+            $('m_priority').innerText = data?.meta?.priority ?? '—';
+
+            const status = $('m_status');
+            status.innerText = data?.meta?.statusLabel ?? '—';
+            status.style.background = data?.meta?.statusColor ?? '';
+            status.className = 'status-pill';
+
+            // chart
+            const baseLabels = data?.chart?.labels || [];
+            const act = data?.chart?.actual || [];
+            const tgt = data?.chart?.target || [];
+            const fct = data?.chart?.forecast || [];
+            const yrs = Array.isArray(data?.chart?.yearTargets) ? data.chart.yearTargets : [];
+            const yearLabels = yrs.map(y => String(y.year));
+            const yearVals = yrs.map(y => y.value ?? null);
+
+            const allLabels = baseLabels.concat(yearLabels);
+            const pad = new Array(yearLabels.length).fill(null);
+            const leftNulls = new Array(baseLabels.length).fill(null);
+
+            const chartData = {
+                labels: allLabels,
+                datasets: [
+                    { type: 'bar', label: 'Actual', data: act.concat(pad), backgroundColor: 'rgba(128,0,128,.35)', borderColor: 'rgba(128,0,128,.95)', borderWidth: 2, borderSkipped: 'bottom' },
+                    { type: 'line', label: 'Target', data: tgt.concat(pad), borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
+                    { type: 'line', label: 'Forecast', data: fct.concat(pad), borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
+                    { type: 'bar', label: 'Year Target', data: leftNulls.concat(yearVals), backgroundColor: 'rgba(122,122,122,.25)', borderColor: '#7a7a7a', borderWidth: 1 }
+                ]
+            };
+
+            if (!kpiChart) {
+                kpiChart = new Chart($('rbChart').getContext('2d'), {
+                    data: chartData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true } },
+                        plugins: { legend: { position: 'top' } }
+                    }
+                });
+            } else {
+                kpiChart.data = chartData;
+                kpiChart.update();
+            }
+        }
+
+        window.prevSlide = async () => { if (!deck.length) return; idx = (idx - 1 + deck.length) % deck.length; await showCurrent(); }
+        window.nextSlide = async () => { if (!deck.length) return; idx = (idx + 1) % deck.length; await showCurrent(); }
+
+        document.addEventListener('DOMContentLoaded', () => loadRedList());
+    </script>
+}
+
+<div class="container py-4">
+    @section PageHeader {
+        <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
+            <div class="page-hero-content">
+                <h1 class="page-title">🚨 RedBoard</h1>
+            </div>
+        </div>
+    }
+
+    <div id="emptyMsg" class="alert alert-secondary rounded-4 d-none">
+        No KPIs are currently marked <strong>Écart (red)</strong>.
+    </div>
+
+    <div id="slideWrap" class="d-none">
+        <!-- Slide header: title + nav -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <div class="h4 mb-0 fw-bold" id="kpiHeading">—</div>
+                <div class="text-muted" id="kpiSub">—</div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="text-muted" id="slideCounter">0 / 0</span>
+                <button class="btn btn-outline-secondary" onclick="prevSlide()">◀</button>
+                <button class="btn btn-outline-secondary" onclick="nextSlide()">▶</button>
+            </div>
+        </div>
+
+        <!-- Title slide (shown for each priority group) -->
+        <div id="titleSlide" class="text-center py-5 d-none">
+            <div class="bg-white border rounded shadow-sm p-5">
+                <div class="display-4 fw-bold mb-3">Priority</div>
+                <div class="display-1 fw-bolder" id="titlePriority"></div>
+                <div class="lead text-muted mt-3">Use the arrow to view KPIs in this priority.</div>
+            </div>
+        </div>
+
+        <!-- KPI slide -->
+        <div id="kpiSlide">
+            <div class="row g-4 mb-4">
+                <div class="col-md-9">
+                    <div class="bg-white border rounded shadow-sm p-3" style="height:420px;">
+                        <canvas id="rbChart" role="img" aria-label="KPI Chart"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-3 d-flex">
+                    <div class="card shadow-sm rounded-3 w-100">
+                        <div class="card-body d-flex flex-column justify-content-between h-100">
+                            <div>
+                                <h6 class="card-title text-secondary fw-bold mb-3">KPI Details</h6>
+                                <p class="mb-2" style="font-size: larger;">
+                                    <strong>👁️ Owner:</strong> <span id="m_owner" class="text-dark">—</span>
+                                </p>
+                                <p class="mb-2" style="font-size: larger;">
+                                    <strong>✍️ Editor:</strong> <span id="m_editor" class="text-dark">—</span>
+                                </p>
+                                <p class="mb-2" style="font-size: larger;">
+                                    <strong>📅 Frequency:</strong> <span id="m_frequency" class="text-dark">—</span>
+                                </p>
+                                <p class="mb-2" style="font-size: larger;">
+                                    <strong>🔢 Unit:</strong> <span id="m_unit" class="text-dark">—</span>
+                                </p>
+                            </div>
+                            <div class="mt-auto">
+                                <div class="mb-4 text-center">
+                                    <div class="text-muted">Priority</div>
+                                    <div id="m_priority" class="display-6 fw-bold text-dark">—</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-muted mb-1">Status</div>
+                                    <span id="m_status" class="status-pill">—</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- /col -->
+            </div> <!-- /row -->
+        </div> <!-- /kpiSlide -->
+    </div> <!-- /slideWrap -->
+</div>

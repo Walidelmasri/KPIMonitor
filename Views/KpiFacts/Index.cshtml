@@ -1,0 +1,166 @@
+@model IEnumerable<KPIMonitor.Models.KpiFact>
+@{
+    ViewData["Title"] = "KPI Facts";
+}
+
+<!-- Local styles just for this view (you can move these to site.css later) -->
+<style>
+  /* widen page a bit */
+  .page-wrap { max-width: 1400px; }
+
+  /* pretty header row */
+  .page-title {
+    display:flex; align-items:center; gap:.6rem;
+    font-weight:800; letter-spacing:.2px;
+  }
+
+  /* table tweaks */
+  .tbl-card { border-radius: 18px; overflow: hidden; }
+  .tbl thead th { white-space: nowrap; }
+  .tbl td, .tbl th { vertical-align: middle; }
+  .nowrap { white-space: nowrap; } /* keep Period on one line */
+
+  /* status pills (full-cell look) */
+  .status-pill {
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width: 110px;
+    padding: .35rem .75rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .status-green  { background:#198754; }  /* conforme */
+  .status-red    { background:#dc3545; }  /* ecart */
+  .status-orange { background:#fd7e14; }  /* rattrapage */
+  .status-blue   { background:#0d6efd; }  /* attente */
+</style>
+
+@if (TempData["Msg"] is string msg)
+{
+    <div class="alert alert-success rounded-4 mx-3 mt-3">@msg</div>
+}
+
+<div class="container page-wrap py-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+              @section PageHeader {
+            <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
+                <div class="page-hero-content">
+                    <h1 class="page-title">📊 KPI Facts</h1>
+                </div>
+            </div>
+        }
+      <a class="btn btn-primary rounded-4" asp-action="Create">➕ Add KPI Fact</a>
+  </div>
+
+  <div class="bg-white shadow-sm tbl-card border">
+    <div class="table-responsive">
+      <table class="table table-striped table-bordered mb-0 tbl">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 28%;">KPI</th>
+            <th style="width: 12%;">Period</th>
+            <th style="width: 8%;">Year Plan</th>
+            <th style="width: 8%;">Actual</th>
+            <th style="width: 8%;">Target</th>
+            <th style="width: 8%;">Forecast</th>
+            <th style="width: 8%;">Budget</th>
+            <th style="width: 10%;">Status</th>
+            <th style="width: 7%;">Active</th>
+            <th style="width: 13%;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+        @if (Model != null && Model.Any())
+        {
+            foreach (var f in Model)
+            {
+                // ---- Period display
+                string periodText;
+                if (f.Period == null)
+                {
+                    periodText = "—";
+                }
+                else if (f.Period.MonthNum != null)
+                {
+                    var m = f.Period.MonthNum.Value;
+                    var mon = System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetAbbreviatedMonthName(m);
+                    periodText = $"{f.Period.Year} — M{m:00} ({mon})";
+                }
+                else if (f.Period.QuarterNum != null)
+                {
+                    periodText = $"{f.Period.Year} — Q{f.Period.QuarterNum}";
+                }
+                else
+                {
+                    // facts shouldn't use year rows, but handle gracefully
+                    periodText = $"{f.Period.Year} — Year";
+                }
+
+                // ---- Status mapping (code -> color class + French label)
+                var code = (f.StatusCode ?? "").Trim().ToLowerInvariant();
+                string statusCls, statusTxt;
+                switch (code)
+                {
+                    case "green":  statusCls = "status-pill status-green";  statusTxt = "Conforme";    break;
+                    case "orange": statusCls = "status-pill status-orange"; statusTxt = "Rattrapage"; break;
+                    case "blue":   statusCls = "status-pill status-blue";   statusTxt = "Attente";    break;
+                    case "red":    statusCls = "status-pill status-red";    statusTxt = "Ecart";      break;
+                    default:       statusCls = "";                          statusTxt = "—";          break;
+                }
+
+                <tr>
+                  <td>
+                    <div class="fw-semibold">@f.Kpi?.KpiName</div>
+                    <div class="text-muted small">@f.Kpi?.KpiCode</div>
+                  </td>
+
+                  <td class="nowrap">@periodText</td>
+
+                  <td>@f.KpiYearPlanId</td>
+
+                  <td>@(f.ActualValue?.ToString("0.###"))</td>
+                  <td>@(f.TargetValue?.ToString("0.###"))</td>
+                  <td>@(f.ForecastValue?.ToString("0.###"))</td>
+                  <td>@(f.Budget?.ToString("0.###"))</td>
+
+                  <td>
+                    @if (!string.IsNullOrEmpty(statusCls))
+                    {
+                        <span class="@statusCls">@statusTxt</span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">—</span>
+                    }
+                  </td>
+
+                  <td>
+                    @(f.IsActive == 1
+                        ? Html.Raw("<span class='badge bg-success rounded-pill px-3'>Active</span>")
+                        : Html.Raw("<span class='badge bg-secondary rounded-pill px-3'>Inactive</span>"))
+                  </td>
+
+                  <td>
+                    @if (f.IsActive == 1)
+                    {
+                        <a class="btn btn-sm btn-outline-warning rounded-3" asp-action="Deactivate" asp-route-id="@f.KpiFactId">Deactivate</a>
+                    }
+                    else
+                    {
+                        <a class="btn btn-sm btn-outline-success rounded-3" asp-action="Activate" asp-route-id="@f.KpiFactId">Activate</a>
+                    }
+                  </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+              <td colspan="10" class="text-center text-muted py-4">No KPI facts yet.</td>
+            </tr>
+        }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

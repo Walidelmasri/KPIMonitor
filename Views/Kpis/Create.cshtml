@@ -1,0 +1,112 @@
+@model KPIMonitor.Models.DimKpi
+@{
+    ViewData["Title"] = "Add KPI";
+}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow rounded-4">
+        <div class="card-header bg-white border-bottom">
+          <h4 class="mb-0 text-dark fw-bold">➕ Add KPI</h4>
+        </div>
+        <div class="card-body">
+          <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="All" class="alert alert-danger rounded-4"></div>
+
+<div class="mb-3">
+  <label class="form-label fw-semibold">Pillar</label>
+  <select asp-for="PillarId" class="form-select" asp-items="ViewBag.Pillars" id="PillarId">
+    <option value="">-- Select Pillar --</option>
+  </select>
+  <span class="text-danger" asp-validation-for="PillarId"></span>
+</div>
+
+<div class="mb-3">
+  <label class="form-label fw-semibold">Objective</label>
+  <select asp-for="ObjectiveId" class="form-select" asp-items="ViewBag.Objectives" id="ObjectiveId" disabled>
+    <option value="">-- Select Objective --</option>
+  </select>
+  <span class="text-danger" asp-validation-for="ObjectiveId"></span>
+  <div class="form-text">Objectives appear after you pick a Pillar.</div>
+</div>
+
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">KPI Code</label>
+              <input asp-for="KpiCode" class="form-control" maxlength="50" />
+              <span class="text-danger" asp-validation-for="KpiCode"></span>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">KPI Name</label>
+              <input asp-for="KpiName" class="form-control" maxlength="200" />
+              <span class="text-danger" asp-validation-for="KpiName"></span>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Created By</label>
+                <input asp-for="CreatedBy" class="form-control" maxlength="150" />
+                <span class="text-danger" asp-validation-for="CreatedBy"></span>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Last Changed By</label>
+                <input asp-for="LastChangedBy" class="form-control" maxlength="150" />
+                <span class="text-danger" asp-validation-for="LastChangedBy"></span>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Status</label>
+              <select asp-for="IsActive" class="form-select">
+                <option value="1">Active</option>
+                <option value="0">Inactive</option>
+              </select>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary btn-lg">💾 Save</button>
+              <a class="btn btn-outline-secondary btn-lg" href="@Url.Action("Index")">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts{
+  @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+  <script>
+    (function () {
+      const pillarSel = document.getElementById('PillarId');
+      const objectiveSel = document.getElementById('ObjectiveId');
+
+      async function loadObjectives(pillarId, selected) {
+        objectiveSel.innerHTML = '<option value="">-- Select Objective --</option>';
+        objectiveSel.disabled = true;
+        if (!pillarId) return;
+
+        const res = await fetch('@Url.Action("GetObjectives","Kpis")' + '?pillarId=' + encodeURIComponent(pillarId));
+        if (!res.ok) return;
+        const items = await res.json();
+        for (const it of items) {
+          const opt = document.createElement('option');
+          opt.value = it.id; opt.textContent = it.name;
+          objectiveSel.appendChild(opt);
+        }
+        objectiveSel.disabled = items.length === 0;
+        if (selected) objectiveSel.value = selected;
+      }
+
+      pillarSel.addEventListener('change', () => loadObjectives(pillarSel.value, null));
+
+      // If the form re-rendered after a server error, repopulate based on current values
+      const currentPillar = pillarSel.value;
+      const currentObjective = '@Model?.ObjectiveId';
+      if (currentPillar) loadObjectives(currentPillar, currentObjective);
+    })();
+  </script>
+}
+

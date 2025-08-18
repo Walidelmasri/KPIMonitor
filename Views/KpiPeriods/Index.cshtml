@@ -1,0 +1,92 @@
+@model IEnumerable<KPIMonitor.Models.DimPeriod>
+@{
+    ViewData["Title"] = "Periods";
+    var filterYear = ViewBag.FilterYear as int?;
+}
+@if (TempData["Msg"] is string msg)
+{
+    <div class="alert alert-success rounded-4 mx-3 mt-3">@msg</div>
+}
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        @section PageHeader {
+    <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
+        <div class="page-hero-content">
+            <h1 class="page-title">🗓️ Periods</h1>
+        </div>
+    </div>
+}
+        <a class="btn btn-primary rounded-4" href="@Url.Action("Create")">➕ Generate Periods</a>
+    </div>
+
+    <form class="row g-2 mb-3" method="get" asp-action="Index">
+        <div class="col-auto">
+            <input type="number" name="year" class="form-control" placeholder="Filter by year (e.g., 2025)" value="@(filterYear?.ToString() ?? "")" />
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-outline-secondary">Filter</button>
+        </div>
+    </form>
+
+    <div class="table-responsive shadow-sm rounded-4 border bg-white">
+        <table class="table table-striped table-bordered mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:100px;">Year</th>
+                    <th style="width:120px;">Type</th>
+                    <th style="width:120px;">Quarter</th>
+                    <th style="width:120px;">Month</th>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th style="width:120px;">Status</th>
+                    <th style="width:220px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var p in Model)
+                    {
+                        var type = !p.MonthNum.HasValue && !p.QuarterNum.HasValue ? "Year"
+                                  : p.QuarterNum.HasValue ? "Quarter"
+                                  : "Month";
+                        <tr>
+                            <td>@p.Year</td>
+                            <td>@type</td>
+                            <td>@(p.QuarterNum?.ToString() ?? "—")</td>
+                            <td>@(p.MonthNum?.ToString() ?? "—")</td>
+                            <td>@p.StartDate?.ToString("yyyy-MM-dd")</td>
+                            <td>@p.EndDate?.ToString("yyyy-MM-dd")</td>
+                            <td>
+                                @if (p.IsActive == 1)
+                                {
+                                    <span class="badge bg-success rounded-pill px-3">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary rounded-pill px-3">Inactive</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    @if (p.IsActive == 1)
+                                    {
+                                        <a class="btn btn-sm btn-outline-warning rounded-3" href="@Url.Action("Inactivate", new { id = p.PeriodId })">Set Inactive</a>
+                                    }
+                                    else
+                                    {
+                                        <a class="btn btn-sm btn-outline-success rounded-3" href="@Url.Action("Activate", new { id = p.PeriodId })">Set Active</a>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="8" class="text-center text-muted py-4">No periods found.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

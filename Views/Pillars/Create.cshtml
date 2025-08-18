@@ -1,0 +1,70 @@
+@model KPIMonitor.Models.DimPillar
+@{
+    ViewData["Title"] = "Add Pillar";
+}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow rounded-4">
+                <div class="card-header bg-white border-bottom">
+                    <h4 class="mb-0 text-dark fw-bold">➕ Add Pillar</h4>
+                </div>
+                <div class="card-body">
+                    <form id="pillarForm" asp-action="Create" method="post">
+                        @Html.AntiForgeryToken()
+                        <!-- show server-side errors -->
+                        <div asp-validation-summary="All" class="alert alert-danger rounded-4" role="alert"></div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Pillar Code</label>
+                            <input asp-for="PillarCode" class="form-control" maxlength="10" placeholder="e.g., 1" />
+                            <span class="text-danger" asp-validation-for="PillarCode"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Pillar Name</label>
+                            <input asp-for="PillarName" class="form-control" maxlength="200"
+                                placeholder="e.g., Operational Delivery" />
+                            <span class="text-danger" asp-validation-for="PillarName"></span>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Created By</label>
+                                <input asp-for="CreatedBy" class="form-control" maxlength="50" placeholder="admin" />
+                                <span class="text-danger" asp-validation-for="CreatedBy"></span>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Last Changed By</label>
+                                <input asp-for="LastChangedBy" class="form-control" maxlength="50"
+                                    placeholder="admin" />
+                                <span class="text-danger" asp-validation-for="LastChangedBy"></span> @* ← shows the required error *@
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Active</label>
+                            <select asp-for="IsActive" class="form-select">
+                                <option value="1">Active</option>
+                                <option value="0">Inactive</option>
+                            </select>
+                        </div>
+
+
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">💾 Save</button>
+                            <a class="btn btn-outline-secondary btn-lg" href="@Url.Action("Index")">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

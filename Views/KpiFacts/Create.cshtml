@@ -1,0 +1,181 @@
+@model KPIMonitor.Models.KpiFact
+@{
+  ViewData["Title"] = "Add KPI Fact";
+  var kpis = ViewBag.KpiId as Microsoft.AspNetCore.Mvc.Rendering.SelectList;
+  var yearPlans = ViewBag.KpiYearPlanId as Microsoft.AspNetCore.Mvc.Rendering.SelectList;
+  var periods = ViewBag.PeriodId as Microsoft.AspNetCore.Mvc.Rendering.SelectList;
+}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-9">
+      <div class="card shadow rounded-4">
+        <div class="card-header bg-white border-bottom">
+          <h4 class="mb-0 text-dark fw-bold">➕ Add KPI Fact</h4>
+        </div>
+        <div class="card-body">
+          <form asp-action="Create" method="post" id="factForm">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="All" class="alert alert-danger rounded-4"></div>
+
+            <!-- KPI -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">KPI</label>
+              <select asp-for="KpiId" class="form-select" asp-items="kpis" id="KpiId">
+                <option value="">-- Select KPI --</option>
+              </select>
+              <span class="text-danger" asp-validation-for="KpiId"></span>
+            </div>
+
+            <!-- Year Plan (populated after KPI) -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Year Plan</label>
+              <select asp-for="KpiYearPlanId" class="form-select" asp-items="yearPlans" id="KpiYearPlanId">
+                <option value="">-- Select Year Plan --</option>
+              </select>
+              <span class="text-danger" asp-validation-for="KpiYearPlanId"></span>
+            </div>
+
+            <!-- Period (months & quarters for the plan's year) -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Period</label>
+              <select asp-for="PeriodId" class="form-select" asp-items="periods" id="PeriodId">
+                <option value="">-- Select Period --</option>
+              </select>
+              <small class="text-muted">Shows <strong>months</strong> and <strong>quarters</strong> for the selected
+                plan’s year.</small>
+              <span class="text-danger" asp-validation-for="PeriodId"></span>
+            </div>
+
+            <div class="row">
+              <div class="col-md-3 mb-3">
+                <label class="form-label fw-semibold">Actual</label>
+                <input asp-for="ActualValue" type="number" step="0.001" class="form-control" />
+              </div>
+              <div class="col-md-3 mb-3">
+                <label class="form-label fw-semibold">Target</label>
+                <input asp-for="TargetValue" type="number" step="0.001" class="form-control" />
+              </div>
+              <div class="col-md-3 mb-3">
+                <label class="form-label fw-semibold">Forecast</label>
+                <input asp-for="ForecastValue" type="number" step="0.001" class="form-control" />
+              </div>
+              <div class="col-md-3 mb-3">
+                <label class="form-label fw-semibold">Budget</label>
+                <input asp-for="Budget" type="number" step="0.001" class="form-control" />
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Status</label>
+                <select asp-for="StatusCode" class="form-select">
+                  <option value="">-- Select Status --</option>
+                  <option value="Green">Green — conforme</option>
+                  <option value="Orange">Orange — rattrapage</option>
+                  <option value="Blue">Blue — attente</option>
+                  <option value="Red">Red — ecart</option>
+                </select>
+                <small class="text-muted">Displayed as a colored dot with: Green=conforme, Orange=rattrapage,
+                  Blue=attente, Red=ecart.</small>
+                <span class="text-danger" asp-validation-for="StatusCode"></span>
+              </div>
+              <div class="col-md-3 mb-3">
+                <label class="form-label fw-semibold">Created By</label>
+                <input asp-for="CreatedBy" class="form-control" maxlength="50" />
+                <span class="text-danger" asp-validation-for="CreatedBy"></span>
+              </div>
+              <div class="col-md-3 mb-3">
+                <label class="form-label fw-semibold">Last Changed By</label>
+                <input asp-for="LastChangedBy" class="form-control" maxlength="50" />
+                <span class="text-danger" asp-validation-for="LastChangedBy"></span>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Active</label>
+              <select asp-for="IsActive" class="form-select">
+                <option value="1">Active</option>
+                <option value="0">Inactive</option>
+              </select>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary btn-lg">💾 Save</button>
+              <a class="btn btn-outline-secondary btn-lg" href="@Url.Action("Index")">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+  @{
+    await Html.RenderPartialAsync("_ValidationScriptsPartial");
+  }
+  <script>
+    (function () {
+      const kpiSel = document.getElementById('KpiId');
+      const planSel = document.getElementById('KpiYearPlanId');
+      const periodSel = document.getElementById('PeriodId');
+
+      function clearSelect(sel, placeholder) {
+        sel.innerHTML = '';
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = placeholder;
+        sel.appendChild(opt);
+      }
+
+      async function fetchJson(url) {
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) throw new Error('Network error');
+        return await res.json();
+      }
+
+      // When KPI changes -> load Year Plans
+      kpiSel.addEventListener('change', async () => {
+        clearSelect(planSel, '-- Select Year Plan --');
+        clearSelect(periodSel, '-- Select Period --');
+
+        const kpiId = kpiSel.value;
+        if (!kpiId) return;
+
+        try {
+          const plans = await fetchJson(`@Url.Action("GetYearPlans", "KpiFacts")?kpiId=${encodeURIComponent(kpiId)}`);
+          for (const p of plans) {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.label;
+            planSel.appendChild(opt);
+          }
+        } catch (e) {
+          console.error(e);
+          alert('Failed to load year plans.');
+        }
+      });
+
+      // When Year Plan changes -> load Periods (months + quarters for that year)
+      planSel.addEventListener('change', async () => {
+        clearSelect(periodSel, '-- Select Period --');
+
+        const planId = planSel.value;
+        if (!planId) return;
+
+        try {
+          const periods = await fetchJson(`@Url.Action("GetPeriods", "KpiFacts")?planId=${encodeURIComponent(planId)}`);
+          for (const p of periods) {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.label;
+            periodSel.appendChild(opt);
+          }
+        } catch (e) {
+          console.error(e);
+          alert('Failed to load periods.');
+        }
+      });
+    })();
+  </script>
+}

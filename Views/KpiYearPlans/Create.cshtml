@@ -1,0 +1,117 @@
+@model KPIMonitor.Models.KpiYearPlan
+@{
+  ViewData["Title"] = "Create KPI Year Plan";
+  var kpis = ViewBag.Kpis as Microsoft.AspNetCore.Mvc.Rendering.SelectList;
+  var yearPeriods = ViewBag.YearPeriods as Microsoft.AspNetCore.Mvc.Rendering.SelectList;
+}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow rounded-4">
+        <div class="card-header bg-white border-bottom">
+          <h4 class="mb-0 text-dark fw-bold">➕ New KPI Year Plan</h4>
+        </div>
+        <div class="card-body">
+          <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="All" class="alert alert-danger rounded-4"></div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">KPI</label>
+              <select asp-for="KpiId" class="form-select" asp-items="kpis">
+                <option value="">-- Select KPI --</option>
+              </select>
+              <span class="text-danger" asp-validation-for="KpiId"></span>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Year (Period)</label>
+              <select asp-for="PeriodId" class="form-select" asp-items="yearPeriods">
+                <option value="">-- Select Year --</option>
+              </select>
+              <span class="text-danger" asp-validation-for="PeriodId"></span>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Frequency</label>
+                <input asp-for="Frequency" class="form-control" maxlength="30" />
+              </div>
+              <div class="col-md-3 mb-3">
+                <label class="form-label fw-semibold">Priority</label>
+                <input asp-for="Priority" type="number" class="form-control" />
+              </div>
+              <div class="col-md-3 mb-3">
+                <label class="form-label fw-semibold">Status</label>
+                <select asp-for="IsActive" class="form-select">
+                  <option value="1">Active</option>
+                  <option value="0">Deactivated</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Unit on its own line to keep grid clean -->
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Unit</label>
+                <select asp-for="Unit" class="form-select">
+                  <option value="">-- Select Unit --</option>
+                  <option value="%">%</option>
+                  <option value="$M">$M</option>
+                  <option value="#">#</option>
+                  <option value="# Days"># Days</option>
+                  <option value="# Months"># Months</option>
+                </select>
+                <span class="text-danger" asp-validation-for="Unit"></span>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Annual Target</label>
+                <input asp-for="AnnualTarget" type="number" step="0.001" class="form-control" />
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Annual Budget</label>
+                <input asp-for="AnnualBudget" type="number" step="0.001" class="form-control" />
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Owner</label>
+                <input asp-for="Owner" class="form-control" maxlength="50" />
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Editor</label>
+                <input asp-for="Editor" class="form-control" maxlength="50" />
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Created By</label>
+                <input asp-for="CreatedBy" class="form-control" maxlength="50" />
+                <span class="text-danger" asp-validation-for="CreatedBy"></span>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label fw-semibold">Last Changed By</label>
+                <input asp-for="LastChangedBy" class="form-control" maxlength="50" />
+                <span class="text-danger" asp-validation-for="LastChangedBy"></span>
+              </div>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary btn-lg">💾 Save</button>
+              <a class="btn btn-outline-secondary btn-lg" href="@Url.Action("Index")">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+  @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

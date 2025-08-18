@@ -1,0 +1,75 @@
+@model KPIMonitor.Models.DimObjective
+@{
+    ViewData["Title"] = "Add Objective";
+    var pillars = ViewBag.Pillars as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>;
+}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow rounded-4">
+                <div class="card-header bg-white border-bottom">
+                    <h4 class="mb-0 text-dark fw-bold">➕ Add Objective</h4>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Create" method="post">
+                        @Html.AntiForgeryToken()
+                        <div asp-validation-summary="All" class="alert alert-danger rounded-4"></div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Pillar</label>
+                            <select asp-for="PillarId" class="form-select" asp-items="ViewBag.Pillars">
+                                <option value="">-- Select Pillar --</option>
+                            </select>
+                            <span class="text-danger" asp-validation-for="PillarId"></span>
+                        </div>
+
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Objective Code</label>
+                            <input asp-for="ObjectiveCode" class="form-control" maxlength="50" />
+                            <span class="text-danger" asp-validation-for="ObjectiveCode"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Objective Name</label>
+                            <input asp-for="ObjectiveName" class="form-control" maxlength="200" />
+                            <span class="text-danger" asp-validation-for="ObjectiveName"></span>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Created By</label>
+                                <input asp-for="CreatedBy" class="form-control" maxlength="150" />
+                                <span class="text-danger" asp-validation-for="CreatedBy"></span>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">Last Changed By</label>
+                                <input asp-for="LastChangedBy" class="form-control" maxlength="150" />
+                                <span class="text-danger" asp-validation-for="LastChangedBy"></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Status</label>
+                            <select asp-for="IsActive" class="form-select">
+                                <option value="1">Active</option>
+                                <option value="0">Inactive</option>
+                            </select>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">💾 Save</button>
+                            <a class="btn btn-outline-secondary btn-lg" href="@Url.Action("Index")">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
