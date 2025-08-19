@@ -112,10 +112,14 @@ namespace KPIMonitor.Controllers
             var lastFact = facts.LastOrDefault();
             (string label, string color) status = (lastFact?.StatusCode ?? "").Trim().ToLower() switch
             {
-                "green"  => ("Conforme", "#198754"),
-                "red"    => ("Écart",     "#dc3545"),
-                "orange" => ("Rattrapage","#fd7e14"),
-                "blue"   => ("Attente",   "#0d6efd"),
+                "green" => ("Ok", "#28a745"), 
+                "red" => ("Needs Attention", "#dc3545"), 
+                "orange" => ("Catching Up", "#fd7e14"), 
+                "blue" => ("Data Missing", "#0d6efd"),
+                "conforme" => ("Ok", "#28a745"), 
+                "ecart" => ("Needs Attention", "#dc3545"), 
+                "rattrapage"=> ("Catching Up", "#fd7e14"), 
+                "attente"=> ("Data Missing", "#0d6efd"),
                 _        => ("—",         "")
             };
 

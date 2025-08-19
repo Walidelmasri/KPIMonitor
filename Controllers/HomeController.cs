@@ -159,6 +159,10 @@ namespace KPIMonitor.Controllers
                 "red" => ("Needs Attention", "#dc3545"), 
                 "orange" => ("Catching Up", "#fd7e14"), 
                 "blue" => ("Data Missing", "#0d6efd"),
+                "conforme" => ("Ok", "#28a745"), 
+                "ecart" => ("Needs Attention", "#dc3545"), 
+                "rattrapage"=> ("Catching Up", "#fd7e14"), 
+                "attente"=> ("Data Missing", "#0d6efd"),
                 _ => ("—", "")
             };
 
@@ -264,8 +268,8 @@ public async Task<IActionResult> UpdateKpiFact(
     if (fact == null) return NotFound("Fact not found.");
 
     fact.ActualValue   = input.ActualValue;
-fact.ForecastValue = input.ForecastValue;
-fact.StatusCode    = input.StatusCode;
+    fact.ForecastValue = input.ForecastValue;
+    fact.StatusCode    = input.StatusCode;
 
 // Save "Last edited by" only if user typed something, else keep existing
 fact.LastChangedBy = string.IsNullOrWhiteSpace(input.LastChangedBy) 
