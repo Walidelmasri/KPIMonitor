@@ -209,5 +209,113 @@ redKpiIds.Add((plan.KpiId, kpi.KpiName ?? "-", subtitle, plan.Priority));
                 table
             });
         }
+        // ---------- Actions (modals/partials only) ----------
+[HttpGet]
+public async Task<IActionResult> ActionForm(decimal kpiId)
+{
+    var kpi = await _db.DimKpis.AsNoTracking().FirstOrDefaultAsync(x => x.KpiId == kpiId);
+    if (kpi == null) return NotFound();
+
+    var vm = new KpiAction
+    {
+        KpiId = kpiId,
+        AssignedAt = DateTime.UtcNow,
+        ExtensionCount = 0,
+        StatusCode = "todo"
+    };
+    ViewBag.KpiTitle = $"{kpi.KpiCode} — {kpi.KpiName}";
+    return PartialView("_ActionForm", vm);
+}
+
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> SaveAction(KpiAction vm)
+{
+    if (!ModelState.IsValid) return BadRequest("Invalid data.");
+    vm.CreatedBy = User?.Identity?.Name ?? "system";
+    vm.CreatedDate = DateTime.UtcNow;
+    vm.LastChangedBy = vm.CreatedBy;
+    vm.LastChangedDate = vm.CreatedDate;
+
+    _db.KpiActions.Add(vm);
+    await _db.SaveChangesAsync();
+    return Ok(new { ok = true });
+}
+
+[HttpGet]
+public async Task<IActionResult> ActionsList(decimal kpiId)
+{
+    var list = await _db.KpiActions
+        .AsNoTracking()
+        .Where(a => a.KpiId == kpiId)
+        .OrderBy(a => a.StatusCode)
+        .ThenBy(a => a.DueDate)
+        .ToListAsync();
+
+    ViewBag.KpiId = kpiId;
+    return PartialView("_ActionsList", list);
+}
+
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> MoveDeadline(decimal actionId, DateTime newDueDate, string? reason)
+{
+    var act = await _db.KpiActions.FirstOrDefaultAsync(a => a.ActionId == actionId);
+    if (act == null) return NotFound();
+
+    if (act.ExtensionCount >= 3)
+        return BadRequest("Max 3 extensions reached.");
+
+    _db.KpiActionDeadlineHistories.Add(new KpiActionDeadlineHistory
+    {
+        ActionId = act.ActionId,
+        OldDueDate = act.DueDate,
+        NewDueDate = newDueDate,
+        ChangedAt = DateTime.UtcNow,
+        ChangedBy = User?.Identity?.Name ?? "system",
+        Reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim()
+    });
+
+    act.DueDate = newDueDate;
+    act.ExtensionCount = (short)(act.ExtensionCount + 1);
+    act.LastChangedBy = User?.Identity?.Name ?? "system";
+    act.LastChangedDate = DateTime.UtcNow;
+
+    await _db.SaveChangesAsync();
+    return Ok(new { ok = true });
+}
+
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> SetStatus(decimal actionId, string statusCode)
+{
+    var act = await _db.KpiActions.FirstOrDefaultAsync(a => a.ActionId == actionId);
+    if (act == null) return NotFound();
+
+    act.StatusCode = (statusCode ?? "todo").Trim().ToLowerInvariant();
+    act.LastChangedBy = User?.Identity?.Name ?? "system";
+    act.LastChangedDate = DateTime.UtcNow;
+
+    await _db.SaveChangesAsync();
+    return Ok(new { ok = true });
+}
+
+// Final "Decisions" board for the current run (three columns by status)
+[HttpPost]
+public async Task<IActionResult> DecisionsBoard([FromBody] decimal[] kpiIds)
+{
+    var actions = await _db.KpiActions
+        .AsNoTracking()
+        .Where(a => kpiIds.Contains(a.KpiId))
+        .OrderBy(a => a.StatusCode).ThenBy(a => a.DueDate)
+        .ToListAsync();
+
+    var todo = actions.Where(a => a.StatusCode == "todo").ToList();
+    var prog = actions.Where(a => a.StatusCode == "inprogress").ToList();
+    var done = actions.Where(a => a.StatusCode == "done").ToList();
+
+    ViewBag.Total = actions.Count;
+    return PartialView("_DecisionsBoard", (todo, prog, done));
+}
     }
 }

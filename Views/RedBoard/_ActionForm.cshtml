@@ -1,0 +1,43 @@
+@model KPIMonitor.Models.KpiAction
+<form id="actionForm" method="post" asp-action="SaveAction" asp-controller="RedBoard">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="KpiId" value="@Model.KpiId" />
+    <div class="mb-2 text-muted">Add action for: <strong>@(ViewBag.KpiTitle ?? "KPI")</strong></div>
+
+    <div class="mb-3">
+        <label class="form-label">Owner</label>
+        <input class="form-control" name="Owner" required />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Action</label>
+        <textarea class="form-control" name="Description" rows="3" maxlength="400" required></textarea>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">Assigned At</label>
+            <input type="datetime-local" class="form-control" name="AssignedAt"
+                   value="@DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm")" />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Deadline</label>
+            <input type="date" class="form-control" name="DueDate" />
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <label class="form-label">Status</label>
+        <select class="form-select" name="StatusCode">
+            <option value="todo">To Do</option>
+            <option value="inprogress">In Progress</option>
+            <option value="done">Done</option>
+        </select>
+    </div>
+
+    <input type="hidden" name="ExtensionCount" value="0" />
+    <div class="mt-3 d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+    </div>
+</form>

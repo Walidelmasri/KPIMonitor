@@ -152,6 +152,18 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvUmVkQm9hcmQvSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/walidsalem/BADEA/KPIMonitor/Views/RedBoard/_ActionForm.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvUmVkQm9hcmQvX0FjdGlvbkZvcm0uY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/RedBoard/_ActionsList.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvUmVkQm9hcmQvX0FjdGlvbnNMaXN0LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/RedBoard/_DecisionsBoard.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvUmVkQm9hcmQvX0RlY2lzaW9uc0JvYXJkLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/walidsalem/BADEA/KPIMonitor/Views/Shared/Error.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvU2hhcmVkL0Vycm9yLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
