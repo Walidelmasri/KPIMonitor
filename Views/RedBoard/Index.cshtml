@@ -72,8 +72,8 @@
             $('titleSlide').classList.add('d-none');
             $('kpiSlide').classList.remove('d-none');
 
-            $('kpiHeading').innerText = slide.name;
-            $('kpiSub').innerText = `${slide.code} • Priority ${slide.priority ?? '—'}`;
+            $('kpiHeading').innerText = `KPI Name: ${slide.name}`;
+            $('kpiSub').innerText = `${slide.code}`;
 
             const data = await api('@Url.Action("GetKpiPresentation", "RedBoard")?kpiId=' + slide.kpiId);
 

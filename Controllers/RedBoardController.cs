@@ -63,13 +63,29 @@ public async Task<IActionResult> GetRedKpiIds()
             }
         }
 
-        // Build the subtitle shown by your view in #kpiSub (it uses slide.code)
-        // Example: "KPI-001 • Pillar: P1 — Growth • Objective: O1 — Increase Revenue"
-        string subtitle = (kpi.KpiCode ?? "-")
-            + (pil != null ? $" • Pillar: {(pil.PillarCode ?? "").Trim()} {(pil.PillarName ?? "").Trim()}".TrimEnd() : "")
-            + (obj != null ? $" • Objective: {(obj.ObjectiveCode ?? "").Trim()} {(obj.ObjectiveName ?? "").Trim()}".TrimEnd() : "");
+// Codes
+string pillCode = (pil?.PillarCode ?? "").Trim();
+string objCode  = (obj?.ObjectiveCode ?? "").Trim();
+string kpiCode  = (kpi.KpiCode ?? "").Trim();
 
-        redKpiIds.Add((plan.KpiId, kpi.KpiName ?? "-", subtitle, plan.Priority));
+// Names
+string pillName = (pil?.PillarName ?? "").Trim();
+string objName  = (obj?.ObjectiveName ?? "").Trim();
+
+// Line 1: KPI code with structure
+string line1 = $"KPI Code: {pillCode}.{objCode} {kpiCode}";
+// Line 2: Pillar name
+string line2 = string.IsNullOrEmpty(pillName) ? "" : $"Pillar: {pillName}";
+// Line 3: Objective name
+string line3 = string.IsNullOrEmpty(objName) ? "" : $"Objective: {objName}";
+// Line 4: Priority
+string line4 = $"Priority: {plan.Priority}";
+
+// Join with newlines — works because your view uses innerText (not innerHTML)
+string subtitle = string.Join("\n", new[] { line1, line2, line3 }
+    .Where(s => !string.IsNullOrWhiteSpace(s)));
+
+redKpiIds.Add((plan.KpiId, kpi.KpiName ?? "-", subtitle, plan.Priority));
     }
 
     var ordered = redKpiIds
