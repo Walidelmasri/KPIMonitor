@@ -14,51 +14,72 @@ namespace KPIMonitor.Controllers
         [HttpGet]
         public IActionResult Index() => View();
 
-        // List of KPI ids that are "red", ordered by priority asc then name
-        [HttpGet]
-        public async Task<IActionResult> GetRedKpiIds()
+// List of KPI ids that are "red", ordered by priority asc then name
+[HttpGet]
+public async Task<IActionResult> GetRedKpiIds()
+{
+    // Latest active plan per KPI (that has a Period row)
+    var latestPlans = await _db.KpiYearPlans
+        .Include(p => p.Period)
+        .Where(p => p.IsActive == 1 && p.Period != null)
+        .GroupBy(p => p.KpiId)
+        .Select(g => g.OrderByDescending(x => x.KpiYearPlanId).First())
+        .ToListAsync();
+
+    var redKpiIds = new List<(decimal kpiId, string name, string code, int? priority)>();
+
+    foreach (var plan in latestPlans)
+    {
+        if (plan.Period == null) continue;
+        var planYear = plan.Period.Year;
+
+        var hasRed = await _db.KpiFacts
+            .Where(f => f.KpiId == plan.KpiId
+                     && f.IsActive == 1
+                     && f.KpiYearPlanId == plan.KpiYearPlanId
+                     && f.Period != null
+                     && f.Period.Year == planYear
+                     && (f.StatusCode ?? "").Trim().ToLower() == "red")
+            .AnyAsync();
+
+        if (!hasRed) continue;
+
+        // KPI + its Objective + Pillar
+        var kpi = await _db.DimKpis.AsNoTracking()
+            .FirstOrDefaultAsync(k => k.KpiId == plan.KpiId);
+        if (kpi == null) continue;
+
+        DimObjective? obj = null;
+        DimPillar? pil = null;
+
+        if (kpi.ObjectiveId != null)
         {
-            // Latest active plan per KPI (that has a Period row)
-            var latestPlans = await _db.KpiYearPlans
-                .Include(p => p.Period)
-                .Where(p => p.IsActive == 1 && p.Period != null)
-                .GroupBy(p => p.KpiId)
-                .Select(g => g.OrderByDescending(x => x.KpiYearPlanId).First())
-                .ToListAsync();
-
-            // KPIs with at least one RED fact in that plan year
-            var redKpiIds = new List<(decimal kpiId, string name, string code, int? priority)>();
-
-            foreach (var plan in latestPlans)
+            obj = await _db.DimObjectives.AsNoTracking()
+                   .FirstOrDefaultAsync(o => o.ObjectiveId == kpi.ObjectiveId);
+            if (obj?.PillarId != null)
             {
-                if (plan.Period == null) continue;
-                var planYear = plan.Period.Year;
-
-                var hasRed = await _db.KpiFacts
-                    .Where(f => f.KpiId == plan.KpiId
-                             && f.IsActive == 1
-                             && f.KpiYearPlanId == plan.KpiYearPlanId
-                             && f.Period != null
-                             && f.Period.Year == planYear
-                             && (f.StatusCode ?? "").Trim().ToLower() == "red")
-                    .AnyAsync();
-
-                if (!hasRed) continue;
-
-                var kpi = await _db.DimKpis.AsNoTracking().FirstOrDefaultAsync(k => k.KpiId == plan.KpiId);
-                if (kpi == null) continue;
-
-                redKpiIds.Add((plan.KpiId, kpi.KpiName ?? "-", kpi.KpiCode ?? "-", plan.Priority));
+                pil = await _db.DimPillars.AsNoTracking()
+                       .FirstOrDefaultAsync(p => p.PillarId == obj.PillarId);
             }
-
-            var ordered = redKpiIds
-                .OrderBy(x => x.priority ?? int.MaxValue) // nulls last
-                .ThenBy(x => x.name)
-                .Select(x => new { kpiId = x.kpiId, name = x.name, code = x.code, priority = x.priority })
-                .ToList();
-
-            return Json(ordered);
         }
+
+        // Build the subtitle shown by your view in #kpiSub (it uses slide.code)
+        // Example: "KPI-001 • Pillar: P1 — Growth • Objective: O1 — Increase Revenue"
+        string subtitle = (kpi.KpiCode ?? "-")
+            + (pil != null ? $" • Pillar: {(pil.PillarCode ?? "").Trim()} {(pil.PillarName ?? "").Trim()}".TrimEnd() : "")
+            + (obj != null ? $" • Objective: {(obj.ObjectiveCode ?? "").Trim()} {(obj.ObjectiveName ?? "").Trim()}".TrimEnd() : "");
+
+        redKpiIds.Add((plan.KpiId, kpi.KpiName ?? "-", subtitle, plan.Priority));
+    }
+
+    var ordered = redKpiIds
+        .OrderBy(x => x.priority ?? int.MaxValue) // nulls last
+        .ThenBy(x => x.name)
+        .Select(x => new { kpiId = x.kpiId, name = x.name, code = x.code, priority = x.priority })
+        .ToList();
+
+    return Json(ordered);
+}
 
         // Single KPI payload (same shape as Dashboard’s summary)
         [HttpGet]
