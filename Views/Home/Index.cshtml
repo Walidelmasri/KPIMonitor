@@ -3,11 +3,11 @@
 }
 <style>
   /* Make all data cells inherit the row's striped background */
-  #factsTbody td {
-    background-color: inherit !important;
-  }
+  #factsTbody td { background-color: inherit !important; }
 </style>
+
 @section Scripts {
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     // ---------- tiny helpers ----------
     const $ = (id) => document.getElementById(id);
@@ -38,6 +38,7 @@
       sel.appendChild(opt);
       sel.disabled = true;
     }
+
     // ----- Edit Fact modal handlers -----
     window.openEditModal = function (btn) {
       const id = btn.getAttribute('data-fact-id');
@@ -45,7 +46,7 @@
       const actual = btn.getAttribute('data-actual') || '';
       const forecast = btn.getAttribute('data-forecast') || '';
       const status = btn.getAttribute('data-status') || '';
-      const lastBy = btn.getAttribute('data-lastby') || ''; // <-- define it
+      const lastBy = btn.getAttribute('data-lastby') || '';
 
       // selection IDs carried on the button
       const pId = btn.getAttribute('data-pillar-id') || '';
@@ -60,15 +61,13 @@
       $('editStatus').value = status;
       $('editLastBy').value = lastBy;
 
-      // preserve current selections for reload-free refresh / redirect
-      const hp = $('h_pillarId'), ho = $('h_objectiveId'), hk = $('h_kpiId');
-      if (hp) hp.value = pId;
-      if (ho) ho.value = oId;
-      if (hk) hk.value = kId;
+      // preserve current selections for (fallback) redirect or later use
+      $('editPillarId').value = pId;
+      $('editObjectiveId').value = oId;
+      $('editKpiId').value = kId;
 
       // show modal
-      const m = new bootstrap.Modal(document.getElementById('editFactModal'));
-      m.show();
+      new bootstrap.Modal(document.getElementById('editFactModal')).show();
     };
 
     // Intercept the modal form submit and do AJAX save
@@ -99,8 +98,7 @@
       });
     })();
 
-
-    // ---------- bootstrap dropdowns ----------
+    // ---------- cascading dropdowns ----------
     async function loadPillars() {
       resetSelect(selPillar, '-- Pillar --');
       resetSelect(selObjective, '-- Objective --');
@@ -160,6 +158,7 @@
     }
 
     async function initPage() {
+      await loadPillars();
 
       const qP = getQS('pillarId');
       const qO = getQS('objectiveId');
@@ -167,32 +166,29 @@
 
       if (qP) { selPillar.value = qP; selPillar.dispatchEvent(new Event('change')); }
       if (qO) {
-        // wait objectives to load, then set
         const waitObjectives = () => new Promise(r => setTimeout(r, 150));
         await waitObjectives(); selObjective.value = qO; selObjective.dispatchEvent(new Event('change'));
       }
       if (qK) {
-        // wait kpis to load, then set
         const waitKpis = () => new Promise(r => setTimeout(r, 150));
         await waitKpis(); selKpi.value = qK; selKpi.dispatchEvent(new Event('change'));
       }
     }
 
-    initPage().catch(console.error);
     // ---------- Chart.js ----------
     const ctx = document.getElementById('kpiChart').getContext('2d');
     let kpiChart = new Chart(ctx, {
       data: {
         labels: [],
         datasets: [
-          { // Actual as bars (purple) with top-edge line only
+          { // Actual as bars (purple)
             type: 'bar',
             label: 'Actual',
             data: [],
-            backgroundColor: 'rgba(128, 0, 128, 0.35)',   // purple fill
-            borderColor: 'rgba(128, 0, 128, 0.95)',       // purple border
+            backgroundColor: 'rgba(128, 0, 128, 0.35)',
+            borderColor: 'rgba(128, 0, 128, 0.95)',
             borderWidth: 2,
-            borderSkipped: 'bottom', // draw border on top/left/right; not at the bottom
+            borderSkipped: 'bottom',
             hoverBackgroundColor: 'rgba(128, 0, 128, 0.5)'
           },
           { // Target as a flat gray line
@@ -206,7 +202,7 @@
             tension: 0.3,
             fill: false
           },
-          { // Forecast as dashed ORANGE line
+          { // Forecast as dashed orange line
             type: 'line',
             label: 'Forecast',
             data: [],
@@ -218,11 +214,11 @@
             tension: 0.3,
             fill: false
           },
-          { // Year Targets (bars appended to the RIGHT of period data)
+          { // Year Targets (bars appended to the RIGHT)
             type: 'bar',
             label: 'Year Target',
             data: [],
-            backgroundColor: 'rgba(122,122,122,0.25)', // soft gray
+            backgroundColor: 'rgba(122,122,122,0.25)',
             borderColor: '#7a7a7a',
             borderWidth: 1
           }
@@ -243,7 +239,7 @@
       kpiChart.update();
 
       // table
-      tableBody.innerHTML = '<tr class="placeholder-row"><td colspan="6" class="text-center text-muted">—</td></tr>';
+      tableBody.innerHTML = '<tr class="placeholder-row"><td colspan="7" class="text-center text-muted">—</td></tr>';
     }
 
     function clearMeta() {
@@ -266,7 +262,7 @@
 
       const res = await api('@Url.Action("GetKpiSummary", "Home")?kpiId=' + encodeURIComponent(kpiId));
 
-      // ---- meta (owner/editor/value/priority/status) ----
+      // ---- meta ----
       metaOwner.textContent = res?.meta?.owner || '—';
       metaEditor.textContent = res?.meta?.editor || '—';
       metaFrequency.textContent = res?.meta?.valueType || '—';
@@ -279,119 +275,66 @@
       metaStatus.className = 'status-pill';
       if (color) metaStatus.style.background = color;
 
-      // ---- period series (months OR quarters for the selected plan year) ----
+      // ---- series ----
       const baseLabels = res?.chart?.labels || [];
       const actual = res?.chart?.actual || [];
       const target = res?.chart?.target || [];
       const forecast = res?.chart?.forecast || [];
 
-      // ---- five-year targets to the RIGHT as bars (use ALL returned years) ----
+      // ---- five-year targets to the RIGHT as bars ----
       const yrArr = Array.isArray(res?.chart?.yearTargets) ? res.chart.yearTargets : []; // [{year, value}]
       const yearLabels = yrArr.map(y => String(y.year));
       const yearBarVals = yrArr.map(y => y.value ?? null);
 
-      // extend labels with 5-year labels
       const allLabels = baseLabels.concat(yearLabels);
-
-      // pad datasets for alignment
       const pad = new Array(yearLabels.length).fill(null);
       const leftNulls = new Array(baseLabels.length).fill(null);
 
       kpiChart.data.labels = allLabels;
-      // Actual (purple bars) occupy PERIOD labels only
-      kpiChart.data.datasets[0].data = actual.concat(pad);
-      // Target (gray line) across PERIOD labels only
-      kpiChart.data.datasets[1].data = target.concat(pad);
-      // Forecast (orange dashed) across PERIOD labels only
-      kpiChart.data.datasets[2].data = forecast.concat(pad);
-      // Year Targets (gray bars) on the RIGHT only
-      kpiChart.data.datasets[3].data = leftNulls.concat(yearBarVals);
+      kpiChart.data.datasets[0].data = actual.concat(pad);         // Actual
+      kpiChart.data.datasets[1].data = target.concat(pad);         // Target
+      kpiChart.data.datasets[2].data = forecast.concat(pad);       // Forecast
+      kpiChart.data.datasets[3].data = leftNulls.concat(yearBarVals); // Year Targets
 
       kpiChart.update();
 
       // ---- table under chart ----
       const rows = res?.table || [];
       if (rows.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No facts for this plan/year.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No facts for this plan/year.</td></tr>';
       } else {
         tableBody.innerHTML = '';
         for (const r of rows) {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-                                    <td>${r.period ?? '—'}</td>
-                                    <td>${r.startDate ?? '—'}</td>
-                                    <td>${r.endDate ?? '—'}</td>
-                                    <td>${r.actual ?? '—'}</td>
-                                    <td>${r.target ?? '—'}</td>
-                                    <td>${r.forecast ?? '—'}</td>
-                                    <td>
-                <button class="btn btn-sm btn-outline-primary"
-                        data-fact-id="${r.id}"
-                        data-period="${r.period ?? ''}"
-                        data-actual="${r.actual ?? ''}"
-                        data-forecast="${r.forecast ?? ''}"
-                        data-status="${r.statusCode ?? ''}"
-                        data-lastby="${r.lastBy ?? ''}"
-                        data-pillar-id="${selPillar.value || ''}"
-                        data-objective-id="${selObjective.value || ''}"
-                        data-kpi-id="${selKpi.value || ''}"
-                        onclick="openEditModal(this)">
-                  ✏️ Edit
-                </button>
-              </td>
-                                  `;
+            <td>${r.period ?? '—'}</td>
+            <td>${r.startDate ?? '—'}</td>
+            <td>${r.endDate ?? '—'}</td>
+            <td>${r.actual ?? '—'}</td>
+            <td>${r.target ?? '—'}</td>
+            <td>${r.forecast ?? '—'}</td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary"
+                      data-fact-id="${r.id}"
+                      data-period="${r.period ?? ''}"
+                      data-actual="${r.actual ?? ''}"
+                      data-forecast="${r.forecast ?? ''}"
+                      data-status="${r.statusCode ?? ''}"
+                      data-lastby="${r.lastBy ?? ''}"
+                      data-pillar-id="${selPillar.value || ''}"
+                      data-objective-id="${selObjective.value || ''}"
+                      data-kpi-id="${selKpi.value || ''}"
+                      onclick="openEditModal(this)">
+                ✏️ Edit
+              </button>
+            </td>`;
           tableBody.appendChild(tr);
         }
       }
     }
 
-    // ---------- Presentation modal wiring ----------
-    function updatePresentationLabels() {
-      const p = selPillar.selectedOptions[0]?.text ?? 'N/A';
-      const o = selObjective.selectedOptions[0]?.text ?? 'N/A';
-      const k = selKpi.selectedOptions[0]?.text ?? 'N/A';
-      $('selectedPillarText').innerText = p;
-      $('selectedObjectiveText').innerText = o;
-      $('selectedKpiText').innerText = k;
-      $('presentationModalLabel').innerText = `📊 ${k}`;
-
-      // mirror the meta into the modal quick view too
-      $('m_owner').innerText = metaOwner.textContent || '—';
-      $('m_editor').innerText = metaEditor.textContent || '—';
-      $('m_frequency').innerText = metaFrequency.textContent || '—';
-      $('m_unit').innerText = metaUnit.textContent || '—';
-      $('m_priority').innerText = metaPriority.textContent || '—';
-      $('m_status').innerText = metaStatus.textContent || '—';
-      // also mirror the visual pill style (same background color and class as the main page)
-      const modalStatus = $('m_status');
-      modalStatus.className = 'status-pill'; // reset to the pill class
-      modalStatus.style.background = metaStatus.style.background; // copy the color from the main pill
-    }
-    document.querySelector('[data-bs-target="#presentationModal"]').addEventListener('click', updatePresentationLabels);
-
-    // clone chart into modal when shown
-    let modalChart;
-    document.getElementById('presentationModal').addEventListener('shown.bs.modal', function () {
-      const container = $('modalChartCloneContainer');
-      container.innerHTML = '';
-      const canvas = document.createElement('canvas');
-      container.appendChild(canvas);
-      modalChart = new Chart(canvas.getContext('2d'), {
-        type: 'bar',
-        data: JSON.parse(JSON.stringify(kpiChart.data)),
-        options: JSON.parse(JSON.stringify(kpiChart.options))
-      });
-    });
-
-    // print helper
-    window.printModalContent = function () {
-      const html = $('modalContentToPrint').innerHTML;
-      const old = document.body.innerHTML;
-      document.body.innerHTML = html; window.print(); document.body.innerHTML = old; location.reload();
-    }
-
     // kick things off
-    loadPillars().catch(console.error);
+    initPage().catch(console.error);
   </script>
 }
 
@@ -403,6 +346,7 @@
       </div>
     </div>
   }
+
   <!-- Selector row (one line) -->
   <div class="card shadow-sm rounded-4 mb-4">
     <div class="card-body">
@@ -442,15 +386,10 @@
         <div class="card-body d-flex flex-column justify-content-between h-100">
           <div>
             <h6 class="card-title text-secondary fw-bold mb-3">KPI Details</h6>
-            <p class="mb-2" style="font-size: larger;"><strong>👁️ Owner:</strong> <span id="metaOwner"
-                class="text-dark">—</span></p>
-            <p class="mb-2" style="font-size: larger;"><strong>✍️ Editor:</strong> <span id="metaEditor"
-                class="text-dark">—</span></p>
-            <p class="mb-2" style="font-size: larger;"><strong>📅 Frequency:</strong> <span id="metaFrequency"
-                class="text-dark">—</span></p>
-            <p class="mb-2" style="font-size: larger;"><strong>🔢 Unit:</strong> <span id="metaUnit"
-                class="text-dark">—</span></p>
-
+            <p class="mb-2" style="font-size: larger;"><strong>👁️ Owner:</strong> <span id="metaOwner" class="text-dark">—</span></p>
+            <p class="mb-2" style="font-size: larger;"><strong>✍️ Editor:</strong> <span id="metaEditor" class="text-dark">—</span></p>
+            <p class="mb-2" style="font-size: larger;"><strong>📅 Frequency:</strong> <span id="metaFrequency" class="text-dark">—</span></p>
+            <p class="mb-2" style="font-size: larger;"><strong>🔢 Unit:</strong> <span id="metaUnit" class="text-dark">—</span></p>
           </div>
           <div class="mt-auto">
             <div class="mb-4 text-center">
@@ -465,13 +404,6 @@
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- Present & Print -->
-  <div class="d-flex gap-3 mt-3">
-    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#presentationModal">📽️ Present
-      Mode</button>
-    <button onclick="printModalContent()" class="btn btn-outline-secondary">🖨️ Print Now</button>
   </div>
 
   <!-- Data Table -->
@@ -498,51 +430,7 @@
   </div>
 </div>
 
-@* Presentation Modal *@
-<div class="modal fade" id="presentationModal" tabindex="-1" aria-labelledby="presentationModalLabel"
-  aria-hidden="true">
-  <div class="modal-dialog modal-fullscreen">
-    <div class="modal-content p-4">
-      <div class="modal-header">
-        <h5 class="modal-title fw-bold" id="presentationModalLabel">📊 KPI Presentation</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-
-      <div class="modal-body" id="modalContentToPrint">
-        <div class="mb-4">
-          <h5 class="fw-bold"><strong>Pillar:</strong> <span id="selectedPillarText">N/A</span></h5>
-          <h5 class="fw-bold"><strong>Objective:</strong> <span id="selectedObjectiveText">N/A</span></h5>
-          <h5 class="fw-bold"><strong>KPI:</strong> <span id="selectedKpiText">N/A</span></h5>
-        </div>
-
-        <div class="row align-items-start">
-          <div class="col-md-9">
-            <div class="bg-white border rounded shadow-sm p-3" style="height: 420px;">
-              <div id="modalChartCloneContainer" class="w-100 h-100"></div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="card shadow-sm rounded-3 p-3">
-              <h5 class="card-title text-secondary fw-bold mb-4 fs-5">KPI Details</h5>
-              <p class="fs-6 mb-2"><strong>👁️ Monitor:</strong> <span id="m_owner">—</span></p>
-              <p class="fs-6 mb-2"><strong>✍️ Editor:</strong> <span id="m_editor">—</span></p>
-              <p class="fs-6 mb-2"><strong>📐 Value Type:</strong> <span id="m_value">—</span></p>
-              <p class="fs-6 mb-2"><strong>📊 Priority:</strong> <span id="m_priority">—</span></p>
-              <p class="fs-6 mb-2"><strong>Status:</strong> <span id="m_status" class="status-pill">—</span></p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="modal-footer">
-        <button onclick="printModalContent()" class="btn btn-secondary">🖨️ Print</button>
-        <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-@* Edit KPI Fact Modal (server-post form) *@
+@* Edit KPI Fact Modal *@
 <div class="modal fade" id="editFactModal" tabindex="-1" aria-labelledby="editFactLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content rounded-4">
@@ -559,11 +447,12 @@
             <label for="editLastBy" class="form-label">Last edited by</label>
             <input type="text" class="form-control" id="editLastBy" name="LastChangedBy" value="">
           </div>
-          <!-- primary key -->
+          <!-- primary key + context -->
           <input type="hidden" name="KpiFactId" id="editFactId" />
           <input type="hidden" id="editPillarId" name="PillarId" />
           <input type="hidden" id="editObjectiveId" name="ObjectiveId" />
           <input type="hidden" id="editKpiId" name="KpiId" />
+
           <div class="row g-3">
             <div class="col-md-4">
               <label class="form-label">Actual</label>
