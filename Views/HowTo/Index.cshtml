@@ -1,0 +1,157 @@
+@{
+    ViewData["Title"] = "How To Use KPIMonitor";
+}
+
+<style>
+  .flow-wrap {
+    background:#fff; border:1px solid #eee; border-radius:16px; padding:1.25rem;
+  }
+  .flow-row {
+    display:flex; align-items:center; gap:12px; overflow-x:auto; padding:.25rem .25rem;
+    scrollbar-width: thin;
+  }
+  .flow-node {
+    min-width: 220px; background:#f6f8fb; border:1px solid #e6e8eb; border-radius:12px;
+    padding:.9rem .95rem; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,.04);
+  }
+  .flow-node small { display:block; color:#6c757d; margin-bottom:.25rem; }
+  .flow-node--pill { min-width: 120px; }
+  .arrow { flex:0 0 auto; opacity:.7; font-weight:800; font-size:20px; }
+  .arrow-down { text-align:center; font-size:22px; margin:.35rem 0; }
+  .howto-card { border:1px solid #eef0f3; border-radius:12px; padding:1rem 1.25rem; background:#fff; height:100%; }
+</style>
+
+@section Scripts { }
+
+<div class="container py-4">
+  @section PageHeader {
+    <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
+      <div class="page-hero-content">
+        <h1 class="page-title">Workflow at a Glance</h1>
+      </div>
+    </div>
+  }
+
+  <!-- Flowchart (Row 1 L→R, Row 2 R→L with End) -->
+  <div class="flow-wrap mb-4">
+    <!-- Row 1 -->
+    <div class="flow-row">
+      <div class="flow-node flow-node--pill"><div class="fw-bold">Start</div></div>
+      <div class="arrow">➔</div>
+
+      <div class="flow-node">
+        <small>Catalog</small>
+        <div class="fw-bold">Create Pillar</div>
+      </div>
+      <div class="arrow">➔</div>
+
+      <div class="flow-node">
+        <small>Catalog</small>
+        <div class="fw-bold">Create Objective</div>
+      </div>
+      <div class="arrow">➔</div>
+
+      <div class="flow-node">
+        <small>Catalog</small>
+        <div class="fw-bold">Create KPI</div>
+      </div>
+      <div class="arrow">➔</div>
+
+      <div class="flow-node">
+        <small>Planning</small>
+        <div class="fw-bold">Create Periods</div>
+      </div>
+      <div class="arrow">➔</div>
+
+      <div class="flow-node">
+        <small>Planning</small>
+        <div class="fw-bold">Create KPI Year Plan</div>
+      </div>
+    </div>
+
+    <!-- Down to row 2 -->
+    <div class="arrow-down">⬇</div>
+
+    <!-- Row 2 (reversed: R→L to finish at End) -->
+    <div class="flow-row justify-content-end">
+      <div class="flow-node">
+        <small>Monitoring</small>
+        <div class="fw-bold">Create KPI Facts</div>
+      </div>
+      <div class="arrow">➔</div>
+
+      <div class="flow-node">
+        <small>Dashboard</small>
+        <div class="fw-bold">Edit KPI Facts (Inline)</div>
+      </div>
+      <div class="arrow">➔</div>
+
+      <div class="flow-node flow-node--pill">
+        <div class="fw-bold">End</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action cards (links kept to Index pages per your note) -->
+  <div class="row g-4">
+    <div class="col-md-4">
+      <div class="howto-card">
+        <div class="fw-bold mb-1">1) Create Pillar</div>
+        <div class="text-muted mb-3">Define strategic pillars.</div>
+        <a class="btn btn-outline-secondary" asp-controller="Pillars" asp-action="Index">Open Pillars</a>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="howto-card">
+        <div class="fw-bold mb-1">2) Create Objective</div>
+        <div class="text-muted mb-3">Add objectives under a pillar.</div>
+        <a class="btn btn-outline-secondary" asp-controller="Objectives" asp-action="Index">Open Objectives</a>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="howto-card">
+        <div class="fw-bold mb-1">3) Create KPI</div>
+        <div class="text-muted mb-3">Register KPIs under an objective.</div>
+        <a class="btn btn-outline-secondary" asp-controller="Kpis" asp-action="Index">Open KPIs</a>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="howto-card">
+        <div class="fw-bold mb-1">4) Create Periods</div>
+        <div class="text-muted mb-3">Load months/quarters for each year.</div>
+        <a class="btn btn-outline-secondary" asp-controller="KpiPeriods" asp-action="Index">Open Periods</a>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="howto-card">
+        <div class="fw-bold mb-1">5) Create KPI Year Plan</div>
+        <div class="text-muted mb-3">Select KPI, year, frequency, targets.</div>
+        <a class="btn btn-outline-secondary" asp-controller="KpiYearPlans" asp-action="Index">Open Year Plans</a>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="howto-card">
+        <div class="fw-bold mb-1">6) Create KPI Facts</div>
+        <div class="text-muted mb-3">Enter actuals/forecasts per period.</div>
+        <a class="btn btn-outline-secondary" asp-controller="KpiFacts" asp-action="Index">Open KPI Facts</a>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="howto-card">
+        <div class="fw-bold mb-1">7) Edit KPI Facts (Inline)</div>
+        <div class="text-muted mb-3">Use the dashboard to edit in place.</div>
+        <a class="btn btn-outline-secondary" asp-controller="Home" asp-action="Index">Open Dashboard</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-info mt-4 rounded-4">
+    Tip: Status colors follow your codes — green (Conforme), red (Écart), orange (Rattrapage), blue (Attente).
+  </div>
+</div>
