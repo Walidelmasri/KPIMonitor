@@ -12,7 +12,7 @@
                 <div class="card-body">
                     <form asp-action="Create" method="post">
                         @Html.AntiForgeryToken()
-                        <div asp-validation-summary="All" class="alert alert-danger rounded-4"></div>
+                        @* <div asp-validation-summary="All" class="alert alert-danger rounded-4"></div> *@
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Year</label>

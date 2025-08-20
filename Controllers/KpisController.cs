@@ -12,16 +12,46 @@ namespace KPIMonitor.Controllers
         public KpisController(AppDbContext db) => _db = db;
 
         // GET: /Kpis
-        public async Task<IActionResult> Index()
-        {
-            var data = await _db.DimKpis
-                                .Include(k => k.Pillar)
-                                .Include(k => k.Objective)
-                                .OrderBy(k => k.KpiId)
-                                .ToListAsync();
-            return View(data);
-        }
+        // public async Task<IActionResult> Index()
+        // {
+        //     var data = await _db.DimKpis
+        //                         .Include(k => k.Pillar)
+        //                         .Include(k => k.Objective)
+        //                         .OrderBy(k => k.KpiId)
+        //                         .ToListAsync();
+        //     return View(data);
+        // }
+// GET: /Kpis
+public async Task<IActionResult> Index(decimal? pillarId)
+{
+    // Base query
+    var q = _db.DimKpis
+               .Include(k => k.Pillar)
+               .Include(k => k.Objective)
+               .AsNoTracking();
 
+    // Optional filter
+    if (pillarId.HasValue)
+        q = q.Where(k => k.PillarId == pillarId.Value);
+
+    // Order the grid (by KPI code so it’s stable)
+    var data = await q.OrderBy(k => k.KpiCode).ToListAsync();
+
+    // Dropdown items: ordered by PillarCode (as requested)
+    ViewBag.Pillars = new SelectList(
+        await _db.DimPillars
+                 .AsNoTracking()
+                 .OrderBy(p => p.PillarCode)
+                 .Select(p => new { p.PillarId, Name = p.PillarCode + " — " + p.PillarName })
+                 .ToListAsync(),
+        "PillarId", "Name", pillarId
+    );
+
+    // For showing the Reset button when filtering
+    ViewBag.CurrentPillarId = pillarId;
+
+    return View(data);
+}
         // GET: /Kpis/Create
         public async Task<IActionResult> Create()
         {
@@ -158,7 +188,7 @@ namespace KPIMonitor.Controllers
         {
             var pillars = await _db.DimPillars
                                    .Where(p => p.IsActive == 1)
-                                   .OrderBy(p => p.PillarName)
+                                   .OrderBy(p => p.PillarCode)
                                    .Select(p => new { p.PillarId, Name = p.PillarCode + " — " + p.PillarName })
                                    .ToListAsync();
             ViewBag.Pillars = new SelectList(pillars, "PillarId", "Name", selected);
@@ -171,7 +201,7 @@ namespace KPIMonitor.Controllers
             var objs = await _db.DimObjectives
                                 .AsNoTracking()
                                 .Where(o => o.IsActive == 1 && o.PillarId == pillarId)
-                                .OrderBy(o => o.ObjectiveName)
+                                .OrderBy(o => o.ObjectiveCode)
                                 .Select(o => new { id = o.ObjectiveId, name = o.ObjectiveCode + " — " + o.ObjectiveName })
                                 .ToListAsync();
             return Json(objs);
