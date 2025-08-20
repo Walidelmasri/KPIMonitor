@@ -323,3 +323,8 @@ label, select { font-size: 1.05rem; }
   color: whitesmoke;
 }
 #titlePriority { letter-spacing: 1px; }
+
+#btnAddAction {
+  display: inline-block;
+  min-width: 100px; /* match your pill width */
+}
