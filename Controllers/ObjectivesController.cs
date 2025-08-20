@@ -12,14 +12,54 @@ namespace KPIMonitor.Controllers
         public ObjectivesController(AppDbContext db) => _db = db;
 
         // GET: /Objectives
-        public async Task<IActionResult> Index()
-        {
-            var data = await _db.DimObjectives
-                                .Include(o => o.Pillar)
-                                .OrderBy(o => o.ObjectiveId)
-                                .ToListAsync();
-            return View(data);
-        }
+        // public async Task<IActionResult> Index()
+        // {
+        //     var data = await _db.DimObjectives
+        //                         .Include(o => o.Pillar)
+        //                         .OrderBy(o => o.ObjectiveId)
+        //                         .ToListAsync();
+        //     return View(data);
+        // }
+// GET: /Objectives
+// public async Task<IActionResult> Index(decimal? pillarId)
+// {
+//     var q = _db.DimObjectives
+//                .Include(o => o.Pillar)
+//                .AsNoTracking();
+
+//     if (pillarId.HasValue)
+//         q = q.Where(o => o.PillarId == pillarId.Value);
+
+//     var data = await q.OrderBy(o => o.ObjectiveCode).ToListAsync();
+
+//     // for the dropdown
+//     ViewBag.Pillars = await _db.DimPillars
+//         .AsNoTracking()
+//         .OrderBy(p => p.PillarCode)
+//         .Select(p => new { p.PillarId, Label = p.PillarCode + " — " + p.PillarName })
+//         .ToListAsync();
+
+//     ViewBag.CurrentPillarId = pillarId;
+
+//     return View(data);
+// }
+    public async Task<IActionResult> Index(decimal? pillarId)
+{
+    var q = _db.DimObjectives
+               .Include(o => o.Pillar)
+               .AsNoTracking();
+
+    if (pillarId.HasValue)
+        q = q.Where(o => o.PillarId == pillarId.Value);
+
+    var data = await q.OrderBy(o => o.PillarId).ToListAsync();
+
+    // 🔽 use the shared SelectList so nothing else breaks
+    await LoadPillarsAsync(pillarId);
+    ViewBag.CurrentPillarId = pillarId;
+
+    return View(data);
+}
 
         // GET: /Objectives/Create
         public async Task<IActionResult> Create()
@@ -139,7 +179,7 @@ namespace KPIMonitor.Controllers
         {
             var pillars = await _db.DimPillars
                                    .Where(p => p.IsActive == 1)   // if empty, comment this line to test
-                                   .OrderBy(p => p.PillarName)
+                                   .OrderBy(p => p.PillarCode)
                                    .Select(p => new { p.PillarId, Name = p.PillarCode + " — " + p.PillarName })
                                    .ToListAsync();
 
