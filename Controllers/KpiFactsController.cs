@@ -17,22 +17,39 @@ namespace KPIMonitor.Controllers
         public KpiFactsController(AppDbContext context) { _db = context; }
 
         // ===========================
-        // Index (unchanged behavior)
+        // Index 
         // ===========================
-        public async Task<IActionResult> Index()
-        {
-            var facts = await _db.KpiFacts
-                .Include(f => f.Kpi)
-                .Include(f => f.Period)
-                .Include(f => f.KpiYearPlan)
-                .OrderBy(f => f.KpiId)
-                .ThenBy(f => f.KpiYearPlanId)
-                .ThenBy(f => f.PeriodId)
-                .AsNoTracking()
-                .ToListAsync();
+// GET: /KpiFacts
+public async Task<IActionResult> Index(decimal? kpiId)
+{
+    var q = _db.KpiFacts
+        .Include(f => f.Kpi)
+        .Include(f => f.Period)
+        .Include(f => f.KpiYearPlan)
+        .AsNoTracking();
 
-            return View(facts);
-        }
+    if (kpiId.HasValue)
+        q = q.Where(f => f.KpiId == kpiId.Value);
+
+    var facts = await q
+        .OrderBy(f => f.KpiId)
+        .ThenBy(f => f.KpiYearPlanId)
+        .ThenBy(f => f.PeriodId)
+        .ToListAsync();
+
+    // dropdown items ordered by KPI CODE
+    var kpiList = await _db.DimKpis
+        .Where(k => k.IsActive == 1)
+        .AsNoTracking()
+        .OrderBy(k => k.KpiCode)
+        .Select(k => new { k.KpiId, Label = k.KpiCode + " — " + k.KpiName })
+        .ToListAsync();
+
+    ViewBag.Kpis = new SelectList(kpiList, "KpiId", "Label", kpiId);
+    ViewBag.CurrentKpiId = kpiId;
+
+    return View(facts);
+}
 
         // ===========================
         // Create (GET)

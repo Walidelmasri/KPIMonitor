@@ -9,12 +9,12 @@
     <div class="col-12 col-xl-8">
       <div class="card shadow rounded-4">
         <div class="card-header bg-white border-bottom">
-          <h1 class="page-title mb-0">➕ Add Five-Year Target</h1>
+          <h4 class="mb-0 text-dark fw-bold">➕ Add Five-Year Target</h4>
         </div>
         <div class="card-body">
           <form asp-action="Create" method="post">
             @Html.AntiForgeryToken()
-            <div asp-validation-summary="All" class="alert alert-danger rounded-4"></div>
+            @* <div asp-validation-summary="All" class="alert alert-danger rounded-4"></div> *@
 
             <!-- KPI -->
             <div class="mb-3">

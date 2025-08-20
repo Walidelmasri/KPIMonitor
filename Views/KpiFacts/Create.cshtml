@@ -15,7 +15,7 @@
         <div class="card-body">
           <form asp-action="Create" method="post" id="factForm">
             @Html.AntiForgeryToken()
-            <div asp-validation-summary="All" class="alert alert-danger rounded-4"></div>
+            @* <div asp-validation-summary="All" class="alert alert-danger rounded-4"></div> *@
 
             <!-- KPI -->
             <div class="mb-3">
