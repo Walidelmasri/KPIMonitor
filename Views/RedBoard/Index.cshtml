@@ -82,101 +82,114 @@
                     runKpiIds.push(k.kpiId);
                 }
             }
-
+            deck.push({ type: 'decisions'});
             idx = 0;
             await showCurrent();
         }
 
-        // ---------------------------
-        // Show current slide (UNCHANGED core + small hooks)
-        // ---------------------------
-        async function showCurrent() {
-            const slide = deck[idx];
-            $('slideCounter').innerText = `${idx + 1} / ${deck.length}`;
+// ---------------------------
+// Show current slide (UNCHANGED core + decisions branch)
+// ---------------------------
+async function showCurrent() {
+    const slide = deck[idx];
+    $('slideCounter').innerText = `${idx + 1} / ${deck.length}`;
+// Always hide the decisions area unless we're on that slide
+$('decisionsWrap').classList.add('d-none');
+    // keep your existing "last slide" toggle
+    const isLast = (idx === deck.length - 1);
+    $('btnDecisions').disabled = !isLast;
 
-            // Show/hide Decisions button only on last slide
-            const isLast = (idx === deck.length - 1);
-            $('btnDecisions').disabled = !isLast;
+    // NEW: decisions slide
+    if (slide.type === 'decisions') {
+        // hide title/kpi areas and actions block
+        $('titleSlide').classList.add('d-none');
+        $('kpiSlide').classList.add('d-none');
+        $('actionsBlock').classList.add('d-none');
 
-            if (slide.type === 'title') {
-                // header for group
-                $('kpiHeading').innerText = `Priority ${slide.priority}`;
-                $('kpiSub').innerText = `${slide.count} KPI${slide.count === 1 ? '' : 's'} flagged red`;
+        // show the decisions section and load it using your existing function
+        await showDecisions();
+        return;
+    }
 
-                const tp = $('titlePriority');
-                tp.textContent = slide.priority;
+    if (slide.type === 'title') {
+        // header for group
+        $('kpiHeading').innerText = `Priority ${slide.priority}`;
+        $('kpiSub').innerText = `${slide.count} KPI${slide.count === 1 ? '' : 's'} flagged red`;
 
-                $('titleSlide').classList.remove('d-none');
-                $('kpiSlide').classList.add('d-none');
-                $('actionsBlock').classList.add('d-none');
-                return;
+        const tp = $('titlePriority');
+        tp.textContent = slide.priority;
+
+        $('titleSlide').classList.remove('d-none');
+        $('kpiSlide').classList.add('d-none');
+        $('actionsBlock').classList.add('d-none');
+        return;
+    }
+
+    // KPI slide
+    $('titleSlide').classList.add('d-none');
+    $('kpiSlide').classList.remove('d-none');
+    $('actionsBlock').classList.remove('d-none');
+
+    currentKpiId = slide.kpiId;
+    $('kpiHeading').innerText = `KPI Name: ${slide.name}`;
+    $('kpiSub').innerText = `${slide.code}`;
+    $('btnAddAction').disabled = false;
+
+    const data = await getJSON('@Url.Action("GetKpiPresentation", "RedBoard")?kpiId=' + slide.kpiId);
+
+    // meta
+    $('m_owner').innerText = data?.meta?.owner ?? '—';
+    $('m_editor').innerText = data?.meta?.editor ?? '—';
+    $('m_frequency').innerText = data?.meta?.valueType ?? '—';
+    $('m_unit').innerText = data?.meta?.unit ?? '—';
+    $('m_priority').innerText = data?.meta?.priority ?? '—';
+
+    const status = $('m_status');
+    status.innerText = data?.meta?.statusLabel ?? '—';
+    status.style.background = data?.meta?.statusColor ?? '';
+    status.className = 'status-pill';
+
+    // chart
+    const baseLabels = data?.chart?.labels || [];
+    const act = data?.chart?.actual || [];
+    const tgt = data?.chart?.target || [];
+    const fct = data?.chart?.forecast || [];
+    const yrs = Array.isArray(data?.chart?.yearTargets) ? data.chart.yearTargets : [];
+    const yearLabels = yrs.map(y => String(y.year));
+    const yearVals = yrs.map(y => y.value ?? null);
+
+    const allLabels = baseLabels.concat(yearLabels);
+    const pad = new Array(yearLabels.length).fill(null);
+    const leftNulls = new Array(baseLabels.length).fill(null);
+
+    const chartData = {
+        labels: allLabels,
+        datasets: [
+            { type: 'bar', label: 'Actual', data: act.concat(pad), backgroundColor: 'rgba(128,0,128,.35)', borderColor: 'rgba(128,0,128,.95)', borderWidth: 2, borderSkipped: 'bottom' },
+            { type: 'line', label: 'Target', data: tgt.concat(pad), borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
+            { type: 'line', label: 'Forecast', data: fct.concat(pad), borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
+            { type: 'bar', label: 'Year Target', data: leftNulls.concat(yearVals), backgroundColor: 'rgba(122,122,122,.25)', borderColor: '#7a7a7a', borderWidth: 1 }
+        ]
+    };
+
+    if (!kpiChart) {
+        kpiChart = new Chart($('rbChart').getContext('2d'), {
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } },
+                plugins: { legend: { position: 'top' } }
             }
+        });
+    } else {
+        kpiChart.data = chartData;
+        kpiChart.update();
+    }
 
-            // KPI slide
-            $('titleSlide').classList.add('d-none');
-            $('kpiSlide').classList.remove('d-none');
-            $('actionsBlock').classList.remove('d-none');
-
-            currentKpiId = slide.kpiId;
-            $('kpiHeading').innerText = `KPI Name: ${slide.name}`;
-            $('kpiSub').innerText = `${slide.code}`;
-            $('btnAddAction').disabled = false;
-
-            const data = await getJSON('@Url.Action("GetKpiPresentation", "RedBoard")?kpiId=' + slide.kpiId);
-
-            // meta
-            $('m_owner').innerText = data?.meta?.owner ?? '—';
-            $('m_editor').innerText = data?.meta?.editor ?? '—';
-            $('m_frequency').innerText = data?.meta?.valueType ?? '—';
-            $('m_unit').innerText = data?.meta?.unit ?? '—';
-            $('m_priority').innerText = data?.meta?.priority ?? '—';
-
-            const status = $('m_status');
-            status.innerText = data?.meta?.statusLabel ?? '—';
-            status.style.background = data?.meta?.statusColor ?? '';
-            status.className = 'status-pill';
-
-            // chart
-            const baseLabels = data?.chart?.labels || [];
-            const act = data?.chart?.actual || [];
-            const tgt = data?.chart?.target || [];
-            const fct = data?.chart?.forecast || [];
-            const yrs = Array.isArray(data?.chart?.yearTargets) ? data.chart.yearTargets : [];
-            const yearLabels = yrs.map(y => String(y.year));
-            const yearVals = yrs.map(y => y.value ?? null);
-
-            const allLabels = baseLabels.concat(yearLabels);
-            const pad = new Array(yearLabels.length).fill(null);
-            const leftNulls = new Array(baseLabels.length).fill(null);
-
-            const chartData = {
-                labels: allLabels,
-                datasets: [
-                    { type: 'bar', label: 'Actual', data: act.concat(pad), backgroundColor: 'rgba(128,0,128,.35)', borderColor: 'rgba(128,0,128,.95)', borderWidth: 2, borderSkipped: 'bottom' },
-                    { type: 'line', label: 'Target', data: tgt.concat(pad), borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
-                    { type: 'line', label: 'Forecast', data: fct.concat(pad), borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
-                    { type: 'bar', label: 'Year Target', data: leftNulls.concat(yearVals), backgroundColor: 'rgba(122,122,122,.25)', borderColor: '#7a7a7a', borderWidth: 1 }
-                ]
-            };
-
-            if (!kpiChart) {
-                kpiChart = new Chart($('rbChart').getContext('2d'), {
-                    data: chartData,
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: { y: { beginAtZero: true } },
-                        plugins: { legend: { position: 'top' } }
-                    }
-                });
-            } else {
-                kpiChart.data = chartData;
-                kpiChart.update();
-            }
-
-            // Load actions list (HTML) for this KPI
-            await loadActionsHtml(slide.kpiId);
-        }
+    // Load actions list (HTML) for this KPI
+    await loadActionsHtml(slide.kpiId);
+}
 
         window.prevSlide = async () => { if (!deck.length) return; idx = (idx - 1 + deck.length) % deck.length; await showCurrent(); }
         window.nextSlide = async () => { if (!deck.length) return; idx = (idx + 1) % deck.length; await showCurrent(); }

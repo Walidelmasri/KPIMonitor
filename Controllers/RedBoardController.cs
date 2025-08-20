@@ -381,10 +381,14 @@ public async Task<IActionResult> DecisionsBoardHtml([FromBody] decimal[] kpiIds)
         return Content("<div class='text-muted small'>No KPIs in this run.</div>", "text/html");
 
     var actions = await _db.KpiActions
-        .AsNoTracking()
-        .Where(a => kpiIds.Contains(a.KpiId))
-        .OrderBy(a => a.StatusCode).ThenBy(a => a.DueDate)
-        .ToListAsync();
+    .AsNoTracking()
+    .Include(a => a.Kpi)
+        .ThenInclude(k => k.Objective)
+    .Include(a => a.Kpi)
+        .ThenInclude(k => k.Pillar)
+    .Where(a => kpiIds.Contains(a.KpiId))
+    .OrderBy(a => a.StatusCode).ThenBy(a => a.DueDate)
+    .ToListAsync();
 
     static string H(string? s) => WebUtility.HtmlEncode(s ?? "");
     static string Fmt(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
@@ -406,18 +410,26 @@ public async Task<IActionResult> DecisionsBoardHtml([FromBody] decimal[] kpiIds)
         }
         else
         {
-            foreach (var a in items)
-            {
-                sb.Append(@$"
+foreach (var a in items)
+{
+    sb.Append(@$"
     <div class='border rounded-3 p-2 bg-white'>
       <div class='d-flex justify-content-between align-items-center'>
         <strong>{H(a.Owner)}</strong>
         <span class='badge rounded-pill {badgeClass}'>{H(title)}</span>
       </div>
-      <div class='mt-1'>{H(a.Description)}</div>
-      <div class='text-muted small mt-1'>Due: {Fmt(a.DueDate)} • Ext: {a.ExtensionCount}</div>
+      <div class='small text-muted mt-1'>
+        KPI: <strong>{H(a.Kpi?.Pillar?.PillarCode ?? "")}.{H(a.Kpi?.Objective?.ObjectiveCode ?? "")} {H(a.Kpi?.KpiCode ?? "")}</strong> — {H(a.Kpi?.KpiName ?? "-")}
+        <div>Pillar: {(string.IsNullOrWhiteSpace(a.Kpi?.Pillar?.PillarName) ? "" : " / ")}{H(a.Kpi?.Objective?.ObjectiveName ?? "")}</div>
+        <div>Objective: {H(a.Kpi?.Objective?.ObjectiveName ?? "")}</div>
+
+      </div>
+      <div class='mt-1'>Description: {H(a.Description)}</div>
+      <div class='text-muted small mt-1'>Due: {Fmt(a.DueDate)}</div>
+      <div class='text-muted small mt-1'>Ext: {a.ExtensionCount}</div>
+
     </div>");
-            }
+}
         }
 
         sb.Append("</div></div>");
