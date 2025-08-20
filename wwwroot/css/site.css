@@ -328,3 +328,47 @@ label, select { font-size: 1.05rem; }
   display: inline-block;
   min-width: 100px; /* match your pill width */
 }
+
+
+/* Turn rails on by adding class="with-rails" to any wrapper */
+.with-rails {
+  position: relative;
+  overflow: visible;            /* allow rails to sit outside the box */
+}
+
+/* Desktop only: paint rails using pseudo-elements so content width is unchanged */
+@media (min-width: 1592px) {
+  .with-rails::before,
+  .with-rails::after {
+    content: "";
+    position: absolute;
+    top: 10px;                /* where rails should start (tweak as you like) */
+    bottom: 0;                  /* run to the bottom of the section */
+    width: 72px;                /* rail visual width */
+    pointer-events: none;       /* purely decorative */
+    background-image: url("/images/side-rail1.png"); /* use ONE file */
+    background-repeat: repeat-y;
+    background-size: 72px auto; /* tile height from the image */
+    image-rendering: auto;
+  }
+
+  /* Left rail sits slightly outside the content */
+  .with-rails::before {
+    left: -85px;                /* push outside; adjust to align with your layout */
+    background-position: left top;
+  }
+
+  /* Right rail mirrors the same image — no second asset required */
+  .with-rails::after {
+    right: -85px;
+    transform: scaleX(-1);      /* mirror the same artwork */
+    transform-origin: center;
+    background-position: right top;
+  }
+}
+
+/* Hide rails on tablet/phone */
+@media (max-width: 991.98px) {
+  .with-rails::before,
+  .with-rails::after { display: none; }
+}
