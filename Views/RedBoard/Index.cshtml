@@ -5,16 +5,55 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        const $ = (id) => document.getElementById(id);
-        const api = (p) => fetch(p, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+        // ---------------------------
+        // Helpers
+        // ---------------------------
+        const $  = (id) => document.getElementById(id);
+        const qs = (sel, root=document) => root.querySelector(sel);
+        const qsa= (sel, root=document) => Array.from(root.querySelectorAll(sel));
 
+        // Antiforgery token (we render it below in a hidden form)
+        const anti = () => (qs('input[name="__RequestVerificationToken"]')?.value || '');
+
+        // Simple GET (expects JSON)
+        const getJSON = (url) => fetch(url, { headers: { 'Accept':'application/json' } }).then(r => r.json());
+
+        // Simple GET (expects HTML)
+        const getHTML = (url) => fetch(url, { headers: { 'Accept':'text/html' } }).then(r => r.text());
+
+        // Simple POST (form submit via fetch, following redirects)
+        async function postForm(url, form) {
+            const fd = new FormData(form);
+            // ensure antiforgery
+            if (!fd.get('__RequestVerificationToken')) fd.append('__RequestVerificationToken', anti());
+            const res = await fetch(url, { 
+                method: 'POST', 
+                body: fd, 
+                headers: { 
+                    'Accept':'text/html',
+                    'X-Requested-With': 'XMLHttpRequest' }});
+            // treat any 200 as success; we don't navigate away
+            if (!res.ok) throw new Error('Save failed');
+            return res.text();
+        }
+
+        // ---------------------------
+        // Slide deck state
+        // ---------------------------
         let redList = [];   // [{kpiId, name, code, priority}]
-        let deck = [];      // [{type:'title', priority, count} or {type:'kpi', kpiId, name, code, priority}]
+        let deck = [];      // same as your logic (title + kpi slides)
         let idx = 0;
         let kpiChart;
+        let currentKpiId = null;
 
+        // also keep list of kpiIds for the "Decisions" board
+        let runKpiIds = [];
+
+        // ---------------------------
+        // Load red list + build deck (UNCHANGED logic)
+        // ---------------------------
         async function loadRedList() {
-            redList = await api('@Url.Action("GetRedKpiIds", "RedBoard")');
+            redList = await getJSON('@Url.Action("GetRedKpiIds", "RedBoard")');
 
             if (!redList || redList.length === 0) {
                 $('emptyMsg').classList.remove('d-none');
@@ -24,58 +63,66 @@
             $('emptyMsg').classList.add('d-none');
             $('slideWrap').classList.remove('d-none');
 
-            buildDeck();
-            idx = 0;
-            await showCurrent();
-        }
-
-        // Build slide deck: title slide before each priority group, then its KPIs
-        function buildDeck() {
+            // build deck by your grouping logic
             const groups = new Map();
             for (const k of redList) {
-                const key = k.priority ?? 999999; // push nulls to end
+                const key = k.priority ?? 999999; // nulls to end
                 if (!groups.has(key)) groups.set(key, []);
                 groups.get(key).push(k);
             }
             const orderedPriorities = Array.from(groups.keys()).sort((a, b) => a - b);
 
             deck = [];
+            runKpiIds = [];
             for (const p of orderedPriorities) {
                 const items = groups.get(p);
-                // title slide
-                deck.push({ type: 'title', priority: p === 999999 ? '—' : p, count: items.length });
-                // kpi slides
-                for (const k of items) deck.push({ type: 'kpi', ...k });
+                deck.push({ type:'title', priority: p === 999999 ? '—' : p, count: items.length });
+                for (const k of items) {
+                    deck.push({ type:'kpi', ...k });
+                    runKpiIds.push(k.kpiId);
+                }
             }
+
+            idx = 0;
+            await showCurrent();
         }
 
+        // ---------------------------
+        // Show current slide (UNCHANGED core + small hooks)
+        // ---------------------------
         async function showCurrent() {
             const slide = deck[idx];
             $('slideCounter').innerText = `${idx + 1} / ${deck.length}`;
 
+            // Show/hide Decisions button only on last slide
+            const isLast = (idx === deck.length - 1);
+            $('btnDecisions').disabled = !isLast;
+
             if (slide.type === 'title') {
-                // Header text for the deck
+                // header for group
                 $('kpiHeading').innerText = `Priority ${slide.priority}`;
                 $('kpiSub').innerText = `${slide.count} KPI${slide.count === 1 ? '' : 's'} flagged red`;
 
-                // Big priority number (always visible on title slide)
                 const tp = $('titlePriority');
                 tp.textContent = slide.priority;
 
-                // Show title, hide KPI
                 $('titleSlide').classList.remove('d-none');
                 $('kpiSlide').classList.add('d-none');
+                $('actionsBlock').classList.add('d-none');
                 return;
             }
 
             // KPI slide
             $('titleSlide').classList.add('d-none');
             $('kpiSlide').classList.remove('d-none');
+            $('actionsBlock').classList.remove('d-none');
 
+            currentKpiId = slide.kpiId;
             $('kpiHeading').innerText = `KPI Name: ${slide.name}`;
             $('kpiSub').innerText = `${slide.code}`;
+            $('btnAddAction').disabled = false;
 
-            const data = await api('@Url.Action("GetKpiPresentation", "RedBoard")?kpiId=' + slide.kpiId);
+            const data = await getJSON('@Url.Action("GetKpiPresentation", "RedBoard")?kpiId=' + slide.kpiId);
 
             // meta
             $('m_owner').innerText = data?.meta?.owner ?? '—';
@@ -126,12 +173,140 @@
                 kpiChart.data = chartData;
                 kpiChart.update();
             }
+
+            // Load actions list (HTML) for this KPI
+            await loadActionsHtml(slide.kpiId);
         }
 
         window.prevSlide = async () => { if (!deck.length) return; idx = (idx - 1 + deck.length) % deck.length; await showCurrent(); }
         window.nextSlide = async () => { if (!deck.length) return; idx = (idx + 1) % deck.length; await showCurrent(); }
 
+        // ---------------------------
+        // Actions Block (HTML fetch)
+        // ---------------------------
+        async function loadActionsHtml(kpiId) {
+            $('actionsList').innerHTML = "<div class='text-muted small'>Loading…</div>";
+            try {
+                const html = await getHTML('@Url.Action("ActionsListHtml","RedBoard")?kpiId=' + encodeURIComponent(kpiId));
+                $('actionsList').innerHTML = html;
+            } catch {
+                $('actionsList').innerHTML = "<div class='text-danger small'>Failed to load actions.</div>";
+            }
+        }
+
+        // Delegate clicks inside actionsList for Move Deadline + Set Status
+        document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+
+            const act = btn.getAttribute('data-action');
+            if (act === 'move-deadline') {
+                const id = btn.getAttribute('data-id');
+                openMoveDeadline(id);
+            }
+        });
+
+        // Delegate change for status dropdowns
+        document.addEventListener('change', async (e) => {
+            const sel = e.target.closest('select[data-action="set-status"]');
+            if (!sel) return;
+            const id = sel.getAttribute('data-id');
+            const val = sel.value;
+            try {
+                const form = new FormData();
+                form.append('__RequestVerificationToken', anti());
+                form.append('actionId', id);
+                form.append('statusCode', val);
+                const res = await fetch('@Url.Action("SetStatus","KpiActions")', {
+                    method: 'POST',
+                    body: form,
+headers: { 'Accept':'text/html', 'X-Requested-With':'XMLHttpRequest' }                });
+                if (!res.ok) throw 0;
+                await loadActionsHtml(currentKpiId);
+            } catch { alert('Failed to update status.'); }
+        });
+
+        // ---------------------------
+        // Add Action Modal
+        // ---------------------------
+        function openAddAction() {
+            if (!currentKpiId) return;
+            $('af_kpiId').value = currentKpiId;
+            $('af_owner').value = '';
+            $('af_description').value = '';
+            $('af_due').value = '';
+            $('af_status').value = 'todo';
+            const m = new bootstrap.Modal(document.getElementById('addActionModal'));
+            m.show();
+        }
+
+        async function submitAddAction(ev) {
+            ev.preventDefault();
+            try {
+                await postForm('@Url.Action("Create","KpiActions")', $('addActionForm'));
+                bootstrap.Modal.getInstance(document.getElementById('addActionModal')).hide();
+                await loadActionsHtml(currentKpiId);
+            } catch {
+                alert('Save failed.');
+            }
+        }
+
+        // ---------------------------
+        // Move Deadline Modal
+        // ---------------------------
+        function openMoveDeadline(actionId) {
+            $('md_actionId').value = actionId;
+            $('md_reason').value = '';
+            $('md_due').value = '';
+            const m = new bootstrap.Modal(document.getElementById('moveDeadlineModal'));
+            m.show();
+        }
+
+        async function submitMoveDeadline(ev) {
+            ev.preventDefault();
+            try {
+                await postForm('@Url.Action("MoveDeadline","KpiActions")', $('moveDeadlineForm'));
+                bootstrap.Modal.getInstance(document.getElementById('moveDeadlineModal')).hide();
+                await loadActionsHtml(currentKpiId);
+            } catch {
+                alert('Failed to move deadline (check max 3 extensions).');
+            }
+        }
+
+        // ---------------------------
+        // Decisions Board (HTML fetch)
+        // ---------------------------
+        async function showDecisions() {
+            if (!runKpiIds.length) return;
+            $('decisionsWrap').classList.remove('d-none');
+            $('decisionsBody').innerHTML = "<div class='text-muted small'>Loading…</div>";
+            try {
+                const res = await fetch('@Url.Action("DecisionsBoardHtml","RedBoard")', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'text/html',
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': anti()
+                    },
+                    body: JSON.stringify(runKpiIds)
+                });
+                if (!res.ok) throw 0;
+                $('decisionsBody').innerHTML = await res.text();
+                $('decisionsWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch {
+                $('decisionsBody').innerHTML = "<div class='text-danger small'>Failed to load decisions.</div>";
+            }
+        }
+
+        // ---------------------------
+        // Boot
+        // ---------------------------
         document.addEventListener('DOMContentLoaded', () => loadRedList());
+        window.submitAddAction = submitAddAction;
+        window.submitMoveDeadline = submitMoveDeadline;
+        window.openAddAction = openAddAction;
+        window.openMoveDeadline = openMoveDeadline;
+        window.showDecisions = showDecisions;
     </script>
 }
 
@@ -144,25 +319,36 @@
         </div>
     }
 
+    <!-- hidden antiforgery to reuse in JS -->
+    <form id="af" method="post" class="d-none">
+        @Html.AntiForgeryToken()
+    </form>
+
     <div id="emptyMsg" class="alert alert-secondary rounded-4 d-none">
         No KPIs are currently marked <strong>Écart (red)</strong>.
     </div>
 
     <div id="slideWrap" class="d-none">
-        <!-- Slide header: title + nav -->
+        <!-- Slide header: title + nav + Add Action + Decisions -->
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
+            <div class="me-2">
                 <div class="h4 mb-0 fw-bold" id="kpiHeading">—</div>
-                <div class="text-muted" id="kpiSub">—</div>
+                <div class="text-muted" id="kpiSub" style="white-space:pre-line;">—</div>
             </div>
             <div class="d-flex align-items-center gap-2">
+                <button id="btnAddAction" class="btn btn-primary" type="button" onclick="openAddAction()" disabled>
+                    ➕ Add Action
+                </button>
                 <span class="text-muted" id="slideCounter">0 / 0</span>
                 <button class="btn btn-outline-secondary" onclick="prevSlide()">◀</button>
                 <button class="btn btn-outline-secondary" onclick="nextSlide()">▶</button>
+                <button id="btnDecisions" class="btn btn-outline-secondary" type="button" onclick="showDecisions()" disabled>
+                    Decisions
+                </button>
             </div>
         </div>
 
-        <!-- Title slide (shown for each priority group) -->
+        <!-- Title slide (your group header) -->
         <div id="titleSlide" class="text-center py-5 d-none">
             <div class="bg-white border rounded shadow-sm p-5">
                 <div class="display-4 fw-bold mb-3">Priority</div>
@@ -171,7 +357,7 @@
             </div>
         </div>
 
-        <!-- KPI slide -->
+        <!-- KPI slide (UNCHANGED layout) -->
         <div id="kpiSlide">
             <div class="row g-4 mb-4">
                 <div class="col-md-9">
@@ -212,5 +398,101 @@
                 </div> <!-- /col -->
             </div> <!-- /row -->
         </div> <!-- /kpiSlide -->
-    </div> <!-- /slideWrap -->
+
+        <!-- Actions block (HTML injected) -->
+        <div id="actionsBlock" class="mt-3 d-none">
+            <div class="bg-white border rounded-3 p-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0 text-secondary fw-bold">Actions for this KPI</h6>
+                </div>
+                <div id="actionsList"></div>
+            </div>
+        </div>
+
+        <!-- Decisions board (HTML injected when requested) -->
+        <div id="decisionsWrap" class="mt-4 d-none">
+            <div class="bg-white border rounded-3 p-3">
+                <h5 class="mb-3">Decisions</h5>
+                <div id="decisionsBody"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Action Modal -->
+<div class="modal fade" id="addActionModal" tabindex="-1" aria-labelledby="addActionLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content rounded-3">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addActionLabel">Add Action</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="addActionForm" method="post" onsubmit="submitAddAction(event)">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+            <input type="hidden" name="KpiId" id="af_kpiId" />
+            <div class="mb-3">
+                <label class="form-label">Owner</label>
+                <input class="form-control" name="Owner" id="af_owner" required />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Assigned At</label>
+                <input type="datetime-local" class="form-control" name="AssignedAt" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Action</label>
+                <textarea class="form-control" name="Description" id="af_description" rows="3" required></textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Due Date</label>
+                <input type="datetime-local" class="form-control" name="DueDate" id="af_due" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Status</label>
+                <select class="form-select" name="StatusCode" id="af_status">
+                    <option value="todo">To Do</option>
+                    <option value="inprogress">In Progress</option>
+                    <option value="done">Done</option>
+                </select>
+            </div>
+            <input type="hidden" name="ExtensionCount" value="0" />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Action</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Move Deadline Modal -->
+<div class="modal fade" id="moveDeadlineModal" tabindex="-1" aria-labelledby="moveDeadlineLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content rounded-3">
+      <div class="modal-header">
+        <h5 class="modal-title" id="moveDeadlineLabel">Move Deadline</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="moveDeadlineForm" method="post" onsubmit="submitMoveDeadline(event)">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+            <input type="hidden" name="actionId" id="md_actionId" />
+            <div class="mb-3">
+                <label class="form-label">New Due Date</label>
+                <input type="datetime-local" class="form-control" name="newDueDate" id="md_due" required />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Reason (optional)</label>
+                <textarea class="form-control" name="reason" id="md_reason" rows="2"></textarea>
+            </div>
+            <div class="text-muted small">Max 3 extensions enforced.</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Move</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>

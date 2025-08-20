@@ -154,7 +154,8 @@ label, select { font-size: 1.05rem; }
 }
 
 /* Remove Bootstrap caret (the arrow/dot you don’t like) */
-.dropdown-toggle::after { display: none; }
+/* .dropdown-toggle::after { display: none; } */
+/* Show a right-pointing arrow on submenu triggers */
 
 /* Multi-level dropdown support (no JS dependency) */
 .dropdown-submenu { position: relative; }
@@ -162,6 +163,7 @@ label, select { font-size: 1.05rem; }
   top: 0; left: 100%;
   margin-top: -0.25rem; margin-left: .1rem;
 }
+
 
 /* Optional: open on hover for mice/trackpads */
 @media (hover: hover) and (pointer: fine) {

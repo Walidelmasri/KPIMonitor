@@ -2,6 +2,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using KPIMonitor.Data;
 using KPIMonitor.Models;
+using System.Text; // add at top of file if not present
+using System.Net;  // add at top of file if not present
+
 
 namespace KPIMonitor.Controllers
 {
@@ -242,19 +245,19 @@ public async Task<IActionResult> SaveAction(KpiAction vm)
     return Ok(new { ok = true });
 }
 
-[HttpGet]
-public async Task<IActionResult> ActionsList(decimal kpiId)
-{
-    var list = await _db.KpiActions
-        .AsNoTracking()
-        .Where(a => a.KpiId == kpiId)
-        .OrderBy(a => a.StatusCode)
-        .ThenBy(a => a.DueDate)
-        .ToListAsync();
+// [HttpGet]
+// public async Task<IActionResult> ActionsList(decimal kpiId)
+// {
+//     var list = await _db.KpiActions
+//         .AsNoTracking()
+//         .Where(a => a.KpiId == kpiId)
+//         .OrderBy(a => a.StatusCode)
+//         .ThenBy(a => a.DueDate)
+//         .ToListAsync();
 
-    ViewBag.KpiId = kpiId;
-    return PartialView("_ActionsList", list);
-}
+//     ViewBag.KpiId = kpiId;
+//     return PartialView("_ActionsList", list);
+// }
 
 [HttpPost]
 [ValidateAntiForgeryToken]
@@ -301,21 +304,135 @@ public async Task<IActionResult> SetStatus(decimal actionId, string statusCode)
 }
 
 // Final "Decisions" board for the current run (three columns by status)
-[HttpPost]
-public async Task<IActionResult> DecisionsBoard([FromBody] decimal[] kpiIds)
+// [HttpPost]
+// public async Task<IActionResult> DecisionsBoard([FromBody] decimal[] kpiIds)
+// {
+//     var actions = await _db.KpiActions
+//         .AsNoTracking()
+//         .Where(a => kpiIds.Contains(a.KpiId))
+//         .OrderBy(a => a.StatusCode).ThenBy(a => a.DueDate)
+//         .ToListAsync();
+
+//     var todo = actions.Where(a => a.StatusCode == "todo").ToList();
+//     var prog = actions.Where(a => a.StatusCode == "inprogress").ToList();
+//     var done = actions.Where(a => a.StatusCode == "done").ToList();
+
+//     ViewBag.Total = actions.Count;
+//     return PartialView("_DecisionsBoard", (todo, prog, done));
+// }
+// ---------- HTML (no partials, no JSON) ----------
+
+[HttpGet]
+public async Task<IActionResult> ActionsListHtml(decimal kpiId)
 {
+    var items = await _db.KpiActions
+        .AsNoTracking()
+        .Where(a => a.KpiId == kpiId)
+        .OrderBy(a => a.StatusCode)
+        .ThenBy(a => a.DueDate)
+        .ToListAsync();
+
+    static string H(string? s) => WebUtility.HtmlEncode(s ?? "");
+    static string Fmt(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
+
+    var sb = new StringBuilder();
+
+    if (items.Count == 0)
+    {
+        sb.Append("<div class='text-muted small'>No actions yet for this KPI.</div>");
+        return Content(sb.ToString(), "text/html");
+    }
+
+    foreach (var a in items)
+    {
+        var sTodo = a.StatusCode?.Equals("todo", StringComparison.OrdinalIgnoreCase) == true ? "selected" : "";
+        var sProg = a.StatusCode?.Equals("inprogress", StringComparison.OrdinalIgnoreCase) == true ? "selected" : "";
+        var sDone = a.StatusCode?.Equals("done", StringComparison.OrdinalIgnoreCase) == true ? "selected" : "";
+
+        sb.Append(@$"
+<div class='border rounded-3 p-2 mb-2 bg-white'>
+  <div class='d-flex justify-content-between align-items-center'>
+    <div>
+      <strong>{H(a.Owner)}</strong>
+      <div class='small text-muted'>Assigned: {Fmt(a.AssignedAt)}</div>
+    </div>
+    <div class='d-flex align-items-center gap-2'>
+      <select class='form-select form-select-sm' data-action='set-status' data-id='{a.ActionId}'>
+        <option value='todo' {sTodo}>To Do</option>
+        <option value='inprogress' {sProg}>In Progress</option>
+        <option value='done' {sDone}>Done</option>
+      </select>
+      <button type='button' class='btn btn-sm btn-outline-secondary' data-action='move-deadline' data-id='{a.ActionId}'>Move deadline</button>
+    </div>
+  </div>
+  <div class='mt-2'>{H(a.Description)}</div>
+  <div class='small text-muted mt-1'>Due: {Fmt(a.DueDate)} • Ext: {a.ExtensionCount}</div>
+</div>");
+    }
+
+    return Content(sb.ToString(), "text/html");
+}
+
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> DecisionsBoardHtml([FromBody] decimal[] kpiIds)
+{
+    if (kpiIds == null || kpiIds.Length == 0)
+        return Content("<div class='text-muted small'>No KPIs in this run.</div>", "text/html");
+
     var actions = await _db.KpiActions
         .AsNoTracking()
         .Where(a => kpiIds.Contains(a.KpiId))
         .OrderBy(a => a.StatusCode).ThenBy(a => a.DueDate)
         .ToListAsync();
 
-    var todo = actions.Where(a => a.StatusCode == "todo").ToList();
-    var prog = actions.Where(a => a.StatusCode == "inprogress").ToList();
-    var done = actions.Where(a => a.StatusCode == "done").ToList();
+    static string H(string? s) => WebUtility.HtmlEncode(s ?? "");
+    static string Fmt(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
 
-    ViewBag.Total = actions.Count;
-    return PartialView("_DecisionsBoard", (todo, prog, done));
+    var todo = actions.Where(a => string.Equals(a.StatusCode, "todo", StringComparison.OrdinalIgnoreCase)).ToList();
+    var prog = actions.Where(a => string.Equals(a.StatusCode, "inprogress", StringComparison.OrdinalIgnoreCase)).ToList();
+    var done = actions.Where(a => string.Equals(a.StatusCode, "done", StringComparison.OrdinalIgnoreCase)).ToList();
+
+    string Col(string title, string badgeClass, IEnumerable<KpiAction> items)
+    {
+        var sb = new StringBuilder();
+        sb.Append(@$"<div class='col-md-4'>
+  <h6 class='text-secondary fw-bold mb-2'>{H(title)}</h6>
+  <div class='d-grid gap-2'>");
+
+        if (!items.Any())
+        {
+            sb.Append("<div class='text-muted small'>No items.</div>");
+        }
+        else
+        {
+            foreach (var a in items)
+            {
+                sb.Append(@$"
+    <div class='border rounded-3 p-2 bg-white'>
+      <div class='d-flex justify-content-between align-items-center'>
+        <strong>{H(a.Owner)}</strong>
+        <span class='badge rounded-pill {badgeClass}'>{H(title)}</span>
+      </div>
+      <div class='mt-1'>{H(a.Description)}</div>
+      <div class='text-muted small mt-1'>Due: {Fmt(a.DueDate)} • Ext: {a.ExtensionCount}</div>
+    </div>");
+            }
+        }
+
+        sb.Append("</div></div>");
+        return sb.ToString();
+    }
+
+    var html =
+        "<div class='row g-3'>" +
+        Col("To Do", "text-bg-secondary", todo) +
+        Col("In Progress", "text-bg-warning", prog) +
+        Col("Done", "text-bg-success", done) +
+        "</div>";
+
+    return Content(html, "text/html");
 }
+
     }
 }

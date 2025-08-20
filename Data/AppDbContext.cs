@@ -209,8 +209,9 @@ modelBuilder.Entity<KpiAction>(e =>
     e.ToTable("KPIACTION");
 
     e.HasKey(x => x.ActionId);
-    e.Property(x => x.ActionId).HasColumnName("ACTIONID"); // Oracle identity column
-
+    e.Property(x => x.ActionId)
+     .HasColumnName("ACTIONID")
+     .ValueGeneratedOnAdd();   // <-- add this
     e.Property(x => x.KpiId).HasColumnName("KPIID").IsRequired();
 
     e.Property(x => x.Owner).HasColumnName("OWNER").HasMaxLength(100).IsRequired();
@@ -242,8 +243,9 @@ modelBuilder.Entity<KpiActionDeadlineHistory>(e =>
     e.ToTable("KPIACTIONDEADLINEHISTORY");
 
     e.HasKey(x => x.Id);
-    e.Property(x => x.Id).HasColumnName("ID"); // Oracle identity
-
+    e.Property(x => x.Id)
+     .HasColumnName("ID")
+     .ValueGeneratedOnAdd();   // <-- add this
     e.Property(x => x.ActionId).HasColumnName("ACTIONID").IsRequired();
 
     e.Property(x => x.OldDueDate).HasColumnName("OLDDUEDATE");

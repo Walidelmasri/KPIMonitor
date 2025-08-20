@@ -45,24 +45,27 @@ namespace KPIMonitor.Controllers
             return View(vm);
         }
 
-        // Create (POST)
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(KpiAction vm)
-        {
-            if (!ModelState.IsValid) return View(vm);
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> Create(KpiAction vm)
+{
+    if (!ModelState.IsValid) return View(vm);
 
-            vm.CreatedBy = User?.Identity?.Name ?? "system";
-            vm.CreatedDate = DateTime.UtcNow;
-            vm.LastChangedBy = vm.CreatedBy;
-            vm.LastChangedDate = vm.CreatedDate;
+    vm.CreatedBy = User?.Identity?.Name ?? "system";
+    vm.CreatedDate = DateTime.UtcNow;
+    vm.LastChangedBy = vm.CreatedBy;
+    vm.LastChangedDate = vm.CreatedDate;
 
-            _db.KpiActions.Add(vm);
-            await _db.SaveChangesAsync();
+    _db.KpiActions.Add(vm);
+    await _db.SaveChangesAsync();
 
-            TempData["Msg"] = "Action created.";
-            return RedirectToAction(nameof(Index), new { kpiId = vm.KpiId });
-        }
+    // NEW: if modal/AJAX, just return 200 OK (no redirect)
+    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        return Content("OK", "text/html");
+
+    TempData["Msg"] = "Action created.";
+    return RedirectToAction(nameof(Index), new { kpiId = vm.KpiId });
+}
 
         // Edit (basic fields)
         public async Task<IActionResult> Edit(decimal id)
@@ -93,58 +96,64 @@ namespace KPIMonitor.Controllers
             return RedirectToAction(nameof(Index), new { kpiId = item.KpiId });
         }
 
-        // Move deadline (enforce <= 3 extensions, record history)
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> MoveDeadline(decimal actionId, DateTime newDueDate, string? reason)
-        {
-            var act = await _db.KpiActions.FirstOrDefaultAsync(a => a.ActionId == actionId);
-            if (act == null) return NotFound();
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> MoveDeadline(decimal actionId, DateTime newDueDate, string? reason)
+{
+    var act = await _db.KpiActions.FirstOrDefaultAsync(a => a.ActionId == actionId);
+    if (act == null) return NotFound();
 
-            if (act.ExtensionCount >= 3)
-            {
-                TempData["Msg"] = "Maximum of 3 deadline extensions reached.";
-                return RedirectToAction(nameof(Index), new { kpiId = act.KpiId });
-            }
+    if (act.ExtensionCount >= 3)
+    {
+        TempData["Msg"] = "Maximum of 3 deadline extensions reached.";
+        return RedirectToAction(nameof(Index), new { kpiId = act.KpiId });
+    }
 
-            var hist = new KpiActionDeadlineHistory
-            {
-                ActionId = act.ActionId,
-                OldDueDate = act.DueDate,
-                NewDueDate = newDueDate,
-                ChangedAt = DateTime.UtcNow,
-                ChangedBy = User?.Identity?.Name ?? "system",
-                Reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim()
-            };
-            _db.KpiActionDeadlineHistories.Add(hist);
+    var hist = new KpiActionDeadlineHistory
+    {
+        ActionId = act.ActionId,
+        OldDueDate = act.DueDate,
+        NewDueDate = newDueDate,
+        ChangedAt = DateTime.UtcNow,
+        ChangedBy = User?.Identity?.Name ?? "system",
+        Reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim()
+    };
+    _db.KpiActionDeadlineHistories.Add(hist);
 
-            act.DueDate = newDueDate;
-            act.ExtensionCount = (short)(act.ExtensionCount + 1);
-            act.LastChangedBy = hist.ChangedBy;
-            act.LastChangedDate = hist.ChangedAt;
+    act.DueDate = newDueDate;
+    act.ExtensionCount = (short)(act.ExtensionCount + 1);
+    act.LastChangedBy = hist.ChangedBy;
+    act.LastChangedDate = hist.ChangedAt;
 
-            await _db.SaveChangesAsync();
+    await _db.SaveChangesAsync();
 
-            TempData["Msg"] = "Deadline moved.";
-            return RedirectToAction(nameof(Index), new { kpiId = act.KpiId });
-        }
+    // NEW
+    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        return Content("OK", "text/html");
 
-        // Update status only (todo/inprogress/done)
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SetStatus(decimal actionId, string statusCode)
-        {
-            var act = await _db.KpiActions.FirstOrDefaultAsync(a => a.ActionId == actionId);
-            if (act == null) return NotFound();
+    TempData["Msg"] = "Deadline moved.";
+    return RedirectToAction(nameof(Index), new { kpiId = act.KpiId });
+}
 
-            act.StatusCode = statusCode?.Trim().ToLowerInvariant() ?? "todo";
-            act.LastChangedBy = User?.Identity?.Name ?? "system";
-            act.LastChangedDate = DateTime.UtcNow;
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> SetStatus(decimal actionId, string statusCode)
+{
+    var act = await _db.KpiActions.FirstOrDefaultAsync(a => a.ActionId == actionId);
+    if (act == null) return NotFound();
 
-            await _db.SaveChangesAsync();
+    act.StatusCode = statusCode?.Trim().ToLowerInvariant() ?? "todo";
+    act.LastChangedBy = User?.Identity?.Name ?? "system";
+    act.LastChangedDate = DateTime.UtcNow;
 
-            TempData["Msg"] = "Status updated.";
-            return RedirectToAction(nameof(Index), new { kpiId = act.KpiId });
-        }
+    await _db.SaveChangesAsync();
+
+    // NEW
+    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        return Content("OK");
+
+    TempData["Msg"] = "Status updated.";
+    return RedirectToAction(nameof(Index), new { kpiId = act.KpiId });
+}
     }
 }
