@@ -11,25 +11,61 @@ namespace KPIMonitor.Controllers
         private readonly AppDbContext _db;
         public KpiYearPlansController(AppDbContext db) => _db = db;
 
-        // GET: /KpiYearPlans
-        public async Task<IActionResult> Index(int? year)
-        {
-            var q = _db.KpiYearPlans
-                       .Include(p => p.Kpi)
-                       .Include(p => p.Period)
-                       .AsNoTracking();
+        // // GET: /KpiYearPlans
+        // public async Task<IActionResult> Index(int? year)
+        // {
+        //     var q = _db.KpiYearPlans
+        //                .Include(p => p.Kpi)
+        //                .Include(p => p.Period)
+        //                .AsNoTracking();
 
-            if (year.HasValue)
-                q = q.Where(x => x.Period != null && x.Period.Year == year.Value);
+        //     if (year.HasValue)
+        //         q = q.Where(x => x.Period != null && x.Period.Year == year.Value);
 
-            var data = await q.OrderBy(x => x.Period!.Year)
-                              .ThenBy(x => x.KpiId)
-                              .ToListAsync();
+        //     var data = await q.OrderBy(x => x.Period!.Year)
+        //                       .ThenBy(x => x.KpiId)
+        //                       .ToListAsync();
 
-            ViewBag.FilterYear = year;
-            return View(data);
-        }
+        //     ViewBag.FilterYear = year;
+        //     return View(data);
+        // }
+// GET: /KpiYearPlans
+public async Task<IActionResult> Index(int? year, decimal? pillarId)
+{
+    var q = _db.KpiYearPlans
+               .Include(p => p.Period)
+               .Include(p => p.Kpi)
+                   .ThenInclude(k => k.Pillar)   // needed to show/filter by pillar
+               .AsNoTracking();
 
+    if (year.HasValue)
+        q = q.Where(x => x.Period != null && x.Period.Year == year.Value);
+
+    if (pillarId.HasValue)
+        q = q.Where(x => x.Kpi != null && x.Kpi.PillarId == pillarId.Value);
+
+    var data = await q
+        .OrderBy(x => x.Period!.Year)
+        .ThenBy(x => x.Kpi!.Pillar!.PillarCode)   // stable, nice ordering
+        .ThenBy(x => x.Kpi!.KpiCode)
+        .ToListAsync();
+
+    // for the filters
+    ViewBag.FilterYear = year;
+    ViewBag.CurrentPillarId = pillarId;
+
+    // dropdown: pillars ordered by code
+    ViewBag.Pillars = new SelectList(
+        await _db.DimPillars
+            .AsNoTracking()
+            .OrderBy(p => p.PillarCode)
+            .Select(p => new { p.PillarId, Name = p.PillarCode + " — " + p.PillarName })
+            .ToListAsync(),
+        "PillarId", "Name", pillarId
+    );
+
+    return View(data);
+}
         // GET: /KpiYearPlans/Create
         public async Task<IActionResult> Create()
         {

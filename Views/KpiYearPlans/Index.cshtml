@@ -2,6 +2,7 @@
 @{
     ViewData["Title"] = "KPI Year Plans";
     var filterYear = ViewBag.FilterYear as int?;
+    var currentPillarId = ViewBag.CurrentPillarId as decimal?;
 }
 @if (TempData["Msg"] is string msg)
 {
@@ -16,26 +17,44 @@
             </div>
         }
         <div class="with-rails">
-<!-- One row: filter (input + button) on the left, new year button on the right -->
-<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-    <!-- Filter form -->
-    <form asp-action="Index" method="get" class="d-flex align-items-center gap-2 mb-0 flex-nowrap">
-        <div class="input-group" style="width:auto;">
-            <input type="number" name="year" class="form-control"
-                   placeholder="Filter by year (e.g., 2025)"
-                   value="@(filterYear?.ToString() ?? "")"
-                   style="max-width:180px;" />
-            <button type="submit" class="btn btn-outline-secondary">Filter</button>
-        </div>
+<!-- One row: year + pillar + reset on the left, New Year Plan on the right -->
+<div class="row g-2 align-items-center mb-3">
+    <!-- Year + Apply -->
+    <div class="col-auto">
+        <form asp-action="Index" method="get" class="d-flex align-items-center gap-2 mb-0">
+            <div class="input-group" style="min-width: 220px; max-width: 220px;">
+                <input type="number"
+                       name="year"
+                       class="form-control"
+                       placeholder="Filter by year (e.g., 2025)"
+                       value="@(filterYear?.ToString() ?? "")" />
+                <button type="submit" class="btn btn-outline-secondary">Apply</button>
+            </div>
 
-        @if (filterYear != null)
-        {
-            <a class="btn btn-outline-secondary" href="@Url.Action("Index")">Reset</a>
-        }
-    </form>
+            <!-- Pillar -->
+            @Html.DropDownList(
+                "pillarId",
+                (SelectList)ViewBag.Pillars,
+                "All pillars",
+                new {
+                    @class = "form-select",
+                    style  = "min-width:260px",
+                    onchange = "this.form.submit()"  // auto-apply when pillar changes
+                }
+            )
 
-    <!-- New Year Plan button -->
-    <a class="btn btn-primary rounded-4" href="@Url.Action("Create")">➕ New Year Plan</a>
+            <!-- Reset (only if any filter is active) -->
+            @if (filterYear != null || ViewBag.CurrentPillarId != null)
+            {
+                <a class="btn btn-outline-secondary" href="@Url.Action("Index")">Reset</a>
+            }
+        </form>
+    </div>
+
+    <!-- Push the action button to the far right -->
+    <div class="col ms-auto text-end">
+        <a class="btn btn-primary rounded-4" href="@Url.Action("Create")">➕ New Year Plan</a>
+    </div>
 </div>
 
     <div class="table-responsive shadow-sm rounded-4 border bg-white">
@@ -44,6 +63,7 @@
                 <tr>
                     <th style="width:40px;">Year</th>
                     <th>KPI</th>
+                    <th style="width:120px;">Pillar</th>
                     <th style="width:120px;">Frequency</th>
                     <th style= "width:80px;">Unit</th>
                     <th style="width:140px;">Annual Target</th>
@@ -61,6 +81,11 @@
                         <tr>
                             <td>@(p.Period?.Year.ToString() ?? "—")</td>
                             <td>@(p.Kpi != null ? $"{p.Kpi.KpiCode} — {p.Kpi.KpiName}" : p.KpiId.ToString())</td>
+                            <td>
+                            @(p.Kpi?.Pillar != null
+                            ? $"{p.Kpi.Pillar.PillarCode} — {p.Kpi.Pillar.PillarName}"
+                            : "—")
+                            </td>
                             <td>@p.Frequency</td>
                             <td>@p.Unit</td>
                             <td>@(p.AnnualTarget?.ToString("0.###") ?? "—")</td>

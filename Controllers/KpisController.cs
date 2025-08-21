@@ -34,8 +34,11 @@ public async Task<IActionResult> Index(decimal? pillarId)
     if (pillarId.HasValue)
         q = q.Where(k => k.PillarId == pillarId.Value);
 
-    // Order the grid (by KPI code so it’s stable)
-    var data = await q.OrderBy(k => k.KpiCode).ToListAsync();
+var data = await q
+    .OrderBy(k => k.Pillar!.PillarCode)          // 1) by Pillar
+    .ThenBy(k => k.Objective!.ObjectiveCode)     // 2) then by Objective code
+    .ThenBy(k => k.KpiCode ?? "")                // 3) finally by KPI code (stable)
+    .ToListAsync();
 
     // Dropdown items: ordered by PillarCode (as requested)
     ViewBag.Pillars = new SelectList(
