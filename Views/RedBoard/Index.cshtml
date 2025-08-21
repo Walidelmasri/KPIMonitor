@@ -335,192 +335,194 @@
             </div>
         </div>
     }
+    <div class="with-rails">
+        <!-- hidden antiforgery to reuse in JS -->
+        <form id="af" method="post" class="d-none">
+            @Html.AntiForgeryToken()
+        </form>
 
-    <!-- hidden antiforgery to reuse in JS -->
-    <form id="af" method="post" class="d-none">
-        @Html.AntiForgeryToken()
-    </form>
-
-    <div id="emptyMsg" class="alert alert-secondary rounded-4 d-none">
-        No KPIs are currently marked <strong>Écart (red)</strong>.
-    </div>
-
-    <div id="slideWrap" class="d-none">
-        <!-- Slide header: title + nav + Add Action + Decisions -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div class="me-2">
-                <div class="h4 mb-0 fw-bold" id="kpiHeading">—</div>
-                <div class="text-muted" id="kpiSub" style="white-space:pre-line;">—</div>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <span class="text-muted" id="slideCounter">0 / 0</span>
-
-                <!-- NEW: First-slide button -->
-                <button id="btnFirst" class="btn btn-outline-secondary" type="button" onclick="firstSlide()"
-                    title="Go to first slide">⏮</button>
-
-                <button class="btn btn-outline-secondary" type="button" onclick="prevSlide()">◀</button>
-                <button class="btn btn-outline-secondary" type="button" onclick="nextSlide()">▶</button>
-
-                <!-- NEW: Last-slide (decisions) button -->
-                <button id="btnLast" class="btn btn-outline-secondary" type="button" onclick="lastSlide()"
-                    title="Go to decisions">⏭</button>
-
-            </div>
+        <div id="emptyMsg" class="alert alert-secondary rounded-4 d-none">
+            No KPIs are currently marked <strong>Écart (red)</strong>.
         </div>
 
-        <!-- Title slide (your group header) -->
-        <div id="titleSlide" class="text-center py-5 d-none">
-            <div class="bg-white border rounded shadow-sm p-5">
-                <div class="display-4 fw-bold mb-3">Priority</div>
-                <div class="display-1 fw-bolder" id="titlePriority"></div>
-                <div class="lead text-muted mt-3">Use the arrows to view KPIs in this priority.</div>
-            </div>
-        </div>
-
-        <!-- KPI slide (UNCHANGED layout) -->
-        <div id="kpiSlide">
-            <div class="row g-4 mb-4">
-                <div class="col-md-9">
-                    <div class="bg-white border rounded shadow-sm p-3" style="height:420px;">
-                        <canvas id="rbChart" role="img" aria-label="KPI Chart"></canvas>
-                    </div>
+        <div id="slideWrap" class="d-none">
+            <!-- Slide header: title + nav + Add Action + Decisions -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="me-2">
+                    <div class="h4 mb-0 fw-bold" id="kpiHeading">—</div>
+                    <div class="text-muted" id="kpiSub" style="white-space:pre-line;">—</div>
                 </div>
-                <div class="col-md-3 d-flex">
-                    <div class="card shadow-sm rounded-3 w-100">
-                        <div class="card-body d-flex flex-column justify-content-between h-100">
-                            <div>
-                                <h6 class="card-title text-secondary fw-bold mb-3">KPI Details</h6>
-                                <p class="mb-2" style="font-size: larger;">
-                                    <strong>👁️ Owner:</strong> <span id="m_owner" class="text-dark">—</span>
-                                </p>
-                                <p class="mb-2" style="font-size: larger;">
-                                    <strong>✍️ Editor:</strong> <span id="m_editor" class="text-dark">—</span>
-                                </p>
-                                <p class="mb-2" style="font-size: larger;">
-                                    <strong>📅 Frequency:</strong> <span id="m_frequency" class="text-dark">—</span>
-                                </p>
-                                <p class="mb-2" style="font-size: larger;">
-                                    <strong>🔢 Unit:</strong> <span id="m_unit" class="text-dark">—</span>
-                                </p>
-                            </div>
-                            <div class="mt-auto">
-                                <div class="mb-4 text-center">
-                                    <div class="text-muted">Priority</div>
-                                    <div id="m_priority" class="display-6 fw-bold text-dark">—</div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted" id="slideCounter">0 / 0</span>
+
+                    <!-- NEW: First-slide button -->
+                    <button id="btnFirst" class="btn btn-outline-secondary" type="button" onclick="firstSlide()"
+                        title="Go to first slide">⏮</button>
+
+                    <button class="btn btn-outline-secondary" type="button" onclick="prevSlide()">◀</button>
+                    <button class="btn btn-outline-secondary" type="button" onclick="nextSlide()">▶</button>
+
+                    <!-- NEW: Last-slide (decisions) button -->
+                    <button id="btnLast" class="btn btn-outline-secondary" type="button" onclick="lastSlide()"
+                        title="Go to decisions">⏭</button>
+
+                </div>
+            </div>
+
+            <!-- Title slide (your group header) -->
+            <div id="titleSlide" class="text-center py-5 d-none">
+                <div class="bg-white border rounded shadow-sm p-5">
+                    <div class="display-4 fw-bold mb-3">Priority</div>
+                    <div class="display-1 fw-bolder" id="titlePriority"></div>
+                    <div class="lead text-muted mt-3">Use the arrows to view KPIs in this priority.</div>
+                </div>
+            </div>
+
+            <!-- KPI slide (UNCHANGED layout) -->
+            <div id="kpiSlide">
+                <div class="row g-4 mb-4">
+                    <div class="col-md-9">
+                        <div class="bg-white border rounded shadow-sm p-3" style="height:420px;">
+                            <canvas id="rbChart" role="img" aria-label="KPI Chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-3 d-flex">
+                        <div class="card shadow-sm rounded-3 w-100">
+                            <div class="card-body d-flex flex-column justify-content-between h-100">
+                                <div>
+                                    <h6 class="card-title text-secondary fw-bold mb-3">KPI Details</h6>
+                                    <p class="mb-2" style="font-size: larger;">
+                                        <strong>👁️ Owner:</strong> <span id="m_owner" class="text-dark">—</span>
+                                    </p>
+                                    <p class="mb-2" style="font-size: larger;">
+                                        <strong>✍️ Editor:</strong> <span id="m_editor" class="text-dark">—</span>
+                                    </p>
+                                    <p class="mb-2" style="font-size: larger;">
+                                        <strong>📅 Frequency:</strong> <span id="m_frequency" class="text-dark">—</span>
+                                    </p>
+                                    <p class="mb-2" style="font-size: larger;">
+                                        <strong>🔢 Unit:</strong> <span id="m_unit" class="text-dark">—</span>
+                                    </p>
                                 </div>
-                                <div class="text-center">
-                                    <div class="text-muted mb-1">Status</div>
-                                    <span id="m_status" class="status-pill">—</span>
-                                </div>
-                                <div class="text-center mt-3">
-                                    <button id="btnAddAction" class="btn btn-primary" type="button"
-                                        onclick="openAddAction()" disabled>
-                                        ➕ Add Action
-                                    </button>
+                                <div class="mt-auto">
+                                    <div class="mb-4 text-center">
+                                        <div class="text-muted">Priority</div>
+                                        <div id="m_priority" class="display-6 fw-bold text-dark">—</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-muted mb-1">Status</div>
+                                        <span id="m_status" class="status-pill">—</span>
+                                    </div>
+                                    <div class="text-center mt-3">
+                                        <button id="btnAddAction" class="btn btn-primary" type="button"
+                                            onclick="openAddAction()" disabled>
+                                            ➕ Add Action
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div> <!-- /col -->
-            </div> <!-- /row -->
-        </div> <!-- /kpiSlide -->
+                    </div> <!-- /col -->
+                </div> <!-- /row -->
+            </div> <!-- /kpiSlide -->
 
-        <!-- Actions block (HTML injected) -->
-        <div id="actionsBlock" class="mt-3 d-none">
-            <div class="bg-white border rounded-3 p-3">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="mb-0 text-secondary fw-bold">Actions for this KPI</h6>
+            <!-- Actions block (HTML injected) -->
+            <div id="actionsBlock" class="mt-3 d-none">
+                <div class="bg-white border rounded-3 p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0 text-secondary fw-bold">Actions for this KPI</h6>
+                    </div>
+                    <div id="actionsList"></div>
                 </div>
-                <div id="actionsList"></div>
+            </div>
+
+            <!-- Decisions board (HTML injected when requested) -->
+            <div id="decisionsWrap" class="mt-4 d-none">
+                <div class="bg-white border rounded-3 p-3">
+                    <h5 class="mb-3">Decisions</h5>
+                    <div id="decisionsBody"></div>
+                </div>
             </div>
         </div>
 
-        <!-- Decisions board (HTML injected when requested) -->
-        <div id="decisionsWrap" class="mt-4 d-none">
-            <div class="bg-white border rounded-3 p-3">
-                <h5 class="mb-3">Decisions</h5>
-                <div id="decisionsBody"></div>
+    </div>
+
+    <!-- Add Action Modal -->
+    <div class="modal fade" id="addActionModal" tabindex="-1" aria-labelledby="addActionLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content rounded-3">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addActionLabel">Add Action</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="addActionForm" method="post" onsubmit="submitAddAction(event)">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-body">
+                        <input type="hidden" name="KpiId" id="af_kpiId" />
+                        <div class="mb-3">
+                            <label class="form-label">Owner</label>
+                            <input class="form-control" name="Owner" id="af_owner" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Assigned At</label>
+                            <input type="datetime-local" class="form-control" name="AssignedAt" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Action</label>
+                            <textarea class="form-control" name="Description" id="af_description" rows="3"
+                                required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Due Date</label>
+                            <input type="datetime-local" class="form-control" name="DueDate" id="af_due" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" name="StatusCode" id="af_status">
+                                <option value="todo">To Do</option>
+                                <option value="inprogress">In Progress</option>
+                                <option value="done">Done</option>
+                            </select>
+                        </div>
+                        <input type="hidden" name="ExtensionCount" value="0" />
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Action</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Add Action Modal -->
-<div class="modal fade" id="addActionModal" tabindex="-1" aria-labelledby="addActionLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content rounded-3">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addActionLabel">Add Action</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <!-- Move Deadline Modal -->
+    <div class="modal fade" id="moveDeadlineModal" tabindex="-1" aria-labelledby="moveDeadlineLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content rounded-3">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="moveDeadlineLabel">Move Deadline</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="moveDeadlineForm" method="post" onsubmit="submitMoveDeadline(event)">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-body">
+                        <input type="hidden" name="actionId" id="md_actionId" />
+                        <div class="mb-3">
+                            <label class="form-label">New Due Date</label>
+                            <input type="datetime-local" class="form-control" name="newDueDate" id="md_due" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Reason (optional)</label>
+                            <textarea class="form-control" name="reason" id="md_reason" rows="2"></textarea>
+                        </div>
+                        <div class="text-muted small">Max 3 extensions enforced.</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Move</button>
+                    </div>
+                </form>
             </div>
-            <form id="addActionForm" method="post" onsubmit="submitAddAction(event)">
-                @Html.AntiForgeryToken()
-                <div class="modal-body">
-                    <input type="hidden" name="KpiId" id="af_kpiId" />
-                    <div class="mb-3">
-                        <label class="form-label">Owner</label>
-                        <input class="form-control" name="Owner" id="af_owner" required />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Assigned At</label>
-                        <input type="datetime-local" class="form-control" name="AssignedAt" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Action</label>
-                        <textarea class="form-control" name="Description" id="af_description" rows="3"
-                            required></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Due Date</label>
-                        <input type="datetime-local" class="form-control" name="DueDate" id="af_due" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Status</label>
-                        <select class="form-select" name="StatusCode" id="af_status">
-                            <option value="todo">To Do</option>
-                            <option value="inprogress">In Progress</option>
-                            <option value="done">Done</option>
-                        </select>
-                    </div>
-                    <input type="hidden" name="ExtensionCount" value="0" />
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Action</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Move Deadline Modal -->
-<div class="modal fade" id="moveDeadlineModal" tabindex="-1" aria-labelledby="moveDeadlineLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content rounded-3">
-            <div class="modal-header">
-                <h5 class="modal-title" id="moveDeadlineLabel">Move Deadline</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="moveDeadlineForm" method="post" onsubmit="submitMoveDeadline(event)">
-                @Html.AntiForgeryToken()
-                <div class="modal-body">
-                    <input type="hidden" name="actionId" id="md_actionId" />
-                    <div class="mb-3">
-                        <label class="form-label">New Due Date</label>
-                        <input type="datetime-local" class="form-control" name="newDueDate" id="md_due" required />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Reason (optional)</label>
-                        <textarea class="form-control" name="reason" id="md_reason" rows="2"></textarea>
-                    </div>
-                    <div class="text-muted small">Max 3 extensions enforced.</div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Move</button>
-                </div>
-            </form>
         </div>
     </div>
 </div>

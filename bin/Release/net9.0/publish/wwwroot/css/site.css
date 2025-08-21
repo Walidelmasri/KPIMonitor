@@ -1,0 +1,374 @@
+/* =========================================================
+   KPIMonitor - site.css
+   Sections:
+   00) Core / Resets
+   01) Typography (Lato + Page Title)
+   02) Global Layout Helpers (universal width + alignment)
+   03) Forms / Inputs
+   04) Cards / Tables / Badges
+   05) Navbar (workflow design + multi-level dropdown)
+   06) Buttons (modern, consistent)
+   07) Login Page
+   08) KPI Status (dot + pill)
+   ========================================================= */
+
+
+/* =========================
+   00) CORE / RESETS
+   ========================= */
+html { font-size: 14px; position: relative; min-height: 100%; }
+@media (min-width: 768px) { html { font-size: 16px; } }
+
+/* Top padding so content isn't hidden behind fixed navbar (≈72px bar + breathing) */
+body {
+  margin-bottom: 60px;
+  padding-top: 75px;
+  font-family: 'Lato', sans-serif;
+  color: #1d1d1f;
+}
+
+/* Accessible focus rings (keep) */
+.btn:focus,
+.btn:active:focus,
+.btn-link.nav-link:focus,
+.form-control:focus,
+.form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+
+/* =========================
+   01) TYPOGRAPHY
+   ========================= */
+.page-title {
+  font-weight: 700;
+  font-size: clamp(1.6rem, 2.2vw + 1rem, 2.2rem);
+  line-height: 1.25;
+  color: #1d1d1f;
+  letter-spacing: 0.2px;
+  margin: 0 0 1.25rem 0;
+}
+.display-4 { font-size: 2.5rem; }
+
+
+/* =========================
+   02) GLOBAL LAYOUT HELPERS
+   (Universal width + consistent alignment)
+   ========================= */
+
+/* Make EVERY page’s content the same width without editing views */
+.container { max-width: 1400px !important; }
+
+/* Optional helper if you choose to wrap pages later:
+   <div class="page-container"> ... </div> */
+.page-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* Space the first table/card/row consistently after the page title */
+.page-title + .table-responsive,
+.page-title + .card,
+.page-title + .row,
+.page-title + table {
+  margin-top: 1.5rem;
+}
+
+/* Make tables stretch nicely and headers stay on one line */
+.table { width: 100%; table-layout: auto; }
+.table thead th {
+  white-space: nowrap;
+  font-weight: 600;
+  background: #f9f9f9;
+}
+
+/* Other globals you already had */
+#modalKpiChart { width: 100% !important; height: 100% !important; }
+label, select { font-size: 1.05rem; }
+
+
+/* =========================
+   03) FORMS / INPUTS
+   ========================= */
+.form-select { padding: 0.6rem 1rem; font-size: 1.05rem; }
+.btn { font-size: 1.05rem; }
+
+.form-floating>.form-control-plaintext::placeholder,
+.form-floating>.form-control::placeholder {
+  color: var(--bs-secondary-color);
+  text-align: end;
+}
+.form-floating>.form-control-plaintext:focus::placeholder,
+.form-floating>.form-control:focus::placeholder { text-align: start; }
+
+
+/* =========================
+   04) CARDS / TABLES / BADGES
+   ========================= */
+.card-title {
+  font-size: 1.2rem;
+  border-bottom: 1px solid #eee;
+  padding-bottom: .5rem;
+  margin-bottom: 1rem;
+  font-weight: 700;
+}
+.badge { font-size: 0.95rem; }
+.table caption { font-size: 1.1rem; font-weight: 600; text-align: left; padding: .5rem; }
+
+
+/* =========================
+   05) NAVBAR (workflow design)
+   - 60px logo height
+   - multi-level dropdowns (Bootstrap 5 + tiny CSS)
+   - green accents, no blue hovers
+   ========================= */
+.navbar.fixed-top { z-index: 1030; height: 72px; }
+
+.navbar-brand img { height: 60px; width: auto; }
+/* More space between logo and text */
+.navbar-brand .app-name {
+  margin-left: 1rem;
+  font-weight: 700; font-size: 18px; color: #1d1d1f; letter-spacing: .2px;
+}
+
+/* Top-level nav links */
+.navbar-nav .nav-link {
+  color: #2d2d2d !important;
+  font-weight: 500; font-size: 15.5px;
+  padding: .6rem .85rem;
+}
+.navbar-nav .nav-link:hover,
+.navbar-nav .nav-link:focus,
+.navbar-nav .nav-link.active {
+  color: #1ca76a !important;           /* BADEA green on hover/active */
+}
+
+/* Dropdown aesthetics (neutral + green hover) */
+.dropdown-menu { border-radius: 12px; padding: .4rem; }
+.dropdown-item { border-radius: 8px; color: #333 !important; font-weight: 500; }
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background: #f2fbf7;                 /* soft green tint */
+  color: #1ca76a !important;           /* remove Bootstrap blue */
+}
+
+/* Remove Bootstrap caret (the arrow/dot you don’t like) */
+/* .dropdown-toggle::after { display: none; } */
+/* Show a right-pointing arrow on submenu triggers */
+
+/* Multi-level dropdown support (no JS dependency) */
+.dropdown-submenu { position: relative; }
+.dropdown-submenu > .dropdown-menu {
+  top: 0; left: 100%;
+  margin-top: -0.25rem; margin-left: .1rem;
+}
+
+
+/* Optional: open on hover for mice/trackpads */
+@media (hover: hover) and (pointer: fine) {
+  .dropdown:hover > .dropdown-menu { display: block; }
+  .dropdown-submenu:hover > .dropdown-menu { display: block; }
+}
+
+
+/* =========================
+   06) BUTTONS (modern, consistent)
+   ========================= */
+/* Base button reset to remove Bootstrap’s glossy look */
+.btn {
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-weight: 600;
+  letter-spacing: .2px;
+  padding: .62rem 1.05rem;
+  transition: background-color .18s ease, color .18s ease, box-shadow .18s ease, transform .08s ease;
+}
+
+/* Subtle elevation */
+.btn:not(.btn-link):not(.btn-outline-*) {
+  box-shadow: 0 2px 6px rgba(0,0,0,.08);
+}
+
+/* Primary action (BADEA green) */
+.btn-primary {
+  background-color: #1ca76a !important;
+  border-color: #1ca76a !important;
+  color: #fff !important;
+}
+.btn-primary:hover { background-color: #16945d !important; border-color: #16945d !important; transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(0); box-shadow: 0 1px 3px rgba(0,0,0,.14) inset; }
+
+/* Secondary/neutral */
+.btn-secondary {
+  background-color: #f4f5f7 !important;
+  border-color: #e6e8eb !important;
+  color: #1d1d1f !important;
+}
+.btn-secondary:hover { background-color: #eceff3 !important; }
+
+/* Outline variants (clean, minimal) */
+.btn-outline-secondary {
+  background: transparent !important;
+  border-color: #cfd6dd !important;
+  color: #47515a !important;
+}
+.btn-outline-secondary:hover {
+  background: #f5f7f9 !important;
+  color: #1d1d1f !important;
+}
+
+/* “Danger lite” for Deactivate etc. */
+.btn-warning {
+  background-color: #fff3e0 !important;   /* pale orange */
+  border-color: #ffd8a8 !important;
+  color: #a36100 !important;
+}
+.btn-warning:hover { background-color: #ffe8c7 !important; }
+
+/* Success (if you need it distinct from primary) */
+.btn-success {
+  background-color: #14a44d !important;
+  border-color: #14a44d !important;
+}
+.btn-success:hover { background-color: #129447 !important; }
+
+/* Rounded, icon-ish Add button (use on Index headers) */
+.btn-add {
+  background-color: #1ca76a !important;
+  border-color: #1ca76a !important;
+  color: #fff !important;
+  border-radius: 9999px;
+  padding: .55rem 1.1rem;
+}
+.btn-add:hover { background-color: #16945d !important; }
+
+/* Make outline buttons less faint in tables */
+.table .btn { box-shadow: none; }
+
+
+/* =========================
+   07) LOGIN PAGE
+   ========================= */
+  /* #login-page {
+      background-image: url('/images/Picture1.png');
+      background-size: cover;
+      background-position: center;
+  } */
+#login-page .login-container { 
+  display: flex; 
+  justify-content: center; 
+  align-items: center; 
+  height: 90vh; 
+}
+#login-page .login-box {
+  background: #fff; padding: 40px; border-radius: 16px;
+  box-shadow: 0 8px 16px rgba(0,0,0,.08);
+  width: 100%; max-width: 400px; text-align: center;
+}
+#login-page .login-logo { width: 320px; height: auto; margin-bottom: 20px; }
+#login-header {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 2rem; font-weight: 600; color: #333; margin-bottom: 1rem; text-align: center;
+}
+#login-form, #login-form * { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; }
+#login-form input.form-control { font-size: 1.125rem; padding: .5rem .75rem; }
+#login-form label { font-weight: 600; font-size: 1rem; margin-bottom: .25rem; display: block; }
+#login-form .text-danger { font-size: .875rem; margin-top: .25rem; }
+#login-form button.btn { font-family: inherit; font-size: 1.125rem; font-weight: 600; padding: .75rem; }
+
+
+/* =========================
+   08) KPI STATUS (dot + pill)
+   ========================= */
+.status-dot {
+  display:inline-block; width:10px; height:10px; border-radius:50%;
+  margin-right:6px; vertical-align:middle;
+}
+.status-green  { background:#198754; }
+.status-red    { background:#dc3545; }
+.status-orange { background:#fd7e14; }
+.status-blue   { background:#0d6efd; }
+
+.status-pill {
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:120px; padding:.42rem .8rem; border-radius:9999px; font-weight:700; color:#fff;
+}
+/* Example:
+   <span class="status-pill" style="background:#198754">Conforme</span>
+*/
+
+.page-hero{
+  position: relative;
+  border-radius: .75rem;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  min-height: 40px;                /* tweak */
+  background-size: cover;
+  background-position: center;
+}
+.page-hero::after{                  /* soft dark overlay for text contrast */
+  content: "";
+  position: absolute; inset: 0;
+  /* background: linear-gradient(180deg, rgba(0,0,0,.25), rgba(0,0,0,.35)); */
+}
+.page-hero-content{
+  position: relative;
+  z-index: 1;
+  padding: 1.25rem 1rem;
+  color: #fff;
+}
+.page-hero h1.page-title{
+  margin: 0;
+  color: whitesmoke;
+}
+#titlePriority { letter-spacing: 1px; }
+
+#btnAddAction {
+  display: inline-block;
+  min-width: 100px; /* match your pill width */
+}
+
+
+/* Turn rails on by adding class="with-rails" to any wrapper */
+.with-rails {
+  position: relative;
+  overflow: visible;            /* allow rails to sit outside the box */
+}
+
+/* Desktop only: paint rails using pseudo-elements so content width is unchanged */
+@media (min-width: 1592px) {
+  .with-rails::before,
+  .with-rails::after {
+    content: "";
+    position: absolute;
+    top: 10px;                /* where rails should start (tweak as you like) */
+    bottom: 0;                  /* run to the bottom of the section */
+    width: 72px;                /* rail visual width */
+    pointer-events: none;       /* purely decorative */
+    background-image: url("/images/side-rail1.png"); /* use ONE file */
+    background-repeat: repeat-y;
+    background-size: 72px auto; /* tile height from the image */
+    image-rendering: auto;
+  }
+
+  /* Left rail sits slightly outside the content */
+  .with-rails::before {
+    left: -85px;                /* push outside; adjust to align with your layout */
+    background-position: left top;
+  }
+
+  /* Right rail mirrors the same image — no second asset required */
+  .with-rails::after {
+    right: -85px;
+    transform: scaleX(-1);      /* mirror the same artwork */
+    transform-origin: center;
+    background-position: right top;
+  }
+}
+
+/* Hide rails on tablet/phone */
+@media (max-width: 991.98px) {
+  .with-rails::before,
+  .with-rails::after { display: none; }
+}

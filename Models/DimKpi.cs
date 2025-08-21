@@ -25,7 +25,7 @@ namespace KPIMonitor.Models
 
         [Required]
         [Column("KPINAME")]
-        [MaxLength(200)]
+        [MaxLength(300)]
         public string KpiName { get; set; }
 
         [Required]
