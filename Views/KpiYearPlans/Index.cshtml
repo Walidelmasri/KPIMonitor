@@ -63,12 +63,12 @@
                 <tr>
                     <th style="width:40px;">Year</th>
                     <th>KPI</th>
-                    <th style="width:120px;">Pillar</th>
+                    <th style="width:170px;">Pillar</th>
                     <th style="width:120px;">Frequency</th>
-                    <th style= "width:80px;">Unit</th>
-                    <th style="width:140px;">Annual Target</th>
-                    <th style="width:140px;">Annual Budget</th>
-                    <th style="width:90px;">Priority</th>
+                    <th style= "width:70px;">Unit</th>
+                    <th style="width:20px;">Annual Target</th>
+                    @* <th style="width:30px;">Annual Budget</th> *@
+                    <th style="width:10px;">Priority</th>
                     <th style="width:100px;">Status</th>
                     <th style="width:120px;">Actions</th>
                 </tr>
@@ -89,7 +89,7 @@
                             <td>@p.Frequency</td>
                             <td>@p.Unit</td>
                             <td>@(p.AnnualTarget?.ToString("0.###") ?? "—")</td>
-                            <td>@(p.AnnualBudget?.ToString("0.###") ?? "—")</td>
+                            @* <td>@(p.AnnualBudget?.ToString("0.###") ?? "—")</td> *@
                             <td>@(p.Priority?.ToString() ?? "—")</td>
                             <td>
                                 @if (p.IsActive == 1)
