@@ -87,150 +87,151 @@ namespace KPIMonitor.Controllers
 
         // The big one: meta + period series + 5-year targets
         [HttpGet]
-        public async Task<IActionResult> GetKpiSummary(decimal kpiId)
+public async Task<IActionResult> GetKpiSummary(decimal kpiId)
+{
+    // 1) Most recent active year plan for this KPI
+    var plan = await _db.KpiYearPlans
+        .Include(p => p.Period)
+        .AsNoTracking()
+        .Where(p => p.KpiId == kpiId && p.IsActive == 1 && p.Period != null)
+        .OrderByDescending(p => p.KpiYearPlanId)
+        .FirstOrDefaultAsync();
+
+    if (plan == null || plan.Period == null)
+    {
+        return Json(new
         {
-            // 1) Find the most recent ACTIVE year plan for this KPI (that has a YEAR period row)
-            var plan = await _db.KpiYearPlans
-                .Include(p => p.Period)        // to read the plan year
-                .AsNoTracking()
-                .Where(p => p.KpiId == kpiId && p.IsActive == 1 && p.Period != null)
-                .OrderByDescending(p => p.KpiYearPlanId)
-                .FirstOrDefaultAsync();
-
-            if (plan == null || plan.Period == null)
+            meta = new
             {
-                // No plan -> return minimal payload so UI shows “—”
-                return Json(new
-                {
-                    meta = new
-                    {
-                        owner = "—",
-                        editor = "—",
-                        valueType = "—",
-                        priority = (int?)null,
-                        statusLabel = "—",
-                        statusColor = ""
-                    },
-                    chart = new
-                    {
-                        labels = Array.Empty<string>(),
-                        actual = Array.Empty<decimal?>(),
-                        target = Array.Empty<decimal?>(),
-                        forecast = Array.Empty<decimal?>(),
-                        yearTargets = Array.Empty<object>()
-                    },
-                    table = Array.Empty<object>()
-                });
-            }
-
-            int planYear = plan.Period.Year;
-
-            // 2) Facts for that plan year (months or quarters), ordered by period
-            var facts = await _db.KpiFacts
-                .Include(f => f.Period)
-                .AsNoTracking()
-                .Where(f => f.KpiId == kpiId &&
-                            f.IsActive == 1 &&
-                            f.KpiYearPlanId == plan.KpiYearPlanId &&
-                            f.Period != null &&
-                            f.Period.Year == planYear)
-                .OrderBy(f => f.Period!.MonthNum ?? 0)
-                .ThenBy(f => f.Period!.QuarterNum ?? 0)
-                .ToListAsync();
-
-            // Labels for months or quarters
-            static string LabelFor(DimPeriod p)
+                owner = "—",
+                editor = "—",
+                valueType = "—",
+                unit = "—",
+                priority = (int?)null,
+                statusLabel = "—",
+                statusColor = "",
+                statusRaw = ""
+            },
+            chart = new
             {
-                if (p.MonthNum.HasValue) return $"{p.Year} — {new DateTime(p.Year, p.MonthNum.Value, 1):MMM}";
-                if (p.QuarterNum.HasValue) return $"{p.Year} — Q{p.QuarterNum.Value}";
-                return p.Year.ToString();
-            }
+                labels = Array.Empty<string>(),
+                actual = Array.Empty<decimal?>(),
+                target = Array.Empty<decimal?>(),
+                forecast = Array.Empty<decimal?>(),
+                yearTargets = Array.Empty<object>()
+            },
+            table = Array.Empty<object>()
+        });
+    }
 
-            var labels = facts.Select(f => LabelFor(f.Period!)).ToList();
-            var actual = facts.Select(f => (decimal?)f.ActualValue).ToList();
-            var target = facts.Select(f => (decimal?)f.TargetValue).ToList();
-            var forecast = facts.Select(f => (decimal?)f.ForecastValue).ToList();
+    int planYear = plan.Period.Year;
 
-            // 3) Status = latest fact’s StatusCode in that year (map to label + color)
-            var lastFact = facts.LastOrDefault();
-            (string label, string color) status = lastFact?.StatusCode?.Trim().ToLower() switch
-            {
-                "green" => ("Ok", "#28a745"), 
-                "red" => ("Needs Attention", "#dc3545"), 
-                "orange" => ("Catching Up", "#fd7e14"), 
-                "blue" => ("Data Missing", "#0d6efd"),
-                "conforme" => ("Ok", "#28a745"), 
-                "ecart" => ("Needs Attention", "#dc3545"), 
-                "rattrapage"=> ("Catching Up", "#fd7e14"), 
-                "attente"=> ("Data Missing", "#0d6efd"),
-                _ => ("—", "")
-            };
+    // 2) Facts for that plan year (months or quarters)
+    var facts = await _db.KpiFacts
+        .Include(f => f.Period)
+        .AsNoTracking()
+        .Where(f => f.KpiId == kpiId &&
+                    f.IsActive == 1 &&
+                    f.KpiYearPlanId == plan.KpiYearPlanId &&
+                    f.Period != null &&
+                    f.Period.Year == planYear)
+        .OrderBy(f => f.Period!.MonthNum ?? 0)
+        .ThenBy(f => f.Period!.QuarterNum ?? 0)
+        .ToListAsync();
 
-            // 4) Five-year targets (append to the RIGHT as bars)
-            var fy = await _db.KpiFiveYearTargets
-                .AsNoTracking()
-                .Where(t => t.KpiId == kpiId && t.IsActive == 1)
-                .OrderByDescending(t => t.BaseYear)
-                .FirstOrDefaultAsync();
+    static string LabelFor(DimPeriod p)
+    {
+        if (p.MonthNum.HasValue) return $"{p.Year} — {new DateTime(p.Year, p.MonthNum.Value, 1):MMM}";
+        if (p.QuarterNum.HasValue) return $"{p.Year} — Q{p.QuarterNum.Value}";
+        return p.Year.ToString();
+    }
 
-            var yearTargets = new List<object>();
-            if (fy != null)
-            {
-                void Add(int offset, decimal? v)
-                {
-                    if (v.HasValue)
-                        yearTargets.Add(new { year = (fy.BaseYear) + offset, value = v.Value }); // <-- year, not label
-                }
-                Add(0, fy.Period1Value);
-                Add(1, fy.Period2Value);
-                Add(2, fy.Period3Value);
-                Add(3, fy.Period4Value);
-                Add(4, fy.Period5Value);
-            }
+    var labels   = facts.Select(f => LabelFor(f.Period!)).ToList();
+    var actual   = facts.Select(f => (decimal?)f.ActualValue).ToList();
+    var target   = facts.Select(f => (decimal?)f.TargetValue).ToList();
+    var forecast = facts.Select(f => (decimal?)f.ForecastValue).ToList();
 
-            // 5) Table rows for the grid
-            string fmt(DateTime? d) => d?.ToString("yyyy-MM-dd") ?? "—";
-            var table = facts.Select(f => new
-            {
-                id = f.KpiFactId,
-                period = LabelFor(f.Period!),
-                startDate = fmt(f.Period!.StartDate),
-                endDate = fmt(f.Period!.EndDate),
-                actual = (decimal?)f.ActualValue,
-                target = (decimal?)f.TargetValue,
-                forecast = (decimal?)f.ForecastValue,
-                statusCode = f.StatusCode ?? "",
-                lastBy = string.IsNullOrWhiteSpace(f.LastChangedBy) ? "-": f.LastChangedBy
-            }).ToList();
+    // 3) Status from the most recent fact that has a non-empty StatusCode
+    var lastWithStatus   = facts.LastOrDefault(f => !string.IsNullOrWhiteSpace(f.StatusCode));
+    string? latestStatusCode = lastWithStatus?.StatusCode;
 
-            // 6) Build meta
-            var meta = new
-            {
-                owner = plan.Owner ?? "—",
-                editor = plan.Editor ?? "—",
-                valueType = string.IsNullOrWhiteSpace(plan.Frequency) ? "—" : plan.Frequency, // e.g., Monthly/Quarterly
-                unit = string.IsNullOrWhiteSpace(plan.Unit) ? "—" : plan.Unit, 
-                priority = plan.Priority,
-                statusLabel = status.label,
-                statusColor = status.color,
-                statusRaw = (lastFact?.StatusCode ?? "")
-            };
+    (string label, string color) status = latestStatusCode?.Trim().ToLowerInvariant() switch
+    {
+        "green"       => ("Ok",               "#28a745"),
+        "red"         => ("Needs Attention",  "#dc3545"),
+        "orange"      => ("Catching Up",      "#fd7e14"),
+        "blue"        => ("Data Missing",     "#0d6efd"),
+        "conforme"    => ("Ok",               "#28a745"),
+        "ecart"       => ("Needs Attention",  "#dc3545"),
+        "rattrapage"  => ("Catching Up",      "#fd7e14"),
+        "attente"     => ("Data Missing",     "#0d6efd"),
+        _             => ("—",                "")
+    };
 
-            // 7) Return the payload the view expects
-            return Json(new
-            {
-                meta,
-                chart = new
-                {
-                    labels,
-                    actual,
-                    target,
-                    forecast,
-                    yearTargets
-                },
-                table
-            });
+    // 4) Five-year targets (append to the RIGHT as bars)
+    var fy = await _db.KpiFiveYearTargets
+        .AsNoTracking()
+        .Where(t => t.KpiId == kpiId && t.IsActive == 1)
+        .OrderByDescending(t => t.BaseYear)
+        .FirstOrDefaultAsync();
+
+    var yearTargets = new List<object>();
+    if (fy != null)
+    {
+        void Add(int offset, decimal? v)
+        {
+            if (v.HasValue) yearTargets.Add(new { year = fy.BaseYear + offset, value = v.Value });
         }
+        Add(0, fy.Period1Value);
+        Add(1, fy.Period2Value);
+        Add(2, fy.Period3Value);
+        Add(3, fy.Period4Value);
+        Add(4, fy.Period5Value);
+    }
+
+    // 5) Table rows
+    string fmt(DateTime? d) => d?.ToString("yyyy-MM-dd") ?? "—";
+    var table = facts.Select(f => new
+    {
+        id = f.KpiFactId,
+        period = LabelFor(f.Period!),
+        startDate = fmt(f.Period!.StartDate),
+        endDate = fmt(f.Period!.EndDate),
+        actual = (decimal?)f.ActualValue,
+        target = (decimal?)f.TargetValue,
+        forecast = (decimal?)f.ForecastValue,
+        statusCode = f.StatusCode ?? "",
+        lastBy = string.IsNullOrWhiteSpace(f.LastChangedBy) ? "-" : f.LastChangedBy
+    }).ToList();
+
+    // 6) Meta
+    var meta = new
+    {
+        owner = plan.Owner ?? "—",
+        editor = plan.Editor ?? "—",
+        valueType = string.IsNullOrWhiteSpace(plan.Frequency) ? "—" : plan.Frequency,
+        unit = string.IsNullOrWhiteSpace(plan.Unit) ? "—" : plan.Unit,
+        priority = plan.Priority,
+        statusLabel = status.label,
+        statusColor = status.color,
+        statusRaw = string.IsNullOrWhiteSpace(latestStatusCode) ? "" : latestStatusCode
+    };
+
+    // 7) Payload
+    return Json(new
+    {
+        meta,
+        chart = new
+        {
+            labels,
+            actual,
+            target,
+            forecast,
+            yearTargets
+        },
+        table
+    });
+}
         // GET a single fact (optional; handy if later you want to fetch fresh values by id)
 [HttpGet]
 public async Task<IActionResult> GetKpiFact(decimal id)
