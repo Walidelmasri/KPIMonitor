@@ -107,17 +107,25 @@
                                 }
                             </td>
                             <td>
-                                <div class="btn-group">
-                                    @if (p.IsActive == 1)
-                                    {
-                                        <a class="btn btn-sm btn-outline-warning rounded-3" href="@Url.Action("Deactivate", new { id = p.KpiYearPlanId })">Deactivate</a>
-                                    }
-                                    else
-                                    {
-                                        <a class="btn btn-sm btn-outline-success rounded-3" href="@Url.Action("Activate", new { id = p.KpiYearPlanId })">Activate</a>
-                                    }
-                                </div>
-                            </td>
+    <div class="btn-group">
+        @if (p.IsActive == 1)
+        {
+            <a class="btn btn-sm btn-outline-warning rounded-3"
+               href="@Url.Action("Deactivate", new { id = p.KpiYearPlanId })">Deactivate</a>
+        }
+        else
+        {
+            <a class="btn btn-sm btn-outline-success rounded-3"
+               href="@Url.Action("Activate", new { id = p.KpiYearPlanId })">Activate</a>
+        }
+
+        <!-- NEW: Generate Facts link -->
+        <a class="btn btn-sm btn-outline-primary rounded-3 ms-1"
+           href="@Url.Action("Generate", "KpiFacts", new { kpiId = p.KpiId, planId = p.KpiYearPlanId })">
+            Generate Facts
+        </a>
+    </div>
+</td>
                         </tr>
                     }
                 }

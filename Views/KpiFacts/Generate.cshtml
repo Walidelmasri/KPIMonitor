@@ -1,0 +1,119 @@
+@model KPIMonitor.Models.ViewModels.GenerateFactsVm
+@{
+    ViewData["Title"] = "Generate KPI Facts";
+}
+
+<div class="container py-5">
+    @if (TempData["Msg"] is string msg)
+    {
+        <div class="alert alert-info rounded-4 mb-3">@msg</div>
+    }
+
+    <div class="card shadow-sm rounded-4">
+        <div class="card-header bg-white border-bottom">
+            <h4 class="mb-0">🧩 Generate KPI Facts</h4>
+        </div>
+        <div class="card-body">
+
+            <!-- Step 1: choose KPI and Plan (GET to refresh preview) -->
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">KPI</label>
+                    @Html.DropDownList("kpiId", Model.Kpis ?? new SelectList(Enumerable.Empty<SelectListItem>()),
+                        "-- Select KPI --",
+                        new { @class = "form-select", onchange = "this.form.submit()" })
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Year Plan</label>
+                    @Html.DropDownList("planId", Model.Plans ?? new SelectList(Enumerable.Empty<SelectListItem>()),
+                        "-- Select Year --",
+                        new { @class = "form-select", onchange = "this.form.submit()" })
+                </div>
+
+                @* Only show frequency choice if plan is selected and frequency unknown *@
+                @if (Model.PlanId.HasValue && string.IsNullOrWhiteSpace(Model.PlanFrequency))
+{
+  <div class="col-md-2">
+    <label class="form-label fw-semibold">Frequency</label>
+    <select asp-for="FrequencyChoice" class="form-select" onchange="this.form.submit()">
+      <option value="">-- Choose --</option>
+      <option value="Monthly">Monthly</option>
+      <option value="Quarterly">Quarterly</option>
+    </select>
+  </div>
+}
+            </form>
+
+            <hr />
+
+            <!-- Step 2: preview + options + POST -->
+            @if (Model.PlanId.HasValue && Model.PlanYear != null && (Model.Preview?.Any() ?? false))
+            {
+                <div class="mb-3 small text-muted">
+                    Plan year: <strong>@Model.PlanYear</strong> • Plan frequency: <strong>@(Model.PlanFrequency ?? Model.FrequencyChoice ?? "—")</strong>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:220px;">Period</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var p in Model.Preview)
+                        {
+                            <tr>
+                                <td>@p.Label</td>
+                                <td>
+                                    @if (p.Exists)
+                                    { <span class="badge bg-secondary">Already exists</span> }
+                                    else
+                                    { <span class="badge bg-success">Will be created</span> }
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+
+                <form method="post" asp-action="Generate" class="mt-3">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="KpiId" value="@Model.KpiId" />
+                    <input type="hidden" name="PlanId" value="@Model.PlanId" />
+                    <input type="hidden" name="FrequencyChoice" value="@Model.FrequencyChoice" />
+
+                    <div class="row g-3">
+                        <div class="col-md-3 form-check">
+                            <input class="form-check-input" type="checkbox" id="CreateMissingOnly" name="CreateMissingOnly" value="true" @(Model.CreateMissingOnly ? "checked" : "") />
+                            <label for="CreateMissingOnly" class="form-check-label">Create missing only</label>
+                        </div>
+                        <div class="col-md-3 form-check">
+                            <input class="form-check-input" type="checkbox" id="OverwriteExisting" name="OverwriteExisting" value="true" @(Model.OverwriteExisting ? "checked" : "") />
+                            <label for="OverwriteExisting" class="form-check-label">Overwrite existing</label>
+                            <div class="form-text">Touch audit fields (or extend to change values if you want).</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Created By</label>
+                            <input class="form-control" name="CreatedBy" value="@Model.CreatedBy" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Last Changed By</label>
+                            <input class="form-control" name="LastChangedBy" value="@Model.LastChangedBy" />
+                        </div>
+                    </div>
+
+                    <div class="mt-3 d-flex gap-2">
+                        <button class="btn btn-primary">🚀 Generate</button>
+                        <a class="btn btn-outline-secondary" href="@Url.Action("Index","KpiFacts")">Back to Facts</a>
+                    </div>
+                </form>
+            }
+            else
+            {
+                <div class="text-muted">Choose a KPI and a Year Plan to preview the periods.</div>
+            }
+        </div>
+    </div>
+</div>

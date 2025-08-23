@@ -44,6 +44,7 @@
       const id = btn.getAttribute('data-fact-id');
       const period = btn.getAttribute('data-period') || '—';
       const actual = btn.getAttribute('data-actual') || '';
+      const target = btn.getAttribute('data-target') || ''
       const forecast = btn.getAttribute('data-forecast') || '';
       const status = btn.getAttribute('data-status') || '';
       const lastBy = btn.getAttribute('data-lastby') || '';
@@ -57,6 +58,7 @@
       $('editFactId').value = id;
       $('editFactPeriod').innerText = period;
       $('editActual').value = (actual === '—') ? '' : actual;
+      $('editTarget').value = (target === '-') ? '' : target;
       $('editForecast').value = (forecast === '—') ? '' : forecast;
       $('editStatus').value = status;
       $('editLastBy').value = lastBy;
@@ -315,18 +317,19 @@
             <td>${r.forecast ?? '—'}</td>
             <td>
               <button class="btn btn-sm btn-outline-primary"
-                      data-fact-id="${r.id}"
-                      data-period="${r.period ?? ''}"
-                      data-actual="${r.actual ?? ''}"
-                      data-forecast="${r.forecast ?? ''}"
-                      data-status="${r.statusCode ?? ''}"
-                      data-lastby="${r.lastBy ?? ''}"
-                      data-pillar-id="${selPillar.value || ''}"
-                      data-objective-id="${selObjective.value || ''}"
-                      data-kpi-id="${selKpi.value || ''}"
-                      onclick="openEditModal(this)">
-                ✏️ Edit
-              </button>
+        data-fact-id="${r.id}"
+        data-period="${r.period ?? ''}"
+        data-actual="${r.actual ?? ''}"
+        data-target="${r.target ?? ''}"
+        data-forecast="${r.forecast ?? ''}"
+        data-status="${r.statusCode ?? ''}"
+        data-lastby="${r.lastBy ?? ''}"
+        data-pillar-id="${selPillar.value || ''}"
+        data-objective-id="${selObjective.value || ''}"
+        data-kpi-id="${selKpi.value || ''}"
+        onclick="openEditModal(this)">
+  ✏️ Edit
+</button>
             </td>`;
           tableBody.appendChild(tr);
         }
@@ -456,25 +459,29 @@
           <input type="hidden" id="editKpiId" name="KpiId" />
 
           <div class="row g-3">
-            <div class="col-md-4">
-              <label class="form-label">Actual</label>
-              <input type="number" step="0.001" class="form-control" name="ActualValue" id="editActual" />
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Forecast</label>
-              <input type="number" step="0.001" class="form-control" name="ForecastValue" id="editForecast" />
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Status</label>
-              <select class="form-select" name="StatusCode" id="editStatus">
-                <option value="">—</option>
-                <option value="conforme">Conforme</option>
-                <option value="ecart">Écart</option>
-                <option value="rattrapage">Rattrapage</option>
-                <option value="attente">Attente</option>
-              </select>
-            </div>
-          </div>
+  <div class="col-md-3">
+    <label class="form-label">Actual</label>
+    <input type="number" step="0.001" class="form-control" name="ActualValue" id="editActual" />
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Target</label>
+    <input type="number" step="0.001" class="form-control" name="TargetValue" id="editTarget" />
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Forecast</label>
+    <input type="number" step="0.001" class="form-control" name="ForecastValue" id="editForecast" />
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Status</label>
+    <select class="form-select" name="StatusCode" id="editStatus">
+      <option value="">—</option>
+      <option value="conforme">Conforme</option>
+      <option value="ecart">Écart</option>
+      <option value="rattrapage">Rattrapage</option>
+      <option value="attente">Attente</option>
+    </select>
+  </div>
+</div>
           <div class="form-text mt-2">Leave a field empty to keep its current value.</div>
         </div>
         <div class="modal-footer">

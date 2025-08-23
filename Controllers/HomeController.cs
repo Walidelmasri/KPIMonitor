@@ -258,7 +258,7 @@ public async Task<IActionResult> GetKpiFact(decimal id)
 [HttpPost]
 [ValidateAntiForgeryToken]
 public async Task<IActionResult> UpdateKpiFact(
-    [Bind("KpiFactId,ActualValue,ForecastValue,StatusCode, LastChangedBy")] KpiFact input,
+    [Bind("KpiFactId,ActualValue,TargetValue, ForecastValue,StatusCode, LastChangedBy")] KpiFact input,
     decimal? pillarId, decimal? objectiveId, decimal? kpiId)
 {
     if (input == null || input.KpiFactId == 0)
@@ -268,6 +268,7 @@ public async Task<IActionResult> UpdateKpiFact(
     if (fact == null) return NotFound("Fact not found.");
 
     fact.ActualValue   = input.ActualValue;
+    fact.TargetValue = input.TargetValue;
     fact.ForecastValue = input.ForecastValue;
     fact.StatusCode    = input.StatusCode;
 

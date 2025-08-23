@@ -52,6 +52,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpRmFjdHMvQ3JlYXRlLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/walidsalem/BADEA/KPIMonitor/Views/KpiFacts/Generate.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpRmFjdHMvR2VuZXJhdGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/walidsalem/BADEA/KPIMonitor/Views/KpiFacts/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpRmFjdHMvSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 

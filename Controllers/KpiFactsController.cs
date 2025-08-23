@@ -8,6 +8,7 @@ using KPIMonitor.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using KPIMonitor.Models.ViewModels;
 
 namespace KPIMonitor.Controllers
 {
@@ -305,11 +306,237 @@ public async Task<IActionResult> Index(decimal? kpiId)
         private static PlanFrequency NormalizeFrequency(string? freq)
         {
             if (string.IsNullOrWhiteSpace(freq)) return PlanFrequency.Unknown;
-
             var f = freq.Trim().ToLowerInvariant();
             if (f.Contains("month"))   return PlanFrequency.Monthly;    // "Monthly", "month", etc.
             if (f.Contains("quarter")) return PlanFrequency.Quarterly;  // "Quarterly", "quarter"
             return PlanFrequency.Unknown;
         }
+
+[HttpGet]
+public async Task<IActionResult> Generate(decimal? kpiId, decimal? planId)
+{
+    var vm = new GenerateFactsVm
+    {
+        KpiId = kpiId,
+        PlanId = planId,
+        CreatedBy = User?.Identity?.Name ?? "system",
+        LastChangedBy = User?.Identity?.Name ?? "system"
+    };
+
+    // Kpis dropdown (active only, sorted by code)
+    var kpis = await _db.DimKpis
+        .AsNoTracking()
+        .Where(k => k.IsActive == 1)
+        .OrderBy(k => k.KpiCode)
+        .Select(k => new { k.KpiId, Label = (k.KpiCode ?? "") + " — " + (k.KpiName ?? "") })
+        .ToListAsync();
+    vm.Kpis = new SelectList(kpis, "KpiId", "Label", vm.KpiId);
+
+    // Plans dropdown (when a KPI is chosen)
+    if (vm.KpiId.HasValue)
+    {
+        var plans = await _db.KpiYearPlans
+            .Include(p => p.Period)
+            .AsNoTracking()
+            .Where(p => p.IsActive == 1
+                     && p.KpiId == vm.KpiId.Value
+                     && p.Period != null
+                     && p.Period.MonthNum == null
+                     && p.Period.QuarterNum == null)
+            .OrderBy(p => p.Period!.Year)
+            .Select(p => new {
+                p.KpiYearPlanId,
+                Label = "Year " + p.Period!.Year,
+                p.Frequency,
+                Year = p.Period!.Year
+            })
+            .ToListAsync();
+
+        vm.Plans = new SelectList(plans, "KpiYearPlanId", "Label", vm.PlanId);
+
+        // If a plan is chosen, build preview
+        if (vm.PlanId.HasValue)
+        {
+            var plan = plans.FirstOrDefault(x => x.KpiYearPlanId == vm.PlanId.Value);
+            if (plan != null)
+            {
+                vm.PlanYear = plan.Year;
+                vm.PlanFrequency = plan.Frequency;
+
+                // Resolve frequency: plan’s own, or user-choice if blank
+                var resolved = NormalizeFrequency(plan.Frequency);
+                if (resolved == PlanFrequency.Unknown && !string.IsNullOrWhiteSpace(vm.FrequencyChoice))
+                    resolved = NormalizeFrequency(vm.FrequencyChoice);
+
+                // If still unknown, we just don’t preview (let user choose)
+                if (resolved != PlanFrequency.Unknown && vm.PlanYear.HasValue)
+                {
+                    var periodsQ = _db.DimPeriods
+                        .AsNoTracking()
+                        .Where(p => p.IsActive == 1 && p.Year == vm.PlanYear.Value);
+
+                    if (resolved == PlanFrequency.Monthly)
+                        periodsQ = periodsQ.Where(p => p.MonthNum != null);
+                    else if (resolved == PlanFrequency.Quarterly)
+                        periodsQ = periodsQ.Where(p => p.QuarterNum != null);
+
+                    var periods = await periodsQ
+                        .OrderBy(p => p.QuarterNum ?? 0)
+                        .ThenBy(p => p.MonthNum ?? 0)
+                        .Select(p => new {
+                            p.PeriodId,
+                            Label = p.MonthNum != null
+                                ? $"{p.Year} — M{p.MonthNum:00} ({CultureInfo.InvariantCulture.DateTimeFormat.GetAbbreviatedMonthName(p.MonthNum.Value)})"
+                                : $"{p.Year} — Q{p.QuarterNum}"
+                        })
+                        .ToListAsync();
+
+                    // Which facts already exist for this plan?
+                    var existing = await _db.KpiFacts
+                        .AsNoTracking()
+                        .Where(f => f.KpiYearPlanId == vm.PlanId.Value)
+                        .Select(f => f.PeriodId)
+                        .ToListAsync();
+                    var existSet = existing.ToHashSet();
+
+                    foreach (var p in periods)
+                    {
+                        vm.Preview.Add(new GenerateFactsVm.PeriodPreview
+                        {
+                            PeriodId = p.PeriodId,
+                            Label = p.Label,
+                            Exists = existSet.Contains(p.PeriodId)
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    return View(vm);
+}
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> Generate(GenerateFactsVm vm)
+{
+    if (!vm.KpiId.HasValue || !vm.PlanId.HasValue)
+    {
+        TempData["Msg"] = "Select a KPI and a Year Plan first.";
+        return RedirectToAction(nameof(Generate), new { kpiId = vm.KpiId, planId = vm.PlanId });
+    }
+
+    // Load plan+year and verify kpi
+    var plan = await _db.KpiYearPlans
+        .Include(p => p.Period)
+        .AsNoTracking()
+        .FirstOrDefaultAsync(p => p.KpiYearPlanId == vm.PlanId.Value);
+
+    if (plan == null || plan.Period == null)
+    {
+        TempData["Msg"] = "Year plan not found.";
+        return RedirectToAction(nameof(Generate), new { kpiId = vm.KpiId, planId = vm.PlanId });
+    }
+    if (plan.KpiId != vm.KpiId.Value)
+    {
+        TempData["Msg"] = "Selected KPI does not match the plan.";
+        return RedirectToAction(nameof(Generate), new { kpiId = vm.KpiId, planId = vm.PlanId });
+    }
+
+    var resolved = NormalizeFrequency(plan.Frequency);
+    if (resolved == PlanFrequency.Unknown && !string.IsNullOrWhiteSpace(vm.FrequencyChoice))
+        resolved = NormalizeFrequency(vm.FrequencyChoice);
+
+    if (resolved == PlanFrequency.Unknown)
+    {
+        TempData["Msg"] = "Choose a frequency (Monthly or Quarterly).";
+        return RedirectToAction(nameof(Generate), new { kpiId = vm.KpiId, planId = vm.PlanId });
+    }
+
+    // Pull periods for the plan’s year
+    var periodsQ = _db.DimPeriods
+        .AsNoTracking()
+        .Where(p => p.IsActive == 1 && p.Year == plan.Period.Year);
+
+    if (resolved == PlanFrequency.Monthly)
+        periodsQ = periodsQ.Where(p => p.MonthNum != null);
+    else if (resolved == PlanFrequency.Quarterly)
+        periodsQ = periodsQ.Where(p => p.QuarterNum != null);
+
+    var periods = await periodsQ
+        .OrderBy(p => p.QuarterNum ?? 0)
+        .ThenBy(p => p.MonthNum ?? 0)
+        .Select(p => p.PeriodId)
+        .ToListAsync();
+
+    if (periods.Count == 0)
+    {
+        TempData["Msg"] = "No matching periods exist for that year. Create them first.";
+        return RedirectToAction(nameof(Generate), new { kpiId = vm.KpiId, planId = vm.PlanId });
+    }
+
+    // Existing facts for the plan
+    var existingFacts = await _db.KpiFacts
+        .Where(f => f.KpiYearPlanId == vm.PlanId.Value)
+        .ToListAsync();
+    var existMap = existingFacts.ToDictionary(f => f.PeriodId, f => f);
+
+    var nowUser = vm.LastChangedBy ?? (User?.Identity?.Name ?? "system");
+    var createdBy = vm.CreatedBy ?? nowUser;
+
+    int toCreate = 0, toUpdate = 0;
+    using var tx = await _db.Database.BeginTransactionAsync();
+
+    try
+    {
+        foreach (var pid in periods)
+        {
+            if (existMap.TryGetValue(pid, out var existing))
+            {
+                // Already exists
+                if (vm.OverwriteExisting && !vm.CreateMissingOnly)
+                {
+                    existing.LastChangedBy = nowUser;
+                    // (optional: wipe values or leave them; here we just touch audit)
+                    // existing.ActualValue = null; etc.
+                    toUpdate++;
+                }
+                // else skip
+            }
+            else
+            {
+                // Missing → create
+                var fact = new KpiFact
+                {
+                    KpiId = vm.KpiId.Value,
+                    KpiYearPlanId = vm.PlanId.Value,
+                    PeriodId = pid,
+                    ActualValue = null,
+                    TargetValue = null,
+                    ForecastValue = null,
+                    Budget = null,
+                    StatusCode = null,
+                    CreatedBy = createdBy,
+                    CreatedDate = DateTime.UtcNow,
+                    LastChangedBy = nowUser,
+                    IsActive = 1
+                };
+                _db.KpiFacts.Add(fact);
+                toCreate++;
+            }
+        }
+
+        await _db.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        TempData["Msg"] = $"Bulk generate finished: created {toCreate} fact(s){(toUpdate > 0 ? $", updated {toUpdate}" : "")}.";
+    }
+    catch (Exception ex)
+    {
+        await tx.RollbackAsync();
+        TempData["Msg"] = "Failed to generate facts: " + ex.Message;
+    }
+
+    return RedirectToAction(nameof(Generate), new { kpiId = vm.KpiId, planId = vm.PlanId });
+}
     }
 }

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("KPIMonitor")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1d1d80e8a8510f725ff8f0e2e7ed8e77416a324a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c3618360f540437d4cd2b51c27756822bd2b4c84")]
 [assembly: System.Reflection.AssemblyProductAttribute("KPIMonitor")]
 [assembly: System.Reflection.AssemblyTitleAttribute("KPIMonitor")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
