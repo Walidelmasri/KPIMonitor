@@ -16,13 +16,30 @@
             @Html.AntiForgeryToken()
             @* <div asp-validation-summary="All" class="alert alert-danger rounded-4"></div> *@
 
-            <div class="mb-3">
-              <label class="form-label fw-semibold">KPI</label>
-              <select asp-for="KpiId" class="form-select" asp-items="kpis">
-                <option value="">-- Select KPI --</option>
-              </select>
-              <span class="text-danger" asp-validation-for="KpiId"></span>
-            </div>
+<div class="row">
+  <div class="col-md-4 mb-3">
+    <label class="form-label fw-semibold">Pillar</label>
+    <select id="c_pillar" class="form-select">
+      <option value="">-- Select Pillar --</option>
+    </select>
+  </div>
+
+  <div class="col-md-4 mb-3">
+    <label class="form-label fw-semibold">Objective</label>
+    <select id="c_objective" class="form-select" disabled>
+      <option value="">-- Select Objective --</option>
+    </select>
+  </div>
+
+  <div class="col-md-4 mb-3">
+    <label class="form-label fw-semibold">KPI</label>
+    <!-- bind the chosen KPI to your model -->
+    <select asp-for="KpiId" id="c_kpi" class="form-select" disabled>
+      <option value="">-- Select KPI --</option>
+    </select>
+    <span class="text-danger" asp-validation-for="KpiId"></span>
+  </div>
+</div>
 
             <div class="mb-3">
               <label class="form-label fw-semibold">Year (Period)</label>
@@ -32,23 +49,37 @@
               <span class="text-danger" asp-validation-for="PeriodId"></span>
             </div>
 
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label class="form-label fw-semibold">Frequency</label>
-                <input asp-for="Frequency" class="form-control" maxlength="30" />
-              </div>
-              <div class="col-md-3 mb-3">
-                <label class="form-label fw-semibold">Priority</label>
-                <input asp-for="Priority" type="number" class="form-control" />
-              </div>
-              <div class="col-md-3 mb-3">
-                <label class="form-label fw-semibold">Status</label>
-                <select asp-for="IsActive" class="form-select">
-                  <option value="1">Active</option>
-                  <option value="0">Deactivated</option>
-                </select>
-              </div>
-            </div>
+<div class="row">
+  <div class="col-md-6 mb-3">
+    <label class="form-label fw-semibold">Frequency</label>
+    <select asp-for="Frequency" class="form-select">
+      <option value="">-- Select Frequency --</option>
+      <option value="Monthly">Monthly</option>
+      <option value="Quarterly">Quarterly</option>
+    </select>
+    <span class="text-danger" asp-validation-for="Frequency"></span>
+  </div>
+
+  <div class="col-md-3 mb-3">
+    <label class="form-label fw-semibold">Priority</label>
+    <select asp-for="Priority" class="form-select">
+      <option value="">-- Select Priority --</option>
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+    </select>
+    <span class="text-danger" asp-validation-for="Priority"></span>
+  </div>
+
+  <div class="col-md-3 mb-3">
+    <label class="form-label fw-semibold">Status</label>
+    <select asp-for="IsActive" class="form-select">
+      <option value="1">Active</option>
+      <option value="0">Deactivated</option>
+    </select>
+  </div>
+</div>
 
             <!-- Unit on its own line to keep grid clean -->
             <div class="row">
@@ -114,4 +145,74 @@
 
 @section Scripts {
   @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+
+  <script>
+    // tiny helpers
+    const $ = (id) => document.getElementById(id);
+    const api = (url) => fetch(url, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+
+    const selPillar = $('c_pillar');
+    const selObjective = $('c_objective');
+    const selKpi = $('c_kpi');
+
+    function resetSelect(sel, placeholder, disable=true) {
+      sel.innerHTML = '';
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = placeholder;
+      sel.appendChild(opt);
+      sel.disabled = !!disable;
+    }
+
+    async function loadPillars() {
+      resetSelect(selPillar, '-- Select Pillar --', false);
+      resetSelect(selObjective, '-- Select Objective --');
+      resetSelect(selKpi, '-- Select KPI --');
+
+      const items = await api('@Url.Action("GetPillars", "Home")'); // [{id,name}]
+      // order by code if your API isn’t already
+      items.sort((a,b) => a.name.localeCompare(b.name, undefined, {numeric:true}));
+      for (const it of items) {
+        const o = document.createElement('option');
+        o.value = it.id; o.textContent = it.name;
+        selPillar.appendChild(o);
+      }
+    }
+
+    selPillar.addEventListener('change', async () => {
+      resetSelect(selObjective, '-- Select Objective --');
+      resetSelect(selKpi, '-- Select KPI --');
+
+      const pid = selPillar.value;
+      if (!pid) return;
+
+      const items = await api('@Url.Action("GetObjectives", "Home")?pillarId=' + encodeURIComponent(pid));
+      items.sort((a,b) => a.name.localeCompare(b.name, undefined, {numeric:true}));
+      for (const it of items) {
+        const o = document.createElement('option');
+        o.value = it.id; o.textContent = it.name;
+        selObjective.appendChild(o);
+      }
+      selObjective.disabled = items.length === 0;
+    });
+
+    selObjective.addEventListener('change', async () => {
+      resetSelect(selKpi, '-- Select KPI --');
+
+      const oid = selObjective.value;
+      if (!oid) return;
+
+      const items = await api('@Url.Action("GetKpis", "Home")?objectiveId=' + encodeURIComponent(oid));
+      items.sort((a,b) => a.name.localeCompare(b.name, undefined, {numeric:true}));
+      for (const it of items) {
+        const o = document.createElement('option');
+        o.value = it.id; o.textContent = it.name;
+        selKpi.appendChild(o);
+      }
+      selKpi.disabled = items.length === 0;
+    });
+
+    // boot
+    document.addEventListener('DOMContentLoaded', loadPillars);
+  </script>
 }

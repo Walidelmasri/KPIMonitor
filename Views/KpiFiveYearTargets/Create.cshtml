@@ -1,7 +1,7 @@
 @model KPIMonitor.Models.KpiFiveYearTarget
 @{
-    ViewData["Title"] = "Add Five-Year Target";
-    var kpis = ViewBag.Kpis as Microsoft.AspNetCore.Mvc.Rendering.SelectList;
+  ViewData["Title"] = "Add Five-Year Target";
+  var kpis = ViewBag.Kpis as Microsoft.AspNetCore.Mvc.Rendering.SelectList;
 }
 
 <div class="container py-5">
@@ -17,12 +17,35 @@
             @* <div asp-validation-summary="All" class="alert alert-danger rounded-4"></div> *@
 
             <!-- KPI -->
-            <div class="mb-3">
-              <label class="form-label fw-semibold">KPI</label>
-              <select asp-for="KpiId" class="form-select" asp-items="kpis">
-                <option value="">-- Select KPI --</option>
-              </select>
-              <span class="text-danger" asp-validation-for="KpiId"></span>
+            <!-- Pillar → Objective → KPI cascade -->
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Pillar</label>
+                @Html.DropDownList(
+                "PillarId",
+                                (SelectList)ViewBag.Pillars,
+                                "-- Select Pillar --",
+                                new { @class = "form-select", id = "pillarSelector" }
+                                )
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Objective</label>
+                @Html.DropDownList(
+                                "ObjectiveId",
+                                (SelectList)ViewBag.Objectives, // empty on first load
+                                "-- Select Objective --",
+                                new { @class = "form-select", id = "objectiveSelector", disabled = "disabled" }
+                                )
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">KPI</label>
+                <select asp-for="KpiId" class="form-select" id="kpiSelector" disabled>
+                  <option value="">-- Select KPI --</option>
+                </select>
+                <span class="text-danger" asp-validation-for="KpiId"></span>
+              </div>
             </div>
 
             <div class="row g-3">
@@ -113,12 +136,14 @@
   </div>
 </div>
 
-@section Scripts{
-  @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+@section Scripts {
+  @{
+    await Html.RenderPartialAsync("_ValidationScriptsPartial");
+  }
   <script>
-    (function(){
+    (function () {
       const by = document.getElementById('BaseYear');
-      const ids = ['Period1','Period2','Period3','Period4','Period5'];
+      const ids = ['Period1', 'Period2', 'Period3', 'Period4', 'Period5'];
 
       document.getElementById('btnAutofillYears')?.addEventListener('click', () => {
         const yr = parseInt(by?.value || '', 10);
@@ -129,5 +154,54 @@
         });
       });
     })();
+  (function () {
+    const selPillar    = document.getElementById('pillarSelector');
+    const selObjective = document.getElementById('objectiveSelector');
+    const selKpi       = document.getElementById('kpiSelector');
+
+    function resetSelect(sel, placeholder) {
+      sel.innerHTML = '';
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = placeholder;
+      sel.appendChild(opt);
+    }
+
+    selPillar?.addEventListener('change', async () => {
+      const pid = selPillar.value;
+      resetSelect(selObjective, '-- Select Objective --');
+      resetSelect(selKpi, '-- Select KPI --');
+      selObjective.disabled = true;
+      selKpi.disabled = true;
+      if (!pid) return;
+
+      const res = await fetch('@Url.Action("GetObjectives","KpiFiveYearTargets")?pillarId=' + encodeURIComponent(pid),
+                              { headers: { 'Accept': 'application/json' }});
+      const items = await res.json();
+      for (const it of items) {
+        const o = document.createElement('option');
+        o.value = it.id; o.textContent = it.name;
+        selObjective.appendChild(o);
+      }
+      selObjective.disabled = items.length === 0;
+    });
+
+    selObjective?.addEventListener('change', async () => {
+      const oid = selObjective.value;
+      resetSelect(selKpi, '-- Select KPI --');
+      selKpi.disabled = true;
+      if (!oid) return;
+
+      const res = await fetch('@Url.Action("GetKpis","KpiFiveYearTargets")?objectiveId=' + encodeURIComponent(oid),
+                              { headers: { 'Accept': 'application/json' }});
+      const items = await res.json();
+      for (const it of items) {
+        const o = document.createElement('option');
+        o.value = it.id; o.textContent = it.name;
+        selKpi.appendChild(o);
+      }
+      selKpi.disabled = items.length === 0;
+    });
+  })();
   </script>
 }

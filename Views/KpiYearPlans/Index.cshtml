@@ -64,10 +64,10 @@
                     <th style="width:40px;">Year</th>
                     <th>KPI</th>
                     <th style="width:170px;">Pillar</th>
-                    <th style="width:120px;">Frequency</th>
+                    <th style="width:30px;">Objective</th>
+                    <th style="width:100px;">Frequency</th>
                     <th style= "width:70px;">Unit</th>
                     <th style="width:20px;">Annual Target</th>
-                    @* <th style="width:30px;">Annual Budget</th> *@
                     <th style="width:10px;">Priority</th>
                     <th style="width:100px;">Status</th>
                     <th style="width:120px;">Actions</th>
@@ -85,6 +85,11 @@
                             @(p.Kpi?.Pillar != null
                             ? $"{p.Kpi.Pillar.PillarCode} — {p.Kpi.Pillar.PillarName}"
                             : "—")
+                            </td>
+                            <td>
+                                @(p.Kpi?.Objective != null
+                                ? $"{p.Kpi.Objective.ObjectiveCode} - {p.Kpi.Objective.ObjectiveName}"
+                                : "-")
                             </td>
                             <td>@p.Frequency</td>
                             <td>@p.Unit</td>

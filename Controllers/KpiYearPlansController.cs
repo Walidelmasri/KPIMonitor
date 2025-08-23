@@ -35,7 +35,9 @@ public async Task<IActionResult> Index(int? year, decimal? pillarId)
     var q = _db.KpiYearPlans
                .Include(p => p.Period)
                .Include(p => p.Kpi)
-                   .ThenInclude(k => k.Pillar)   // needed to show/filter by pillar
+                .ThenInclude(k => k.Pillar)   
+               .Include(p => p.Kpi)
+                .ThenInclude(k => k.Objective) 
                .AsNoTracking();
 
     if (year.HasValue)
@@ -45,10 +47,11 @@ public async Task<IActionResult> Index(int? year, decimal? pillarId)
         q = q.Where(x => x.Kpi != null && x.Kpi.PillarId == pillarId.Value);
 
     var data = await q
-        .OrderBy(x => x.Period!.Year)
-        .ThenBy(x => x.Kpi!.Pillar!.PillarCode)   // stable, nice ordering
-        .ThenBy(x => x.Kpi!.KpiCode)
-        .ToListAsync();
+    .OrderBy(x => x.Period!.Year)
+    .ThenBy(x => x.Kpi!.Pillar!.PillarCode)
+    .ThenBy(x => x.Kpi!.Objective!.ObjectiveCode) 
+    .ThenBy(x => x.Kpi!.KpiCode)
+    .ToListAsync();
 
     // for the filters
     ViewBag.FilterYear = year;

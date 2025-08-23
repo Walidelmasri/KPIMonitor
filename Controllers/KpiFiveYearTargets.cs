@@ -12,36 +12,77 @@ namespace KPIMonitor.Controllers
         public KpiFiveYearTargetsController(AppDbContext db) => _db = db;
 
         // GET: /KpiFiveYearTargets
-        public async Task<IActionResult> Index(decimal? kpiId)
-        {
-            var q = _db.KpiFiveYearTargets
-                       .Include(t => t.Kpi)
-                       .AsNoTracking();
+public async Task<IActionResult> Index(decimal? pillarId, decimal? objectiveId)
+{
+    var q = _db.KpiFiveYearTargets
+        .Include(t => t.Kpi)
+            .ThenInclude(k => k.Pillar)
+        .Include(t => t.Kpi)
+            .ThenInclude(k => k.Objective)
+        .AsNoTracking();
 
-            if (kpiId.HasValue)
-                q = q.Where(t => t.KpiId == kpiId.Value);
+    if (pillarId.HasValue)
+        q = q.Where(t => t.Kpi != null && t.Kpi.PillarId == pillarId.Value);
 
-            // dropdown list of active KPIs
-            await LoadKpisAsync(kpiId);
+    if (objectiveId.HasValue)
+        q = q.Where(t => t.Kpi != null && t.Kpi.ObjectiveId == objectiveId.Value);
 
-            var data = await q.OrderBy(t => t.Kpi!.KpiCode)
-                              .ThenByDescending(t => t.BaseYear)
-                              .ToListAsync();
-            return View(data);
-        }
+    var data = await q
+        .OrderBy(t => t.Kpi!.Pillar!.PillarCode)         // pillar first
+        .ThenBy(t => t.Kpi!.Objective!.ObjectiveCode)     // then objective
+        .ThenBy(t => t.Kpi!.KpiCode)                      // then KPI
+        .ThenByDescending(t => t.BaseYear)                // newest base year first
+        .ToListAsync();
+
+    // Pillar dropdown (ordered by code)
+    ViewBag.Pillars = new SelectList(
+        await _db.DimPillars
+            .AsNoTracking()
+            .OrderBy(p => p.PillarCode)
+            .Select(p => new { p.PillarId, Name = p.PillarCode + " — " + p.PillarName })
+            .ToListAsync(),
+        "PillarId", "Name", pillarId
+    );
+
+    // Objective dropdown (only when a pillar is chosen)
+    if (pillarId.HasValue)
+    {
+        ViewBag.Objectives = new SelectList(
+            await _db.DimObjectives
+                .AsNoTracking()
+                .Where(o => o.PillarId == pillarId.Value && o.IsActive == 1)
+                .OrderBy(o => o.ObjectiveCode)
+                .Select(o => new { o.ObjectiveId, Name = o.ObjectiveCode + " — " + o.ObjectiveName })
+                .ToListAsync(),
+            "ObjectiveId", "Name", objectiveId
+        );
+    }
+    else
+    {
+        ViewBag.Objectives = new SelectList(Enumerable.Empty<SelectListItem>(), "Value", "Text");
+    }
+
+    ViewBag.CurrentPillarId = pillarId;
+    ViewBag.CurrentObjectiveId = objectiveId;
+
+    return View(data);
+}
 
         // GET: /KpiFiveYearTargets/Create
         [HttpGet]
-        public async Task<IActionResult> Create()
-        {
-            await LoadKpisAsync();
-            var user = User?.Identity?.Name ?? "system";
-            return View(new KpiFiveYearTarget {
-                IsActive = 1,
-                CreatedBy = user,
-                LastChangedBy = user
-            });
-        }
+public async Task<IActionResult> Create()
+{
+    await LoadPillarsAsync(); // first dropdown only
+    ViewBag.Objectives = new SelectList(Enumerable.Empty<SelectListItem>(), "Value", "Text");
+    ViewBag.Kpis       = new SelectList(Enumerable.Empty<SelectListItem>(), "Value", "Text");
+
+    var user = User?.Identity?.Name ?? "system";
+    return View(new KpiFiveYearTarget {
+        IsActive = 1,
+        CreatedBy = user,
+        LastChangedBy = user
+    });
+}
 
         // POST: /KpiFiveYearTargets/Create
         [HttpPost]
@@ -147,5 +188,45 @@ namespace KPIMonitor.Controllers
 
             ViewBag.Kpis = new SelectList(kpis, "KpiId", "Label", selected);
         }
+        // GET: /KpiFiveYearTargets/GetObjectives?pillarId=123
+[HttpGet]
+public async Task<IActionResult> GetObjectives(decimal pillarId)
+{
+    var items = await _db.DimObjectives
+        .AsNoTracking()
+        .Where(o => o.IsActive == 1 && o.PillarId == pillarId)
+        .OrderBy(o => o.ObjectiveCode)
+        .Select(o => new { id = o.ObjectiveId, name = o.ObjectiveCode + " — " + o.ObjectiveName })
+        .ToListAsync();
+
+    return Json(items);
+}
+
+// GET: /KpiFiveYearTargets/GetKpis?objectiveId=456
+[HttpGet]
+public async Task<IActionResult> GetKpis(decimal objectiveId)
+{
+    var items = await _db.DimKpis
+        .AsNoTracking()
+        .Where(k => k.IsActive == 1 && k.ObjectiveId == objectiveId)
+        .OrderBy(k => k.KpiCode)
+        .Select(k => new { id = k.KpiId, name = (k.KpiCode ?? "") + " — " + (k.KpiName ?? "") })
+        .ToListAsync();
+
+    return Json(items);
+}
+
+// used by the Create GET to populate Pillars dropdown
+private async Task LoadPillarsAsync(decimal? selected = null)
+{
+    var pillars = await _db.DimPillars
+        .AsNoTracking()
+        .Where(p => p.IsActive == 1)
+        .OrderBy(p => p.PillarCode)
+        .Select(p => new { p.PillarId, Name = p.PillarCode + " — " + p.PillarName })
+        .ToListAsync();
+
+    ViewBag.Pillars = new SelectList(pillars, "PillarId", "Name", selected);
+}
     }
 }
