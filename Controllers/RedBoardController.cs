@@ -21,83 +21,104 @@ namespace KPIMonitor.Controllers
 [HttpGet]
 public async Task<IActionResult> GetRedKpiIds()
 {
-    // Latest active plan per KPI (that has a Period row)
-    var latestPlans = await _db.KpiYearPlans
-        .Include(p => p.Period)
-        .Where(p => p.IsActive == 1 && p.Period != null)
-        .GroupBy(p => p.KpiId)
-        .Select(g => g.OrderByDescending(x => x.KpiYearPlanId).First())
+    var redCodes = new[] { "red", "ecart" }; // normalize to lowercase
+
+    // Step 1: latest plan id per KPI (pure grouping = easy to translate)
+    var latestIds =
+        from p in _db.KpiYearPlans
+        where p.IsActive == 1 && p.Period != null
+        group p by p.KpiId into g
+        select new
+        {
+            KpiId = g.Key,
+            MaxPlanId = g.Max(x => x.KpiYearPlanId)
+        };
+
+    // Step 2: join back to the actual plan row to get the year & priority
+    var latestPlans =
+        from lid in latestIds
+        join p in _db.KpiYearPlans on
+            new { lid.KpiId, PlanId = lid.MaxPlanId }
+            equals new { p.KpiId, PlanId = p.KpiYearPlanId }
+        select new
+        {
+            p.KpiId,
+            p.KpiYearPlanId,
+            Year = p.Period!.Year,   // navigation gives us the year
+            p.Priority
+        };
+
+    // Step 3: one shot join to facts (same plan & same year) and to KPI/Objective/Pillar
+    var query =
+        from lp in latestPlans
+        join f in _db.KpiFacts
+            on new { lp.KpiId, PlanId = lp.KpiYearPlanId }
+            equals new { f.KpiId, PlanId = f.KpiYearPlanId }
+        join per in _db.DimPeriods on f.PeriodId equals per.PeriodId
+        where f.IsActive == 1
+           && per.Year == lp.Year
+           && f.StatusCode != null
+           && redCodes.Contains(f.StatusCode.ToLower())
+        join k in _db.DimKpis on lp.KpiId equals k.KpiId
+        join o in _db.DimObjectives on k.ObjectiveId equals o.ObjectiveId into gobj
+        from o in gobj.DefaultIfEmpty()
+        join p in _db.DimPillars on k.PillarId equals p.PillarId into gpil
+        from p in gpil.DefaultIfEmpty()
+        select new
+        {
+            lp.KpiId,
+            KpiName = k.KpiName,
+            KpiCode = k.KpiCode,
+            lp.Priority,
+            PillarCode    = p != null ? p.PillarCode    : "",
+            PillarName    = p != null ? p.PillarName    : "",
+            ObjectiveCode = o != null ? o.ObjectiveCode : "",
+            ObjectiveName = o != null ? o.ObjectiveName : ""
+        };
+
+    // Distinct KPIs (one red KPI per list entry)
+    var deduped = await query
+        .AsNoTracking()
+        .GroupBy(x => new
+        {
+            x.KpiId, x.KpiName, x.KpiCode, x.Priority,
+            x.PillarCode, x.PillarName, x.ObjectiveCode, x.ObjectiveName
+        })
+        .Select(g => g.Key)
         .ToListAsync();
 
-    var redKpiIds = new List<(decimal kpiId, string name, string code, int? priority)>();
-
-    foreach (var plan in latestPlans)
-    {
-        if (plan.Period == null) continue;
-        var planYear = plan.Period.Year;
-
-        var hasRed = await _db.KpiFacts
-            .Where(f => f.KpiId == plan.KpiId
-                     && f.IsActive == 1
-                     && f.KpiYearPlanId == plan.KpiYearPlanId
-                     && f.Period != null
-                     && f.Period.Year == planYear
-                     && (f.StatusCode ?? "").Trim().ToLower() == "red")
-            .AnyAsync();
-
-        if (!hasRed) continue;
-
-        // KPI + its Objective + Pillar
-        var kpi = await _db.DimKpis.AsNoTracking()
-            .FirstOrDefaultAsync(k => k.KpiId == plan.KpiId);
-        if (kpi == null) continue;
-
-        DimObjective? obj = null;
-        DimPillar? pil = null;
-
-        if (kpi.ObjectiveId != null)
+    // Build the payload your view expects
+    var result = deduped
+        .OrderBy(x => x.Priority ?? int.MaxValue)
+        .ThenBy(x => x.PillarCode)
+        .ThenBy(x => x.ObjectiveCode)
+        .ThenBy(x => x.KpiCode)
+        .Select(x =>
         {
-            obj = await _db.DimObjectives.AsNoTracking()
-                   .FirstOrDefaultAsync(o => o.ObjectiveId == kpi.ObjectiveId);
-            if (obj?.PillarId != null)
+            string pillCode = (x.PillarCode ?? "").Trim();
+            string objCode  = (x.ObjectiveCode ?? "").Trim();
+            string kpiCode  = (x.KpiCode ?? "").Trim();
+
+            string pillName = (x.PillarName ?? "").Trim();
+            string objName  = (x.ObjectiveName ?? "").Trim();
+
+            var line1 = $"KPI Code: {pillCode}.{objCode} {kpiCode}";
+            var line2 = string.IsNullOrEmpty(pillName) ? "" : $"Pillar: {pillName}";
+            var line3 = string.IsNullOrEmpty(objName)  ? "" : $"Objective: {objName}";
+            var subtitle = string.Join("\n", new[] { line1, line2, line3 }
+                .Where(s => !string.IsNullOrWhiteSpace(s)));
+
+            return new
             {
-                pil = await _db.DimPillars.AsNoTracking()
-                       .FirstOrDefaultAsync(p => p.PillarId == obj.PillarId);
-            }
-        }
-
-// Codes
-string pillCode = (pil?.PillarCode ?? "").Trim();
-string objCode  = (obj?.ObjectiveCode ?? "").Trim();
-string kpiCode  = (kpi.KpiCode ?? "").Trim();
-
-// Names
-string pillName = (pil?.PillarName ?? "").Trim();
-string objName  = (obj?.ObjectiveName ?? "").Trim();
-
-// Line 1: KPI code with structure
-string line1 = $"KPI Code: {pillCode}.{objCode} {kpiCode}";
-// Line 2: Pillar name
-string line2 = string.IsNullOrEmpty(pillName) ? "" : $"Pillar: {pillName}";
-// Line 3: Objective name
-string line3 = string.IsNullOrEmpty(objName) ? "" : $"Objective: {objName}";
-// Line 4: Priority
-string line4 = $"Priority: {plan.Priority}";
-
-// Join with newlines — works because your view uses innerText (not innerHTML)
-string subtitle = string.Join("\n", new[] { line1, line2, line3 }
-    .Where(s => !string.IsNullOrWhiteSpace(s)));
-
-redKpiIds.Add((plan.KpiId, kpi.KpiName ?? "-", subtitle, plan.Priority));
-    }
-
-    var ordered = redKpiIds
-        .OrderBy(x => x.priority ?? int.MaxValue) // nulls last
-        .ThenBy(x => x.name)
-        .Select(x => new { kpiId = x.kpiId, name = x.name, code = x.code, priority = x.priority })
+                kpiId = x.KpiId,
+                name = x.KpiName ?? "-",
+                code = subtitle,
+                priority = x.Priority
+            };
+        })
         .ToList();
 
-    return Json(ordered);
+    return Json(result);
 }
 
         // Single KPI payload (same shape as Dashboard’s summary)
@@ -126,16 +147,15 @@ redKpiIds.Add((plan.KpiId, kpi.KpiName ?? "-", subtitle, plan.Priority));
 
             // Facts for that plan year
             var facts = await _db.KpiFacts
-                .Include(f => f.Period)
-                .AsNoTracking()
-                .Where(f => f.KpiId == kpiId
-                         && f.IsActive == 1
-                         && f.KpiYearPlanId == plan.KpiYearPlanId
-                         && f.Period != null
-                         && f.Period.Year == planYear)
-                .OrderBy(f => f.Period!.MonthNum ?? 0)
-                .ThenBy(f => f.Period!.QuarterNum ?? 0)
-                .ToListAsync();
+    .Include(f => f.Period)
+    .AsNoTracking()
+    .Where(f => f.KpiId == kpiId
+             && f.IsActive == 1
+             && f.KpiYearPlanId == plan.KpiYearPlanId
+             && f.Period != null
+             && f.Period.Year == planYear)
+    .OrderBy(f => f.Period!.StartDate)   // <-- use StartDate for natural order
+    .ToListAsync();
 
             static string LabelFor(DimPeriod p)
             {
@@ -149,19 +169,22 @@ redKpiIds.Add((plan.KpiId, kpi.KpiName ?? "-", subtitle, plan.Priority));
             var target   = facts.Select(f => (decimal?)f.TargetValue).ToList();
             var forecast = facts.Select(f => (decimal?)f.ForecastValue).ToList();
 
-            var lastFact = facts.LastOrDefault();
-            (string label, string color) status = (lastFact?.StatusCode ?? "").Trim().ToLower() switch
-            {
-                "green" => ("Ok", "#28a745"), 
-                "red" => ("Needs Attention", "#dc3545"), 
-                "orange" => ("Catching Up", "#fd7e14"), 
-                "blue" => ("Data Missing", "#0d6efd"),
-                "conforme" => ("Ok", "#28a745"), 
-                "ecart" => ("Needs Attention", "#dc3545"), 
-                "rattrapage"=> ("Catching Up", "#fd7e14"), 
-                "attente"=> ("Data Missing", "#0d6efd"),
-                _        => ("—",         "")
-            };
+            // find the most recent fact that actually has a status
+var lastWithStatus = facts.LastOrDefault(f => !string.IsNullOrWhiteSpace(f.StatusCode));
+string? latestStatusCode = lastWithStatus?.StatusCode;
+
+(string label, string color) status = latestStatusCode?.Trim().ToLowerInvariant() switch
+{
+    "green"      => ("Ok",               "#28a745"),
+    "red"        => ("Needs Attention",  "#dc3545"),
+    "orange"     => ("Catching Up",      "#fd7e14"),
+    "blue"       => ("Data Missing",     "#0d6efd"),
+    "conforme"   => ("Ok",               "#28a745"),
+    "ecart"      => ("Needs Attention",  "#dc3545"),
+    "rattrapage" => ("Catching Up",      "#fd7e14"),
+    "attente"    => ("Data Missing",     "#0d6efd"),
+    _            => ("—",                "")
+};
 
             // five-year targets (bars to the right)
             var fy = await _db.KpiFiveYearTargets

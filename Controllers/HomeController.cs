@@ -128,16 +128,15 @@ public async Task<IActionResult> GetKpiSummary(decimal kpiId)
 
     // 2) Facts for that plan year (months or quarters)
     var facts = await _db.KpiFacts
-        .Include(f => f.Period)
-        .AsNoTracking()
-        .Where(f => f.KpiId == kpiId &&
-                    f.IsActive == 1 &&
-                    f.KpiYearPlanId == plan.KpiYearPlanId &&
-                    f.Period != null &&
-                    f.Period.Year == planYear)
-        .OrderBy(f => f.Period!.MonthNum ?? 0)
-        .ThenBy(f => f.Period!.QuarterNum ?? 0)
-        .ToListAsync();
+    .Include(f => f.Period)
+    .AsNoTracking()
+    .Where(f => f.KpiId == kpiId
+             && f.IsActive == 1
+             && f.KpiYearPlanId == plan.KpiYearPlanId
+             && f.Period != null
+             && f.Period.Year == planYear)
+    .OrderBy(f => f.Period!.StartDate)   // <-- use StartDate for natural order
+    .ToListAsync();
 
     static string LabelFor(DimPeriod p)
     {
