@@ -116,7 +116,7 @@
             if (slide.type === 'title') {
                 // header for group
                 $('kpiHeading').innerText = `Priority ${slide.priority}`;
-                $('kpiSub').innerText = `${slide.count} KPI${slide.count === 1 ? '' : 's'} flagged red`;
+                $('kpiSub').innerText = `${slide.count} KPI${slide.count === 1 ? '' : 's'} Need Attention`;
 
                 const tp = $('titlePriority');
                 tp.textContent = slide.priority;
