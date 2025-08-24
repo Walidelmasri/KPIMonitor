@@ -264,6 +264,21 @@
 
       const res = await api('@Url.Action("GetKpiSummary", "Home")?kpiId=' + encodeURIComponent(kpiId));
 
+// ---- title above chart ----
+// Expecting these from HomeController.GetKpiSummary: meta.pillarCode, meta.objectiveCode, meta.code, meta.title
+const leftParts = [];
+if (res?.meta?.pillarCode)   leftParts.push(res.meta.pillarCode);
+if (res?.meta?.objectiveCode)leftParts.push(res.meta.objectiveCode);
+
+// join pillar and objective with a dot, then add a space and KPI code
+let left = leftParts.join('.');
+if (res?.meta?.code) {
+  left = left ? `${left} ${res.meta.code}` : res.meta.code;
+}
+
+// final: "<PillarCode>.<ObjectiveCode> <KpiCode> — <KpiName>"
+const finalTitle = (left ? `${left} — ` : '') + (res?.meta?.title || '—');
+$('kpiTitle').textContent = finalTitle;
       // ---- meta ----
       metaOwner.textContent = res?.meta?.owner || '—';
       metaEditor.textContent = res?.meta?.editor || '—';
@@ -381,8 +396,9 @@
   <div class="row mb-5 g-4">
     <div class="col-md-9">
       <div class="bg-white border rounded shadow-sm p-3" style="height: 420px;">
-        <canvas id="kpiChart" aria-label="KPI Chart" role="img"></canvas>
-      </div>
+  <h6 id="kpiTitle" class="text-center text-secondary mb-2">KPI Title</h6>
+  <canvas id="kpiChart" aria-label="KPI Chart" role="img"></canvas>
+</div>
     </div>
 
     <div class="col-md-3 d-flex">

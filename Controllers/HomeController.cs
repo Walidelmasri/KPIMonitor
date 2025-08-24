@@ -202,19 +202,30 @@ public async Task<IActionResult> GetKpiSummary(decimal kpiId)
         statusCode = f.StatusCode ?? "",
         lastBy = string.IsNullOrWhiteSpace(f.LastChangedBy) ? "-" : f.LastChangedBy
     }).ToList();
-
+var kpi = await _db.DimKpis
+    .Include(x => x.Objective)
+        .ThenInclude(o => o.Pillar)
+    .AsNoTracking()
+    .FirstOrDefaultAsync(x => x.KpiId == kpiId);
     // 6) Meta
     var meta = new
-    {
-        owner = plan.Owner ?? "—",
-        editor = plan.Editor ?? "—",
-        valueType = string.IsNullOrWhiteSpace(plan.Frequency) ? "—" : plan.Frequency,
-        unit = string.IsNullOrWhiteSpace(plan.Unit) ? "—" : plan.Unit,
-        priority = plan.Priority,
-        statusLabel = status.label,
-        statusColor = status.color,
-        statusRaw = string.IsNullOrWhiteSpace(latestStatusCode) ? "" : latestStatusCode
-    };
+{
+    // NEW: for the title above the chart
+    title = kpi?.KpiName ?? "—",
+    code = kpi?.KpiCode ?? "",
+    pillarCode = kpi?.Objective?.Pillar?.PillarCode ?? "",
+    objectiveCode = kpi?.Objective?.ObjectiveCode ?? "",
+
+    // existing fields
+    owner = plan.Owner ?? "—",
+    editor = plan.Editor ?? "—",
+    valueType = string.IsNullOrWhiteSpace(plan.Frequency) ? "—" : plan.Frequency,
+    unit = string.IsNullOrWhiteSpace(plan.Unit) ? "—" : plan.Unit,
+    priority = plan.Priority,
+    statusLabel = status.label,
+    statusColor = status.color,
+    statusRaw = string.IsNullOrWhiteSpace(latestStatusCode) ? "" : latestStatusCode
+};
 
     // 7) Payload
     return Json(new
