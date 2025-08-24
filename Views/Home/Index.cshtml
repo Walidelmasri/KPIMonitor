@@ -229,6 +229,7 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        layout: {padding: {top: 16, bottom: 26}},
         scales: { y: { beginAtZero: true } },
         plugins: { legend: { position: 'top' } }
       }
@@ -395,7 +396,7 @@ $('kpiTitle').textContent = finalTitle;
   <!-- Chart + side card -->
   <div class="row mb-5 g-4">
     <div class="col-md-9">
-      <div class="bg-white border rounded shadow-sm p-3" style="height: 420px;">
+      <div class="bg-white border rounded shadow-sm p-3" style="height: 500px;">
   <h6 id="kpiTitle" class="text-center text-secondary mb-2">KPI Title</h6>
   <canvas id="kpiChart" aria-label="KPI Chart" role="img"></canvas>
 </div>
