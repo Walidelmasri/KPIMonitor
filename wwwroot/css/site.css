@@ -85,7 +85,7 @@ body {
 
 /* Other globals you already had */
 #modalKpiChart { width: 100% !important; height: 100% !important; }
-label, select { font-size: 1.05rem; }
+label, select { font-size: 2.05rem; }
 
 
 /* =========================
