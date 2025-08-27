@@ -1,0 +1,165 @@
+@model IEnumerable<KPIMonitor.Models.AuditLog>
+@{
+    ViewData["Title"] = "Audit Trail";
+    string ActionBadge(string? action)
+    {
+        switch ((action ?? "").ToUpperInvariant())
+        {
+            case "INSERT": return "text-bg-success";
+            case "UPDATE": return "text-bg-warning";
+            case "DELETE": return "text-bg-danger";
+            default:       return "text-bg-secondary";
+        }
+    }
+}
+
+<div class="container py-5">
+
+    @section PageHeader {
+        <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
+            <div class="page-hero-content">
+                <h1 class="page-title">📝 Audit Trail</h1>
+                <div class="text-muted">@((Model?.Count() ?? 0)) records</div>
+            </div>
+        </div>
+    }
+
+    <div class="with-rails">
+        <div class="table-responsive shadow-sm rounded-4 border bg-white">
+            <table class="table table-striped table-bordered mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:170px;">Time (UTC)</th>
+                        <th style="width:160px;">User</th>
+                        <th style="width:160px;">Table</th>
+                        <th style="width:110px;">Action</th>
+                        <th style="width:240px;">Key</th>
+                        <th>Changes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var r in Model)
+                    {
+                        <tr>
+                            <td>@r.ChangedAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            <td>@(string.IsNullOrWhiteSpace(r.ChangedBy) ? "system" : r.ChangedBy)</td>
+                            <td>@r.TableName</td>
+                            <td>
+                                <span class="badge rounded-pill @ActionBadge(r.Action)">
+                                    @((r.Action ?? "—").ToUpperInvariant())
+                                </span>
+                            </td>
+
+                            <!-- Key: render compact (no raw JSON) -->
+                            <td>
+                                <div class="small text-muted"
+                                     data-key='@r.KeyJson'>
+                                    <!-- will be filled by JS -->
+                                </div>
+                            </td>
+
+                            <!-- Changes: pretty list (no raw JSON) with a details toggle -->
+                            <td>
+                                <div class="small"
+                                     data-changes='@r.ColumnChangesJson'>
+                                    <!-- will be filled by JS -->
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">No audit entries yet.</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    // Safe JSON parse
+    const safe = (s) => {
+        try { return JSON.parse(s); } catch { return null; }
+    };
+
+    // Shorten long strings for inline display
+    const clip = (v, max = 48) => {
+        if (v == null) return "∅";
+        let s = String(v);
+        return s.length > max ? s.slice(0, max) + "…" : s;
+    };
+
+    // Render the Key object like: id=123, kpiId=45, periodId=202401
+    document.querySelectorAll('[data-key]').forEach(el => {
+        const json = el.getAttribute('data-key') ?? '';
+        const obj = safe(json);
+        if (!obj || typeof obj !== 'object') {
+            el.textContent = '—';
+            return;
+        }
+        const parts = [];
+        for (const k of Object.keys(obj)) {
+            parts.push(`${k}=${clip(obj[k], 32)}`);
+        }
+        el.textContent = parts.length ? parts.join(', ') : '—';
+    });
+
+    // Render ColumnChanges as a tidy list with a Details toggle
+    document.querySelectorAll('[data-changes]').forEach(el => {
+        const json = el.getAttribute('data-changes') ?? '';
+        const obj = safe(json);
+        if (!obj || typeof obj !== 'object') {
+            el.innerHTML = '<span class="text-muted">—</span>';
+            return;
+        }
+
+        const keys = Object.keys(obj);
+        if (!keys.length) {
+            el.innerHTML = '<span class="text-muted">—</span>';
+            return;
+        }
+
+        // Summary line
+        const summary = document.createElement('div');
+        summary.className = 'text-muted mb-1';
+        summary.textContent = `${keys.length} field${keys.length > 1 ? 's' : ''} changed`;
+
+        // Details (collapsed)
+        const details = document.createElement('details');
+        details.className = 'border rounded-3 p-2 bg-light-subtle';
+        const summaryTag = document.createElement('summary');
+        summaryTag.textContent = 'Details';
+        summaryTag.className = 'fw-semibold cursor-pointer';
+        details.appendChild(summaryTag);
+
+        // List of "Field: old → new"
+        const list = document.createElement('div');
+        list.className = 'mt-2';
+        keys.forEach(k => {
+            const change = obj[k] ?? {};
+            const oldV = ('old' in change) ? change.old : change.Old ?? null;
+            const newV = ('new' in change) ? change.new : change.New ?? null;
+
+            const row = document.createElement('div');
+            row.innerHTML =
+                `<code class="me-1">${k}</code>: ` +
+                `<span class="text-decoration-line-through text-muted">"${clip(oldV)}"</span>` +
+                ` <span class="mx-1">→</span> ` +
+                `<span class="fw-semibold">"${clip(newV)}"</span>`;
+            list.appendChild(row);
+        });
+        details.appendChild(list);
+
+        el.replaceChildren(summary, details);
+    });
+})();
+</script>
+}
