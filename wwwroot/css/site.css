@@ -346,7 +346,7 @@ label, select { font-size: 2.05rem; }
     bottom: 0;                  /* run to the bottom of the section */
     width: 72px;                /* rail visual width */
     pointer-events: none;       /* purely decorative */
-    background-image: url("/images/side-rail1.png"); /* use ONE file */
+    background-image: url("../images/side-rail1.png"); /* use ONE file */
     background-repeat: repeat-y;
     background-size: 72px auto; /* tile height from the image */
     image-rendering: auto;
