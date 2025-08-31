@@ -1,0 +1,28 @@
+    # Ignore compiled files and build artifacts
+    bin/
+    obj/
+    *.dll
+    *.pdb
+    *.exe
+
+    # Ignore Visual Studio related files
+    .vs/
+    *.suo
+    *.user
+    *.log
+    *.opensdf
+    *.sdf
+
+    # Ignore NuGet packages
+    packages/
+
+    # Ignore temporary files
+    Temp/
+    tmp/
+
+    # Ignore user-specific settings
+    *.csproj.user
+    *.sln.user
+
+    # Ignore compiled Razor views (if applicable)
+    *.cshtml.g.cs
