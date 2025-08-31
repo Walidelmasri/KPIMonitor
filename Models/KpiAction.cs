@@ -5,8 +5,8 @@ namespace KPIMonitor.Models
     public class KpiAction
     {
         public decimal ActionId { get; set; }          
-        public decimal KpiId { get; set; }             
-
+        public decimal? KpiId { get; set; }             
+        public bool IsGeneral { get; set; }
         public string Owner { get; set; } = null!;
         public DateTime? AssignedAt { get; set; }
 

@@ -66,7 +66,38 @@ public async Task<IActionResult> Create(KpiAction vm)
     TempData["Msg"] = "Action created.";
     return RedirectToAction(nameof(Index), new { kpiId = vm.KpiId });
 }
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> CreateGeneral(KpiAction vm)
+{
+    if (vm == null || string.IsNullOrWhiteSpace(vm.Description))
+        return BadRequest("Description is required.");
 
+    // 🔒 Server-enforce "general" (ignore anything sent from the client)
+    vm.KpiId = null;
+    vm.IsGeneral = true;
+
+    // Set timestamps and audit fields like your existing Create
+    vm.CreatedBy = User?.Identity?.Name ?? "system";
+    vm.CreatedDate = DateTime.UtcNow;
+    vm.LastChangedBy = vm.CreatedBy;
+    vm.LastChangedDate = vm.CreatedDate;
+
+    // Reasonable defaults if not posted
+    if (vm.AssignedAt == null) vm.AssignedAt = DateTime.UtcNow;
+    vm.StatusCode = string.IsNullOrWhiteSpace(vm.StatusCode) ? "todo" : vm.StatusCode.Trim().ToLowerInvariant();
+    // ExtensionCount is already short (0 by default from your GET Create path); if null/0 it's fine.
+
+    _db.KpiActions.Add(vm);
+    await _db.SaveChangesAsync();
+
+    // Match your AJAX pattern from Create: return a simple OK if this was an XHR
+    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        return Content("OK", "text/html");
+
+    TempData["Msg"] = "General action created.";
+    return RedirectToAction(nameof(Index)); // no kpiId → shows all (or change to your preferred landing)
+}
         // Edit (basic fields)
         public async Task<IActionResult> Edit(decimal id)
         {

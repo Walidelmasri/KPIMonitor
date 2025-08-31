@@ -260,13 +260,23 @@
         async function submitAddAction(ev) {
             ev.preventDefault();
             try {
-                await postForm('@Url.Action("Create", "KpiActions")', $('addActionForm'));
+                const url = isGeneralCreate
+                    ? '@Url.Action("CreateGeneral", "KpiActions")'
+                    : '@Url.Action("Create", "KpiActions")';
+
+                await postForm(url, $('addActionForm'));
                 bootstrap.Modal.getInstance(document.getElementById('addActionModal')).hide();
+
+                // reset the flag after a successful save
+                isGeneralCreate = false;
+
+                // refresh current KPI actions list (general actions won't show here, which is fine)
                 await loadActionsHtml(currentKpiId);
             } catch {
                 alert('Save failed.');
             }
         }
+
 
         // ---------------------------
         // Move Deadline Modal
@@ -324,6 +334,63 @@
         window.openAddAction = openAddAction;
         window.openMoveDeadline = openMoveDeadline;
         window.showDecisions = showDecisions;
+
+        let isGeneralCreate = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnGeneral = document.getElementById('btnAddGeneralAction');
+            if (btnGeneral) {
+                btnGeneral.addEventListener('click', () => {
+                    isGeneralCreate = true;
+
+                    // reuse your existing Add Action modal + fields
+                    $('af_kpiId').value = '';       // ensure no KPI id goes up
+                    $('af_owner').value = '';
+                    $('af_description').value = '';
+                    $('af_due').value = '';
+                    $('af_status').value = 'todo';
+
+                    const m = new bootstrap.Modal(document.getElementById('addActionModal'));
+                    m.show();
+                });
+            }
+        });
+
+
+        // On submit, branch the URL (keep your existing submit code, just add this one switch)
+        $('#actionForm').on('submit', function (e) {
+            e.preventDefault();
+
+            // Build form data exactly like you do today (DON'T include KpiId for general)
+            const formData = $(this).serialize();
+
+            const url = isGeneralCreate
+                ? '/KpiActions/CreateGeneral'
+                : '/KpiActions/Create';
+
+            $.ajax({
+                url: url,
+                method: 'POST',
+                data: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    // if you already add the anti-forgery token via header or hidden input, keep doing that
+                }
+            }).done(function () {
+                // whatever you do today after "OK"
+                // e.g., refresh the list or append a new card
+                $('#actionModal').modal('hide');
+
+                // Optional: mark card as General when you render it (see step 3)
+                reloadActionsOrAppendNewOne();
+            }).fail(function (xhr) {
+                alert(xhr.responseText || 'Error creating general action');
+            }).always(function () {
+                isGeneralCreate = false;
+                $('#kpiSelectorRow').show(); // restore for next time
+            });
+        });
+
     </script>
 }
 
@@ -352,6 +419,7 @@
                     <div class="h4 mb-0 fw-bold" id="kpiHeading">—</div>
                     <div class="text-muted" id="kpiSub" style="white-space:pre-line;">—</div>
                 </div>
+
                 <div class="d-flex align-items-center gap-2">
                     <span class="text-muted" id="slideCounter">0 / 0</span>
 
@@ -439,10 +507,16 @@
             <!-- Decisions board (HTML injected when requested) -->
             <div id="decisionsWrap" class="mt-4 d-none">
                 <div class="bg-white border rounded-3 p-3">
-                    <h5 class="mb-3">Decisions</h5>
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h5 class="mb-0">Decisions</h5>
+                        <button id="btnAddGeneralAction" type="button" class="btn btn-primary btn-sm">
+                            Add General Action
+                        </button>
+                    </div>
                     <div id="decisionsBody"></div>
                 </div>
             </div>
+
         </div>
 
     </div>

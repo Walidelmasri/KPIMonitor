@@ -198,7 +198,6 @@ namespace KPIMonitor.Data
                 e.Property(x => x.LastChangedBy).HasColumnName("LASTCHANGEDBY").HasMaxLength(50);
                 e.Property(x => x.LastChangedDate).HasColumnName("LASTCHANGEDDATE");
                 e.Property(x => x.IsActive).HasColumnName("ISACTIVE");
-
                 e.HasOne(x => x.Kpi)
                  .WithMany()                         // (no collection on DimKpi needed)
                  .HasForeignKey(x => x.KpiId)
@@ -213,24 +212,21 @@ namespace KPIMonitor.Data
                 e.Property(x => x.ActionId)
                  .HasColumnName("ACTIONID")
                  .ValueGeneratedOnAdd();   // <-- add this
-                e.Property(x => x.KpiId).HasColumnName("KPIID").IsRequired();
-
+                e.Property(x => x.KpiId).HasColumnName("KPIID").IsRequired(false);
                 e.Property(x => x.Owner).HasColumnName("OWNER").HasMaxLength(100).IsRequired();
                 e.Property(x => x.AssignedAt).HasColumnName("ASSIGNEDAT");
-
                 e.Property(x => x.Description).HasColumnName("DESCRIPTION").HasMaxLength(400).IsRequired();
                 e.Property(x => x.DueDate).HasColumnName("DUEDATE");
-
                 e.Property(x => x.StatusCode).HasColumnName("STATUSCODE").HasMaxLength(20).IsRequired();
-
                 e.Property(x => x.ExtensionCount).HasColumnName("EXTENSIONCOUNT");
-
                 e.Property(x => x.CreatedBy).HasColumnName("CREATEDBY").HasMaxLength(100);
                 e.Property(x => x.CreatedDate).HasColumnName("CREATEDDATE");
-
                 e.Property(x => x.LastChangedBy).HasColumnName("LASTCHANGEDBY").HasMaxLength(100);
                 e.Property(x => x.LastChangedDate).HasColumnName("LASTCHANGEDDATE");
-
+                e.Property(a => a.IsGeneral)
+                .HasColumnName("ISGENERAL")
+                .HasColumnType("NUMBER(1)")
+                .HasDefaultValue(false);
                 e.HasOne(x => x.Kpi)
                  .WithMany()                       // (no back-collection on DimKpi; keeps your existing models intact)
                  .HasForeignKey(x => x.KpiId)
@@ -276,99 +272,99 @@ namespace KPIMonitor.Data
 });
         }
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-{
-    // collect audit rows BEFORE saving
-    var now = DateTime.UtcNow;
-    // var user = string.IsNullOrWhiteSpace(CurrentUserName) ? "system" : CurrentUserName;
-
-    var audits = new List<AuditLog>();
-
-    // entries we want to log
-    var entries = ChangeTracker.Entries()
-        .Where(e => e.Entity is not AuditLog &&
-                    e.State != EntityState.Detached &&
-                    e.State != EntityState.Unchanged)
-        .ToList();
-
-    foreach (var e in entries)
-    {
-        var table = e.Metadata.GetTableName() ?? e.Metadata.ClrType.Name.ToUpperInvariant();
-
-        // primary key(s)
-        var keyProps = e.Properties.Where(p => p.Metadata.IsPrimaryKey());
-        var keyDict = new Dictionary<string, object?>();
-        foreach (var kp in keyProps)
         {
-            object? val = e.State == EntityState.Added ? kp.CurrentValue
-                        : e.State == EntityState.Deleted ? kp.OriginalValue
-                        : kp.CurrentValue ?? kp.OriginalValue;
-            keyDict[kp.Metadata.Name] = val;
-        }
+            // collect audit rows BEFORE saving
+            var now = DateTime.UtcNow;
+            // var user = string.IsNullOrWhiteSpace(CurrentUserName) ? "system" : CurrentUserName;
 
-        // action + changed columns
-        string action = e.State switch
-        {
-            EntityState.Added    => "Added",
-            EntityState.Deleted  => "Deleted",
-            EntityState.Modified => "Modified",
-            _ => "Unknown"
-        };
+            var audits = new List<AuditLog>();
 
-        var changes = new List<object>();
+            // entries we want to log
+            var entries = ChangeTracker.Entries()
+                .Where(e => e.Entity is not AuditLog &&
+                            e.State != EntityState.Detached &&
+                            e.State != EntityState.Unchanged)
+                .ToList();
 
-        if (e.State == EntityState.Added)
-        {
-            foreach (var p in e.Properties)
+            foreach (var e in entries)
             {
-                changes.Add(new { Column = p.Metadata.Name, Old = (string?)null, New = p.CurrentValue });
-            }
-        }
-        else if (e.State == EntityState.Deleted)
-        {
-            foreach (var p in e.Properties)
-            {
-                changes.Add(new { Column = p.Metadata.Name, Old = p.OriginalValue, New = (string?)null });
-            }
-        }
-        else if (e.State == EntityState.Modified)
-        {
-            foreach (var p in e.Properties.Where(p => p.IsModified))
-            {
-                // only record when value actually changed
-                var oldVal = p.OriginalValue;
-                var newVal = p.CurrentValue;
-                if (!Equals(oldVal, newVal))
+                var table = e.Metadata.GetTableName() ?? e.Metadata.ClrType.Name.ToUpperInvariant();
+
+                // primary key(s)
+                var keyProps = e.Properties.Where(p => p.Metadata.IsPrimaryKey());
+                var keyDict = new Dictionary<string, object?>();
+                foreach (var kp in keyProps)
                 {
-                    changes.Add(new { Column = p.Metadata.Name, Old = oldVal, New = newVal });
+                    object? val = e.State == EntityState.Added ? kp.CurrentValue
+                                : e.State == EntityState.Deleted ? kp.OriginalValue
+                                : kp.CurrentValue ?? kp.OriginalValue;
+                    keyDict[kp.Metadata.Name] = val;
                 }
+
+                // action + changed columns
+                string action = e.State switch
+                {
+                    EntityState.Added => "Added",
+                    EntityState.Deleted => "Deleted",
+                    EntityState.Modified => "Modified",
+                    _ => "Unknown"
+                };
+
+                var changes = new List<object>();
+
+                if (e.State == EntityState.Added)
+                {
+                    foreach (var p in e.Properties)
+                    {
+                        changes.Add(new { Column = p.Metadata.Name, Old = (string?)null, New = p.CurrentValue });
+                    }
+                }
+                else if (e.State == EntityState.Deleted)
+                {
+                    foreach (var p in e.Properties)
+                    {
+                        changes.Add(new { Column = p.Metadata.Name, Old = p.OriginalValue, New = (string?)null });
+                    }
+                }
+                else if (e.State == EntityState.Modified)
+                {
+                    foreach (var p in e.Properties.Where(p => p.IsModified))
+                    {
+                        // only record when value actually changed
+                        var oldVal = p.OriginalValue;
+                        var newVal = p.CurrentValue;
+                        if (!Equals(oldVal, newVal))
+                        {
+                            changes.Add(new { Column = p.Metadata.Name, Old = oldVal, New = newVal });
+                        }
+                    }
+                    // if nothing actually changed (rare), skip logging
+                    if (changes.Count == 0) continue;
+                }
+
+                var audit = new AuditLog
+                {
+                    TableName = table,
+                    KeyJson = System.Text.Json.JsonSerializer.Serialize(keyDict),
+                    Action = action,
+                    ChangedBy = "system", //need to change this in the future to actual currentuser fetched by ad
+                    ChangedAtUtc = now,
+                    ColumnChangesJson = System.Text.Json.JsonSerializer.Serialize(changes)
+                };
+                audits.Add(audit);
             }
-            // if nothing actually changed (rare), skip logging
-            if (changes.Count == 0) continue;
+
+            // save data first
+            var result = await base.SaveChangesAsync(cancellationToken);
+
+            // then save audits (if any)
+            if (audits.Count > 0)
+            {
+                AuditLogs.AddRange(audits);
+                await base.SaveChangesAsync(cancellationToken);
+            }
+
+            return result;
         }
-
-        var audit = new AuditLog
-        {
-            TableName = table,
-            KeyJson = System.Text.Json.JsonSerializer.Serialize(keyDict),
-            Action = action,
-            ChangedBy = "system", //need to change this in the future to actual currentuser fetched by ad
-            ChangedAtUtc = now,
-            ColumnChangesJson = System.Text.Json.JsonSerializer.Serialize(changes)
-        };
-        audits.Add(audit);
-    }
-
-    // save data first
-    var result = await base.SaveChangesAsync(cancellationToken);
-
-    // then save audits (if any)
-    if (audits.Count > 0)
-    {
-        AuditLogs.AddRange(audits);
-        await base.SaveChangesAsync(cancellationToken);
-    }
-
-    return result;
-}
     }
 }

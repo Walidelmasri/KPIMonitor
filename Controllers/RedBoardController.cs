@@ -4,6 +4,7 @@ using KPIMonitor.Data;
 using KPIMonitor.Models;
 using System.Text; // add at top of file if not present
 using System.Net;  // add at top of file if not present
+using System.Linq;
 
 
 namespace KPIMonitor.Controllers
@@ -396,6 +397,7 @@ public async Task<IActionResult> ActionsListHtml(decimal kpiId)
     return Content(sb.ToString(), "text/html");
 }
 
+
 [HttpPost]
 [ValidateAntiForgeryToken]
 public async Task<IActionResult> DecisionsBoardHtml([FromBody] decimal[] kpiIds)
@@ -403,15 +405,26 @@ public async Task<IActionResult> DecisionsBoardHtml([FromBody] decimal[] kpiIds)
     if (kpiIds == null || kpiIds.Length == 0)
         return Content("<div class='text-muted small'>No KPIs in this run.</div>", "text/html");
 
-    var actions = await _db.KpiActions
-    .AsNoTracking()
-    .Include(a => a.Kpi)
-        .ThenInclude(k => k.Objective)
-    .Include(a => a.Kpi)
-        .ThenInclude(k => k.Pillar)
-    .Where(a => kpiIds.Contains(a.KpiId))
-    .OrderBy(a => a.StatusCode).ThenBy(a => a.DueDate)
-    .ToListAsync();
+    // KPI-scoped actions for the selected run
+    var kpiScoped = await _db.KpiActions
+        .AsNoTracking()
+        .Include(a => a.Kpi)
+            .ThenInclude(k => k.Objective)
+        .Include(a => a.Kpi)
+            .ThenInclude(k => k.Pillar)
+        .Where(a => a.KpiId.HasValue && kpiIds.Contains(a.KpiId.Value))  // fix for nullable KpiId
+        .OrderBy(a => a.StatusCode).ThenBy(a => a.DueDate)
+        .ToListAsync();
+
+    // General actions (no KPI) — always include
+    var general = await _db.KpiActions
+        .AsNoTracking()
+        .Where(a => a.KpiId == null)
+        .OrderBy(a => a.StatusCode).ThenBy(a => a.DueDate)
+        .ToListAsync();
+
+    // Merge
+    var actions = kpiScoped.Concat(general).ToList();
 
     static string H(string? s) => WebUtility.HtmlEncode(s ?? "");
     static string Fmt(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
@@ -433,26 +446,41 @@ public async Task<IActionResult> DecisionsBoardHtml([FromBody] decimal[] kpiIds)
         }
         else
         {
-foreach (var a in items)
-{
-    sb.Append(@$"
+            foreach (var a in items)
+            {
+                // Build the KPI/general info block
+                string infoBlock;
+                if (a.KpiId == null || a.IsGeneral)
+                {
+                    infoBlock = "<div class='small text-muted mt-1'><span class='badge text-bg-info me-1'>General</span>General Action</div>";
+                }
+                else
+                {
+                    var kpiCode = $"{H(a.Kpi?.Pillar?.PillarCode ?? "")}.{H(a.Kpi?.Objective?.ObjectiveCode ?? "")} {H(a.Kpi?.KpiCode ?? "")}";
+                    var kpiName = H(a.Kpi?.KpiName ?? "-");
+                    var pillarName = H(a.Kpi?.Pillar?.PillarName ?? "");
+                    var objectiveName = H(a.Kpi?.Objective?.ObjectiveName ?? "");
+
+                    infoBlock = @$"
+      <div class='small text-muted mt-1'>
+        KPI: <strong>{kpiCode}</strong> — {kpiName}
+        {(string.IsNullOrWhiteSpace(pillarName) ? "" : $"<div>Pillar: {pillarName}</div>")}
+        {(string.IsNullOrWhiteSpace(objectiveName) ? "" : $"<div>Objective: {objectiveName}</div>")}
+      </div>";
+                }
+
+                sb.Append(@$"
     <div class='border rounded-3 p-2 bg-white'>
       <div class='d-flex justify-content-between align-items-center'>
         <strong>{H(a.Owner)}</strong>
         <span class='badge rounded-pill {badgeClass}'>{H(title)}</span>
       </div>
-      <div class='small text-muted mt-1'>
-        KPI: <strong>{H(a.Kpi?.Pillar?.PillarCode ?? "")}.{H(a.Kpi?.Objective?.ObjectiveCode ?? "")} {H(a.Kpi?.KpiCode ?? "")}</strong> — {H(a.Kpi?.KpiName ?? "-")}
-        <div>Pillar: {(string.IsNullOrWhiteSpace(a.Kpi?.Pillar?.PillarName) ? "" : " / ")}{H(a.Kpi?.Objective?.ObjectiveName ?? "")}</div>
-        <div>Objective: {H(a.Kpi?.Objective?.ObjectiveName ?? "")}</div>
-
-      </div>
+      {infoBlock}
       <div class='mt-1'>Description: {H(a.Description)}</div>
       <div class='text-muted small mt-1'>Due: {Fmt(a.DueDate)}</div>
       <div class='text-muted small mt-1'>Ext: {a.ExtensionCount}</div>
-
     </div>");
-}
+            }
         }
 
         sb.Append("</div></div>");
@@ -468,6 +496,8 @@ foreach (var a in items)
 
     return Content(html, "text/html");
 }
+
+
 
     }
 }
