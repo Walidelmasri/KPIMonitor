@@ -16,14 +16,42 @@
 /* =========================
    00) CORE / RESETS
    ========================= */
-html { font-size: 14px; position: relative; min-height: 100%; }
-@media (min-width: 768px) { html { font-size: 16px; } }
+:root {
+  --app-font: 'Tajawal', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
+/* Make everything inherit the body’s font (including pseudo-elements) */
+*,
+*::before,
+*::after {
+  font-family: inherit;
+}
+
+/* Form controls on some browsers don’t inherit by default */
+input,
+button,
+select,
+textarea {
+  font: inherit;
+}
+
+html {
+  font-size: 14px;
+  position: relative;
+  min-height: 100%;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
 
 /* Top padding so content isn't hidden behind fixed navbar (≈72px bar + breathing) */
 body {
   margin-bottom: 60px;
   padding-top: 75px;
-  font-family: 'Lato', sans-serif;
+  font-family: var(--app-font);
   color: #1d1d1f;
 }
 
@@ -48,7 +76,10 @@ body {
   letter-spacing: 0.2px;
   margin: 0 0 1.25rem 0;
 }
-.display-4 { font-size: 2.5rem; }
+
+.display-4 {
+  font-size: 2.5rem;
+}
 
 
 /* =========================
@@ -57,7 +88,9 @@ body {
    ========================= */
 
 /* Make EVERY page’s content the same width without editing views */
-.container { max-width: 1400px !important; }
+.container {
+  max-width: 1400px !important;
+}
 
 /* Optional helper if you choose to wrap pages later:
    <div class="page-container"> ... </div> */
@@ -68,15 +101,19 @@ body {
 }
 
 /* Space the first table/card/row consistently after the page title */
-.page-title + .table-responsive,
-.page-title + .card,
-.page-title + .row,
-.page-title + table {
+.page-title+.table-responsive,
+.page-title+.card,
+.page-title+.row,
+.page-title+table {
   margin-top: 1.5rem;
 }
 
 /* Make tables stretch nicely and headers stay on one line */
-.table { width: 100%; table-layout: auto; }
+.table {
+  width: 100%;
+  table-layout: auto;
+}
+
 .table thead th {
   white-space: nowrap;
   font-weight: 600;
@@ -84,23 +121,39 @@ body {
 }
 
 /* Other globals you already had */
-#modalKpiChart { width: 100% !important; height: 100% !important; }
-label, select { font-size: 2.05rem; }
+#modalKpiChart {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+label,
+select {
+  font-size: 2.05rem;
+}
 
 
 /* =========================
    03) FORMS / INPUTS
    ========================= */
-.form-select { padding: 0.6rem 1rem; font-size: 1.05rem; }
-.btn { font-size: 1.05rem; }
+.form-select {
+  padding: 0.6rem 1rem;
+  font-size: 1.05rem;
+}
+
+.btn {
+  font-size: 1.05rem;
+}
 
 .form-floating>.form-control-plaintext::placeholder,
 .form-floating>.form-control::placeholder {
   color: var(--bs-secondary-color);
   text-align: end;
 }
+
 .form-floating>.form-control-plaintext:focus::placeholder,
-.form-floating>.form-control:focus::placeholder { text-align: start; }
+.form-floating>.form-control:focus::placeholder {
+  text-align: start;
+}
 
 
 /* =========================
@@ -113,8 +166,17 @@ label, select { font-size: 2.05rem; }
   margin-bottom: 1rem;
   font-weight: 700;
 }
-.badge { font-size: 0.95rem; }
-.table caption { font-size: 1.1rem; font-weight: 600; text-align: left; padding: .5rem; }
+
+.badge {
+  font-size: 0.95rem;
+}
+
+.table caption {
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-align: left;
+  padding: .5rem;
+}
 
 
 /* =========================
@@ -123,34 +185,58 @@ label, select { font-size: 2.05rem; }
    - multi-level dropdowns (Bootstrap 5 + tiny CSS)
    - green accents, no blue hovers
    ========================= */
-.navbar.fixed-top { z-index: 1030; height: 72px; }
+.navbar.fixed-top {
+  z-index: 1030;
+  height: 72px;
+}
 
-.navbar-brand img { height: 60px; width: auto; }
+.navbar-brand img {
+  height: 60px;
+  width: auto;
+}
+
 /* More space between logo and text */
 .navbar-brand .app-name {
   margin-left: 1rem;
-  font-weight: 700; font-size: 18px; color: #1d1d1f; letter-spacing: .2px;
+  font-weight: 700;
+  font-size: 18px;
+  color: #1d1d1f;
+  letter-spacing: .2px;
 }
 
 /* Top-level nav links */
 .navbar-nav .nav-link {
   color: #2d2d2d !important;
-  font-weight: 500; font-size: 15.5px;
+  font-weight: 500;
+  font-size: 15.5px;
   padding: .6rem .85rem;
 }
+
 .navbar-nav .nav-link:hover,
 .navbar-nav .nav-link:focus,
 .navbar-nav .nav-link.active {
-  color: #1ca76a !important;           /* BADEA green on hover/active */
+  color: #1ca76a !important;
+  /* BADEA green on hover/active */
 }
 
 /* Dropdown aesthetics (neutral + green hover) */
-.dropdown-menu { border-radius: 12px; padding: .4rem; }
-.dropdown-item { border-radius: 8px; color: #333 !important; font-weight: 500; }
+.dropdown-menu {
+  border-radius: 12px;
+  padding: .4rem;
+}
+
+.dropdown-item {
+  border-radius: 8px;
+  color: #333 !important;
+  font-weight: 500;
+}
+
 .dropdown-item:hover,
 .dropdown-item:focus {
-  background: #f2fbf7;                 /* soft green tint */
-  color: #1ca76a !important;           /* remove Bootstrap blue */
+  background: #f2fbf7;
+  /* soft green tint */
+  color: #1ca76a !important;
+  /* remove Bootstrap blue */
 }
 
 /* Remove Bootstrap caret (the arrow/dot you don’t like) */
@@ -158,17 +244,27 @@ label, select { font-size: 2.05rem; }
 /* Show a right-pointing arrow on submenu triggers */
 
 /* Multi-level dropdown support (no JS dependency) */
-.dropdown-submenu { position: relative; }
-.dropdown-submenu > .dropdown-menu {
-  top: 0; left: 100%;
-  margin-top: -0.25rem; margin-left: .1rem;
+.dropdown-submenu {
+  position: relative;
+}
+
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -0.25rem;
+  margin-left: .1rem;
 }
 
 
 /* Optional: open on hover for mice/trackpads */
 @media (hover: hover) and (pointer: fine) {
-  .dropdown:hover > .dropdown-menu { display: block; }
-  .dropdown-submenu:hover > .dropdown-menu { display: block; }
+  .dropdown:hover>.dropdown-menu {
+    display: block;
+  }
+
+  .dropdown-submenu:hover>.dropdown-menu {
+    display: block;
+  }
 }
 
 
@@ -187,7 +283,7 @@ label, select { font-size: 2.05rem; }
 
 /* Subtle elevation */
 .btn:not(.btn-link):not(.btn-outline-*) {
-  box-shadow: 0 2px 6px rgba(0,0,0,.08);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
 }
 
 /* Primary action (BADEA green) */
@@ -196,8 +292,17 @@ label, select { font-size: 2.05rem; }
   border-color: #1ca76a !important;
   color: #fff !important;
 }
-.btn-primary:hover { background-color: #16945d !important; border-color: #16945d !important; transform: translateY(-1px); }
-.btn-primary:active { transform: translateY(0); box-shadow: 0 1px 3px rgba(0,0,0,.14) inset; }
+
+.btn-primary:hover {
+  background-color: #16945d !important;
+  border-color: #16945d !important;
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .14) inset;
+}
 
 /* Secondary/neutral */
 .btn-secondary {
@@ -205,7 +310,10 @@ label, select { font-size: 2.05rem; }
   border-color: #e6e8eb !important;
   color: #1d1d1f !important;
 }
-.btn-secondary:hover { background-color: #eceff3 !important; }
+
+.btn-secondary:hover {
+  background-color: #eceff3 !important;
+}
 
 /* Outline variants (clean, minimal) */
 .btn-outline-secondary {
@@ -213,6 +321,7 @@ label, select { font-size: 2.05rem; }
   border-color: #cfd6dd !important;
   color: #47515a !important;
 }
+
 .btn-outline-secondary:hover {
   background: #f5f7f9 !important;
   color: #1d1d1f !important;
@@ -220,18 +329,25 @@ label, select { font-size: 2.05rem; }
 
 /* “Danger lite” for Deactivate etc. */
 .btn-warning {
-  background-color: #fff3e0 !important;   /* pale orange */
+  background-color: #fff3e0 !important;
+  /* pale orange */
   border-color: #ffd8a8 !important;
   color: #a36100 !important;
 }
-.btn-warning:hover { background-color: #ffe8c7 !important; }
+
+.btn-warning:hover {
+  background-color: #ffe8c7 !important;
+}
 
 /* Success (if you need it distinct from primary) */
 .btn-success {
   background-color: #14a44d !important;
   border-color: #14a44d !important;
 }
-.btn-success:hover { background-color: #129447 !important; }
+
+.btn-success:hover {
+  background-color: #129447 !important;
+}
 
 /* Rounded, icon-ish Add button (use on Index headers) */
 .btn-add {
@@ -241,127 +357,217 @@ label, select { font-size: 2.05rem; }
   border-radius: 9999px;
   padding: .55rem 1.1rem;
 }
-.btn-add:hover { background-color: #16945d !important; }
+
+.btn-add:hover {
+  background-color: #16945d !important;
+}
 
 /* Make outline buttons less faint in tables */
-.table .btn { box-shadow: none; }
+.table .btn {
+  box-shadow: none;
+}
 
 
 /* =========================
    07) LOGIN PAGE
    ========================= */
-  /* #login-page {
+/* #login-page {
       background-image: url('/images/Picture1.png');
       background-size: cover;
       background-position: center;
   } */
-#login-page .login-container { 
-  display: flex; 
-  justify-content: center; 
-  align-items: center; 
-  height: 90vh; 
+#login-page .login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 90vh;
 }
+
 #login-page .login-box {
-  background: #fff; padding: 40px; border-radius: 16px;
-  box-shadow: 0 8px 16px rgba(0,0,0,.08);
-  width: 100%; max-width: 400px; text-align: center;
+  background: #fff;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, .08);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
 }
-#login-page .login-logo { width: 320px; height: auto; margin-bottom: 20px; }
+
+#login-page .login-logo {
+  width: 320px;
+  height: auto;
+  margin-bottom: 20px;
+}
+
 #login-header {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 2rem; font-weight: 600; color: #333; margin-bottom: 1rem; text-align: center;
+  /* was: font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; */
+  font-family: inherit;
+  font-size: 2rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 1rem;
+  text-align: center;
 }
-#login-form, #login-form * { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; }
-#login-form input.form-control { font-size: 1.125rem; padding: .5rem .75rem; }
-#login-form label { font-weight: 600; font-size: 1rem; margin-bottom: .25rem; display: block; }
-#login-form .text-danger { font-size: .875rem; margin-top: .25rem; }
-#login-form button.btn { font-family: inherit; font-size: 1.125rem; font-weight: 600; padding: .75rem; }
+
+#login-form,
+#login-form * {
+  /* was: font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; */
+  font-family: inherit;
+  color: #333;
+}
+
+#login-form input.form-control {
+  font-size: 1.125rem;
+  padding: .5rem .75rem;
+}
+
+#login-form label {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: .25rem;
+  display: block;
+}
+
+#login-form .text-danger {
+  font-size: .875rem;
+  margin-top: .25rem;
+}
+
+#login-form button.btn {
+  font-family: inherit;
+  font-size: 1.125rem;
+  font-weight: 600;
+  padding: .75rem;
+}
 
 
 /* =========================
    08) KPI STATUS (dot + pill)
    ========================= */
 .status-dot {
-  display:inline-block; width:10px; height:10px; border-radius:50%;
-  margin-right:6px; vertical-align:middle;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
 }
-.status-green  { background:#198754; }
-.status-red    { background:#dc3545; }
-.status-orange { background:#fd7e14; }
-.status-blue   { background:#0d6efd; }
+
+.status-green {
+  background: #198754;
+}
+
+.status-red {
+  background: #dc3545;
+}
+
+.status-orange {
+  background: #fd7e14;
+}
+
+.status-blue {
+  background: #0d6efd;
+}
 
 .status-pill {
-  display:inline-flex; align-items:center; justify-content:center;
-  min-width:120px; padding:.42rem .8rem; border-radius:9999px; font-weight:700; color:#fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+  padding: .42rem .8rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  color: #fff;
 }
+
 /* Example:
    <span class="status-pill" style="background:#198754">Conforme</span>
 */
 
-.page-hero{
+.page-hero {
   position: relative;
   border-radius: .75rem;
   overflow: hidden;
   margin-bottom: 1rem;
-  min-height: 40px;                /* tweak */
+  min-height: 40px;
+  /* tweak */
   background-size: cover;
   background-position: center;
 }
-.page-hero::after{                  /* soft dark overlay for text contrast */
+
+.page-hero::after {
+  /* soft dark overlay for text contrast */
   content: "";
-  position: absolute; inset: 0;
+  position: absolute;
+  inset: 0;
   /* background: linear-gradient(180deg, rgba(0,0,0,.25), rgba(0,0,0,.35)); */
 }
-.page-hero-content{
+
+.page-hero-content {
   position: relative;
   z-index: 1;
   padding: 1.25rem 1rem;
   color: #fff;
 }
-.page-hero h1.page-title{
+
+.page-hero h1.page-title {
   margin: 0;
   color: whitesmoke;
 }
-#titlePriority { letter-spacing: 1px; }
+
+#titlePriority {
+  letter-spacing: 1px;
+}
 
 #btnAddAction {
   display: inline-block;
-  min-width: 100px; /* match your pill width */
+  min-width: 100px;
+  /* match your pill width */
 }
 
 
 /* Turn rails on by adding class="with-rails" to any wrapper */
 .with-rails {
   position: relative;
-  overflow: visible;            /* allow rails to sit outside the box */
+  overflow: visible;
+  /* allow rails to sit outside the box */
 }
 
 /* Desktop only: paint rails using pseudo-elements so content width is unchanged */
 @media (min-width: 1592px) {
+
   .with-rails::before,
   .with-rails::after {
     content: "";
     position: absolute;
-    top: 10px;                /* where rails should start (tweak as you like) */
-    bottom: 0;                  /* run to the bottom of the section */
-    width: 72px;                /* rail visual width */
-    pointer-events: none;       /* purely decorative */
-    background-image: url("../images/side-rail1.png"); /* use ONE file */
+    top: 10px;
+    /* where rails should start (tweak as you like) */
+    bottom: 0;
+    /* run to the bottom of the section */
+    width: 72px;
+    /* rail visual width */
+    pointer-events: none;
+    /* purely decorative */
+    background-image: url("../images/side-rail1.png");
+    /* use ONE file */
     background-repeat: repeat-y;
-    background-size: 72px auto; /* tile height from the image */
+    background-size: 72px auto;
+    /* tile height from the image */
     image-rendering: auto;
   }
 
   /* Left rail sits slightly outside the content */
   .with-rails::before {
-    left: -85px;                /* push outside; adjust to align with your layout */
+    left: -85px;
+    /* push outside; adjust to align with your layout */
     background-position: left top;
   }
 
   /* Right rail mirrors the same image — no second asset required */
   .with-rails::after {
     right: -85px;
-    transform: scaleX(-1);      /* mirror the same artwork */
+    transform: scaleX(-1);
+    /* mirror the same artwork */
     transform-origin: center;
     background-position: right top;
   }
@@ -369,6 +575,9 @@ label, select { font-size: 2.05rem; }
 
 /* Hide rails on tablet/phone */
 @media (max-width: 991.98px) {
+
   .with-rails::before,
-  .with-rails::after { display: none; }
+  .with-rails::after {
+    display: none;
+  }
 }
