@@ -9,9 +9,12 @@
         <div class="login-box" role="main" aria-labelledby="login-header">
             <img src="~/images/logo-en.png" alt="Company Logo" class="login-logo" />
             <h2 id="login-header">Sign In</h2>
+@Html.ValidationSummary(excludePropertyErrors: true, message: "", htmlAttributes: new { @class = "text-danger mb-3" })
 
             @using (Html.BeginForm("Login", "Account", FormMethod.Post, new { id = "login-form" }))
             {
+                @Html.AntiForgeryToken() <!-- 🔹 add this -->
+
                 <div class="form-group mb-3">
                     @Html.LabelFor(m => m.Username)
                     @Html.TextBoxFor(m => m.Username, new { @class = "form-control", autofocus = "autofocus", aria_required = "true" })

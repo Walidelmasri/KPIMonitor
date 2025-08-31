@@ -18,15 +18,53 @@
 </head>
 
 <body>
+    @{
+        var isAuth = User?.Identity?.IsAuthenticated ?? false;
+        var rawName = User?.Identity?.Name ?? "";
+
+        // Normalize to "First Last" (handles: DOMAIN\user, user@domain, user.user, user_user, user-user)
+        var nameCore = rawName?.Trim() ?? "";
+
+        var slash = nameCore.LastIndexOf('\\');
+        if (slash >= 0 && slash < nameCore.Length - 1)
+            nameCore = nameCore[(slash + 1)..]; // strip DOMAIN\
+
+        var at = nameCore.IndexOf('@');
+        if (at > 0)
+            nameCore = nameCore[..at]; // strip @domain
+
+        nameCore = nameCore.Replace('.', ' ')
+        .Replace('_', ' ')
+        .Replace('-', ' ');
+
+        nameCore = System.Text.RegularExpressions.Regex.Replace(nameCore, @"\s+", " ").Trim();
+
+        var displayName = System.Globalization.CultureInfo.CurrentCulture.TextInfo
+        .ToTitleCase(nameCore.ToLower()); // "walid salem" -> "Walid Salem"
+    }
+
+
     <header>
         <!-- Fixed bar at top (72px total height, logo 60px) -->
         <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm fixed-top">
             <div class="container-fluid">
                 <!-- Brand -->
-                <a class="navbar-brand d-flex align-items-center" asp-controller="Home" asp-action="Index">
-                    <img src="~/images/logo-en.png" alt="BADEA Logo" class="me-2" />
-                    <span class="app-name">KPIMonitor</span>
-                </a>
+                @if (isAuth)
+{
+    <a class="navbar-brand d-flex align-items-center" asp-controller="Home" asp-action="Index">
+        <img src="~/images/logo-en.png" alt="BADEA Logo" class="me-2" />
+        <span class="app-name">KPIMonitor</span>
+    </a>
+}
+else
+{
+    <!-- locked: visible but not clickable -->
+    <span class="navbar-brand d-flex align-items-center" style="pointer-events:none; opacity:.8;">
+        <img src="~/images/logo-en.png" alt="BADEA Logo" class="me-2" />
+        <span class="app-name">KPIMonitor</span>
+    </span>
+}
+
 
                 <!-- Toggler -->
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
@@ -37,124 +75,143 @@
                 <!-- Nav -->
                 <div class="collapse navbar-collapse" id="mainNav">
                     <ul class="navbar-nav me-auto" data-bs-auto-close="outside">
-                        <!-- ===== Catalog ===== -->
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Catalog</a>
-                            <ul class="dropdown-menu">
-                                <!-- Pillars submenu -->
-                                <li class="dropdown-submenu">
-                                    <a class="dropdown-item dropdown-toggle" href="#">Pillars</a>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" asp-controller="Pillars" asp-action="Index">All
-                                                Pillars</a></li>
-                                        <li><a class="dropdown-item" asp-controller="Pillars" asp-action="Create">Add
-                                                Pillar</a></li>
-                                    </ul>
-                                </li>
+                        @if (isAuth)
+                        {
+                            <!-- ===== Catalog ===== -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Catalog</a>
+                                <ul class="dropdown-menu">
+                                    <!-- Pillars submenu -->
+                                    <li class="dropdown-submenu">
+                                        <a class="dropdown-item dropdown-toggle" href="#">Pillars</a>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" asp-controller="Pillars" asp-action="Index">All
+                                                    Pillars</a></li>
+                                            <li><a class="dropdown-item" asp-controller="Pillars" asp-action="Create">Add
+                                                    Pillar</a></li>
+                                        </ul>
+                                    </li>
 
-                                <!-- Objectives submenu -->
-                                <li class="dropdown-submenu">
-                                    <a class="dropdown-item dropdown-toggle" href="#">Objectives</a>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" asp-controller="Objectives" asp-action="Index">All
-                                                Objectives</a></li>
-                                        <li><a class="dropdown-item" asp-controller="Objectives" asp-action="Create">Add
-                                                Objective</a></li>
-                                    </ul>
-                                </li>
+                                    <!-- Objectives submenu -->
+                                    <li class="dropdown-submenu">
+                                        <a class="dropdown-item dropdown-toggle" href="#">Objectives</a>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" asp-controller="Objectives" asp-action="Index">All
+                                                    Objectives</a></li>
+                                            <li><a class="dropdown-item" asp-controller="Objectives" asp-action="Create">Add
+                                                    Objective</a></li>
+                                        </ul>
+                                    </li>
 
-                                <!-- KPIs submenu -->
-                                <li class="dropdown-submenu">
-                                    <a class="dropdown-item dropdown-toggle" href="#">KPIs</a>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" asp-controller="Kpis" asp-action="Index">All
-                                                KPIs</a></li>
-                                        <li><a class="dropdown-item" asp-controller="Kpis" asp-action="Create">Add
-                                                KPI</a></li>
-                                    </ul>
-                                </li>
-                            </ul>
-                        </li>
+                                    <!-- KPIs submenu -->
+                                    <li class="dropdown-submenu">
+                                        <a class="dropdown-item dropdown-toggle" href="#">KPIs</a>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" asp-controller="Kpis" asp-action="Index">All
+                                                    KPIs</a></li>
+                                            <li><a class="dropdown-item" asp-controller="Kpis" asp-action="Create">Add
+                                                    KPI</a></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
 
-                        <!-- ===== Planning ===== -->
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Planning</a>
-                            <ul class="dropdown-menu">
-                                <!-- KPI Periods -->
-                                <li class="dropdown-submenu">
-                                    <a class="dropdown-item dropdown-toggle" href="#">KPI Periods</a>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" asp-controller="KpiPeriods" asp-action="Index">View
-                                                KPI Periods</a></li>
-                                        <li><a class="dropdown-item" asp-controller="KpiPeriods"
-                                                asp-action="Create">Create KPI Period</a></li>
-                                    </ul>
-                                </li>
-                                <!-- KPI Year Plans -->
-                                <li class="dropdown-submenu">
-                                    <a class="dropdown-item dropdown-toggle" href="#">KPI Year Plans</a>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" asp-controller="KpiYearPlans"
-                                                asp-action="Index">View Year Plans</a></li>
-                                        <li><a class="dropdown-item" asp-controller="KpiYearPlans"
-                                                asp-action="Create">Create Year Plan</a></li>
+                            <!-- ===== Planning ===== -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Planning</a>
+                                <ul class="dropdown-menu">
+                                    <!-- KPI Periods -->
+                                    <li class="dropdown-submenu">
+                                        <a class="dropdown-item dropdown-toggle" href="#">KPI Periods</a>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" asp-controller="KpiPeriods" asp-action="Index">View
+                                                    KPI Periods</a></li>
+                                            <li><a class="dropdown-item" asp-controller="KpiPeriods"
+                                                    asp-action="Create">Create KPI Period</a></li>
+                                        </ul>
+                                    </li>
+                                    <!-- KPI Year Plans -->
+                                    <li class="dropdown-submenu">
+                                        <a class="dropdown-item dropdown-toggle" href="#">KPI Year Plans</a>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" asp-controller="KpiYearPlans"
+                                                    asp-action="Index">View Year Plans</a></li>
+                                            <li><a class="dropdown-item" asp-controller="KpiYearPlans"
+                                                    asp-action="Create">Create Year Plan</a></li>
 
-                                        <!-- Five-Year Targets (nested under KPI Year Plans) -->
-                                        <li class="dropdown-submenu">
-                                            <a class="dropdown-item dropdown-toggle" href="#">Five-Year Targets</a>
-                                            <ul class="dropdown-menu">
-                                                <li><a class="dropdown-item" asp-controller="KpiFiveYearTargets"
-                                                        asp-action="Index">View Five-Year Targets</a></li>
-                                                <li><a class="dropdown-item" asp-controller="KpiFiveYearTargets"
-                                                        asp-action="Create">Create Five-Year Target</a></li>
-                                                <li><a class="dropdown-item" asp-controller="KpiFiveYearTargets"
-                                                        asp-action="Edit" asp-route-id="">Edit (pick from list)</a></li>
-                                            </ul>
-                                        </li>
-                                        <!-- /Five-Year Targets -->
-                                    </ul>
-                                </li>
+                                            <!-- Five-Year Targets (nested under KPI Year Plans) -->
+                                            <li class="dropdown-submenu">
+                                                <a class="dropdown-item dropdown-toggle" href="#">Five-Year Targets</a>
+                                                <ul class="dropdown-menu">
+                                                    <li><a class="dropdown-item" asp-controller="KpiFiveYearTargets"
+                                                            asp-action="Index">View Five-Year Targets</a></li>
+                                                    <li><a class="dropdown-item" asp-controller="KpiFiveYearTargets"
+                                                            asp-action="Create">Create Five-Year Target</a></li>
+                                                    <li><a class="dropdown-item" asp-controller="KpiFiveYearTargets"
+                                                            asp-action="Edit" asp-route-id="">Edit (pick from list)</a></li>
+                                                </ul>
+                                            </li>
+                                            <!-- /Five-Year Targets -->
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
 
-                            </ul>
-                        </li>
+                            <!-- ===== Monitoring ===== -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Monitoring</a>
+                                <ul class="dropdown-menu">
+                                    <!-- KPI Facts -->
+                                    <li class="dropdown-submenu">
+                                        <a class="dropdown-item dropdown-toggle" href="#">KPI Facts</a>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" asp-controller="KpiFacts" asp-action="Index">View
+                                                    All</a></li>
+                                            <li><a class="dropdown-item" asp-controller="KpiFacts"
+                                                    asp-action="Create">Create</a></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
 
-                        <!-- ===== Monitoring ===== -->
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Monitoring</a>
-                            <ul class="dropdown-menu">
-                                <!-- KPI Facts -->
-                                <li class="dropdown-submenu">
-                                    <a class="dropdown-item dropdown-toggle" href="#">KPI Facts</a>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" asp-controller="KpiFacts" asp-action="Index">View
-                                                All</a></li>
-                                        <li><a class="dropdown-item" asp-controller="KpiFacts"
-                                                asp-action="Create">Create</a></li>
-                                    </ul>
-                                </li>
-                            </ul>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Audit" asp-action="Index">Audit</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="RedBoard" asp-action="Index">RedBoard</a>
-                        </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Audit" asp-action="Index">Audit</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="RedBoard" asp-action="Index">RedBoard</a>
+                            </li>
+                        }
+                    </ul>
 
                 </div>
-            </div>
-            <!-- RIGHT SIDE: Help on the far right -->
-            <ul class="navbar-nav ms-auto d-flex align-items-center gap-2">
-                <li class="nav-item">
-                    <a class="nav-link d-flex align-items-center" asp-controller="HowTo" asp-action="Index"
-                        title="How To">
-                        <span style="display:inline-flex;width:26px;height:26px;border-radius:50%;
-                         border:1px solid #cfd6dd;align-items:center;justify-content:center;font-weight:700;">
-                            ?
-                        </span>
-                    </a>
-                </li>
-            </ul>
+                <!-- RIGHT SIDE: Help on the far right -->
+                <ul class="navbar-nav ms-auto d-flex align-items-center gap-2">
+                    @if (isAuth)
+                    {
+                        <li class="nav-item">
+                            <span class="navbar-text">Hello, <strong>@displayName</strong></span>
+                        </li>
+                        <li class="nav-item">
+                            <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline mb-0">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">Logout</button>
+                            </form>
+                        </li>
+                    }
+
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center" asp-controller="HowTo" asp-action="Index"
+                            title="How To">
+                            <span style="display:inline-flex;width:26px;height:26px;border-radius:50%;
+                 border:1px solid #cfd6dd;align-items:center;justify-content:center;font-weight:700;">
+                                ?
+                            </span>
+                        </a>
+                    </li>
+                </ul>
+
+                </ul>
+
         </nav>
     </header>
 

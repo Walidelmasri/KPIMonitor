@@ -10,7 +10,8 @@
         "dependencies": {
           "Microsoft.EntityFrameworkCore.Design": "9.0.8",
           "Oracle.EntityFrameworkCore": "9.23.90",
-          "Oracle.ManagedDataAccess.Core": "23.9.1"
+          "Oracle.ManagedDataAccess.Core": "23.9.1",
+          "System.DirectoryServices.Protocols": "9.0.8"
         },
         "runtime": {
           "KPIMonitor.dll": {}
@@ -514,7 +515,7 @@
       "Oracle.ManagedDataAccess.Core/23.9.1": {
         "dependencies": {
           "System.Diagnostics.PerformanceCounter": "8.0.0",
-          "System.DirectoryServices.Protocols": "8.0.2",
+          "System.DirectoryServices.Protocols": "9.0.8",
           "System.Formats.Asn1": "8.0.1",
           "System.Memory": "4.6.0",
           "System.Security.Cryptography.Pkcs": "8.0.1"
@@ -636,31 +637,31 @@
           }
         }
       },
-      "System.DirectoryServices.Protocols/8.0.2": {
+      "System.DirectoryServices.Protocols/9.0.8": {
         "runtime": {
-          "lib/net8.0/System.DirectoryServices.Protocols.dll": {
-            "assemblyVersion": "8.0.0.2",
-            "fileVersion": "8.0.1725.26602"
+          "lib/net9.0/System.DirectoryServices.Protocols.dll": {
+            "assemblyVersion": "9.0.0.8",
+            "fileVersion": "9.0.825.36511"
           }
         },
         "runtimeTargets": {
-          "runtimes/linux/lib/net8.0/System.DirectoryServices.Protocols.dll": {
+          "runtimes/linux/lib/net9.0/System.DirectoryServices.Protocols.dll": {
             "rid": "linux",
             "assetType": "runtime",
-            "assemblyVersion": "8.0.0.2",
-            "fileVersion": "8.0.1725.26602"
+            "assemblyVersion": "9.0.0.8",
+            "fileVersion": "9.0.825.36511"
           },
-          "runtimes/osx/lib/net8.0/System.DirectoryServices.Protocols.dll": {
+          "runtimes/osx/lib/net9.0/System.DirectoryServices.Protocols.dll": {
             "rid": "osx",
             "assetType": "runtime",
-            "assemblyVersion": "8.0.0.2",
-            "fileVersion": "8.0.1725.26602"
+            "assemblyVersion": "9.0.0.8",
+            "fileVersion": "9.0.825.36511"
           },
-          "runtimes/win/lib/net8.0/System.DirectoryServices.Protocols.dll": {
+          "runtimes/win/lib/net9.0/System.DirectoryServices.Protocols.dll": {
             "rid": "win",
             "assetType": "runtime",
-            "assemblyVersion": "8.0.0.2",
-            "fileVersion": "8.0.1725.26602"
+            "assemblyVersion": "9.0.0.8",
+            "fileVersion": "9.0.825.36511"
           }
         }
       },
@@ -972,12 +973,12 @@
       "path": "system.diagnostics.performancecounter/8.0.0",
       "hashPath": "system.diagnostics.performancecounter.8.0.0.nupkg.sha512"
     },
-    "System.DirectoryServices.Protocols/8.0.2": {
+    "System.DirectoryServices.Protocols/9.0.8": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-7pSU+qkmdkwbikAvn4kpvClfyffaR7dYJw7ucBtO5d6m/7wgKZIULOZAGFLMIMOFFmg7xC67TYKptHxcbqQm+Q==",
-      "path": "system.directoryservices.protocols/8.0.2",
-      "hashPath": "system.directoryservices.protocols.8.0.2.nupkg.sha512"
+      "sha512": "sha512-n//z9hQr+zGvv6nDN8B0aKyz90FFsVbbzDNHtx/ieOzkxYdcfEzf2q7EpkHMBNofxvD7QrM8AQrS7+jJQyRIsw==",
+      "path": "system.directoryservices.protocols/9.0.8",
+      "hashPath": "system.directoryservices.protocols.9.0.8.nupkg.sha512"
     },
     "System.Formats.Asn1/8.0.1": {
       "type": "package",

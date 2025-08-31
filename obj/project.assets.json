@@ -895,31 +895,31 @@
           }
         }
       },
-      "System.DirectoryServices.Protocols/8.0.2": {
+      "System.DirectoryServices.Protocols/9.0.8": {
         "type": "package",
         "compile": {
-          "lib/net8.0/System.DirectoryServices.Protocols.dll": {
+          "lib/net9.0/System.DirectoryServices.Protocols.dll": {
             "related": ".xml"
           }
         },
         "runtime": {
-          "lib/net8.0/System.DirectoryServices.Protocols.dll": {
+          "lib/net9.0/System.DirectoryServices.Protocols.dll": {
             "related": ".xml"
           }
         },
         "build": {
-          "buildTransitive/net6.0/_._": {}
+          "buildTransitive/net8.0/_._": {}
         },
         "runtimeTargets": {
-          "runtimes/linux/lib/net8.0/System.DirectoryServices.Protocols.dll": {
+          "runtimes/linux/lib/net9.0/System.DirectoryServices.Protocols.dll": {
             "assetType": "runtime",
             "rid": "linux"
           },
-          "runtimes/osx/lib/net8.0/System.DirectoryServices.Protocols.dll": {
+          "runtimes/osx/lib/net9.0/System.DirectoryServices.Protocols.dll": {
             "assetType": "runtime",
             "rid": "osx"
           },
-          "runtimes/win/lib/net8.0/System.DirectoryServices.Protocols.dll": {
+          "runtimes/win/lib/net9.0/System.DirectoryServices.Protocols.dll": {
             "assetType": "runtime",
             "rid": "win"
           }
@@ -2860,10 +2860,10 @@
         "useSharedDesignerContext.txt"
       ]
     },
-    "System.DirectoryServices.Protocols/8.0.2": {
-      "sha512": "7pSU+qkmdkwbikAvn4kpvClfyffaR7dYJw7ucBtO5d6m/7wgKZIULOZAGFLMIMOFFmg7xC67TYKptHxcbqQm+Q==",
+    "System.DirectoryServices.Protocols/9.0.8": {
+      "sha512": "n//z9hQr+zGvv6nDN8B0aKyz90FFsVbbzDNHtx/ieOzkxYdcfEzf2q7EpkHMBNofxvD7QrM8AQrS7+jJQyRIsw==",
       "type": "package",
-      "path": "system.directoryservices.protocols/8.0.2",
+      "path": "system.directoryservices.protocols/9.0.8",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -2871,36 +2871,28 @@
         "LICENSE.TXT",
         "PACKAGE.md",
         "THIRD-PARTY-NOTICES.TXT",
-        "buildTransitive/net6.0/_._",
+        "buildTransitive/net8.0/_._",
         "buildTransitive/netcoreapp2.0/System.DirectoryServices.Protocols.targets",
         "lib/net462/_._",
-        "lib/net6.0/System.DirectoryServices.Protocols.dll",
-        "lib/net6.0/System.DirectoryServices.Protocols.xml",
-        "lib/net7.0/System.DirectoryServices.Protocols.dll",
-        "lib/net7.0/System.DirectoryServices.Protocols.xml",
         "lib/net8.0/System.DirectoryServices.Protocols.dll",
         "lib/net8.0/System.DirectoryServices.Protocols.xml",
+        "lib/net9.0/System.DirectoryServices.Protocols.dll",
+        "lib/net9.0/System.DirectoryServices.Protocols.xml",
         "lib/netstandard2.0/System.DirectoryServices.Protocols.dll",
         "lib/netstandard2.0/System.DirectoryServices.Protocols.xml",
-        "runtimes/linux/lib/net6.0/System.DirectoryServices.Protocols.dll",
-        "runtimes/linux/lib/net6.0/System.DirectoryServices.Protocols.xml",
-        "runtimes/linux/lib/net7.0/System.DirectoryServices.Protocols.dll",
-        "runtimes/linux/lib/net7.0/System.DirectoryServices.Protocols.xml",
         "runtimes/linux/lib/net8.0/System.DirectoryServices.Protocols.dll",
         "runtimes/linux/lib/net8.0/System.DirectoryServices.Protocols.xml",
-        "runtimes/osx/lib/net6.0/System.DirectoryServices.Protocols.dll",
-        "runtimes/osx/lib/net6.0/System.DirectoryServices.Protocols.xml",
-        "runtimes/osx/lib/net7.0/System.DirectoryServices.Protocols.dll",
-        "runtimes/osx/lib/net7.0/System.DirectoryServices.Protocols.xml",
+        "runtimes/linux/lib/net9.0/System.DirectoryServices.Protocols.dll",
+        "runtimes/linux/lib/net9.0/System.DirectoryServices.Protocols.xml",
         "runtimes/osx/lib/net8.0/System.DirectoryServices.Protocols.dll",
         "runtimes/osx/lib/net8.0/System.DirectoryServices.Protocols.xml",
-        "runtimes/win/lib/net6.0/System.DirectoryServices.Protocols.dll",
-        "runtimes/win/lib/net6.0/System.DirectoryServices.Protocols.xml",
-        "runtimes/win/lib/net7.0/System.DirectoryServices.Protocols.dll",
-        "runtimes/win/lib/net7.0/System.DirectoryServices.Protocols.xml",
+        "runtimes/osx/lib/net9.0/System.DirectoryServices.Protocols.dll",
+        "runtimes/osx/lib/net9.0/System.DirectoryServices.Protocols.xml",
         "runtimes/win/lib/net8.0/System.DirectoryServices.Protocols.dll",
         "runtimes/win/lib/net8.0/System.DirectoryServices.Protocols.xml",
-        "system.directoryservices.protocols.8.0.2.nupkg.sha512",
+        "runtimes/win/lib/net9.0/System.DirectoryServices.Protocols.dll",
+        "runtimes/win/lib/net9.0/System.DirectoryServices.Protocols.xml",
+        "system.directoryservices.protocols.9.0.8.nupkg.sha512",
         "system.directoryservices.protocols.nuspec",
         "useSharedDesignerContext.txt"
       ]
@@ -3212,7 +3204,8 @@
     "net9.0": [
       "Microsoft.EntityFrameworkCore.Design >= 9.0.8",
       "Oracle.EntityFrameworkCore >= 9.23.90",
-      "Oracle.ManagedDataAccess.Core >= 23.9.1"
+      "Oracle.ManagedDataAccess.Core >= 23.9.1",
+      "System.DirectoryServices.Protocols >= 9.0.8"
     ]
   },
   "packageFolders": {
@@ -3271,6 +3264,10 @@
           "Oracle.ManagedDataAccess.Core": {
             "target": "Package",
             "version": "[23.9.1, )"
+          },
+          "System.DirectoryServices.Protocols": {
+            "target": "Package",
+            "version": "[9.0.8, )"
           }
         },
         "imports": [

@@ -57,6 +57,10 @@
             "Oracle.ManagedDataAccess.Core": {
               "target": "Package",
               "version": "[23.9.1, )"
+            },
+            "System.DirectoryServices.Protocols": {
+              "target": "Package",
+              "version": "[9.0.8, )"
             }
           },
           "imports": [
