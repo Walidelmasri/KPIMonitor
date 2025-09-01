@@ -6,5 +6,7 @@ namespace KPIMonitor.Services
     {
         Task<IReadOnlyList<EmployeePickDto>> GetAllForPickAsync(CancellationToken ct = default);
         Task<(string EmpId, string NameEng)?> TryGetByEmpIdAsync(string empId, CancellationToken ct = default);
+        Task<(string EmpId, string NameEng)?> TryGetByUserIdAsync(string userId, CancellationToken ct = default);
+
     }
 }
