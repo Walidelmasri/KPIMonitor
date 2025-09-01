@@ -3,9 +3,9 @@ using KPIMonitor.Data;
 using Microsoft.EntityFrameworkCore;
 using Oracle.EntityFrameworkCore;
 
-// 🔽 NEW usings for cookie auth + DI
 using Microsoft.AspNetCore.Authentication.Cookies;
 using KPIMonitor.Services.Auth;
+using KPIMonitor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,8 +16,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseOracle(oracleConnStr));
 
 builder.Services.AddControllersWithViews();
+builder.Services.AddScoped<IEmployeeDirectory, OracleEmployeeDirectory>();
+builder.Services.AddScoped<IKpiYearPlanOwnerEditorService, KpiYearPlanOwnerEditorService>();
 
-// 🔽 NEW: Cookie auth for sign-in/sign-out flow
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>
     {
@@ -31,12 +32,10 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization();
 
-// 🔽 NEW: AD authenticator (your LDAP implementation)
 builder.Services.AddScoped<IAdAuthenticator, LdapAdAuthenticator>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -45,25 +44,20 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// 🔽 RECOMMENDED: serve wwwroot (logo/css/js)
 app.UseStaticFiles();
 
 app.UseRouting();
 
-// 🔽 NEW: must come before Authorization
 app.UseAuthentication();
 
 app.UseAuthorization();
 
-// If you’re using MapStaticAssets()/WithStaticAssets() from a specific package,
-// you can keep them, but with MVC the usual is UseStaticFiles() above.
-// Remove these two lines if you don’t need them:
-// app.MapStaticAssets();
+
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Account}/{action=Login}/{id?}")
-    // .WithStaticAssets() // remove if not needed
+    // .WithStaticAssets() 
     ;
 
 app.Run();

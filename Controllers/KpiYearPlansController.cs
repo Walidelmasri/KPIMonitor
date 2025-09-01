@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using KPIMonitor.Data;
 using KPIMonitor.Models;
+using KPIMonitor.Services;
+using System.Threading;
+
 
 namespace KPIMonitor.Controllers
 {
@@ -29,46 +32,46 @@ namespace KPIMonitor.Controllers
         //     ViewBag.FilterYear = year;
         //     return View(data);
         // }
-// GET: /KpiYearPlans
-public async Task<IActionResult> Index(int? year, decimal? pillarId)
-{
-    var q = _db.KpiYearPlans
-               .Include(p => p.Period)
-               .Include(p => p.Kpi)
-                .ThenInclude(k => k.Pillar)   
-               .Include(p => p.Kpi)
-                .ThenInclude(k => k.Objective) 
-               .AsNoTracking();
+        // GET: /KpiYearPlans
+        public async Task<IActionResult> Index(int? year, decimal? pillarId)
+        {
+            var q = _db.KpiYearPlans
+                       .Include(p => p.Period)
+                       .Include(p => p.Kpi)
+                        .ThenInclude(k => k.Pillar)
+                       .Include(p => p.Kpi)
+                        .ThenInclude(k => k.Objective)
+                       .AsNoTracking();
 
-    if (year.HasValue)
-        q = q.Where(x => x.Period != null && x.Period.Year == year.Value);
+            if (year.HasValue)
+                q = q.Where(x => x.Period != null && x.Period.Year == year.Value);
 
-    if (pillarId.HasValue)
-        q = q.Where(x => x.Kpi != null && x.Kpi.PillarId == pillarId.Value);
+            if (pillarId.HasValue)
+                q = q.Where(x => x.Kpi != null && x.Kpi.PillarId == pillarId.Value);
 
-    var data = await q
-    .OrderBy(x => x.Period!.Year)
-    .ThenBy(x => x.Kpi!.Pillar!.PillarCode)
-    .ThenBy(x => x.Kpi!.Objective!.ObjectiveCode) 
-    .ThenBy(x => x.Kpi!.KpiCode)
-    .ToListAsync();
+            var data = await q
+            .OrderBy(x => x.Period!.Year)
+            .ThenBy(x => x.Kpi!.Pillar!.PillarCode)
+            .ThenBy(x => x.Kpi!.Objective!.ObjectiveCode)
+            .ThenBy(x => x.Kpi!.KpiCode)
+            .ToListAsync();
 
-    // for the filters
-    ViewBag.FilterYear = year;
-    ViewBag.CurrentPillarId = pillarId;
+            // for the filters
+            ViewBag.FilterYear = year;
+            ViewBag.CurrentPillarId = pillarId;
 
-    // dropdown: pillars ordered by code
-    ViewBag.Pillars = new SelectList(
-        await _db.DimPillars
-            .AsNoTracking()
-            .OrderBy(p => p.PillarCode)
-            .Select(p => new { p.PillarId, Name = p.PillarCode + " — " + p.PillarName })
-            .ToListAsync(),
-        "PillarId", "Name", pillarId
-    );
+            // dropdown: pillars ordered by code
+            ViewBag.Pillars = new SelectList(
+                await _db.DimPillars
+                    .AsNoTracking()
+                    .OrderBy(p => p.PillarCode)
+                    .Select(p => new { p.PillarId, Name = p.PillarCode + " — " + p.PillarName })
+                    .ToListAsync(),
+                "PillarId", "Name", pillarId
+            );
 
-    return View(data);
-}
+            return View(data);
+        }
         // GET: /KpiYearPlans/Create
         public async Task<IActionResult> Create()
         {
@@ -224,5 +227,129 @@ public async Task<IActionResult> Index(int? year, decimal? pillarId)
                                 .ToListAsync();
             ViewBag.YearPeriods = new SelectList(list, "PeriodId", "Label", selected);
         }
+        // GET: full edit modal (frequency, unit, annual target, priority, owner/editor)
+        [HttpGet]
+        public async Task<IActionResult> EditModal(decimal id, CancellationToken ct)
+        {
+            // Load plan
+            var plan = await _db.KpiYearPlans
+                                .AsNoTracking()
+                                .FirstOrDefaultAsync(p => p.KpiYearPlanId == id, ct);
+            if (plan == null) return NotFound();
+
+            // Load employees
+            var dir = HttpContext.RequestServices.GetRequiredService<IEmployeeDirectory>();
+            var emps = await dir.GetAllForPickAsync(ct);
+
+            // Reuse OwnerEditorEditVm for dropdowns + context
+            var vm = new KPIMonitor.ViewModels.OwnerEditorEditVm
+            {
+                PlanId = plan.KpiYearPlanId,
+                OwnerEmpId = plan.OwnerEmpId,
+                EditorEmpId = plan.EditorEmpId,
+                CurrentOwnerName = plan.Owner,
+                CurrentEditorName = plan.Editor,
+                Employees = emps
+            };
+
+            // Pre-fill basic fields via ViewBag (simple)
+            ViewBag.Frequency = plan.Frequency ?? "";
+            ViewBag.Unit = plan.Unit ?? "";
+            ViewBag.AnnualTargetText = plan.AnnualTarget?.ToString("0.###") ?? "";
+            ViewBag.PriorityText = plan.Priority?.ToString() ?? "";
+
+            return PartialView("_KpiYearPlanEditModal", vm);
+        }
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdatePlan(
+            [FromForm] decimal planId,
+            [FromForm] string? frequency,
+            [FromForm] string? unit,
+            [FromForm] decimal? annualTarget,
+            [FromForm] int? priority,
+            [FromForm] string? ownerEmpId,
+            [FromForm] string? editorEmpId,
+            CancellationToken ct)
+        {
+            // ad-hoc logger without changing constructor
+            var log = HttpContext.RequestServices.GetRequiredService<ILogger<KpiYearPlansController>>();
+
+            log.LogInformation("UpdatePlan START planId={PlanId} freq={Freq} unit={Unit} target={Target} prio={Prio} ownerEmpId={OwnerEmpId} editorEmpId={EditorEmpId}",
+                planId, frequency, unit, annualTarget, priority, ownerEmpId, editorEmpId);
+
+            var plan = await _db.KpiYearPlans.FirstOrDefaultAsync(p => p.KpiYearPlanId == planId, ct);
+            if (plan == null)
+            {
+                log.LogWarning("UpdatePlan NOT FOUND planId={PlanId}", planId);
+                return NotFound("Plan not found.");
+            }
+
+            // Basic fields (even if you hid freq/unit in the table, we persist them safely)
+            plan.Frequency = string.IsNullOrWhiteSpace(frequency) ? null : frequency.Trim();
+            plan.Unit = string.IsNullOrWhiteSpace(unit) ? null : unit.Trim();
+            plan.AnnualTarget = annualTarget;
+            plan.Priority = priority;
+
+            // Directory lookups for owners/editors
+            var dir = HttpContext.RequestServices.GetRequiredService<IEmployeeDirectory>();
+
+            if (!string.IsNullOrWhiteSpace(ownerEmpId))
+            {
+                var owner = await dir.TryGetByEmpIdAsync(ownerEmpId!, ct);
+                if (owner == null)
+                {
+                    log.LogWarning("UpdatePlan invalid ownerEmpId={OwnerEmpId}", ownerEmpId);
+                    return BadRequest("Invalid Owner.");
+                }
+                plan.OwnerEmpId = owner.Value.EmpId;
+                plan.Owner = owner.Value.NameEng; // ensure NAME_ENG
+                log.LogInformation("UpdatePlan OWNER set to {Name} ({EmpId})", plan.Owner, plan.OwnerEmpId);
+            }
+            else
+            {
+                plan.OwnerEmpId = null;
+                // keep legacy plan.Owner text (or clear if you prefer)
+                log.LogInformation("UpdatePlan OWNER cleared (EmpId null)");
+            }
+
+            if (!string.IsNullOrWhiteSpace(editorEmpId))
+            {
+                var editor = await dir.TryGetByEmpIdAsync(editorEmpId!, ct);
+                if (editor == null)
+                {
+                    log.LogWarning("UpdatePlan invalid editorEmpId={EditorEmpId}", editorEmpId);
+                    return BadRequest("Invalid Editor.");
+                }
+                plan.EditorEmpId = editor.Value.EmpId;
+                plan.Editor = editor.Value.NameEng; // ensure NAME_ENG
+                log.LogInformation("UpdatePlan EDITOR set to {Name} ({EmpId})", plan.Editor, plan.EditorEmpId);
+            }
+            else
+            {
+                plan.EditorEmpId = null;
+                log.LogInformation("UpdatePlan EDITOR cleared (EmpId null)");
+            }
+
+            await _db.SaveChangesAsync(ct);
+            log.LogInformation("UpdatePlan SAVED planId={PlanId}", plan.KpiYearPlanId);
+
+            // send back what the table expects (strings preformatted)
+            return Json(new
+            {
+                ok = true,
+                planId = plan.KpiYearPlanId,
+                frequency = plan.Frequency ?? "",
+                unit = plan.Unit ?? "",
+                annualTargetText = plan.AnnualTarget?.ToString("0.###") ?? "—",
+                priorityText = plan.Priority?.ToString() ?? "—",
+                owner = plan.Owner ?? "—",   // NAME_ENG
+                editor = plan.Editor ?? "—"  // NAME_ENG
+            });
+        }
+
+
     }
 }

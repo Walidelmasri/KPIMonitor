@@ -61,5 +61,8 @@ namespace KPIMonitor.Models
         // Navigation
         public DimKpi? Kpi { get; set; }
         public DimPeriod? Period { get; set; }
+        public string? OwnerEmpId  { get; set; }   // maps to OWNEREMPID (VARCHAR2(5))
+        public string? EditorEmpId { get; set; }   // maps to EDITOREMPID (VARCHAR2(5))
+
     }
 }

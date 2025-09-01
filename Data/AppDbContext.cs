@@ -121,7 +121,13 @@ namespace KPIMonitor.Data
                 e.Property(x => x.CreatedDate).HasColumnName("CREATEDDATE");
                 e.Property(x => x.LastChangedBy).HasColumnName("LASTCHANGEDBY").HasMaxLength(50);
                 e.Property(x => x.IsActive).HasColumnName("ISACTIVE");
+                e.Property(p => p.OwnerEmpId)
+                     .HasColumnName("OWNEREMPID")
+                     .HasMaxLength(5);
 
+                e.Property(p => p.EditorEmpId)
+                 .HasColumnName("EDITOREMPID")
+                 .HasMaxLength(5);
                 e.HasOne(x => x.Kpi)
                  .WithMany()
                  .HasForeignKey(x => x.KpiId)
