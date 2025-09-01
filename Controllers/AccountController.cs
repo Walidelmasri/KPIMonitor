@@ -24,6 +24,15 @@ namespace KPIMonitor.Controllers
         [AllowAnonymous]
         public IActionResult Login(string? returnUrl = null)
         {
+            // If already authenticated, skip the login view
+            if (User?.Identity?.IsAuthenticated == true)
+            {
+                if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                    return Redirect(returnUrl);
+
+                return RedirectToAction("Index", "Home");
+            }
+
             ViewBag.ReturnUrl = returnUrl;
             return View(new LoginViewModel());
         }
@@ -61,10 +70,10 @@ namespace KPIMonitor.Controllers
                 var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
                 await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
 
-if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
-    return Redirect(returnUrl);
+                if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                    return Redirect(returnUrl);
 
-return RedirectToAction("Index", "Home"); // 🔁 Dashboard
+                return RedirectToAction("Index", "Home"); // 🔁 Dashboard
 
             }
             catch (Exception ex)

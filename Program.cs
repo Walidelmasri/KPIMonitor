@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Oracle.EntityFrameworkCore;
 
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using KPIMonitor.Services.Auth;
 using KPIMonitor.Services;
 
@@ -22,15 +23,28 @@ builder.Services.AddScoped<IKpiYearPlanOwnerEditorService, KpiYearPlanOwnerEdito
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>
     {
-        o.Cookie.Name = "KpiMonitorAuth";   // easy to find/delete
+        o.Cookie.Name = "KpiMonitorAuth";
+        o.Cookie.HttpOnly = true;
+        o.Cookie.SameSite = SameSiteMode.Lax;
+        o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+
         o.LoginPath = "/Account/Login";
         o.LogoutPath = "/Account/Logout";
         o.AccessDeniedPath = "/Account/Login";
-        o.SlidingExpiration = true;
-        o.ExpireTimeSpan = TimeSpan.FromHours(8);
+
+        // HARD 30-min expiry; user must reauthenticate after this
+        o.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+        o.SlidingExpiration = false;
     });
 
-builder.Services.AddAuthorization();
+// Require authentication for everything by default
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
 
 builder.Services.AddScoped<IAdAuthenticator, LdapAdAuthenticator>();
 
