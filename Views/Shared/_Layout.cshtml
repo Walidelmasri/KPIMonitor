@@ -88,7 +88,7 @@
                                         <ul class="dropdown-menu">
                                             <li><a class="dropdown-item" asp-controller="Pillars" asp-action="Index">All
                                                     Pillars</a></li>
-                                            <li><a class="dropdown-item" asp-controller="Pillars" asp-action="Create">Add
+                                            <li asp-admin-only><a class="dropdown-item" asp-controller="Pillars" asp-action="Create">Add
                                                     Pillar</a></li>
                                         </ul>
                                     </li>
@@ -99,7 +99,7 @@
                                         <ul class="dropdown-menu">
                                             <li><a class="dropdown-item" asp-controller="Objectives" asp-action="Index">All
                                                     Objectives</a></li>
-                                            <li><a class="dropdown-item" asp-controller="Objectives" asp-action="Create">Add
+                                            <li asp-admin-only><a class="dropdown-item" asp-controller="Objectives" asp-action="Create">Add
                                                     Objective</a></li>
                                         </ul>
                                     </li>
@@ -110,7 +110,7 @@
                                         <ul class="dropdown-menu">
                                             <li><a class="dropdown-item" asp-controller="Kpis" asp-action="Index">All
                                                     KPIs</a></li>
-                                            <li><a class="dropdown-item" asp-controller="Kpis" asp-action="Create">Add
+                                            <li asp-admin-only><a class="dropdown-item" asp-controller="Kpis" asp-action="Create">Add
                                                     KPI</a></li>
                                         </ul>
                                     </li>
