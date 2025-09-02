@@ -127,7 +127,7 @@
                                         <ul class="dropdown-menu">
                                             <li><a class="dropdown-item" asp-controller="KpiPeriods" asp-action="Index">View
                                                     KPI Periods</a></li>
-                                            <li><a class="dropdown-item" asp-controller="KpiPeriods"
+                                            <li asp-admin-only><a class="dropdown-item" asp-controller="KpiPeriods"
                                                     asp-action="Create">Create KPI Period</a></li>
                                         </ul>
                                     </li>
@@ -137,7 +137,7 @@
                                         <ul class="dropdown-menu">
                                             <li><a class="dropdown-item" asp-controller="KpiYearPlans"
                                                     asp-action="Index">View Year Plans</a></li>
-                                            <li><a class="dropdown-item" asp-controller="KpiYearPlans"
+                                            <li asp-admin-only><a class="dropdown-item" asp-controller="KpiYearPlans"
                                                     asp-action="Create">Create Year Plan</a></li>
 
                                             <!-- Five-Year Targets (nested under KPI Year Plans) -->
@@ -146,7 +146,7 @@
                                                 <ul class="dropdown-menu">
                                                     <li><a class="dropdown-item" asp-controller="KpiFiveYearTargets"
                                                             asp-action="Index">View Five-Year Targets</a></li>
-                                                    <li><a class="dropdown-item" asp-controller="KpiFiveYearTargets"
+                                                    <li asp-admin-only><a class="dropdown-item" asp-controller="KpiFiveYearTargets"
                                                             asp-action="Create">Create Five-Year Target</a></li>
                                                     <li><a class="dropdown-item" asp-controller="KpiFiveYearTargets"
                                                             asp-action="Edit" asp-route-id="">Edit (pick from list)</a></li>
@@ -168,7 +168,7 @@
                                         <ul class="dropdown-menu">
                                             <li><a class="dropdown-item" asp-controller="KpiFacts" asp-action="Index">View
                                                     All</a></li>
-                                            <li><a class="dropdown-item" asp-controller="KpiFacts"
+                                            <li asp-admin-only><a class="dropdown-item" asp-controller="KpiFacts"
                                                     asp-action="Create">Create</a></li>
                                         </ul>
                                     </li>
