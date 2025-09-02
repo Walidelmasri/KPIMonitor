@@ -1,8 +1,11 @@
 @model IEnumerable<KPIMonitor.Models.KpiFact>
+@using KPIMonitor.Services
+@inject IAdminAuthorizer AdminAuthorizer
+
 @{
   ViewData["Title"] = "KPI Facts";
+  var isAdmin = AdminAuthorizer.IsAdmin(User);
 }
-
 <!-- Local styles just for this view (you can move these to site.css later) -->
 <style>
   /* widen page a bit */
@@ -110,7 +113,9 @@
       </form>
 
       <!-- Add button -->
-      <a class="btn btn-primary rounded-4" asp-action="Create">➕ Add KPI Fact</a>
+      <div asp-admin-only>
+        <a class="btn btn-primary rounded-4" asp-action="Create">➕ Add KPI Fact</a>
+      </div>
     </div>
 
     <div class="bg-white shadow-sm tbl-card border">
@@ -127,7 +132,10 @@
               <th style="width: 8%;">Budget</th>
               <th style="width: 10%;">Status</th>
               <th style="width: 7%;">Active</th>
-              <th style="width: 13%;">Actions</th>
+              @if (isAdmin)
+              {
+                <th style="width: 13%;">Actions</th>
+              }
             </tr>
           </thead>
           <tbody>
@@ -201,26 +209,31 @@
                                 : Html.Raw("<span class='badge bg-secondary rounded-pill px-3'>Inactive</span>"))
                   </td>
 
-                  <td>
-                    @if (f.IsActive == 1)
-                    {
-                      <a class="btn btn-sm btn-outline-warning rounded-3" asp-action="Deactivate"
-                        asp-route-id="@f.KpiFactId">Deactivate</a>
-                    }
-                    else
-                    {
-                      <a class="btn btn-sm btn-outline-success rounded-3" asp-action="Activate"
-                        asp-route-id="@f.KpiFactId">Activate</a>
-                    }
-                  </td>
+                  @if (isAdmin)
+{
+  <td>
+    @if (f.IsActive == 1)
+    {
+      <a class="btn btn-sm btn-outline-warning rounded-3"
+         asp-action="Deactivate" asp-route-id="@f.KpiFactId">Deactivate</a>
+    }
+    else
+    {
+      <a class="btn btn-sm btn-outline-success rounded-3"
+         asp-action="Activate" asp-route-id="@f.KpiFactId">Activate</a>
+    }
+  </td>
+}
+
                 </tr>
               }
             }
             else
             {
               <tr>
-                <td colspan="10" class="text-center text-muted py-4">No KPI facts yet.</td>
-              </tr>
+<td colspan="@(isAdmin ? 10 : 9)" class="text-center text-muted py-4">
+  No KPI facts yet.
+</td>              </tr>
             }
           </tbody>
         </table>
