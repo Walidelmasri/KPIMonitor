@@ -1,0 +1,25 @@
+@{
+    ViewData["Title"] = "403 Access Denied";
+}
+
+<div class="container py-5">
+    @section PageHeader {
+        <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
+            <div class="page-hero-content">
+                <h1 class="page-title">403 Access Denied</h1>
+            </div>
+        </div>
+    }
+
+    <div class="with-rails">
+        <div class="bg-white border rounded-4 shadow-sm p-4">
+            <p class="lead mb-2">You need admin privileges to view this page.</p>
+            <p class="text-muted">If you believe this is an error, please contact your administrator.</p>
+
+            <div class="mt-4 d-flex gap-2">
+                <a href="@Url.Action("Index","Home")" class="btn btn-primary rounded-4">Go to dashboard</a>
+                <a href="javascript:history.back()" class="btn btn-outline-secondary rounded-4">Go back</a>
+            </div>
+        </div>
+    </div>
+</div>

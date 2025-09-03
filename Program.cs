@@ -7,6 +7,9 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using KPIMonitor.Services.Auth;
 using KPIMonitor.Services;
+// using KPIMonitor.Conventions;   // added
+// using KPIMonitor.Auth;          // added
+// using KPIMonitor.Options;       // added (AdminOptions)
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,13 +19,21 @@ string oracleConnStr = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseOracle(oracleConnStr));
 
-builder.Services.AddControllersWithViews();
-builder.Services.AddHttpContextAccessor();
-builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection("App"));
-builder.Services.AddScoped<IAdminAuthorizer, ConfigAdminAuthorizer>();
+builder.Services.AddHttpContextAccessor(); // added
+
+builder.Services.AddControllersWithViews(o =>
+{
+    // DRY: auto-protect creator actions (Create/Add/Import/Clone/Bulk…)
+    o.Conventions.Add(new ProtectCreateActionsConvention());
+});
+
 builder.Services.AddScoped<IEmployeeDirectory, OracleEmployeeDirectory>();
 builder.Services.AddScoped<IKpiYearPlanOwnerEditorService, KpiYearPlanOwnerEditorService>();
 builder.Services.AddScoped<IKpiAccessService, KpiAccessService>();
+
+// Admin authorizer + options (SOLID)
+builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection("App"));
+builder.Services.AddScoped<IAdminAuthorizer, ConfigAdminAuthorizer>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>
@@ -34,7 +45,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
         o.LoginPath = "/Account/Login";
         o.LogoutPath = "/Account/Logout";
-        o.AccessDeniedPath = "/Account/Login";
+        o.AccessDeniedPath = "/Account/AccessDenied"; // changed
 
         // HARD 30-min expiry; user must reauthenticate after this
         o.ExpireTimeSpan = TimeSpan.FromMinutes(30);
@@ -47,8 +58,14 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
         .Build();
+
+    // Admin-only policy (uses IAdminAuthorizer via AdminOnlyHandler)
+    options.AddPolicy("AdminOnly", policy =>
+        policy.Requirements.Add(new AdminOnlyRequirement()));
 });
 
+// Policy handler
+builder.Services.AddScoped<IAuthorizationHandler, AdminOnlyHandler>();
 
 builder.Services.AddScoped<IAdAuthenticator, LdapAdAuthenticator>();
 
@@ -69,8 +86,6 @@ app.UseRouting();
 app.UseAuthentication();
 
 app.UseAuthorization();
-
-
 
 app.MapControllerRoute(
     name: "default",
