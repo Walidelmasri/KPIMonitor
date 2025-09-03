@@ -80,7 +80,7 @@
 
         @* --- PAGER (Prev/Next, no COUNT) --- *@
         @{
-            var pg       = ViewBag.Page     as int? ?? 1;    // avoid @page directive clash
+            var pg       = ViewBag.Page     as int? ?? 1;    
             var pageSize = ViewBag.PageSize as int? ?? 10;
             var hasNext  = ViewBag.HasNext  as bool? ?? false;
         }
