@@ -49,7 +49,7 @@
             </div>
 
             <div class="col ms-auto text-end">
-                <a class="btn btn-primary rounded-4" href="@Url.Action("Create")">➕ New Year Plan</a>
+                <a class="btn btn-primary rounded-4" asp-admin-only href="@Url.Action("Create")">➕ New Year Plan</a>
             </div>
         </div>
 
@@ -103,13 +103,13 @@
                                            href="@Url.Action("Activate", new { id = p.KpiYearPlanId })">Activate</a>
                                     }
 
-                                    <a class="btn btn-sm btn-outline-primary rounded-3 ms-1"
+                                    <a class="btn btn-sm btn-outline-primary rounded-3 ms-1" asp-admin-only
                                        href="@Url.Action("Generate", "KpiFacts", new { kpiId = p.KpiId, planId = p.KpiYearPlanId })">
                                         Generate Facts
                                     </a>
 
                                     <button type="button"
-                                            class="btn btn-sm btn-outline-primary rounded-3 ms-1"
+                                            class="btn btn-sm btn-outline-primary rounded-3 ms-1" asp-admin-only
                                             onclick="openPlanEdit(@p.KpiYearPlanId)">
                                         Edit
                                     </button>

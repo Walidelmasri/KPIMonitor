@@ -1,15 +1,11 @@
 using Oracle.ManagedDataAccess.Client; // existing
 using KPIMonitor.Data;
 using Microsoft.EntityFrameworkCore;
-using Oracle.EntityFrameworkCore;
-
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using KPIMonitor.Services.Auth;
 using KPIMonitor.Services;
-// using KPIMonitor.Conventions;   // added
-// using KPIMonitor.Auth;          // added
-// using KPIMonitor.Options;       // added (AdminOptions)
+
 
 var builder = WebApplication.CreateBuilder(args);
 
