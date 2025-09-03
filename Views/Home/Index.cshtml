@@ -164,10 +164,85 @@
     </div>
   </div>
 </div>
-
 @section Scripts {
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <script>
+    // ---- number formatter FIRST (used by defaults + chart) ----
+    function _fmtShort(v) {
+      const n = Number(v);
+      if (!isFinite(n)) return '';
+      const a = Math.abs(n);
+      if (a >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
+      if (a >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+      if (a >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+      return n.toString();
+    }
+    // --- Custom labels plugin (Chart.js v4) ---
+    const ShowAllValues = {
+      id: 'showAllValues',
+      afterDatasetsDraw(chart, args, opts) {
+        const { ctx, data } = chart;
+        const fmt = (opts && typeof opts.formatter === 'function') ? opts.formatter : _fmtShort;
+
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        const fontSize = opts?.fontSize || 12;
+        const fontWeight = opts?.fontWeight || '700';
+        ctx.font = `${fontWeight} ${fontSize}px system-ui,-apple-system,Segoe UI,Roboto,Arial`;
+        ctx.fillStyle = opts?.color || '#111';
+
+        data.datasets.forEach((ds, di) => {
+          if (!chart.isDatasetVisible(di)) return;
+          const meta = chart.getDatasetMeta(di);
+
+          meta.data.forEach((el, i) => {
+            const raw = ds.data[i];
+            const val = Number(raw);
+            if (raw == null || Number.isNaN(val)) return;   // skip null/NaN
+
+            const { x, y } = el.getProps(['x', 'y'], true);
+
+            // put label just outside the element
+            let dy;
+            if ((ds.type || meta.type) === 'bar') {
+              dy = val < 0 ? 14 : -4; // below if bar is negative, else above
+            } else {
+              dy = -6;                // line points
+            }
+
+            ctx.fillText(fmt(val), x, y + dy);
+          });
+        });
+
+        ctx.restore();
+      }
+    };
+    Chart.register(ShowAllValues);
+
+    // ---- register plugin + global defaults for labels ----
+    Chart.register(ChartDataLabels);
+    Chart.defaults.set('plugins.datalabels', {
+      display: (ctx) => ctx.raw != null,   // show for all non-null values
+      formatter: (v) => _fmtShort(v),
+      anchor: 'end',
+      align: 'end',
+      offset: 2,
+      clamp: true,
+      clip: false,                          // allow slight overflow when y-axis hidden
+      color: '#111',
+      font: { weight: 'bold' }
+    });
+
+    // (kept even if unused)
+    const _isLastNonNull = (arr, idx) => {
+      for (let i = arr.length - 1; i >= 0; i--) {
+        if (arr[i] != null && !Number.isNaN(arr[i])) return idx === i;
+      }
+      return false;
+    };
+
     // ---------- tiny helpers ----------
     const $ = (id) => document.getElementById(id);
     const api = (path) =>
@@ -350,11 +425,10 @@
             type: 'bar',
             label: 'Actual',
             data: [],
-            backgroundColor: 'rgba(128, 0, 128, 0.35)',
-            borderColor: 'rgba(128, 0, 128, 0.95)',
+            backgroundColor: '#800080',
+            borderColor: '#800080',
             borderWidth: 2,
-            borderSkipped: 'bottom',
-            hoverBackgroundColor: 'rgba(128, 0, 128, 0.5)'
+            borderSkipped: 'bottom'
           },
           { // Target as a flat gray line
             type: 'line',
@@ -383,7 +457,7 @@
             type: 'bar',
             label: 'Year Target',
             data: [],
-            backgroundColor: 'rgba(122,122,122,0.25)',
+            backgroundColor: '#7a7a7a',
             borderColor: '#7a7a7a',
             borderWidth: 1
           }
@@ -392,9 +466,25 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        layout: { padding: { top: 16, bottom: 26 } },
-        scales: { y: { beginAtZero: true } },
-        plugins: { legend: { position: 'top' } }
+        layout: { padding: { top: 20, bottom: 26 } }, // headroom for labels
+
+        // NO grid, NO Y axis labels
+        scales: {
+          x: { grid: { display: false } },
+          y: { display: false, grid: { display: false }, beginAtZero: true }
+        },
+
+        plugins: {
+          legend: { position: 'top' },
+          datalabels: false,                 // turn OFF the external plugin for this chart
+          showAllValues: {                   // our custom plugin options
+            formatter: _fmtShort,
+            fontSize: 12,
+            fontWeight: '700',
+            color: '#111'
+          },
+          tooltip: { enabled: true }
+        }
       }
     });
 
@@ -430,12 +520,12 @@
 
       // NEW: ACL state from server
       currentPlanId = res?.meta?.planId ?? null;
-      canEditFacts  = !!res?.meta?.canEdit;
+      canEditFacts = !!res?.meta?.canEdit;
 
       // ---- title above chart ----
       const leftParts = [];
-      if (res?.meta?.pillarCode)   leftParts.push(res.meta.pillarCode);
-      if (res?.meta?.objectiveCode)leftParts.push(res.meta.objectiveCode);
+      if (res?.meta?.pillarCode) leftParts.push(res.meta.pillarCode);
+      if (res?.meta?.objectiveCode) leftParts.push(res.meta.objectiveCode);
 
       let left = leftParts.join('.');
       if (res?.meta?.code) {
@@ -493,32 +583,32 @@
           // NEW: conditional Edit cell based on ACL
           const editCellHtml = canEditFacts
             ? `<button class="btn btn-sm btn-outline-primary"
-                 data-fact-id="${r.id}"
-                 data-period="${r.period ?? ''}"
-                 data-actual="${r.actual ?? ''}"
-                 data-target="${r.target ?? ''}"
-                 data-forecast="${r.forecast ?? ''}"
-                 data-status="${r.statusCode ?? ''}"
-                 data-lastby="${r.lastBy ?? ''}"
-                 data-pillar-id="${selPillar.value || ''}"
-                 data-objective-id="${selObjective.value || ''}"
-                 data-kpi-id="${selKpi.value || ''}"
-                 onclick="openEditModal(this)">
-                 ✏️ Edit
-               </button>`
+                   data-fact-id="${r.id}"
+                   data-period="${r.period ?? ''}"
+                   data-actual="${r.actual ?? ''}"
+                   data-target="${r.target ?? ''}"
+                   data-forecast="${r.forecast ?? ''}"
+                   data-status="${r.statusCode ?? ''}"
+                   data-lastby="${r.lastBy ?? ''}"
+                   data-pillar-id="${selPillar.value || ''}"
+                   data-objective-id="${selObjective.value || ''}"
+                   data-kpi-id="${selKpi.value || ''}"
+                   onclick="openEditModal(this)">
+                   ✏️ Edit
+                 </button>`
             : `<button class="btn btn-sm btn-outline-secondary" data-noaccess="1" title="You do not have access to edit these facts">
-                 ✏️ Edit
-               </button>`;
+                   ✏️ Edit
+                 </button>`;
 
           tr.innerHTML = `
-            <td>${r.period ?? '—'}</td>
-            <td>${r.startDate ?? '—'}</td>
-            <td>${r.endDate ?? '—'}</td>
-            <td>${r.actual ?? '—'}</td>
-            <td>${r.target ?? '—'}</td>
-            <td>${r.forecast ?? '—'}</td>
-            <td>${editCellHtml}</td>
-          `;
+              <td>${r.period ?? '—'}</td>
+              <td>${r.startDate ?? '—'}</td>
+              <td>${r.endDate ?? '—'}</td>
+              <td>${r.actual ?? '—'}</td>
+              <td>${r.target ?? '—'}</td>
+              <td>${r.forecast ?? '—'}</td>
+              <td>${editCellHtml}</td>
+            `;
           tableBody.appendChild(tr);
         }
       }
