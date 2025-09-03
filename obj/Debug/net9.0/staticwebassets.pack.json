@@ -37,8 +37,12 @@
       "PackagePath": "staticwebassets/images/side-rail.png"
     },
     {
-      "Id": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/side-rail1.png",
-      "PackagePath": "staticwebassets/images/side-rail1.png"
+      "Id": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/side-rail1.jpeg",
+      "PackagePath": "staticwebassets/images/side-rail1.jpeg"
+    },
+    {
+      "Id": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/side-rail1.webp",
+      "PackagePath": "staticwebassets/images/side-rail1.webp"
     },
     {
       "Id": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/js/site.js",

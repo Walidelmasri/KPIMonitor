@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "PCiw1YC6DB22YS+kBZ2eyIN3D67nSHMC5tejbF1Rx/c=",
+  "Hash": "kb2vroW/7AzDqjMkC85+W42ok6XaPOn9WteJq7i6vBg=",
   "Source": "KPIMonitor",
   "BasePath": "_content/KPIMonitor",
   "Mode": "Default",
@@ -1277,12 +1277,12 @@
       "OriginalItemSpec": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/lib/bootstrap/dist/js/bootstrap.esm.min.js.map"
     },
     {
-      "Identity": "/Users/walidsalem/BADEA/KPIMonitor/obj/Debug/net9.0/compressed/wjv24w2evb-duwwtqp8y7.gz",
+      "Identity": "/Users/walidsalem/BADEA/KPIMonitor/obj/Debug/net9.0/compressed/wjv24w2evb-u8i8cdgy27.gz",
       "SourceId": "KPIMonitor",
       "SourceType": "Discovered",
       "ContentRoot": "/Users/walidsalem/BADEA/KPIMonitor/obj/Debug/net9.0/compressed/",
       "BasePath": "_content/KPIMonitor",
-      "RelativePath": "css/site#[.{fingerprint=duwwtqp8y7}]?.css.gz",
+      "RelativePath": "css/site#[.{fingerprint=u8i8cdgy27}]?.css.gz",
       "AssetKind": "All",
       "AssetMode": "All",
       "AssetRole": "Alternative",
@@ -1291,8 +1291,8 @@
       "RelatedAsset": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/css/site.css",
       "AssetTraitName": "Content-Encoding",
       "AssetTraitValue": "gzip",
-      "Fingerprint": "1qpl3e0ioz",
-      "Integrity": "hy9auLPpUnzwML8sWuw2j/CojzWWSfH/4KZiytffA/o=",
+      "Fingerprint": "mb6kq76kfe",
+      "Integrity": "ApNhAm5pvndyEkwgglX5L4rxlOtPZHTrAEL4Eao/1H0=",
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/css/site.css"
@@ -1417,8 +1417,8 @@
       "RelatedAsset": "",
       "AssetTraitName": "",
       "AssetTraitValue": "",
-      "Fingerprint": "duwwtqp8y7",
-      "Integrity": "uxy0qQKh5dPto4iYaLXVUF+L3Y2aUp5wnjD/A6fkQig=",
+      "Fingerprint": "u8i8cdgy27",
+      "Integrity": "opHYXHhe/dXvDPBt+TwPIXau1XWLYflvbgxR2vQotoU=",
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot/css/site.css"
@@ -1571,12 +1571,12 @@
       "OriginalItemSpec": "wwwroot/images/side-rail.png"
     },
     {
-      "Identity": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/side-rail1.png",
+      "Identity": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/side-rail1.jpeg",
       "SourceId": "KPIMonitor",
       "SourceType": "Discovered",
       "ContentRoot": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/",
       "BasePath": "_content/KPIMonitor",
-      "RelativePath": "images/side-rail1#[.{fingerprint}]?.png",
+      "RelativePath": "images/side-rail1#[.{fingerprint}]?.jpeg",
       "AssetKind": "All",
       "AssetMode": "All",
       "AssetRole": "Primary",
@@ -1585,11 +1585,32 @@
       "RelatedAsset": "",
       "AssetTraitName": "",
       "AssetTraitValue": "",
-      "Fingerprint": "autcqwlr36",
-      "Integrity": "EgzA94HRD4ZNsUBERThUdFlkwJytR3Dr8GOone1L+yY=",
+      "Fingerprint": "kcj2p5xne8",
+      "Integrity": "dIu+ZdqmI2hhXT+jVIQp+NyNXUXfvtdFlzHUGg4rQao=",
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
-      "OriginalItemSpec": "wwwroot/images/side-rail1.png"
+      "OriginalItemSpec": "wwwroot/images/side-rail1.jpeg"
+    },
+    {
+      "Identity": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/side-rail1.webp",
+      "SourceId": "KPIMonitor",
+      "SourceType": "Discovered",
+      "ContentRoot": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/",
+      "BasePath": "_content/KPIMonitor",
+      "RelativePath": "images/side-rail1#[.{fingerprint}]?.webp",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "Fingerprint": "pwkymcsvcm",
+      "Integrity": "p1sggLST1r24FszAlXb17WIadDSsbGpbGCkp9fgczVE=",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot/images/side-rail1.webp"
     },
     {
       "Identity": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/js/site.js",
@@ -2876,12 +2897,12 @@
   "Endpoints": [
     {
       "Route": "css/site.css",
-      "AssetFile": "/Users/walidsalem/BADEA/KPIMonitor/obj/Debug/net9.0/compressed/wjv24w2evb-duwwtqp8y7.gz",
+      "AssetFile": "/Users/walidsalem/BADEA/KPIMonitor/obj/Debug/net9.0/compressed/wjv24w2evb-u8i8cdgy27.gz",
       "Selectors": [
         {
           "Name": "Content-Encoding",
           "Value": "gzip",
-          "Quality": "0.000257532835"
+          "Quality": "0.000257334020"
         }
       ],
       "ResponseHeaders": [
@@ -2891,15 +2912,15 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "3882"
+          "Value": "3885"
         },
         {
           "Name": "ETag",
-          "Value": "\"hy9auLPpUnzwML8sWuw2j/CojzWWSfH/4KZiytffA/o=\""
+          "Value": "\"ApNhAm5pvndyEkwgglX5L4rxlOtPZHTrAEL4Eao/1H0=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sun, 31 Aug 2025 11:21:10 GMT"
+          "Value": "Wed, 03 Sep 2025 09:51:04 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -2919,13 +2940,13 @@
         },
         {
           "Name": "ETag",
-          "Value": "W/\"uxy0qQKh5dPto4iYaLXVUF+L3Y2aUp5wnjD/A6fkQig=\""
+          "Value": "W/\"opHYXHhe/dXvDPBt+TwPIXau1XWLYflvbgxR2vQotoU=\""
         }
       ],
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-uxy0qQKh5dPto4iYaLXVUF+L3Y2aUp5wnjD/A6fkQig="
+          "Value": "sha256-opHYXHhe/dXvDPBt+TwPIXau1XWLYflvbgxR2vQotoU="
         }
       ]
     },
@@ -2940,7 +2961,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "12171"
+          "Value": "12172"
         },
         {
           "Name": "Content-Type",
@@ -2948,11 +2969,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"uxy0qQKh5dPto4iYaLXVUF+L3Y2aUp5wnjD/A6fkQig=\""
+          "Value": "\"opHYXHhe/dXvDPBt+TwPIXau1XWLYflvbgxR2vQotoU=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sun, 31 Aug 2025 11:21:10 GMT"
+          "Value": "Wed, 03 Sep 2025 09:51:04 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -2962,13 +2983,13 @@
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-uxy0qQKh5dPto4iYaLXVUF+L3Y2aUp5wnjD/A6fkQig="
+          "Value": "sha256-opHYXHhe/dXvDPBt+TwPIXau1XWLYflvbgxR2vQotoU="
         }
       ]
     },
     {
       "Route": "css/site.css.gz",
-      "AssetFile": "/Users/walidsalem/BADEA/KPIMonitor/obj/Debug/net9.0/compressed/wjv24w2evb-duwwtqp8y7.gz",
+      "AssetFile": "/Users/walidsalem/BADEA/KPIMonitor/obj/Debug/net9.0/compressed/wjv24w2evb-u8i8cdgy27.gz",
       "Selectors": [],
       "ResponseHeaders": [
         {
@@ -2977,7 +2998,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "3882"
+          "Value": "3885"
         },
         {
           "Name": "Content-Type",
@@ -2985,11 +3006,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"hy9auLPpUnzwML8sWuw2j/CojzWWSfH/4KZiytffA/o=\""
+          "Value": "\"ApNhAm5pvndyEkwgglX5L4rxlOtPZHTrAEL4Eao/1H0=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sun, 31 Aug 2025 11:21:10 GMT"
+          "Value": "Wed, 03 Sep 2025 09:51:04 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -3007,18 +3028,18 @@
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-hy9auLPpUnzwML8sWuw2j/CojzWWSfH/4KZiytffA/o="
+          "Value": "sha256-ApNhAm5pvndyEkwgglX5L4rxlOtPZHTrAEL4Eao/1H0="
         }
       ]
     },
     {
-      "Route": "css/site.duwwtqp8y7.css",
-      "AssetFile": "/Users/walidsalem/BADEA/KPIMonitor/obj/Debug/net9.0/compressed/wjv24w2evb-duwwtqp8y7.gz",
+      "Route": "css/site.u8i8cdgy27.css",
+      "AssetFile": "/Users/walidsalem/BADEA/KPIMonitor/obj/Debug/net9.0/compressed/wjv24w2evb-u8i8cdgy27.gz",
       "Selectors": [
         {
           "Name": "Content-Encoding",
           "Value": "gzip",
-          "Quality": "0.000257532835"
+          "Quality": "0.000257334020"
         }
       ],
       "ResponseHeaders": [
@@ -3028,15 +3049,15 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "3882"
+          "Value": "3885"
         },
         {
           "Name": "ETag",
-          "Value": "\"hy9auLPpUnzwML8sWuw2j/CojzWWSfH/4KZiytffA/o=\""
+          "Value": "\"ApNhAm5pvndyEkwgglX5L4rxlOtPZHTrAEL4Eao/1H0=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sun, 31 Aug 2025 11:21:10 GMT"
+          "Value": "Wed, 03 Sep 2025 09:51:04 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -3056,13 +3077,13 @@
         },
         {
           "Name": "ETag",
-          "Value": "W/\"uxy0qQKh5dPto4iYaLXVUF+L3Y2aUp5wnjD/A6fkQig=\""
+          "Value": "W/\"opHYXHhe/dXvDPBt+TwPIXau1XWLYflvbgxR2vQotoU=\""
         }
       ],
       "EndpointProperties": [
         {
           "Name": "fingerprint",
-          "Value": "duwwtqp8y7"
+          "Value": "u8i8cdgy27"
         },
         {
           "Name": "label",
@@ -3070,12 +3091,12 @@
         },
         {
           "Name": "integrity",
-          "Value": "sha256-uxy0qQKh5dPto4iYaLXVUF+L3Y2aUp5wnjD/A6fkQig="
+          "Value": "sha256-opHYXHhe/dXvDPBt+TwPIXau1XWLYflvbgxR2vQotoU="
         }
       ]
     },
     {
-      "Route": "css/site.duwwtqp8y7.css",
+      "Route": "css/site.u8i8cdgy27.css",
       "AssetFile": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/css/site.css",
       "Selectors": [],
       "ResponseHeaders": [
@@ -3085,7 +3106,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "12171"
+          "Value": "12172"
         },
         {
           "Name": "Content-Type",
@@ -3093,11 +3114,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"uxy0qQKh5dPto4iYaLXVUF+L3Y2aUp5wnjD/A6fkQig=\""
+          "Value": "\"opHYXHhe/dXvDPBt+TwPIXau1XWLYflvbgxR2vQotoU=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sun, 31 Aug 2025 11:21:10 GMT"
+          "Value": "Wed, 03 Sep 2025 09:51:04 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -3107,7 +3128,7 @@
       "EndpointProperties": [
         {
           "Name": "fingerprint",
-          "Value": "duwwtqp8y7"
+          "Value": "u8i8cdgy27"
         },
         {
           "Name": "label",
@@ -3115,13 +3136,13 @@
         },
         {
           "Name": "integrity",
-          "Value": "sha256-uxy0qQKh5dPto4iYaLXVUF+L3Y2aUp5wnjD/A6fkQig="
+          "Value": "sha256-opHYXHhe/dXvDPBt+TwPIXau1XWLYflvbgxR2vQotoU="
         }
       ]
     },
     {
-      "Route": "css/site.duwwtqp8y7.css.gz",
-      "AssetFile": "/Users/walidsalem/BADEA/KPIMonitor/obj/Debug/net9.0/compressed/wjv24w2evb-duwwtqp8y7.gz",
+      "Route": "css/site.u8i8cdgy27.css.gz",
+      "AssetFile": "/Users/walidsalem/BADEA/KPIMonitor/obj/Debug/net9.0/compressed/wjv24w2evb-u8i8cdgy27.gz",
       "Selectors": [],
       "ResponseHeaders": [
         {
@@ -3130,7 +3151,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "3882"
+          "Value": "3885"
         },
         {
           "Name": "Content-Type",
@@ -3138,11 +3159,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"hy9auLPpUnzwML8sWuw2j/CojzWWSfH/4KZiytffA/o=\""
+          "Value": "\"ApNhAm5pvndyEkwgglX5L4rxlOtPZHTrAEL4Eao/1H0=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sun, 31 Aug 2025 11:21:10 GMT"
+          "Value": "Wed, 03 Sep 2025 09:51:04 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -3160,7 +3181,7 @@
       "EndpointProperties": [
         {
           "Name": "fingerprint",
-          "Value": "duwwtqp8y7"
+          "Value": "u8i8cdgy27"
         },
         {
           "Name": "label",
@@ -3168,7 +3189,7 @@
         },
         {
           "Name": "integrity",
-          "Value": "sha256-hy9auLPpUnzwML8sWuw2j/CojzWWSfH/4KZiytffA/o="
+          "Value": "sha256-ApNhAm5pvndyEkwgglX5L4rxlOtPZHTrAEL4Eao/1H0="
         }
       ]
     },
@@ -3963,8 +3984,8 @@
       ]
     },
     {
-      "Route": "images/side-rail1.autcqwlr36.png",
-      "AssetFile": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/side-rail1.png",
+      "Route": "images/side-rail1.jpeg",
+      "AssetFile": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/side-rail1.jpeg",
       "Selectors": [],
       "ResponseHeaders": [
         {
@@ -3973,64 +3994,19 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "5048174"
+          "Value": "26501"
         },
         {
           "Name": "Content-Type",
-          "Value": "image/png"
+          "Value": "image/jpeg"
         },
         {
           "Name": "ETag",
-          "Value": "\"EgzA94HRD4ZNsUBERThUdFlkwJytR3Dr8GOone1L+yY=\""
+          "Value": "\"dIu+ZdqmI2hhXT+jVIQp+NyNXUXfvtdFlzHUGg4rQao=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Wed, 20 Aug 2025 11:49:05 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "max-age=31536000, immutable"
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "fingerprint",
-          "Value": "autcqwlr36"
-        },
-        {
-          "Name": "label",
-          "Value": "images/side-rail1.png"
-        },
-        {
-          "Name": "integrity",
-          "Value": "sha256-EgzA94HRD4ZNsUBERThUdFlkwJytR3Dr8GOone1L+yY="
-        }
-      ]
-    },
-    {
-      "Route": "images/side-rail1.png",
-      "AssetFile": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/side-rail1.png",
-      "Selectors": [],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "5048174"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "image/png"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"EgzA94HRD4ZNsUBERThUdFlkwJytR3Dr8GOone1L+yY=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Wed, 20 Aug 2025 11:49:05 GMT"
+          "Value": "Wed, 03 Sep 2025 09:50:08 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -4040,7 +4016,134 @@
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-EgzA94HRD4ZNsUBERThUdFlkwJytR3Dr8GOone1L+yY="
+          "Value": "sha256-dIu+ZdqmI2hhXT+jVIQp+NyNXUXfvtdFlzHUGg4rQao="
+        }
+      ]
+    },
+    {
+      "Route": "images/side-rail1.kcj2p5xne8.jpeg",
+      "AssetFile": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/side-rail1.jpeg",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "26501"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "image/jpeg"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"dIu+ZdqmI2hhXT+jVIQp+NyNXUXfvtdFlzHUGg4rQao=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Wed, 03 Sep 2025 09:50:08 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "kcj2p5xne8"
+        },
+        {
+          "Name": "label",
+          "Value": "images/side-rail1.jpeg"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-dIu+ZdqmI2hhXT+jVIQp+NyNXUXfvtdFlzHUGg4rQao="
+        }
+      ]
+    },
+    {
+      "Route": "images/side-rail1.pwkymcsvcm.webp",
+      "AssetFile": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/side-rail1.webp",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "4583686"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "image/webp"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"p1sggLST1r24FszAlXb17WIadDSsbGpbGCkp9fgczVE=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Wed, 03 Sep 2025 09:45:22 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "pwkymcsvcm"
+        },
+        {
+          "Name": "label",
+          "Value": "images/side-rail1.webp"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-p1sggLST1r24FszAlXb17WIadDSsbGpbGCkp9fgczVE="
+        }
+      ]
+    },
+    {
+      "Route": "images/side-rail1.webp",
+      "AssetFile": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/side-rail1.webp",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "4583686"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "image/webp"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"p1sggLST1r24FszAlXb17WIadDSsbGpbGCkp9fgczVE=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Wed, 03 Sep 2025 09:45:22 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=3600, must-revalidate"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "integrity",
+          "Value": "sha256-p1sggLST1r24FszAlXb17WIadDSsbGpbGCkp9fgczVE="
         }
       ]
     },

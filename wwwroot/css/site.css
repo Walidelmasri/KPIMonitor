@@ -548,7 +548,7 @@ select {
     /* rail visual width */
     pointer-events: none;
     /* purely decorative */
-    background-image: url("../images/side-rail1.png");
+    background-image: url("../images/side-rail1.jpeg");
     /* use ONE file */
     background-repeat: repeat-y;
     background-size: 72px auto;
