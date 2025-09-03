@@ -43,8 +43,9 @@
                         {
                             <tr>
                                 <td>
-                                    <span class="audit-when" title="@r.ChangedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC"
-                                        data-utc="@r.ChangedAtUtc.ToString("o")">
+                                    <span class="audit-when"
+                                          title="@r.ChangedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC"
+                                          data-utc="@r.ChangedAtUtc.ToString("o")">
                                     </span>
                                 </td>
                                 <td>@(string.IsNullOrWhiteSpace(r.ChangedBy) ? "system" : r.ChangedBy)</td>
@@ -58,7 +59,11 @@
                                     <div class="small text-muted" data-key='@r.KeyJson'></div>
                                 </td>
                                 <td>
-                                    <div class="small" data-changes-raw='@r.ColumnChangesJson'></div>
+                                    <details class="audit-details"
+                                             data-url="@Url.Action("Changes", new { id = r.AuditId })">
+                                        <summary class="fw-semibold cursor-pointer">Details</summary>
+                                        <div class="mt-2 text-muted small">Click to load…</div>
+                                    </details>
                                 </td>
                             </tr>
                         }
@@ -72,6 +77,35 @@
                 </tbody>
             </table>
         </div>
+
+        @* --- PAGER (Prev/Next, no COUNT) --- *@
+        @{
+            var pg       = ViewBag.Page     as int? ?? 1;    // avoid @page directive clash
+            var pageSize = ViewBag.PageSize as int? ?? 10;
+            var hasNext  = ViewBag.HasNext  as bool? ?? false;
+        }
+
+        @if (Model != null && Model.Any())
+        {
+            <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+                <div class="text-muted small">
+                    Page @(pg) · Page size @(pageSize)
+                </div>
+
+                <nav aria-label="Audit pagination">
+                    <ul class="pagination mb-0">
+                        <li class="page-item @(pg == 1 ? "disabled" : "")">
+                            <a class="page-link"
+                               href="@Url.Action("Index", new { page = pg - 1, pageSize })">Prev</a>
+                        </li>
+                        <li class="page-item @(hasNext ? "" : "disabled")">
+                            <a class="page-link"
+                               href="@Url.Action("Index", new { page = pg + 1, pageSize })">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        }
     </div>
 </div>
 
@@ -114,49 +148,65 @@
                 el.textContent = parts.length ? parts.join(', ') : '—';
             });
 
-            // ---- Render raw "Changes" but with titles ----
-            document.querySelectorAll('[data-changes-raw]').forEach(el => {
-                const decoded = decodeHtml(el.getAttribute('data-changes-raw') ?? '');
-                if (!decoded) { el.innerHTML = '<span class="text-muted">—</span>'; return; }
+            // ---- Lazy-load "Changes" JSON on first open ----
+            function makeRow(label, value) {
+                const r = document.createElement('div');
+                const b = document.createElement('strong');
+                b.textContent = label + ': ';
+                const span = document.createElement('span');
+                span.textContent = value == null ? '∅' : String(value);
+                r.appendChild(b);
+                r.appendChild(span);
+                return r;
+            }
+            function makeHr() {
+                const h = document.createElement('hr');
+                h.className = 'my-2';
+                return h;
+            }
+            async function loadDetails(detailsEl) {
+                const url = detailsEl.getAttribute('data-url');
+                const box = detailsEl.querySelector('div'); // the placeholder inside <details>
+                box.textContent = 'Loading…';
 
-                const parsed = safeJson(decoded);
+                try {
+                    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    const data = await res.json();
 
-                // Build details element
-                const details = document.createElement('details');
-                details.className = 'border rounded-3 p-2 bg-light-subtle';
+                    const frag = document.createDocumentFragment();
 
-                const summary = document.createElement('summary');
-                summary.textContent = 'Details';
-                summary.className = 'fw-semibold cursor-pointer';
-                details.appendChild(summary);
+                    if (Array.isArray(data)) {
+                        data.forEach(item => {
+                            const col = item.Column ?? item.col ?? item.name ?? '?';
+                            const oldVal = ('Old' in item) ? item.Old : (item.old ?? null);
+                            const newVal = ('New' in item) ? item.New : (item.new ?? null);
+                            frag.appendChild(makeRow('Column', col));
+                            frag.appendChild(makeRow('Old Value', oldVal));
+                            frag.appendChild(makeRow('New Value', newVal));
+                            frag.appendChild(makeHr());
+                        });
+                    } else {
+                        const pre = document.createElement('pre');
+                        pre.className = 'mb-0';
+                        pre.textContent = JSON.stringify(data, null, 2);
+                        frag.appendChild(pre);
+                    }
 
-                const box = document.createElement('div');
-                box.className = 'mt-2';
-
-                if (Array.isArray(parsed)) {
-                    parsed.forEach(item => {
-                        const col = item.Column ?? item.col ?? item.name ?? '?';
-                        const oldVal = ('Old' in item) ? item.Old : (item.old ?? null);
-                        const newVal = ('New' in item) ? item.New : (item.new ?? null);
-
-                        const row = document.createElement('div');
-                        row.innerHTML =
-                            `<div><strong>Column:</strong> ${col}</div>` +
-                            `<div><strong>Old Value:</strong> ${oldVal ?? '∅'}</div>` +
-                            `<div><strong>New Value:</strong> ${newVal ?? '∅'}</div>` +
-                            `<hr class="my-2">`;
-                        box.appendChild(row);
-                    });
-                } else {
-                    // fallback: show raw JSON if not array
-                    const pre = document.createElement('pre');
-                    pre.className = 'mb-0';
-                    pre.textContent = decoded;
-                    box.appendChild(pre);
+                    box.replaceChildren(frag);
+                    detailsEl.dataset.loaded = '1';
+                } catch (e) {
+                    box.textContent = 'Failed to load details';
+                    detailsEl.dataset.loaded = '0';
                 }
+            }
 
-                details.appendChild(box);
-                el.replaceChildren(details);
+            document.querySelectorAll('.audit-details').forEach(d => {
+                d.addEventListener('toggle', () => {
+                    if (d.open && d.dataset.loaded !== '1') {
+                        loadDetails(d);
+                    }
+                });
             });
         })();
     </script>
