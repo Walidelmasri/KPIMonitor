@@ -178,41 +178,75 @@
       if (a >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
       return n.toString();
     }
-    // --- Custom labels plugin (Chart.js v4) ---
+    // --- Custom labels plugin with per-dataset overrides ---
     const ShowAllValues = {
       id: 'showAllValues',
-      afterDatasetsDraw(chart, args, opts) {
+      afterDatasetsDraw(chart, _args, opts) {
         const { ctx, data } = chart;
         const fmt = (opts && typeof opts.formatter === 'function') ? opts.formatter : _fmtShort;
 
+        const barDY = opts?.barDY ?? -6;
+        const barDYNeg = opts?.barDYNeg ?? 14;
+        const lineDY = opts?.lineDY ?? -8;
+        const minGap = opts?.minGap ?? 12;
+
         ctx.save();
+        const baseFont = `${opts?.fontWeight ?? '700'} ${opts?.fontSize ?? 15}px system-ui,-apple-system,Segoe UI,Roboto,Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
-        const fontSize = opts?.fontSize || 12;
-        const fontWeight = opts?.fontWeight || '700';
-        ctx.font = `${fontWeight} ${fontSize}px system-ui,-apple-system,Segoe UI,Roboto,Arial`;
-        ctx.fillStyle = opts?.color || '#111';
+
+        // anti-overlap per x-index
+        const lastYByIndex = new Map();
 
         data.datasets.forEach((ds, di) => {
           if (!chart.isDatasetVisible(di)) return;
           const meta = chart.getDatasetMeta(di);
+          const isBar = (ds.type || meta.type) === 'bar';
+          const isLine = (ds.type || meta.type) === 'line';
+
+          // Optional filters: only last/step for lines
+          const onlyLastForLines = !!opts?.onlyLastForLines;
+          const lineStep = Number.isInteger(opts?.lineStep) ? Math.max(1, opts.lineStep) : 1;
+          const lastLineIdx = isLine && onlyLastForLines
+            ? [...ds.data].map((v, i) => [v, i]).reverse().find(x => x[0] != null)?.[1]
+            : null;
+
+          const per = opts?.perDataset?.[di] || {};   // {dy, dx, color}
 
           meta.data.forEach((el, i) => {
             const raw = ds.data[i];
             const val = Number(raw);
-            if (raw == null || Number.isNaN(val)) return;   // skip null/NaN
+            if (raw == null || Number.isNaN(val)) return;
+
+            if (isLine && onlyLastForLines && i !== lastLineIdx) return;
+            if (isLine && lineStep > 1 && (i % lineStep) !== 0) return;
 
             const { x, y } = el.getProps(['x', 'y'], true);
 
-            // put label just outside the element
-            let dy;
-            if ((ds.type || meta.type) === 'bar') {
-              dy = val < 0 ? 14 : -4; // below if bar is negative, else above
-            } else {
-              dy = -6;                // line points
-            }
+            // pick a base DY, then allow per-dataset override
+            let dy = isBar ? (val < 0 ? barDYNeg : barDY) : lineDY;
+            if (typeof per.dy === 'number') dy = per.dy;
 
-            ctx.fillText(fmt(val), x, y + dy);
+            const dx = typeof per.dx === 'number' ? per.dx : 0;
+
+            let labelY = y + dy;
+            const labelX = x + dx;
+
+            const lastY = lastYByIndex.get(i);
+            if (lastY !== undefined && Math.abs(labelY - lastY) < minGap) {
+              labelY = Math.min(labelY, lastY - minGap);
+            }
+            lastYByIndex.set(i, labelY);
+
+            ctx.font = baseFont;
+            ctx.fillStyle = per.color || opts?.color || '#111';
+
+            if (opts?.outline) {
+              ctx.lineWidth = 3;
+              ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+              ctx.strokeText(fmt(val), labelX, labelY);
+            }
+            ctx.fillText(fmt(val), labelX, labelY);
           });
         });
 
@@ -220,6 +254,8 @@
       }
     };
     Chart.register(ShowAllValues);
+
+
 
     // ---- register plugin + global defaults for labels ----
     Chart.register(ChartDataLabels);
@@ -466,7 +502,7 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        layout: { padding: { top: 20, bottom: 26 } }, // headroom for labels
+layout: { padding: { top: 16 } },   // was { top: 14, bottom: 66 }
 
         // NO grid, NO Y axis labels
         scales: {
@@ -475,16 +511,25 @@
         },
 
         plugins: {
-          legend: { position: 'top' },
-          datalabels: false,                 // turn OFF the external plugin for this chart
-          showAllValues: {                   // our custom plugin options
+          datalabels: false,               // keep the other plugin off for this chart
+          showAllValues: {
             formatter: _fmtShort,
             fontSize: 12,
             fontWeight: '700',
-            color: '#111'
+            minGap: 20,
+            outline: true,
+
+            // per dataset: [Actual(bar), Target(line), Forecast(line)]
+            perDataset: [
+              { dy: -12, dx: 0, color: '#800080' }, // bar above
+              { dy: 12, dx: -6, color: '#7a7a7a' }, // target below & a hair left
+              { dy: -18, dx: 8, color: '#fd7e14' }  // forecast higher & a hair right
+            ]
           },
           tooltip: { enabled: true }
         }
+
+
       }
     });
 
@@ -583,32 +628,32 @@
           // NEW: conditional Edit cell based on ACL
           const editCellHtml = canEditFacts
             ? `<button class="btn btn-sm btn-outline-primary"
-                   data-fact-id="${r.id}"
-                   data-period="${r.period ?? ''}"
-                   data-actual="${r.actual ?? ''}"
-                   data-target="${r.target ?? ''}"
-                   data-forecast="${r.forecast ?? ''}"
-                   data-status="${r.statusCode ?? ''}"
-                   data-lastby="${r.lastBy ?? ''}"
-                   data-pillar-id="${selPillar.value || ''}"
-                   data-objective-id="${selObjective.value || ''}"
-                   data-kpi-id="${selKpi.value || ''}"
-                   onclick="openEditModal(this)">
-                   ✏️ Edit
-                 </button>`
+                         data-fact-id="${r.id}"
+                         data-period="${r.period ?? ''}"
+                         data-actual="${r.actual ?? ''}"
+                         data-target="${r.target ?? ''}"
+                         data-forecast="${r.forecast ?? ''}"
+                         data-status="${r.statusCode ?? ''}"
+                         data-lastby="${r.lastBy ?? ''}"
+                         data-pillar-id="${selPillar.value || ''}"
+                         data-objective-id="${selObjective.value || ''}"
+                         data-kpi-id="${selKpi.value || ''}"
+                         onclick="openEditModal(this)">
+                         ✏️ Edit
+                       </button>`
             : `<button class="btn btn-sm btn-outline-secondary" data-noaccess="1" title="You do not have access to edit these facts">
-                   ✏️ Edit
-                 </button>`;
+                         ✏️ Edit
+                       </button>`;
 
           tr.innerHTML = `
-              <td>${r.period ?? '—'}</td>
-              <td>${r.startDate ?? '—'}</td>
-              <td>${r.endDate ?? '—'}</td>
-              <td>${r.actual ?? '—'}</td>
-              <td>${r.target ?? '—'}</td>
-              <td>${r.forecast ?? '—'}</td>
-              <td>${editCellHtml}</td>
-            `;
+                    <td>${r.period ?? '—'}</td>
+                    <td>${r.startDate ?? '—'}</td>
+                    <td>${r.endDate ?? '—'}</td>
+                    <td>${r.actual ?? '—'}</td>
+                    <td>${r.target ?? '—'}</td>
+                    <td>${r.forecast ?? '—'}</td>
+                    <td>${editCellHtml}</td>
+                  `;
           tableBody.appendChild(tr);
         }
       }
