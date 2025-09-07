@@ -2,8 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using KPIMonitor.Data;
 using KPIMonitor.Models;
-using System.Text; // add at top of file if not present
-using System.Net;  // add at top of file if not present
+using System.Text;
+using System.Net;
 using System.Linq;
 
 
@@ -18,109 +18,115 @@ namespace KPIMonitor.Controllers
         [HttpGet]
         public IActionResult Index() => View();
 
-// List of KPI ids that are "red", ordered by priority asc then name
-[HttpGet]
-public async Task<IActionResult> GetRedKpiIds()
-{
-    var redCodes = new[] { "red", "ecart" }; // normalize to lowercase
-
-    // Step 1: latest plan id per KPI (pure grouping = easy to translate)
-    var latestIds =
-        from p in _db.KpiYearPlans
-        where p.IsActive == 1 && p.Period != null
-        group p by p.KpiId into g
-        select new
+        // List of KPI ids that are "red", ordered by priority asc then name
+        [HttpGet]
+        public async Task<IActionResult> GetRedKpiIds()
         {
-            KpiId = g.Key,
-            MaxPlanId = g.Max(x => x.KpiYearPlanId)
-        };
+            var redCodes = new[] { "red", "ecart" }; // normalize to lowercase
 
-    // Step 2: join back to the actual plan row to get the year & priority
-    var latestPlans =
-        from lid in latestIds
-        join p in _db.KpiYearPlans on
-            new { lid.KpiId, PlanId = lid.MaxPlanId }
-            equals new { p.KpiId, PlanId = p.KpiYearPlanId }
-        select new
-        {
-            p.KpiId,
-            p.KpiYearPlanId,
-            Year = p.Period!.Year,   // navigation gives us the year
-            p.Priority
-        };
+            // Step 1: latest plan id per KPI (pure grouping = easy to translate)
+            var latestIds =
+                from p in _db.KpiYearPlans
+                where p.IsActive == 1 && p.Period != null
+                group p by p.KpiId into g
+                select new
+                {
+                    KpiId = g.Key,
+                    MaxPlanId = g.Max(x => x.KpiYearPlanId)
+                };
 
-    // Step 3: one shot join to facts (same plan & same year) and to KPI/Objective/Pillar
-    var query =
-        from lp in latestPlans
-        join f in _db.KpiFacts
-            on new { lp.KpiId, PlanId = lp.KpiYearPlanId }
-            equals new { f.KpiId, PlanId = f.KpiYearPlanId }
-        join per in _db.DimPeriods on f.PeriodId equals per.PeriodId
-        where f.IsActive == 1
-           && per.Year == lp.Year
-           && f.StatusCode != null
-           && redCodes.Contains(f.StatusCode.ToLower())
-        join k in _db.DimKpis on lp.KpiId equals k.KpiId
-        join o in _db.DimObjectives on k.ObjectiveId equals o.ObjectiveId into gobj
-        from o in gobj.DefaultIfEmpty()
-        join p in _db.DimPillars on k.PillarId equals p.PillarId into gpil
-        from p in gpil.DefaultIfEmpty()
-        select new
-        {
-            lp.KpiId,
-            KpiName = k.KpiName,
-            KpiCode = k.KpiCode,
-            lp.Priority,
-            PillarCode    = p != null ? p.PillarCode    : "",
-            PillarName    = p != null ? p.PillarName    : "",
-            ObjectiveCode = o != null ? o.ObjectiveCode : "",
-            ObjectiveName = o != null ? o.ObjectiveName : ""
-        };
+            // Step 2: join back to the actual plan row to get the year & priority
+            var latestPlans =
+                from lid in latestIds
+                join p in _db.KpiYearPlans on
+                    new { lid.KpiId, PlanId = lid.MaxPlanId }
+                    equals new { p.KpiId, PlanId = p.KpiYearPlanId }
+                select new
+                {
+                    p.KpiId,
+                    p.KpiYearPlanId,
+                    Year = p.Period!.Year,   // navigation gives us the year
+                    p.Priority
+                };
 
-    // Distinct KPIs (one red KPI per list entry)
-    var deduped = await query
-        .AsNoTracking()
-        .GroupBy(x => new
-        {
-            x.KpiId, x.KpiName, x.KpiCode, x.Priority,
-            x.PillarCode, x.PillarName, x.ObjectiveCode, x.ObjectiveName
-        })
-        .Select(g => g.Key)
-        .ToListAsync();
+            // Step 3: one shot join to facts (same plan & same year) and to KPI/Objective/Pillar
+            var query =
+                from lp in latestPlans
+                join f in _db.KpiFacts
+                    on new { lp.KpiId, PlanId = lp.KpiYearPlanId }
+                    equals new { f.KpiId, PlanId = f.KpiYearPlanId }
+                join per in _db.DimPeriods on f.PeriodId equals per.PeriodId
+                where f.IsActive == 1
+                   && per.Year == lp.Year
+                   && f.StatusCode != null
+                   && redCodes.Contains(f.StatusCode.ToLower())
+                join k in _db.DimKpis on lp.KpiId equals k.KpiId
+                join o in _db.DimObjectives on k.ObjectiveId equals o.ObjectiveId into gobj
+                from o in gobj.DefaultIfEmpty()
+                join p in _db.DimPillars on k.PillarId equals p.PillarId into gpil
+                from p in gpil.DefaultIfEmpty()
+                select new
+                {
+                    lp.KpiId,
+                    KpiName = k.KpiName,
+                    KpiCode = k.KpiCode,
+                    lp.Priority,
+                    PillarCode = p != null ? p.PillarCode : "",
+                    PillarName = p != null ? p.PillarName : "",
+                    ObjectiveCode = o != null ? o.ObjectiveCode : "",
+                    ObjectiveName = o != null ? o.ObjectiveName : ""
+                };
 
-    // Build the payload your view expects
-    var result = deduped
-        .OrderBy(x => x.Priority ?? int.MaxValue)
-        .ThenBy(x => x.PillarCode)
-        .ThenBy(x => x.ObjectiveCode)
-        .ThenBy(x => x.KpiCode)
-        .Select(x =>
-        {
-            string pillCode = (x.PillarCode ?? "").Trim();
-            string objCode  = (x.ObjectiveCode ?? "").Trim();
-            string kpiCode  = (x.KpiCode ?? "").Trim();
+            // Distinct KPIs (one red KPI per list entry)
+            var deduped = await query
+                .AsNoTracking()
+                .GroupBy(x => new
+                {
+                    x.KpiId,
+                    x.KpiName,
+                    x.KpiCode,
+                    x.Priority,
+                    x.PillarCode,
+                    x.PillarName,
+                    x.ObjectiveCode,
+                    x.ObjectiveName
+                })
+                .Select(g => g.Key)
+                .ToListAsync();
 
-            string pillName = (x.PillarName ?? "").Trim();
-            string objName  = (x.ObjectiveName ?? "").Trim();
+            // Build the payload your view expects
+            var result = deduped
+                .OrderBy(x => x.Priority ?? int.MaxValue)
+                .ThenBy(x => x.PillarCode)
+                .ThenBy(x => x.ObjectiveCode)
+                .ThenBy(x => x.KpiCode)
+                .Select(x =>
+                {
+                    string pillCode = (x.PillarCode ?? "").Trim();
+                    string objCode = (x.ObjectiveCode ?? "").Trim();
+                    string kpiCode = (x.KpiCode ?? "").Trim();
 
-            var line1 = $"KPI Code: {pillCode}.{objCode} {kpiCode}";
-            var line2 = string.IsNullOrEmpty(pillName) ? "" : $"Pillar: {pillName}";
-            var line3 = string.IsNullOrEmpty(objName)  ? "" : $"Objective: {objName}";
-            var subtitle = string.Join("\n", new[] { line1, line2, line3 }
-                .Where(s => !string.IsNullOrWhiteSpace(s)));
+                    string pillName = (x.PillarName ?? "").Trim();
+                    string objName = (x.ObjectiveName ?? "").Trim();
 
-            return new
-            {
-                kpiId = x.KpiId,
-                name = x.KpiName ?? "-",
-                code = subtitle,
-                priority = x.Priority
-            };
-        })
-        .ToList();
+                    var line1 = $"KPI Code: {pillCode}.{objCode} {kpiCode}";
+                    var line2 = string.IsNullOrEmpty(pillName) ? "" : $"Pillar: {pillName}";
+                    var line3 = string.IsNullOrEmpty(objName) ? "" : $"Objective: {objName}";
+                    var subtitle = string.Join("\n", new[] { line1, line2, line3 }
+                        .Where(s => !string.IsNullOrWhiteSpace(s)));
 
-    return Json(result);
-}
+                    return new
+                    {
+                        kpiId = x.KpiId,
+                        name = x.KpiName ?? "-",
+                        code = subtitle,
+                        priority = x.Priority
+                    };
+                })
+                .ToList();
+
+            return Json(result);
+        }
 
         // Single KPI payload (same shape as Dashboard’s summary)
         [HttpGet]
@@ -165,27 +171,27 @@ public async Task<IActionResult> GetRedKpiIds()
                 return p.Year.ToString();
             }
 
-            var labels   = facts.Select(f => LabelFor(f.Period!)).ToList();
-            var actual   = facts.Select(f => (decimal?)f.ActualValue).ToList();
-            var target   = facts.Select(f => (decimal?)f.TargetValue).ToList();
+            var labels = facts.Select(f => LabelFor(f.Period!)).ToList();
+            var actual = facts.Select(f => (decimal?)f.ActualValue).ToList();
+            var target = facts.Select(f => (decimal?)f.TargetValue).ToList();
             var forecast = facts.Select(f => (decimal?)f.ForecastValue).ToList();
 
             // find the most recent fact that actually has a status
-var lastWithStatus = facts.LastOrDefault(f => !string.IsNullOrWhiteSpace(f.StatusCode));
-string? latestStatusCode = lastWithStatus?.StatusCode;
+            var lastWithStatus = facts.LastOrDefault(f => !string.IsNullOrWhiteSpace(f.StatusCode));
+            string? latestStatusCode = lastWithStatus?.StatusCode;
 
-(string label, string color) status = latestStatusCode?.Trim().ToLowerInvariant() switch
-{
-    "green"      => ("Ok",               "#28a745"),
-    "red"        => ("Needs Attention",  "#dc3545"),
-    "orange"     => ("Catching Up",      "#fd7e14"),
-    "blue"       => ("Data Missing",     "#0d6efd"),
-    "conforme"   => ("Ok",               "#28a745"),
-    "ecart"      => ("Needs Attention",  "#dc3545"),
-    "rattrapage" => ("Catching Up",      "#fd7e14"),
-    "attente"    => ("Data Missing",     "#0d6efd"),
-    _            => ("—",                "")
-};
+            (string label, string color) status = latestStatusCode?.Trim().ToLowerInvariant() switch
+            {
+                "green" => ("Ok", "#28a745"),
+                "red" => ("Needs Attention", "#dc3545"),
+                "orange" => ("Catching Up", "#fd7e14"),
+                "blue" => ("Data Missing", "#0d6efd"),
+                "conforme" => ("Ok", "#28a745"),
+                "ecart" => ("Needs Attention", "#dc3545"),
+                "rattrapage" => ("Catching Up", "#fd7e14"),
+                "attente" => ("Data Missing", "#0d6efd"),
+                _ => ("—", "")
+            };
 
             // five-year targets (bars to the right)
             var fy = await _db.KpiFiveYearTargets
@@ -237,143 +243,143 @@ string? latestStatusCode = lastWithStatus?.StatusCode;
             });
         }
         // ---------- Actions (modals/partials only) ----------
-[HttpGet]
-public async Task<IActionResult> ActionForm(decimal kpiId)
-{
-    var kpi = await _db.DimKpis.AsNoTracking().FirstOrDefaultAsync(x => x.KpiId == kpiId);
-    if (kpi == null) return NotFound();
+        [HttpGet]
+        public async Task<IActionResult> ActionForm(decimal kpiId)
+        {
+            var kpi = await _db.DimKpis.AsNoTracking().FirstOrDefaultAsync(x => x.KpiId == kpiId);
+            if (kpi == null) return NotFound();
 
-    var vm = new KpiAction
-    {
-        KpiId = kpiId,
-        AssignedAt = DateTime.UtcNow,
-        ExtensionCount = 0,
-        StatusCode = "todo"
-    };
-    ViewBag.KpiTitle = $"{kpi.KpiCode} — {kpi.KpiName}";
-    return PartialView("_ActionForm", vm);
-}
+            var vm = new KpiAction
+            {
+                KpiId = kpiId,
+                AssignedAt = DateTime.UtcNow,
+                ExtensionCount = 0,
+                StatusCode = "todo"
+            };
+            ViewBag.KpiTitle = $"{kpi.KpiCode} — {kpi.KpiName}";
+            return PartialView("_ActionForm", vm);
+        }
 
-[HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> SaveAction(KpiAction vm)
-{
-    if (!ModelState.IsValid) return BadRequest("Invalid data.");
-    vm.CreatedBy = User?.Identity?.Name ?? "system";
-    vm.CreatedDate = DateTime.UtcNow;
-    vm.LastChangedBy = vm.CreatedBy;
-    vm.LastChangedDate = vm.CreatedDate;
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveAction(KpiAction vm)
+        {
+            if (!ModelState.IsValid) return BadRequest("Invalid data.");
+            vm.CreatedBy = User?.Identity?.Name ?? "system";
+            vm.CreatedDate = DateTime.UtcNow;
+            vm.LastChangedBy = vm.CreatedBy;
+            vm.LastChangedDate = vm.CreatedDate;
 
-    _db.KpiActions.Add(vm);
-    await _db.SaveChangesAsync();
-    return Ok(new { ok = true });
-}
+            _db.KpiActions.Add(vm);
+            await _db.SaveChangesAsync();
+            return Ok(new { ok = true });
+        }
 
-// [HttpGet]
-// public async Task<IActionResult> ActionsList(decimal kpiId)
-// {
-//     var list = await _db.KpiActions
-//         .AsNoTracking()
-//         .Where(a => a.KpiId == kpiId)
-//         .OrderBy(a => a.StatusCode)
-//         .ThenBy(a => a.DueDate)
-//         .ToListAsync();
+        // [HttpGet]
+        // public async Task<IActionResult> ActionsList(decimal kpiId)
+        // {
+        //     var list = await _db.KpiActions
+        //         .AsNoTracking()
+        //         .Where(a => a.KpiId == kpiId)
+        //         .OrderBy(a => a.StatusCode)
+        //         .ThenBy(a => a.DueDate)
+        //         .ToListAsync();
 
-//     ViewBag.KpiId = kpiId;
-//     return PartialView("_ActionsList", list);
-// }
+        //     ViewBag.KpiId = kpiId;
+        //     return PartialView("_ActionsList", list);
+        // }
 
-[HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> MoveDeadline(decimal actionId, DateTime newDueDate, string? reason)
-{
-    var act = await _db.KpiActions.FirstOrDefaultAsync(a => a.ActionId == actionId);
-    if (act == null) return NotFound();
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MoveDeadline(decimal actionId, DateTime newDueDate, string? reason)
+        {
+            var act = await _db.KpiActions.FirstOrDefaultAsync(a => a.ActionId == actionId);
+            if (act == null) return NotFound();
 
-    if (act.ExtensionCount >= 3)
-        return BadRequest("Max 3 extensions reached.");
+            if (act.ExtensionCount >= 3)
+                return BadRequest("Max 3 extensions reached.");
 
-    _db.KpiActionDeadlineHistories.Add(new KpiActionDeadlineHistory
-    {
-        ActionId = act.ActionId,
-        OldDueDate = act.DueDate,
-        NewDueDate = newDueDate,
-        ChangedAt = DateTime.UtcNow,
-        ChangedBy = User?.Identity?.Name ?? "system",
-        Reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim()
-    });
+            _db.KpiActionDeadlineHistories.Add(new KpiActionDeadlineHistory
+            {
+                ActionId = act.ActionId,
+                OldDueDate = act.DueDate,
+                NewDueDate = newDueDate,
+                ChangedAt = DateTime.UtcNow,
+                ChangedBy = User?.Identity?.Name ?? "system",
+                Reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim()
+            });
 
-    act.DueDate = newDueDate;
-    act.ExtensionCount = (short)(act.ExtensionCount + 1);
-    act.LastChangedBy = User?.Identity?.Name ?? "system";
-    act.LastChangedDate = DateTime.UtcNow;
+            act.DueDate = newDueDate;
+            act.ExtensionCount = (short)(act.ExtensionCount + 1);
+            act.LastChangedBy = User?.Identity?.Name ?? "system";
+            act.LastChangedDate = DateTime.UtcNow;
 
-    await _db.SaveChangesAsync();
-    return Ok(new { ok = true });
-}
+            await _db.SaveChangesAsync();
+            return Ok(new { ok = true });
+        }
 
-[HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> SetStatus(decimal actionId, string statusCode)
-{
-    var act = await _db.KpiActions.FirstOrDefaultAsync(a => a.ActionId == actionId);
-    if (act == null) return NotFound();
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SetStatus(decimal actionId, string statusCode)
+        {
+            var act = await _db.KpiActions.FirstOrDefaultAsync(a => a.ActionId == actionId);
+            if (act == null) return NotFound();
 
-    act.StatusCode = (statusCode ?? "todo").Trim().ToLowerInvariant();
-    act.LastChangedBy = User?.Identity?.Name ?? "system";
-    act.LastChangedDate = DateTime.UtcNow;
+            act.StatusCode = (statusCode ?? "todo").Trim().ToLowerInvariant();
+            act.LastChangedBy = User?.Identity?.Name ?? "system";
+            act.LastChangedDate = DateTime.UtcNow;
 
-    await _db.SaveChangesAsync();
-    return Ok(new { ok = true });
-}
+            await _db.SaveChangesAsync();
+            return Ok(new { ok = true });
+        }
 
-// Final "Decisions" board for the current run (three columns by status)
-// [HttpPost]
-// public async Task<IActionResult> DecisionsBoard([FromBody] decimal[] kpiIds)
-// {
-//     var actions = await _db.KpiActions
-//         .AsNoTracking()
-//         .Where(a => kpiIds.Contains(a.KpiId))
-//         .OrderBy(a => a.StatusCode).ThenBy(a => a.DueDate)
-//         .ToListAsync();
+        // Final "Decisions" board for the current run (three columns by status)
+        // [HttpPost]
+        // public async Task<IActionResult> DecisionsBoard([FromBody] decimal[] kpiIds)
+        // {
+        //     var actions = await _db.KpiActions
+        //         .AsNoTracking()
+        //         .Where(a => kpiIds.Contains(a.KpiId))
+        //         .OrderBy(a => a.StatusCode).ThenBy(a => a.DueDate)
+        //         .ToListAsync();
 
-//     var todo = actions.Where(a => a.StatusCode == "todo").ToList();
-//     var prog = actions.Where(a => a.StatusCode == "inprogress").ToList();
-//     var done = actions.Where(a => a.StatusCode == "done").ToList();
+        //     var todo = actions.Where(a => a.StatusCode == "todo").ToList();
+        //     var prog = actions.Where(a => a.StatusCode == "inprogress").ToList();
+        //     var done = actions.Where(a => a.StatusCode == "done").ToList();
 
-//     ViewBag.Total = actions.Count;
-//     return PartialView("_DecisionsBoard", (todo, prog, done));
-// }
-// ---------- HTML (no partials, no JSON) ----------
+        //     ViewBag.Total = actions.Count;
+        //     return PartialView("_DecisionsBoard", (todo, prog, done));
+        // }
+        // ---------- HTML (no partials, no JSON) ----------
 
-[HttpGet]
-public async Task<IActionResult> ActionsListHtml(decimal kpiId)
-{
-    var items = await _db.KpiActions
-        .AsNoTracking()
-        .Where(a => a.KpiId == kpiId)
-        .OrderBy(a => a.StatusCode)
-        .ThenBy(a => a.DueDate)
-        .ToListAsync();
+        [HttpGet]
+        public async Task<IActionResult> ActionsListHtml(decimal kpiId)
+        {
+            var items = await _db.KpiActions
+                .AsNoTracking()
+                .Where(a => a.KpiId == kpiId)
+                .OrderBy(a => a.StatusCode)
+                .ThenBy(a => a.DueDate)
+                .ToListAsync();
 
-    static string H(string? s) => WebUtility.HtmlEncode(s ?? "");
-    static string Fmt(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
+            static string H(string? s) => WebUtility.HtmlEncode(s ?? "");
+            static string Fmt(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
 
-    var sb = new StringBuilder();
+            var sb = new StringBuilder();
 
-    if (items.Count == 0)
-    {
-        sb.Append("<div class='text-muted small'>No actions yet for this KPI.</div>");
-        return Content(sb.ToString(), "text/html");
-    }
+            if (items.Count == 0)
+            {
+                sb.Append("<div class='text-muted small'>No actions yet for this KPI.</div>");
+                return Content(sb.ToString(), "text/html");
+            }
 
-    foreach (var a in items)
-    {
-        var sTodo = a.StatusCode?.Equals("todo", StringComparison.OrdinalIgnoreCase) == true ? "selected" : "";
-        var sProg = a.StatusCode?.Equals("inprogress", StringComparison.OrdinalIgnoreCase) == true ? "selected" : "";
-        var sDone = a.StatusCode?.Equals("done", StringComparison.OrdinalIgnoreCase) == true ? "selected" : "";
+            foreach (var a in items)
+            {
+                var sTodo = a.StatusCode?.Equals("todo", StringComparison.OrdinalIgnoreCase) == true ? "selected" : "";
+                var sProg = a.StatusCode?.Equals("inprogress", StringComparison.OrdinalIgnoreCase) == true ? "selected" : "";
+                var sDone = a.StatusCode?.Equals("done", StringComparison.OrdinalIgnoreCase) == true ? "selected" : "";
 
-        sb.Append(@$"
+                sb.Append(@$"
 <div class='border rounded-3 p-2 mb-2 bg-white'>
   <div class='d-flex justify-content-between align-items-center'>
     <div>
@@ -392,84 +398,84 @@ public async Task<IActionResult> ActionsListHtml(decimal kpiId)
   <div class='mt-2'>{H(a.Description)}</div>
   <div class='small text-muted mt-1'>Due: {Fmt(a.DueDate)} • Ext: {a.ExtensionCount}</div>
 </div>");
-    }
+            }
 
-    return Content(sb.ToString(), "text/html");
-}
+            return Content(sb.ToString(), "text/html");
+        }
 
 
-[HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> DecisionsBoardHtml([FromBody] decimal[] kpiIds)
-{
-    if (kpiIds == null || kpiIds.Length == 0)
-        return Content("<div class='text-muted small'>No KPIs in this run.</div>", "text/html");
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DecisionsBoardHtml([FromBody] decimal[] kpiIds)
+        {
+            if (kpiIds == null || kpiIds.Length == 0)
+                return Content("<div class='text-muted small'>No KPIs in this run.</div>", "text/html");
 
-    // KPI-scoped actions for the selected run
-    var kpiScoped = await _db.KpiActions
-        .AsNoTracking()
-        .Include(a => a.Kpi)
-            .ThenInclude(k => k.Objective)
-        .Include(a => a.Kpi)
-            .ThenInclude(k => k.Pillar)
-        .Where(a => a.KpiId.HasValue && kpiIds.Contains(a.KpiId.Value))  // fix for nullable KpiId
-        .OrderBy(a => a.StatusCode).ThenBy(a => a.DueDate)
-        .ToListAsync();
+            // KPI-scoped actions for the selected run
+            var kpiScoped = await _db.KpiActions
+                .AsNoTracking()
+                .Include(a => a.Kpi)
+                    .ThenInclude(k => k.Objective)
+                .Include(a => a.Kpi)
+                    .ThenInclude(k => k.Pillar)
+                .Where(a => a.KpiId.HasValue && kpiIds.Contains(a.KpiId.Value))  // fix for nullable KpiId
+                .OrderBy(a => a.StatusCode).ThenBy(a => a.DueDate)
+                .ToListAsync();
 
-    // General actions (no KPI) — always include
-    var general = await _db.KpiActions
-        .AsNoTracking()
-        .Where(a => a.KpiId == null)
-        .OrderBy(a => a.StatusCode).ThenBy(a => a.DueDate)
-        .ToListAsync();
+            // General actions (no KPI) — always include
+            var general = await _db.KpiActions
+                .AsNoTracking()
+                .Where(a => a.KpiId == null)
+                .OrderBy(a => a.StatusCode).ThenBy(a => a.DueDate)
+                .ToListAsync();
 
-    // Merge
-    var actions = kpiScoped.Concat(general).ToList();
+            // Merge
+            var actions = kpiScoped.Concat(general).ToList();
 
-    static string H(string? s) => WebUtility.HtmlEncode(s ?? "");
-    static string Fmt(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
+            static string H(string? s) => WebUtility.HtmlEncode(s ?? "");
+            static string Fmt(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
 
-    var todo = actions.Where(a => string.Equals(a.StatusCode, "todo", StringComparison.OrdinalIgnoreCase)).ToList();
-    var prog = actions.Where(a => string.Equals(a.StatusCode, "inprogress", StringComparison.OrdinalIgnoreCase)).ToList();
-    var done = actions.Where(a => string.Equals(a.StatusCode, "done", StringComparison.OrdinalIgnoreCase)).ToList();
+            var todo = actions.Where(a => string.Equals(a.StatusCode, "todo", StringComparison.OrdinalIgnoreCase)).ToList();
+            var prog = actions.Where(a => string.Equals(a.StatusCode, "inprogress", StringComparison.OrdinalIgnoreCase)).ToList();
+            var done = actions.Where(a => string.Equals(a.StatusCode, "done", StringComparison.OrdinalIgnoreCase)).ToList();
 
-    string Col(string title, string badgeClass, IEnumerable<KpiAction> items)
-    {
-        var sb = new StringBuilder();
-        sb.Append(@$"<div class='col-md-4'>
+            string Col(string title, string badgeClass, IEnumerable<KpiAction> items)
+            {
+                var sb = new StringBuilder();
+                sb.Append(@$"<div class='col-md-4'>
   <h6 class='text-secondary fw-bold mb-2'>{H(title)}</h6>
   <div class='d-grid gap-2'>");
 
-        if (!items.Any())
-        {
-            sb.Append("<div class='text-muted small'>No items.</div>");
-        }
-        else
-        {
-            foreach (var a in items)
-            {
-                // Build the KPI/general info block
-                string infoBlock;
-                if (a.KpiId == null || a.IsGeneral)
+                if (!items.Any())
                 {
-                    infoBlock = "<div class='small text-muted mt-1'><span class='badge text-bg-info me-1'>General</span>General Action</div>";
+                    sb.Append("<div class='text-muted small'>No items.</div>");
                 }
                 else
                 {
-                    var kpiCode = $"{H(a.Kpi?.Pillar?.PillarCode ?? "")}.{H(a.Kpi?.Objective?.ObjectiveCode ?? "")} {H(a.Kpi?.KpiCode ?? "")}";
-                    var kpiName = H(a.Kpi?.KpiName ?? "-");
-                    var pillarName = H(a.Kpi?.Pillar?.PillarName ?? "");
-                    var objectiveName = H(a.Kpi?.Objective?.ObjectiveName ?? "");
+                    foreach (var a in items)
+                    {
+                        // Build the KPI/general info block
+                        string infoBlock;
+                        if (a.KpiId == null || a.IsGeneral)
+                        {
+                            infoBlock = "<div class='small text-muted mt-1'><span class='badge text-bg-info me-1'>General</span>General Action</div>";
+                        }
+                        else
+                        {
+                            var kpiCode = $"{H(a.Kpi?.Pillar?.PillarCode ?? "")}.{H(a.Kpi?.Objective?.ObjectiveCode ?? "")} {H(a.Kpi?.KpiCode ?? "")}";
+                            var kpiName = H(a.Kpi?.KpiName ?? "-");
+                            var pillarName = H(a.Kpi?.Pillar?.PillarName ?? "");
+                            var objectiveName = H(a.Kpi?.Objective?.ObjectiveName ?? "");
 
-                    infoBlock = @$"
+                            infoBlock = @$"
       <div class='small text-muted mt-1'>
         KPI: <strong>{kpiCode}</strong> — {kpiName}
         {(string.IsNullOrWhiteSpace(pillarName) ? "" : $"<div>Pillar: {pillarName}</div>")}
         {(string.IsNullOrWhiteSpace(objectiveName) ? "" : $"<div>Objective: {objectiveName}</div>")}
       </div>";
-                }
+                        }
 
-                sb.Append(@$"
+                        sb.Append(@$"
     <div class='border rounded-3 p-2 bg-white'>
       <div class='d-flex justify-content-between align-items-center'>
         <strong>{H(a.Owner)}</strong>
@@ -480,22 +486,22 @@ public async Task<IActionResult> DecisionsBoardHtml([FromBody] decimal[] kpiIds)
       <div class='text-muted small mt-1'>Due: {Fmt(a.DueDate)}</div>
       <div class='text-muted small mt-1'>Ext: {a.ExtensionCount}</div>
     </div>");
+                    }
+                }
+
+                sb.Append("</div></div>");
+                return sb.ToString();
             }
+
+            var html =
+                "<div class='row g-3'>" +
+                Col("To Do", "text-bg-secondary", todo) +
+                Col("In Progress", "text-bg-warning", prog) +
+                Col("Done", "text-bg-success", done) +
+                "</div>";
+
+            return Content(html, "text/html");
         }
-
-        sb.Append("</div></div>");
-        return sb.ToString();
-    }
-
-    var html =
-        "<div class='row g-3'>" +
-        Col("To Do", "text-bg-secondary", todo) +
-        Col("In Progress", "text-bg-warning", prog) +
-        Col("Done", "text-bg-success", done) +
-        "</div>";
-
-    return Content(html, "text/html");
-}
 
 
 

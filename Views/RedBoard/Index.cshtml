@@ -209,13 +209,13 @@
         // ---------------------------
         async function loadRedList() {
             redList = await getJSON('@Url.Action("GetRedKpiIds", "RedBoard")');
-// Update "red KPIs" count badge (one-time per load)
-const badge = $('redCountBadge');
-if (badge) {
-  const n = Array.isArray(redList) ? redList.length : 0;
-  badge.textContent = n;
-  badge.classList.toggle('d-none', n === 0);
-}
+            // Update "red KPIs" count badge (one-time per load)
+            const badge = $('redCountBadge');
+            if (badge) {
+                const n = Array.isArray(redList) ? redList.length : 0;
+                badge.textContent = n;
+                badge.classList.toggle('d-none', n === 0);
+            }
 
             if (!redList || redList.length === 0) {
                 $('emptyMsg').classList.remove('d-none');
@@ -658,7 +658,9 @@ if (badge) {
 
                 <div class="d-flex align-items-center gap-2">
                     <span class="text-muted" id="slideCounter">0 / 0</span>
-                    <span id="redCountBadge" class="badge bg-danger d-none" title="Red KPIs">0</span>
+                    <button id="redCountBadge" class="btn btn-danger d-none" type="button" disabled
+                        title="Red KPIs">0</button>
+
 
                     <!-- NEW: First-slide button -->
                     <button id="btnFirst" class="btn btn-outline-secondary" type="button" onclick="firstSlide()"
