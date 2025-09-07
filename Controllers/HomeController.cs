@@ -100,9 +100,8 @@ namespace KPIMonitor.Controllers
                 .Where(p => p.KpiId == kpiId && p.IsActive == 1 && p.Period != null)
                 .OrderByDescending(p => p.KpiYearPlanId)
                 .FirstOrDefaultAsync();
-            var planId = plan.KpiYearPlanId;
-            var canEdit = await _acl.CanEditPlanAsync(planId, User);
 
+            // ✅ FIX: don't touch plan before null-check
             if (plan == null || plan.Period == null)
             {
                 return Json(new
@@ -116,7 +115,9 @@ namespace KPIMonitor.Controllers
                         priority = (int?)null,
                         statusLabel = "—",
                         statusColor = "",
-                        statusRaw = ""
+                        statusRaw = "",
+                        planId = (decimal?)null,
+                        canEdit = false
                     },
                     chart = new
                     {
@@ -130,19 +131,38 @@ namespace KPIMonitor.Controllers
                 });
             }
 
+            // ✅ SAFE to use plan now
+            var planId = plan.KpiYearPlanId;
+            var canEdit = await _acl.CanEditPlanAsync(planId, User);
+
             int planYear = plan.Period.Year;
 
             // 2) Facts for that plan year (months or quarters)
             var facts = await _db.KpiFacts
-            .Include(f => f.Period)
-            .AsNoTracking()
-            .Where(f => f.KpiId == kpiId
-                     && f.IsActive == 1
-                     && f.KpiYearPlanId == plan.KpiYearPlanId
-                     && f.Period != null
-                     && f.Period.Year == planYear)
-            .OrderBy(f => f.Period!.StartDate)   // <-- use StartDate for natural order
-            .ToListAsync();
+                .Include(f => f.Period)
+                .AsNoTracking()
+                .Where(f => f.KpiId == kpiId
+                         && f.IsActive == 1
+                         && f.KpiYearPlanId == plan.KpiYearPlanId
+                         && f.Period != null
+                         && f.Period.Year == planYear)
+                .OrderBy(f => f.Period!.StartDate)   // <-- use StartDate for natural order
+                .ToListAsync();
+
+            // build list of fact ids
+            var factIds = facts.Select(f => f.KpiFactId).ToList();
+
+            // Guard against empty IN() for some providers
+            List<decimal> pendingIds = new();
+            if (factIds.Count > 0)
+            {
+                pendingIds = await _db.KpiFactChanges
+                    .AsNoTracking()
+                    .Where(c => c.ApprovalStatus == "pending" && factIds.Contains(c.KpiFactId))
+                    .Select(c => c.KpiFactId)
+                    .Distinct()
+                    .ToListAsync();
+            }
 
             static string LabelFor(DimPeriod p)
             {
@@ -196,6 +216,8 @@ namespace KPIMonitor.Controllers
 
             // 5) Table rows
             string fmt(DateTime? d) => d?.ToString("yyyy-MM-dd") ?? "—";
+
+            // ✅ NEW: include hasPending flag per row
             var table = facts.Select(f => new
             {
                 id = f.KpiFactId,
@@ -206,17 +228,20 @@ namespace KPIMonitor.Controllers
                 target = (decimal?)f.TargetValue,
                 forecast = (decimal?)f.ForecastValue,
                 statusCode = f.StatusCode ?? "",
-                lastBy = string.IsNullOrWhiteSpace(f.LastChangedBy) ? "-" : f.LastChangedBy
+                lastBy = string.IsNullOrWhiteSpace(f.LastChangedBy) ? "-" : f.LastChangedBy,
+                hasPending = pendingIds.Contains(f.KpiFactId)   // <<—— here
             }).ToList();
+
+            // 6) Meta
             var kpi = await _db.DimKpis
                 .Include(x => x.Objective)
                     .ThenInclude(o => o.Pillar)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.KpiId == kpiId);
-            // 6) Meta
+
             var meta = new
             {
-                // NEW: for the title above the chart
+                // for the title above the chart
                 title = kpi?.KpiName ?? "—",
                 code = kpi?.KpiCode ?? "",
                 pillarCode = kpi?.Objective?.Pillar?.PillarCode ?? "",

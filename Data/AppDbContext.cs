@@ -17,6 +17,7 @@ namespace KPIMonitor.Data
         public DbSet<KpiAction> KpiActions { get; set; } = default!;
         public DbSet<KpiActionDeadlineHistory> KpiActionDeadlineHistories { get; set; } = default!;
         public DbSet<AuditLog> AuditLogs { get; set; } = default!;
+        public DbSet<KpiFactChange> KpiFactChanges { get; set; } = null!;
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<DimPillar>(e =>
@@ -265,18 +266,48 @@ namespace KPIMonitor.Data
                  .HasConstraintName("FK_KPI_ACT_HIST_ACTION");
             });
             modelBuilder.Entity<AuditLog>(e =>
-{
-    e.ToTable("AUDITLOG");
-    e.HasKey(x => x.AuditId);
-    e.Property(x => x.AuditId).HasColumnName("AUDITID").ValueGeneratedOnAdd();
-    e.Property(x => x.TableName).HasColumnName("TABLENAME").HasMaxLength(128).IsRequired();
-    e.Property(x => x.KeyJson).HasColumnName("KEYJSON").IsRequired();              // CLOB/NVARCHAR2 under the hood
-    e.Property(x => x.Action).HasColumnName("ACTION").HasMaxLength(20).IsRequired();
-    e.Property(x => x.ChangedBy).HasColumnName("CHANGEDBY").HasMaxLength(150);
-    e.Property(x => x.ChangedAtUtc).HasColumnName("CHANGEDATUTC");
-    e.Property(x => x.ColumnChangesJson).HasColumnName("COLUMNCHANGESJSON").IsRequired();
-});
-        }
+            {
+                e.ToTable("AUDITLOG");
+                e.HasKey(x => x.AuditId);
+                e.Property(x => x.AuditId).HasColumnName("AUDITID").ValueGeneratedOnAdd();
+                e.Property(x => x.TableName).HasColumnName("TABLENAME").HasMaxLength(128).IsRequired();
+                e.Property(x => x.KeyJson).HasColumnName("KEYJSON").IsRequired();              // CLOB/NVARCHAR2 under the hood
+                e.Property(x => x.Action).HasColumnName("ACTION").HasMaxLength(20).IsRequired();
+                e.Property(x => x.ChangedBy).HasColumnName("CHANGEDBY").HasMaxLength(150);
+                e.Property(x => x.ChangedAtUtc).HasColumnName("CHANGEDATUTC");
+                e.Property(x => x.ColumnChangesJson).HasColumnName("COLUMNCHANGESJSON").IsRequired();
+            });
+
+
+    modelBuilder.Entity<KpiFactChange>(e =>
+    {
+        // You already ended up querying KPIFACTCHANGES, so keep that:
+        e.ToTable("KPIFACTCHANGES");
+        e.HasKey(x => x.KpiFactChangeId);
+
+        // Map every property to the real UPPERCASE columns
+        e.Property(x => x.KpiFactChangeId).HasColumnName("KPIFACTCHANGEID");
+        e.Property(x => x.KpiFactId).HasColumnName("KPIFACTID");
+        e.Property(x => x.ProposedActualValue).HasColumnName("PROPOSEDACTUALVALUE");
+        e.Property(x => x.ProposedTargetValue).HasColumnName("PROPOSEDTARGETVALUE");
+        e.Property(x => x.ProposedForecastValue).HasColumnName("PROPOSEDFORECASTVALUE");
+        e.Property(x => x.ProposedStatusCode).HasColumnName("PROPOSEDSTATUSCODE");
+        e.Property(x => x.SubmittedBy).HasColumnName("SUBMITTEDBY");
+        e.Property(x => x.SubmittedAt).HasColumnName("SUBMITTEDAT");
+        e.Property(x => x.ApprovalStatus).HasColumnName("APPROVALSTATUS");
+        e.Property(x => x.ReviewedBy).HasColumnName("REVIEWEDBY");
+        e.Property(x => x.ReviewedAt).HasColumnName("REVIEWEDAT");
+        e.Property(x => x.RejectReason).HasColumnName("REJECTREASON");
+
+        // FK → KpiFacts (leave this if KpiFacts already works in your app)
+        e.HasOne(x => x.KpiFact)
+         .WithMany(f => f.Changes)
+         .HasForeignKey(x => x.KpiFactId);
+         // .HasConstraintName("FK_KFC_KPIFACTS"); // optional, only matters for migrations
+    });
+}
+
+        
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             // collect audit rows BEFORE saving

@@ -1,0 +1,148 @@
+@{
+  ViewData["Title"] = "Approvals Inbox";
+}
+<style>
+  .appr-diff { color:#111; }
+</style>
+
+<div class="container py-4">
+  @section PageHeader {
+    <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
+      <div class="page-hero-content">
+        <h1 class="page-title">Approvals Inbox</h1>
+      </div>
+    </div>
+  }
+
+  <!-- antiforgery for AJAX -->
+  <form id="af" class="d-none" method="post">@Html.AntiForgeryToken()</form>
+
+  <div class="d-flex gap-2 mb-3">
+    <button class="btn btn-sm btn-primary" data-tab="pending">Pending</button>
+    <button class="btn btn-sm btn-outline-secondary" data-tab="approved">Approved</button>
+    <button class="btn btn-sm btn-outline-secondary" data-tab="rejected">Rejected</button>
+    <button class="btn btn-sm btn-outline-secondary ms-auto" id="refreshBtn">↻ Refresh</button>
+  </div>
+
+  <div id="apprBody" class="bg-white border rounded-3 p-3">
+    <div class="text-muted small">Loading…</div>
+  </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content rounded-3">
+      <div class="modal-header">
+        <h5 class="modal-title" id="rejectLabel">Reject Change</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="rejectForm" method="post">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+          <input type="hidden" id="rej_changeId" name="changeId"/>
+          <div class="mb-3">
+            <label class="form-label">Reason</label>
+            <textarea class="form-control" id="rej_reason" name="reason" rows="3" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-danger" type="submit">Reject</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+const $  = (id) => document.getElementById(id);
+const qs = (sel, root=document) => root.querySelector(sel);
+const anti = () => (qs('input[name="__RequestVerificationToken"]')?.value || '');
+
+let currentTab = 'pending';
+
+async function loadList(tab) {
+  currentTab = tab || currentTab || 'pending';
+  const body = $('apprBody');
+  body.innerHTML = "<div class='text-muted small'>Loading…</div>";
+  try {
+    const res = await fetch('@Url.Action("ListHtml","KpiFactChanges")', {
+      method: 'POST',
+      headers: {
+        'Accept': 'text/html',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'RequestVerificationToken': anti()
+      },
+      body: new URLSearchParams({ status: currentTab })
+    });
+    if (!res.ok) throw 0;
+    body.innerHTML = await res.text();
+  } catch {
+    body.innerHTML = "<div class='text-danger small'>Failed to load.</div>";
+  }
+}
+
+document.addEventListener('click', async (e) => {
+  // tab switching
+  const tabBtn = e.target.closest('[data-tab]');
+  if (tabBtn) {
+    e.preventDefault();
+    document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('btn-primary'));
+    document.querySelectorAll('[data-tab]').forEach(b => b.classList.add('btn-outline-secondary'));
+    tabBtn.classList.add('btn-primary'); tabBtn.classList.remove('btn-outline-secondary');
+    await loadList(tabBtn.getAttribute('data-tab'));
+    return;
+  }
+
+  // approve/reject buttons inside injected fragment
+  const btn = e.target.closest('.appr-btn');
+  if (!btn) return;
+
+  const id = btn.getAttribute('data-id');
+  const action = btn.getAttribute('data-action');
+
+  if (action === 'approve') {
+    btn.disabled = true;
+    try {
+      const fd = new FormData(); fd.append('__RequestVerificationToken', anti()); fd.append('changeId', id);
+      const res = await fetch('@Url.Action("Approve","KpiFactChanges")', {
+        method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest','Accept':'application/json' }, body: fd
+      });
+      if (!res.ok) { const err = await res.json().catch(()=>null); throw new Error(err?.error || 'Approve failed'); }
+      await loadList(currentTab);
+    } catch (err) { alert(err.message); btn.disabled = false; }
+    return;
+  }
+
+  if (action === 'reject') {
+    $('rej_changeId').value = id;
+    $('rej_reason').value = '';
+    new bootstrap.Modal(document.getElementById('rejectModal')).show();
+    return;
+  }
+});
+
+$('rejectForm').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const id = $('rej_changeId').value;
+  const reason = $('rej_reason').value.trim();
+  if (!reason) { alert('Reason is required.'); return; }
+
+  try {
+    const fd = new FormData(ev.target); // has token + changeId + reason
+    const res = await fetch('@Url.Action("Reject","KpiFactChanges")', {
+      method: 'POST', headers: { 'X-Requested-With':'XMLHttpRequest','Accept':'application/json' }, body: fd
+    });
+    if (!res.ok) { const err = await res.json().catch(()=>null); throw new Error(err?.error || 'Reject failed'); }
+    bootstrap.Modal.getInstance(document.getElementById('rejectModal')).hide();
+    await loadList(currentTab);
+  } catch (err) { alert(err.message); }
+});
+
+$('refreshBtn').addEventListener('click', (e) => { e.preventDefault(); loadList(currentTab); });
+
+document.addEventListener('DOMContentLoaded', () => loadList('pending'));
+</script>
+}
