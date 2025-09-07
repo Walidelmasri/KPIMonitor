@@ -155,108 +155,130 @@ namespace KPIMonitor.Controllers
         /// <summary>
         /// HTML fragment for the approvals list. Default = pending.
         /// </summary>
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ListHtml(string? status = "pending")
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> ListHtml(string? status = "pending")
+{
+    // ---- sanitize tab
+    var s = (status ?? "pending").Trim().ToLowerInvariant();
+    if (s != "pending" && s != "approved" && s != "rejected") s = "pending";
+
+    // ---- who am I + admin + override
+    var isAdmin = User.IsInRole("Admin");
+    var u = (User?.Identity?.Name ?? string.Empty).Trim().ToUpperInvariant();
+
+    // allow override from either query (?showAll=1) or form
+    var showAll =
+        string.Equals(Request.Query["showAll"], "1", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(Request.Form["showAll"], "1", StringComparison.OrdinalIgnoreCase);
+
+    // ---- base query: ONLY KPIFACTCHANGES
+    var q = _db.KpiFactChanges
+        .AsNoTracking()
+        .Where(c => c.ApprovalStatus == s);
+
+    // ---- owner filter (only when not admin and not showAll)
+    if (!isAdmin && !showAll)
+    {
+        q = q.Where(c =>
+            (from f in _db.KpiFacts
+             join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
+             where f.KpiFactId == c.KpiFactId
+                   && yp.Owner != null
+                   && yp.Owner.Trim().ToUpper() == u
+             select 1).Any()
+        );
+    }
+
+    // ---- fetch minimal change rows
+    var items = await q
+        .OrderByDescending(c => c.SubmittedAt)
+        .Select(c => new
         {
-            status = (status ?? "pending").Trim().ToLowerInvariant();
-            if (status != "pending" && status != "approved" && status != "rejected")
-                status = "pending";
+            c.KpiFactChangeId,
+            c.KpiFactId,
+            c.ProposedActualValue,
+            c.ProposedTargetValue,
+            c.ProposedForecastValue,
+            c.ProposedStatusCode,
+            c.SubmittedBy,
+            c.SubmittedAt,
+            c.ApprovalStatus,
+            c.RejectReason
+        })
+        .ToListAsync();
 
-            var isAdmin = User.IsInRole("Admin");
-            var user = (User?.Identity?.Name ?? string.Empty).ToLowerInvariant();
+    // ---- OPTIONAL: get current fact values to show diffs (no heavy graph joins)
+    var factIds = items.Select(i => i.KpiFactId).Distinct().ToList();
+    var curFacts = await _db.KpiFacts
+        .AsNoTracking()
+        .Where(f => factIds.Contains(f.KpiFactId))
+        .Select(f => new
+        {
+            f.KpiFactId,
+            f.ActualValue,
+            f.TargetValue,
+            f.ForecastValue,
+            f.StatusCode
+        })
+        .ToDictionaryAsync(x => x.KpiFactId, x => x);
 
-            // base filter by status
-            var q = _db.KpiFactChanges
-                .AsNoTracking()
-                .Include(c => c.KpiFact)!.ThenInclude(f => f.Period)
-                .Include(c => c.KpiFact)!.ThenInclude(f => f.Kpi)!.ThenInclude(k => k.Objective)!.ThenInclude(o => o.Pillar)
-                .Where(c => status == "pending" ? c.ApprovalStatus == "pending"
-                         : status == "approved" ? c.ApprovalStatus == "approved"
-                                                : c.ApprovalStatus == "rejected");
+    // ---- helpers
+    static string H(string? s) => WebUtility.HtmlEncode(s ?? "");
+    static string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
+    static string LabelStatus(string code) => (code ?? "").Trim().ToLowerInvariant() switch
+    {
+        "conforme" => "Ok",
+        "ecart" => "Needs Attention",
+        "rattrapage" => "Catching Up",
+        "attente" => "Data Missing",
+        "" => "—",
+        _ => code!
+    };
 
-            // owner-only unless admin
-            if (!isAdmin)
-            {
-                q = q.Where(c =>
-                    _db.KpiYearPlans.Any(yp =>
-                        c.KpiFact != null &&
-                        yp.KpiYearPlanId == c.KpiFact.KpiYearPlanId &&
-                        yp.Owner != null &&
-                        yp.Owner.ToLower() == user));
-            }
-
-            var items = await q.OrderByDescending(c => c.SubmittedAt).ToListAsync();
-
-            // (keep the rest of your method: H(), F(), LabelFor(), DiffCell(), StatusCell(), sb builder, return Content(...))
-
-
-            static string H(string? s) => WebUtility.HtmlEncode(s ?? "");
-            static string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
-            static string LabelFor(DimPeriod? p)
-            {
-                if (p == null) return "—";
-                if (p.MonthNum.HasValue) return $"{p.Year} — {new DateTime(p.Year, p.MonthNum.Value, 1):MMM}";
-                if (p.QuarterNum.HasValue) return $"{p.Year} — Q{p.QuarterNum.Value}";
-                return p.Year.ToString();
-            }
-
-            string DiffCell(string title, decimal? curV, decimal? newV)
-            {
-                var changed = (newV.HasValue && curV != newV);
-                var cls = changed ? "appr-diff" : "text-muted";
-                var cur = curV.HasValue ? curV.Value.ToString("0.###") : "—";
-                var pro = newV.HasValue ? newV.Value.ToString("0.###") : "—";
-                return $@"
+    string DiffNum(string title, decimal? curV, decimal? newV)
+    {
+        var changed = (newV.HasValue && curV != newV);
+        var cls = changed ? "appr-diff" : "text-muted";
+        var cur = curV.HasValue ? curV.Value.ToString("0.###") : "—";
+        var pro = newV.HasValue ? newV.Value.ToString("0.###") : "—";
+        return $@"
 <div class='appr-cell'>
   <div class='small text-muted'>{H(title)}</div>
   <div class='{cls}'>{H(cur)} → <strong>{H(pro)}</strong></div>
 </div>";
-            }
+    }
 
-            string StatusCell(string cur, string prop)
-            {
-                cur = cur?.Trim() ?? "";
-                prop = prop?.Trim() ?? "";
-                var changed = (!string.IsNullOrWhiteSpace(prop) && !string.Equals(cur, prop, StringComparison.OrdinalIgnoreCase));
-                var cls = changed ? "appr-diff" : "text-muted";
-                string Label(string code) => code.ToLowerInvariant() switch
-                {
-                    "conforme" => "Ok",
-                    "ecart" => "Needs Attention",
-                    "rattrapage" => "Catching Up",
-                    "attente" => "Data Missing",
-                    _ => string.IsNullOrWhiteSpace(code) ? "—" : code
-                };
-                return $@"
+    string DiffStatus(string cur, string prop)
+    {
+        cur = cur?.Trim() ?? "";
+        prop = prop?.Trim() ?? "";
+        var changed = (!string.IsNullOrWhiteSpace(prop) &&
+                       !string.Equals(cur, prop, StringComparison.OrdinalIgnoreCase));
+        var cls = changed ? "appr-diff" : "text-muted";
+        return $@"
 <div class='appr-cell'>
   <div class='small text-muted'>Status</div>
-  <div class='{cls}'>{H(Label(cur))} → <strong>{H(Label(prop))}</strong></div>
+  <div class='{cls}'>{H(LabelStatus(cur))} → <strong>{H(LabelStatus(prop))}</strong></div>
 </div>";
-            }
+    }
 
-            var sb = new StringBuilder();
-            if (items.Count == 0)
-            {
-                sb.Append("<div class='text-muted small'>No items.</div>");
-            }
-            else
-            {
-                foreach (var c in items)
-                {
-                    var f = c.KpiFact!;
-                    var k = f.Kpi!;
-                    var o = k.Objective!;
-                    var p = o.Pillar!;
-                    var code = $"{H(p.PillarCode ?? "")}.{H(o.ObjectiveCode ?? "")} {H(k.KpiCode ?? "")}";
-                    var name = H(k.KpiName ?? "-");
-                    var per = LabelFor(f.Period);
+    // ---- build HTML (minimal header; no pillar/objective joins)
+    var sb = new StringBuilder();
+    if (items.Count == 0)
+    {
+        sb.Append("<div class='text-muted small'>No items.</div>");
+    }
+    else
+    {
+        foreach (var c in items)
+        {
+            curFacts.TryGetValue(c.KpiFactId, out var cf);
 
-                    var rowHead = $@"
+            var rowHead = $@"
 <div class='d-flex justify-content-between align-items-start'>
   <div>
-    <div class='fw-bold'>{code} — {name}</div>
-    <div class='small text-muted'>Period: {H(per)}</div>
+    <div class='fw-bold'>KPI Fact #{H(c.KpiFactId.ToString())}</div>
     <div class='small text-muted'>Submitted by <strong>{H(c.SubmittedBy)}</strong> at {F(c.SubmittedAt)}</div>
   </div>
   <div class='text-end'>
@@ -266,29 +288,30 @@ namespace KPIMonitor.Controllers
         <button type='button' class='btn btn-outline-danger btn-sm appr-btn' data-action='reject' data-id='{c.KpiFactChangeId}'>Reject</button>
       </div>" :
       c.ApprovalStatus == "approved" ? "<span class='badge text-bg-success'>Approved</span>" :
-                                        $"<span class='badge text-bg-danger'>Rejected</span><div class='small text-muted mt-1'>Reason: {H(c.RejectReason)}</div>"
+        $"<span class='badge text-bg-danger'>Rejected</span><div class='small text-muted mt-1'>Reason: {H(c.RejectReason)}</div>"
     )}
   </div>
 </div>";
 
-                    var rowDiffs = $@"
+            var rowDiffs = $@"
 <div class='row g-3 mt-2'>
-  <div class='col-6 col-md-3'>{DiffCell("Actual", f.ActualValue, c.ProposedActualValue)}</div>
-  <div class='col-6 col-md-3'>{DiffCell("Target", f.TargetValue, c.ProposedTargetValue)}</div>
-  <div class='col-6 col-md-3'>{DiffCell("Forecast", f.ForecastValue, c.ProposedForecastValue)}</div>
-  <div class='col-6 col-md-3'>{StatusCell(f.StatusCode ?? "", c.ProposedStatusCode ?? "")}</div>
+  <div class='col-6 col-md-3'>{DiffNum("Actual",   cf?.ActualValue,   c.ProposedActualValue)}</div>
+  <div class='col-6 col-md-3'>{DiffNum("Target",   cf?.TargetValue,   c.ProposedTargetValue)}</div>
+  <div class='col-6 col-md-3'>{DiffNum("Forecast", cf?.ForecastValue, c.ProposedForecastValue)}</div>
+  <div class='col-6 col-md-3'>{DiffStatus(cf?.StatusCode ?? "",       c.ProposedStatusCode ?? "")}</div>
 </div>";
 
-                    sb.Append($@"
+            sb.Append($@"
 <div class='border rounded-3 bg-white p-3 mb-2'>
   {rowHead}
   {rowDiffs}
 </div>");
-                }
-            }
-
-            return Content(sb.ToString(), "text/html");
         }
+    }
+
+    return Content(sb.ToString(), "text/html");
+}
+
         private async Task<bool> IsOwnerOrAdminForChangeAsync(decimal changeId)
         {
             if (User.IsInRole("Admin")) return true;

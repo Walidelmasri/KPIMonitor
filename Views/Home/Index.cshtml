@@ -422,29 +422,32 @@
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const url = '@Url.Action("Submit", "KpiFactChanges")';
-        const fd = new FormData(form); // has token + your current fields
+const url = '@Url.Action("Submit", "KpiFactChanges")';
+const fd = new FormData(form); // has token + current fields
 
-        // Keep only what Submit(...) expects; remove noise
-        fd.delete('LastChangedBy');
-        fd.delete('PillarId');
-        fd.delete('ObjectiveId');
-        fd.delete('KpiId');
+// remove noise
+fd.delete('LastChangedBy');
+fd.delete('PillarId');
+fd.delete('ObjectiveId');
+fd.delete('KpiId');
 
-        // The controller params are: kpiFactId, actualValue, targetValue, forecastValue, statusCode
-        // Form has: KpiFactId, ActualValue, TargetValue, ForecastValue, StatusCode
-        // Model binder is case-insensitive, so we can keep the originals.
-        // Just ensure we don't send empty strings for all fields.
-        const hasAny =
-          (fd.get('ActualValue') ?? '').toString().trim() !== '' ||
-          (fd.get('TargetValue') ?? '').toString().trim() !== '' ||
-          (fd.get('ForecastValue') ?? '').toString().trim() !== '' ||
-          (fd.get('StatusCode') ?? '').toString().trim() !== '';
+// rename Actual/Target/Forecast/Status -> Proposed*
+const renameToProposed = (oldKey, newKey) => {
+  const v = fd.get(oldKey);
+  fd.delete(oldKey);
+  if (v != null && String(v).trim() !== '') fd.append(newKey, String(v).trim());
+};
+renameToProposed('ActualValue',   'ProposedActualValue');
+renameToProposed('TargetValue',   'ProposedTargetValue');
+renameToProposed('ForecastValue', 'ProposedForecastValue');
+renameToProposed('StatusCode',    'ProposedStatusCode');
 
-        if (!hasAny) {
-          alert('No changes to submit.');
-          return;
-        }
+// guard: at least one proposed field
+if (!['ProposedActualValue','ProposedTargetValue','ProposedForecastValue','ProposedStatusCode'].some(k => fd.has(k))) {
+  alert('No changes to submit.');
+  return;
+}
+
 
         try {
           const res = await fetch(url, {

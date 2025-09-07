@@ -57,33 +57,41 @@
 
 @section Scripts {
 <script>
-const $  = (id) => document.getElementById(id);
-const qs = (sel, root=document) => root.querySelector(sel);
-const anti = () => (qs('input[name="__RequestVerificationToken"]')?.value || '');
+  const $  = (id) => document.getElementById(id);
+  const qs = (sel, root=document) => root.querySelector(sel);
+  const anti = () => (qs('input[name="__RequestVerificationToken"]')?.value || '');
 
-let currentTab = 'pending';
+  let currentTab = 'pending';
 
-async function loadList(tab) {
-  currentTab = tab || currentTab || 'pending';
-  const body = $('apprBody');
-  body.innerHTML = "<div class='text-muted small'>Loading…</div>";
-  try {
-    const res = await fetch('@Url.Action("ListHtml","KpiFactChanges")', {
-      method: 'POST',
-      headers: {
-        'Accept': 'text/html',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'RequestVerificationToken': anti()
-      },
-      body: new URLSearchParams({ status: currentTab })
-    });
-    if (!res.ok) throw 0;
-    body.innerHTML = await res.text();
-  } catch {
-    body.innerHTML = "<div class='text-danger small'>Failed to load.</div>";
+  async function loadList(tab) {
+    currentTab = tab || currentTab || 'pending';
+    const body = $('apprBody');
+    body.innerHTML = "<div class='text-muted small'>Loading…</div>";
+    try {
+      // KEEP the page query (?showAll=1) and send the antiforgery header
+      const listUrl = '@Url.Action("ListHtml","KpiFactChanges")' + (window.location.search || '');
+
+      const res = await fetch(listUrl, {
+        method: 'POST',
+        headers: {
+          'Accept': 'text/html',
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'RequestVerificationToken': anti()
+        },
+        body: new URLSearchParams({
+          status: currentTab
+          // Optional: also pass showAll via body if you want redundancy:
+          // , showAll: new URLSearchParams(window.location.search).get('showAll') || ''
+        })
+      });
+
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      body.innerHTML = await res.text();
+    } catch (err) {
+      console.error(err);
+      body.innerHTML = "<div class='text-danger small'>Failed to load.</div>";
+    }
   }
-}
-
 document.addEventListener('click', async (e) => {
   // tab switching
   const tabBtn = e.target.closest('[data-tab]');
