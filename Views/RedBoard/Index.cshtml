@@ -1,9 +1,25 @@
 @{
     ViewData["Title"] = "RedBoard";
 }
+<style>
+    /* subtle alert tint for RedBoard */
+    .alert-tint {
+        background: #fff5f5 !important;
+        /* very light red */
+        border-color: #f8d7da !important;
+        /* soft red border */
+        box-shadow: 0 2px 8px rgba(220, 53, 69, .10) !important;
+    }
+
+    .alert-tint .card-title,
+    .alert-tint h6 {
+        color: #842029;
+    }
+</style>
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <script>
         // ---------------------------
         // Helpers
@@ -50,12 +66,156 @@
 
         // also keep list of kpiIds for the "Decisions" board
         let runKpiIds = [];
+        // number formatter (same as Home)
+        function _fmtShort(v) {
+            const n = Number(v); if (!isFinite(n)) return '';
+            const a = Math.abs(n);
+            if (a >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
+            if (a >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+            if (a >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+            return n.toString();
+        }
+
+        // === SmartValueLabels (same as Home) ===
+        const SmartValueLabels = {
+            id: 'smartValueLabels',
+            afterDatasetsDraw(chart, _args, opts) {
+                const { ctx, data, chartArea } = chart;
+                const o = opts || {};
+                const fmt = typeof o.formatter === 'function' ? o.formatter : (v) => String(v);
+
+                const fontSize = o.fontSize || 12;
+                const fontWeight = o.fontWeight || '700';
+                const minGap = o.minGap || 14;
+                const padTop = o.padTop || 4;
+                const padBottom = o.padBottom || 4;
+                const maxShift = o.maxShift || 40;
+
+                const barDY = (o.barDY != null ? o.barDY : -12);
+                const barDYNeg = (o.barDYNeg != null ? o.barDYNeg : 14);
+                const lineDY = (o.lineDY != null ? o.lineDY : -12);
+
+                const perDataset = o.perDataset || [];
+                const lineStepDefault = o.lineStep || 1;
+                const onlyLastForLinesDefault = !!o.onlyLastForLines;
+
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.font = `${fontWeight} ${fontSize}px system-ui,-apple-system,Segoe UI,Roboto,Arial`;
+
+                const byIndex = new Map();
+
+                data.datasets.forEach((ds, di) => {
+                    if (!chart.isDatasetVisible(di)) return;
+                    const meta = chart.getDatasetMeta(di);
+                    const type = ds.type || meta.type;
+                    const isBar = type === 'bar';
+                    const isLine = type === 'line';
+                    const per = perDataset[di] || {};
+                    const step = Number.isInteger(per.step) ? Math.max(1, per.step) : lineStepDefault;
+
+                    let lastIdxForThisLine = null;
+                    if (isLine && (onlyLastForLinesDefault || per.onlyLast)) {
+                        for (let i = ds.data.length - 1; i >= 0; i--) {
+                            const v = ds.data[i];
+                            if (v != null && !Number.isNaN(+v)) { lastIdxForThisLine = i; break; }
+                        }
+                    }
+
+                    meta.data.forEach((el, i) => {
+                        const raw = ds.data[i];
+                        const val = Number(raw);
+                        if (raw == null || Number.isNaN(val)) return;
+
+                        if (isLine) {
+                            if ((onlyLastForLinesDefault || per.onlyLast) && i !== lastIdxForThisLine) return;
+                            if ((i % step) !== 0) return;
+                        }
+
+                        const { x, y } = el.getProps(['x', 'y'], true);
+                        let dy = isBar ? (val < 0 ? barDYNeg : barDY) : lineDY;
+                        if (typeof per.dy === 'number') dy = per.dy;
+                        const dx = (typeof per.dx === 'number') ? per.dx : 0;
+
+                        const text = fmt(val);
+                        const w = ctx.measureText(text).width;
+                        const h = fontSize * 1.2;
+
+                        const item = {
+                            x: x + dx, y: y + dy, baseY: y + dy,
+                            val, text, color: per.color || o.color || '#111',
+                            w, h, priority: isBar ? 0 : 1
+                        };
+                        const arr = byIndex.get(i);
+                        if (arr) arr.push(item); else byIndex.set(i, [item]);
+                    });
+                });
+
+                const topLimitBase = chartArea.top + padTop;
+                const botLimit = chartArea.bottom - padBottom;
+
+                byIndex.forEach((items) => {
+                    const clampNearBase = (it) => {
+                        const topLimit = topLimitBase + it.h;
+                        if (it.y < topLimit) it.y = topLimit;
+                        const low = it.baseY - maxShift;
+                        const high = it.baseY + maxShift;
+                        if (it.y < low) it.y = low;
+                        if (it.y > high) it.y = high;
+                        if (it.y > botLimit) it.y = botLimit;
+                    };
+
+                    items.forEach(it => { it.y = it.baseY; clampNearBase(it); });
+
+                    let guard = 0;
+                    while (guard++ < 10) {
+                        let changed = false;
+                        for (let i = 0; i < items.length; i++) {
+                            for (let j = i + 1; j < items.length; j++) {
+                                const a = items[i], b = items[j];
+                                const aL = a.x - a.w / 2, aR = a.x + a.w / 2, aT = a.y - a.h, aB = a.y;
+                                const bL = b.x - b.w / 2, bR = b.x + b.w / 2, bT = b.y - b.h, bB = b.y;
+                                const overlap = !(aR < bL || aL > bR || aB < bT || aT > bB);
+                                if (overlap) {
+                                    const hi = (a.val >= b.val) ? a : b;
+                                    const lo = (hi === a) ? b : a;
+                                    hi.y -= minGap;                    // bigger value up
+                                    lo.y += Math.min(4, minGap / 2);     // smaller down a touch
+                                    clampNearBase(hi); clampNearBase(lo);
+                                    changed = true;
+                                }
+                            }
+                        }
+                        if (!changed) break;
+                    }
+
+                    items.sort((a, b) => a.priority - b.priority);
+                    items.forEach(it => {
+                        ctx.fillStyle = it.color;
+                        if (o.outline) { ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.strokeText(it.text, it.x, it.y); }
+                        ctx.fillText(it.text, it.x, it.y);
+                    });
+                });
+
+                ctx.restore();
+            }
+        };
+        Chart.register(SmartValueLabels);
+        Chart.register(ChartDataLabels); // we keep datalabels OFF per chart options
 
         // ---------------------------
         // Load red list + build deck (UNCHANGED logic)
         // ---------------------------
         async function loadRedList() {
             redList = await getJSON('@Url.Action("GetRedKpiIds", "RedBoard")');
+// Update "red KPIs" count badge (one-time per load)
+const badge = $('redCountBadge');
+if (badge) {
+  const n = Array.isArray(redList) ? redList.length : 0;
+  badge.textContent = n;
+  badge.classList.toggle('d-none', n === 0);
+}
 
             if (!redList || redList.length === 0) {
                 $('emptyMsg').classList.remove('d-none');
@@ -167,10 +327,48 @@
             const chartData = {
                 labels: allLabels,
                 datasets: [
-                    { type: 'bar', label: 'Actual', data: act.concat(pad), backgroundColor: 'rgba(128,0,128,.35)', borderColor: 'rgba(128,0,128,.95)', borderWidth: 2, borderSkipped: 'bottom' },
-                    { type: 'line', label: 'Target', data: tgt.concat(pad), borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
-                    { type: 'line', label: 'Forecast', data: fct.concat(pad), borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
-                    { type: 'bar', label: 'Year Target', data: leftNulls.concat(yearVals), backgroundColor: 'rgba(122,122,122,.25)', borderColor: '#7a7a7a', borderWidth: 1 }
+                    // In chartData.datasets on RedBoard
+                    { // Actual
+                        type: 'bar',
+                        label: 'Actual',
+                        data: act.concat(pad),
+                        backgroundColor: '#800080',   // <- solid like Home
+                        borderColor: '#800080',
+                        borderWidth: 2,
+                        borderSkipped: 'bottom'
+                    },
+                    { // Target (already #7a7a7a)
+                        type: 'line',
+                        label: 'Target',
+                        data: tgt.concat(pad),
+                        borderColor: '#7a7a7a',
+                        pointBackgroundColor: '#7a7a7a',
+                        pointBorderColor: '#7a7a7a',
+                        borderWidth: 2,
+                        tension: .3,
+                        fill: false
+                    },
+                    { // Forecast (already #fd7e14)
+                        type: 'line',
+                        label: 'Forecast',
+                        data: fct.concat(pad),
+                        borderColor: '#fd7e14',
+                        pointBackgroundColor: '#fd7e14',
+                        pointBorderColor: '#fd7e14',
+                        borderDash: [5, 5],
+                        borderWidth: 2,
+                        tension: .3,
+                        fill: false
+                    },
+                    { // Year Target
+                        type: 'bar',
+                        label: 'Year Target',
+                        data: leftNulls.concat(yearVals),
+                        backgroundColor: '#7a7a7a',   // <- solid like Home
+                        borderColor: '#7a7a7a',
+                        borderWidth: 1
+                    }
+
                 ]
             };
 
@@ -180,9 +378,47 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        scales: { y: { beginAtZero: true } },
-                        plugins: { legend: { position: 'top' } }
+                        layout: { padding: { top: 28, bottom: 8 } },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: {
+                                    padding: 8,
+                                    callback: function (value) {
+                                        const label = this.getLabelForValue(value);
+                                        // Strip leading "YYYY – " so monthly/quarter labels read nicely
+                                        return String(label).replace(/^\s*\d{4}\s*[\-–—]\s*/, '');
+                                    }
+                                }
+                            },
+                            y: { display: false, grid: { display: false }, beginAtZero: true }
+                        },
+                        plugins: {
+                            datalabels: false,               // keep built-in datalabels OFF for this chart
+                            smartValueLabels: {
+                                formatter: _fmtShort,
+                                fontSize: 12,
+                                fontWeight: '700',
+                                minGap: 14,
+                                padTop: 12,
+                                padBottom: 4,
+                                outline: true,
+                                // dataset order: Actual(bar), Target(line), Forecast(line), Year Target(bar)
+                                perDataset: [
+                                    { dy: -12, dx: 0, color: '#800080' }, // Actual
+                                    { dy: 12, dx: -8, color: '#7a7a7a' }, // Target (below)
+                                    { dy: -16, dx: 8, color: '#fd7e14' }, // Forecast (above/right)
+                                    { dy: -12, dx: 0, color: '#7a7a7a' }  // Year Target
+                                ]
+                            },
+                            tooltip: { enabled: true },
+                            legend: {
+                                position: 'top',
+                                labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 8, weight: '700' } }
+                            }
+                        }
                     }
+
                 });
             } else {
                 kpiChart.data = chartData;
@@ -422,6 +658,7 @@
 
                 <div class="d-flex align-items-center gap-2">
                     <span class="text-muted" id="slideCounter">0 / 0</span>
+                    <span id="redCountBadge" class="badge bg-danger d-none" title="Red KPIs">0</span>
 
                     <!-- NEW: First-slide button -->
                     <button id="btnFirst" class="btn btn-outline-secondary" type="button" onclick="firstSlide()"
@@ -450,7 +687,7 @@
             <div id="kpiSlide">
                 <div class="row g-4 mb-4">
                     <div class="col-md-9">
-                        <div class="bg-white border rounded shadow-sm p-3" style="height:420px;">
+                        <div class="bg-white border rounded shadow-sm p-3 alert-tint" style="height:550px;">
                             <canvas id="rbChart" role="img" aria-label="KPI Chart"></canvas>
                         </div>
                     </div>
