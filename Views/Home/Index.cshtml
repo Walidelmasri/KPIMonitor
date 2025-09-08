@@ -422,8 +422,32 @@
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const url = form.getAttribute('action') || '@Url.Action("UpdateKpiFact", "Home")';
-        const fd = new FormData(form); // includes __RequestVerificationToken
+const url = '@Url.Action("Submit", "KpiFactChanges")';
+const fd = new FormData(form); // has token + current fields
+
+// remove noise
+fd.delete('LastChangedBy');
+fd.delete('PillarId');
+fd.delete('ObjectiveId');
+fd.delete('KpiId');
+
+// rename Actual/Target/Forecast/Status -> Proposed*
+const renameToProposed = (oldKey, newKey) => {
+  const v = fd.get(oldKey);
+  fd.delete(oldKey);
+  if (v != null && String(v).trim() !== '') fd.append(newKey, String(v).trim());
+};
+renameToProposed('ActualValue',   'ProposedActualValue');
+renameToProposed('TargetValue',   'ProposedTargetValue');
+renameToProposed('ForecastValue', 'ProposedForecastValue');
+renameToProposed('StatusCode',    'ProposedStatusCode');
+
+// guard: at least one proposed field
+if (!['ProposedActualValue','ProposedTargetValue','ProposedForecastValue','ProposedStatusCode'].some(k => fd.has(k))) {
+  alert('No changes to submit.');
+  return;
+}
+
 
         try {
           const res = await fetch(url, {
@@ -431,7 +455,10 @@
             headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
             body: fd
           });
-          if (!res.ok) throw new Error('Save failed');
+          if (!res.ok) {
+            const err = await res.json().catch(() => null);
+            throw new Error(err?.error || 'Save failed');
+          }
 
           // Close modal
           bootstrap.Modal.getInstance(document.getElementById('editFactModal'))?.hide();
@@ -583,8 +610,8 @@
               callback: function (value) {
                 const label = this.getLabelForValue(value);
                 @* return String(label).replace(/^\s*[\-–—]\s*/, ''); // remove leading dash *@
-                // If your labels are "2025 – Jan", use this instead:
-                return String(label).replace(/^\s*\d{4}\s*[\-–—]\s*/, '');
+                      // If your labels are "2025 – Jan", use this instead:
+                      return String(label).replace(/^\s*\d{4}\s*[\-–—]\s*/, '');
               }
             }
           },
@@ -715,34 +742,41 @@
           const tr = document.createElement('tr');
 
           // NEW: conditional Edit cell based on ACL
-          const editCellHtml = canEditFacts
-            ? `<button class="btn btn-sm btn-outline-primary"
-                               data-fact-id="${r.id}"
-                               data-period="${r.period ?? ''}"
-                               data-actual="${r.actual ?? ''}"
-                               data-target="${r.target ?? ''}"
-                               data-forecast="${r.forecast ?? ''}"
-                               data-status="${r.statusCode ?? ''}"
-                               data-lastby="${r.lastBy ?? ''}"
-                               data-pillar-id="${selPillar.value || ''}"
-                               data-objective-id="${selObjective.value || ''}"
-                               data-kpi-id="${selKpi.value || ''}"
-                               onclick="openEditModal(this)">
-                               ✏️ Edit
-                             </button>`
-            : `<button class="btn btn-sm btn-outline-secondary" data-noaccess="1" title="You do not have access to edit these facts">
-                               ✏️ Edit
-                             </button>`;
+          const editCellHtml =
+            (canEditFacts && !r.hasPending)
+              ? `<button class="btn btn-sm btn-outline-primary"
+                     data-fact-id="${r.id}"
+                     data-period="${r.period ?? ''}"
+                     data-actual="${r.actual ?? ''}"
+                     data-target="${r.target ?? ''}"
+                     data-forecast="${r.forecast ?? ''}"
+                     data-status="${r.statusCode ?? ''}"
+                     data-lastby="${r.lastBy ?? ''}"
+                     data-pillar-id="${selPillar.value || ''}"
+                     data-objective-id="${selObjective.value || ''}"
+                     data-kpi-id="${selKpi.value || ''}"
+                     onclick="openEditModal(this)">
+                     ✏️ Edit
+                   </button>`
+              : (r.hasPending
+                ? `<button class="btn btn-sm btn-outline-secondary" data-pending="1" title="A change is already pending for this period">
+                 ⏳ Pending
+               </button>`
+                : `<button class="btn btn-sm btn-outline-secondary" data-noaccess="1" title="You do not have access to edit these facts">
+                 ✏️ Edit
+               </button>`);
 
           tr.innerHTML = `
-                          <td>${r.period ?? '—'}</td>
-                          <td>${r.startDate ?? '—'}</td>
-                          <td>${r.endDate ?? '—'}</td>
-                          <td>${r.actual ?? '—'}</td>
-                          <td>${r.target ?? '—'}</td>
-                          <td>${r.forecast ?? '—'}</td>
-                          <td>${editCellHtml}</td>
-                        `;
+    <td>
+      ${r.period ?? '—'}
+      ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}
+    </td>                            <td>${r.startDate ?? '—'}</td>
+                                <td>${r.endDate ?? '—'}</td>
+                                <td>${r.actual ?? '—'}</td>
+                                <td>${r.target ?? '—'}</td>
+                                <td>${r.forecast ?? '—'}</td>
+                                <td>${editCellHtml}</td>
+                              `;
           tableBody.appendChild(tr);
         }
       }
@@ -755,7 +789,13 @@
       e.preventDefault();
       alert('You do not have access to edit these facts.\nOnly the KPI Year Plan Owner/Editor (or an Admin) can edit.');
     });
-
+    // Friendly alert for rows with a pending change
+    document.addEventListener('click', function (e) {
+      const btn = e.target.closest('[data-pending="1"]');
+      if (!btn) return;
+      e.preventDefault();
+      alert('A change is already pending approval for this period.\nYou can edit again after it is approved or rejected.');
+    });
     // kick things off
     initPage().catch(console.error);
   </script>

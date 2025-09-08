@@ -17,6 +17,8 @@ namespace KPIMonitor.Data
         public DbSet<KpiAction> KpiActions { get; set; } = default!;
         public DbSet<KpiActionDeadlineHistory> KpiActionDeadlineHistories { get; set; } = default!;
         public DbSet<AuditLog> AuditLogs { get; set; } = default!;
+        public DbSet<KpiFactChange> KpiFactChanges { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<DimPillar>(e =>
@@ -278,32 +280,32 @@ namespace KPIMonitor.Data
             });
 
 
-    modelBuilder.Entity<KpiFactChange>(e =>
-    {
-        // You already ended up querying KPIFACTCHANGES, so keep that:
-        e.ToTable("KPIFACTCHANGES");
-        e.HasKey(x => x.KpiFactChangeId);
+            modelBuilder.Entity<KpiFactChange>(e =>
+            {
+                // You already ended up querying KPIFACTCHANGES, so keep that:
+                e.ToTable("KPIFACTCHANGES");
+                e.HasKey(x => x.KpiFactChangeId);
 
-        // Map every property to the real UPPERCASE columns
-        e.Property(x => x.KpiFactChangeId).HasColumnName("KPIFACTCHANGEID").ValueGeneratedOnAdd();;
-        e.Property(x => x.KpiFactId).HasColumnName("KPIFACTID");
-        e.Property(x => x.ProposedActualValue).HasColumnName("PROPOSEDACTUALVALUE");
-        e.Property(x => x.ProposedTargetValue).HasColumnName("PROPOSEDTARGETVALUE");
-        e.Property(x => x.ProposedForecastValue).HasColumnName("PROPOSEDFORECASTVALUE");
-        e.Property(x => x.ProposedStatusCode).HasColumnName("PROPOSEDSTATUSCODE");
-        e.Property(x => x.SubmittedBy).HasColumnName("SUBMITTEDBY");
-        e.Property(x => x.SubmittedAt).HasColumnName("SUBMITTEDAT");
-        e.Property(x => x.ApprovalStatus).HasColumnName("APPROVALSTATUS");
-        e.Property(x => x.ReviewedBy).HasColumnName("REVIEWEDBY");
-        e.Property(x => x.ReviewedAt).HasColumnName("REVIEWEDAT");
-        e.Property(x => x.RejectReason).HasColumnName("REJECTREASON");
+                // Map every property to the real UPPERCASE columns
+                e.Property(x => x.KpiFactChangeId).HasColumnName("KPIFACTCHANGEID").ValueGeneratedOnAdd(); ;
+                e.Property(x => x.KpiFactId).HasColumnName("KPIFACTID");
+                e.Property(x => x.ProposedActualValue).HasColumnName("PROPOSEDACTUALVALUE");
+                e.Property(x => x.ProposedTargetValue).HasColumnName("PROPOSEDTARGETVALUE");
+                e.Property(x => x.ProposedForecastValue).HasColumnName("PROPOSEDFORECASTVALUE");
+                e.Property(x => x.ProposedStatusCode).HasColumnName("PROPOSEDSTATUSCODE");
+                e.Property(x => x.SubmittedBy).HasColumnName("SUBMITTEDBY");
+                e.Property(x => x.SubmittedAt).HasColumnName("SUBMITTEDAT");
+                e.Property(x => x.ApprovalStatus).HasColumnName("APPROVALSTATUS");
+                e.Property(x => x.ReviewedBy).HasColumnName("REVIEWEDBY");
+                e.Property(x => x.ReviewedAt).HasColumnName("REVIEWEDAT");
+                e.Property(x => x.RejectReason).HasColumnName("REJECTREASON");
 
-        // FK → KpiFacts (leave this if KpiFacts already works in your app)
-        e.HasOne(x => x.KpiFact)
-         .WithMany(f => f.Changes)
-         .HasForeignKey(x => x.KpiFactId);
-    });
-}
+                // FK → KpiFacts (leave this if KpiFacts already works in your app)
+                e.HasOne(x => x.KpiFact)
+                 .WithMany(f => f.Changes)
+                 .HasForeignKey(x => x.KpiFactId);
+            });
+        }
 
         
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

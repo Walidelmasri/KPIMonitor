@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using KPIMonitor.Services.Auth;
 using KPIMonitor.Services;
-
+using KPIMonitor.Services.Abstractions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,8 +26,8 @@ builder.Services.AddControllersWithViews(o =>
 builder.Services.AddScoped<IEmployeeDirectory, OracleEmployeeDirectory>();
 builder.Services.AddScoped<IKpiYearPlanOwnerEditorService, KpiYearPlanOwnerEditorService>();
 builder.Services.AddScoped<IKpiAccessService, KpiAccessService>();
+builder.Services.AddScoped<IKpiFactChangeService, KpiFactChangeService>();
 
-// Admin authorizer + options (SOLID)
 builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection("App"));
 builder.Services.AddScoped<IAdminAuthorizer, ConfigAdminAuthorizer>();
 
