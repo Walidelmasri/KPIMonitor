@@ -143,6 +143,17 @@ namespace KPIMonitor.Controllers
                      && f.Period.Year == planYear)
             .OrderBy(f => f.Period!.StartDate)   // <-- use StartDate for natural order
             .ToListAsync();
+// --- compute "hasPending" per fact (for Dashboard edit button) ---
+var factIds = facts.Select(f => f.KpiFactId).ToList();
+
+var pendingFactIds = await _db.KpiFactChanges
+    .AsNoTracking()
+    .Where(ch => ch.ApprovalStatus == "pending" && factIds.Contains(ch.KpiFactId))
+    .Select(ch => ch.KpiFactId)
+    .Distinct()
+    .ToListAsync();
+
+var pendingSet = new HashSet<decimal>(pendingFactIds);
 
             static string LabelFor(DimPeriod p)
             {
@@ -196,18 +207,22 @@ namespace KPIMonitor.Controllers
 
             // 5) Table rows
             string fmt(DateTime? d) => d?.ToString("yyyy-MM-dd") ?? "—";
-            var table = facts.Select(f => new
-            {
-                id = f.KpiFactId,
-                period = LabelFor(f.Period!),
-                startDate = fmt(f.Period!.StartDate),
-                endDate = fmt(f.Period!.EndDate),
-                actual = (decimal?)f.ActualValue,
-                target = (decimal?)f.TargetValue,
-                forecast = (decimal?)f.ForecastValue,
-                statusCode = f.StatusCode ?? "",
-                lastBy = string.IsNullOrWhiteSpace(f.LastChangedBy) ? "-" : f.LastChangedBy
-            }).ToList();
+var table = facts.Select(f => new
+{
+    id        = f.KpiFactId,
+    period    = LabelFor(f.Period),
+    startDate = f.Period?.StartDate?.ToString("yyyy-MM-dd") ?? "—",
+    endDate   = f.Period?.EndDate?.ToString("yyyy-MM-dd") ?? "—",
+
+    actual    = f.ActualValue?.ToString("0.###"),
+    target    = f.TargetValue?.ToString("0.###"),
+    forecast  = f.ForecastValue?.ToString("0.###"),
+    statusCode= f.StatusCode,
+    lastBy    = f.LastChangedBy,
+
+    hasPending = pendingSet.Contains(f.KpiFactId)   // <-- THIS drives "⏳ Pending"
+}).ToList();
+
             var kpi = await _db.DimKpis
                 .Include(x => x.Objective)
                     .ThenInclude(o => o.Pillar)
