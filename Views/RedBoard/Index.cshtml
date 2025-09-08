@@ -27,6 +27,7 @@
         const $ = (id) => document.getElementById(id);
         const qs = (sel, root = document) => root.querySelector(sel);
         const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const ENABLE_DECISIONS = false; // <- turn off the last slide safely
 
         // Antiforgery token (we render it below in a hidden form)
         const anti = () => (qs('input[name="__RequestVerificationToken"]')?.value || '');
@@ -244,7 +245,7 @@
                     runKpiIds.push(k.kpiId);
                 }
             }
-            deck.push({ type: 'decisions' });
+            if (ENABLE_DECISIONS) deck.push({ type: 'decisions' });
             idx = 0;
             await showCurrent();
         }
@@ -262,7 +263,7 @@
             $('btnFirst') && ($('btnFirst').disabled = isFirst);
             $('btnLast') && ($('btnLast').disabled = isLast);
             // NEW: decisions slide
-            if (slide.type === 'decisions') {
+            if (slide.type === 'decisions' && ENABLE_DECISIONS) {
                 // hide title/kpi areas and actions block
                 $('titleSlide').classList.add('d-none');
                 $('kpiSlide').classList.add('d-none');
