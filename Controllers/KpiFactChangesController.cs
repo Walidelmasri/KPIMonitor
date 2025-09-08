@@ -2,12 +2,12 @@ using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Net; // WebUtility.HtmlEncode
+using System.Net; 
 using System.Security.Claims;
 using KPIMonitor.Data;
 using KPIMonitor.Models;
-using KPIMonitor.Services;                  // IKpiAccessService
-using KPIMonitor.Services.Abstractions;     // IKpiFactChangeService
+using KPIMonitor.Services;                  
+using KPIMonitor.Services.Abstractions;     
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,7 +18,7 @@ namespace KPIMonitor.Controllers
         private readonly IKpiFactChangeService _svc;
         private readonly IKpiAccessService _acl;
         private readonly AppDbContext _db;
-        private readonly global::IAdminAuthorizer _admin;   // <-- use your ConfigAdminAuthorizer
+        private readonly global::IAdminAuthorizer _admin;   
 
         public KpiFactChangesController(
             IKpiFactChangeService svc,
@@ -328,10 +328,10 @@ namespace KPIMonitor.Controllers
 
                     var rowDiffs = $@"
 <div class='row g-3 mt-2'>
-  <div class='col-6 col-md-3'>{DiffNum("Actual",   cf?.ActualValue,   c.ProposedActualValue)}</div>
-  <div class='col-6 col-md-3'>{DiffNum("Target",   cf?.TargetValue,   c.ProposedTargetValue)}</div>
+  <div class='col-6 col-md-3'>{DiffNum("Actual", cf?.ActualValue, c.ProposedActualValue)}</div>
+  <div class='col-6 col-md-3'>{DiffNum("Target", cf?.TargetValue, c.ProposedTargetValue)}</div>
   <div class='col-6 col-md-3'>{DiffNum("Forecast", cf?.ForecastValue, c.ProposedForecastValue)}</div>
-  <div class='col-6 col-md-3'>{DiffStatus(cf?.StatusCode ?? "",       c.ProposedStatusCode ?? "")}</div>
+  <div class='col-6 col-md-3'>{DiffStatus(cf?.StatusCode ?? "", c.ProposedStatusCode ?? "")}</div>
 </div>";
 
                     sb.Append($@"
@@ -345,24 +345,79 @@ namespace KPIMonitor.Controllers
             return Content(sb.ToString(), "text/html");
         }
 
-        private async Task<bool> IsOwnerOrAdminForChangeAsync(decimal changeId)
-        {
-            if (_admin.IsAdmin(User)) return true;
+private async Task<bool> IsOwnerOrAdminForChangeAsync(decimal changeId)
+{
+    if (_admin.IsAdmin(User)) return true;
 
-            var samUpper = Sam().ToUpperInvariant();
+    var samUpper = Sam().ToUpperInvariant();
 
-            var owner = await (
-                from c in _db.KpiFactChanges
-                join f in _db.KpiFacts on c.KpiFactId equals f.KpiFactId
-                join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
-                where c.KpiFactChangeId == changeId
-                select yp.Owner
-            ).FirstOrDefaultAsync();
+    var pair = await (
+        from c  in _db.KpiFactChanges
+        join f  in _db.KpiFacts      on c.KpiFactId      equals f.KpiFactId
+        join yp in _db.KpiYearPlans  on f.KpiYearPlanId  equals yp.KpiYearPlanId
+        where c.KpiFactChangeId == changeId
+        select new { yp.Owner, yp.Editor }
+    ).FirstOrDefaultAsync();
 
-            if (string.IsNullOrWhiteSpace(owner)) return false;
+    if (pair == null) return false;
 
-            var o = owner.Trim().ToUpperInvariant();
-            return o == samUpper || o.EndsWith("\\" + samUpper) || o.StartsWith(samUpper + "@");
+    bool ownerMatch =
+        pair.Owner != null && (
+            pair.Owner.Trim().ToUpper() == samUpper ||
+            pair.Owner.ToUpper().EndsWith("\\" + samUpper) ||
+            pair.Owner.ToUpper().StartsWith(samUpper + "@")
+        );
+
+
+
+    return ownerMatch;
+}
+[HttpGet]
+public async Task<IActionResult> DebugOwner()
+{
+    var meRaw = User?.Identity?.Name ?? "";
+    var meSam = Sam(meRaw);
+    var meUp  = meSam.ToUpperInvariant();
+
+    var totalPending = await _db.KpiFactChanges.AsNoTracking()
+        .CountAsync(c => c.ApprovalStatus == "pending");
+
+    var minePending = await (
+        from c  in _db.KpiFactChanges.AsNoTracking()
+        join f  in _db.KpiFacts.AsNoTracking()      on c.KpiFactId      equals f.KpiFactId
+        join yp in _db.KpiYearPlans.AsNoTracking()  on f.KpiYearPlanId  equals yp.KpiYearPlanId
+        where c.ApprovalStatus == "pending"
+              && (
+                   (yp.Owner != null && (
+                       yp.Owner.Trim().ToUpper() == meUp ||
+                       yp.Owner.ToUpper().EndsWith("\\" + meUp) ||
+                       yp.Owner.ToUpper().StartsWith(meUp + "@")
+                   ))
+                   ||
+                   (yp.Editor != null && (
+                       yp.Editor.Trim().ToUpper() == meUp ||
+                       yp.Editor.ToUpper().EndsWith("\\" + meUp) ||
+                       yp.Editor.ToUpper().StartsWith(meUp + "@")
+                   ))
+                 )
+        select c.KpiFactChangeId
+    ).CountAsync();
+
+    var sample = await (
+        from c  in _db.KpiFactChanges.AsNoTracking()
+        join f  in _db.KpiFacts.AsNoTracking()      on c.KpiFactId      equals f.KpiFactId
+        join yp in _db.KpiYearPlans.AsNoTracking()  on f.KpiYearPlanId  equals yp.KpiYearPlanId
+        where c.ApprovalStatus == "pending"
+        orderby c.SubmittedAt descending
+        select new {
+            c.KpiFactChangeId, c.KpiFactId,
+            OwnerRaw  = yp.Owner,  OwnerUp  = (yp.Owner  == null ? null : yp.Owner.Trim().ToUpper()),
+            EditorRaw = yp.Editor, EditorUp = (yp.Editor == null ? null : yp.Editor.Trim().ToUpper())
         }
+    ).Take(10).ToListAsync();
+
+    return Json(new { meRaw, meSam, meUp, totalPending, minePending, sample });
+}
+
     }
 }
