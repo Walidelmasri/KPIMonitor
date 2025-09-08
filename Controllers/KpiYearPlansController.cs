@@ -300,38 +300,54 @@ namespace KPIMonitor.Controllers
             {
                 var owner = await dir.TryGetByEmpIdAsync(ownerEmpId!, ct);
                 if (owner == null)
-                {
-                    log.LogWarning("UpdatePlan invalid ownerEmpId={OwnerEmpId}", ownerEmpId);
                     return BadRequest("Invalid Owner.");
-                }
+
+                // NAME for UI
+                plan.Owner = owner.Value.NameEng;     // keep your NAME_ENG behavior
                 plan.OwnerEmpId = owner.Value.EmpId;
-                plan.Owner = owner.Value.NameEng; // ensure NAME_ENG
-                log.LogInformation("UpdatePlan OWNER set to {Name} ({EmpId})", plan.Owner, plan.OwnerEmpId);
+
+                // LOGIN for approvals (uppercased + normalized)
+                var ownerLoginUp = ExtractLoginUpper(owner.Value)
+                                   ?? ExtractLoginUpper(ownerEmpId)   // try from id if it’s a login-like string
+                                   ?? (string?)null;
+
+                plan.OwnerLogin = string.IsNullOrWhiteSpace(ownerLoginUp)
+                    ? null
+                    : ownerLoginUp;                   // store already UPPER
             }
             else
             {
                 plan.OwnerEmpId = null;
-                // keep legacy plan.Owner text (or clear if you prefer)
-                log.LogInformation("UpdatePlan OWNER cleared (EmpId null)");
+                // leave plan.Owner as-is if you want, or clear it:
+                // plan.Owner = null;
+                plan.OwnerLogin = null;
             }
 
             if (!string.IsNullOrWhiteSpace(editorEmpId))
             {
                 var editor = await dir.TryGetByEmpIdAsync(editorEmpId!, ct);
                 if (editor == null)
-                {
-                    log.LogWarning("UpdatePlan invalid editorEmpId={EditorEmpId}", editorEmpId);
                     return BadRequest("Invalid Editor.");
-                }
+
+                plan.Editor = editor.Value.NameEng;
                 plan.EditorEmpId = editor.Value.EmpId;
-                plan.Editor = editor.Value.NameEng; // ensure NAME_ENG
-                log.LogInformation("UpdatePlan EDITOR set to {Name} ({EmpId})", plan.Editor, plan.EditorEmpId);
+
+                var editorLoginUp = ExtractLoginUpper(editor.Value)
+                                    ?? ExtractLoginUpper(editorEmpId)
+                                    ?? (string?)null;
+
+                plan.EditorLogin = string.IsNullOrWhiteSpace(editorLoginUp)
+                    ? null
+                    : editorLoginUp;                  // store already UPPER
             }
             else
             {
                 plan.EditorEmpId = null;
-                log.LogInformation("UpdatePlan EDITOR cleared (EmpId null)");
+                // plan.Editor = null;
+                plan.EditorLogin = null;
             }
+
+
 
             await _db.SaveChangesAsync(ct);
             log.LogInformation("UpdatePlan SAVED planId={PlanId}", plan.KpiYearPlanId);
@@ -350,6 +366,80 @@ namespace KPIMonitor.Controllers
             });
         }
 
+        private static string Sam(string? raw)
+        {
+            var s = raw ?? "";
+            var bs = s.LastIndexOf('\\');             // DOMAIN\user
+            if (bs >= 0 && bs < s.Length - 1) s = s[(bs + 1)..];
+            var at = s.IndexOf('@');                  // user@domain
+            if (at > 0) s = s[..at];
+            return s.Trim();
+        }
+
+        // Try to extract a login from the directory record, then normalize+UPPER it
+        private static string? ToOwnerEditorLoginUpper(dynamic person)
+        {
+            // adapt these property names to whatever your IEmployeeDirectory returns
+            // Try common fields in order of preference:
+            string? raw =
+                  (person?.Login as string)
+               ?? (person?.SamAccountName as string)
+               ?? (person?.UserPrincipalName as string)   // e.g., user@corp
+               ?? (person?.Email as string)
+               ?? (person?.EmailAddress as string);
+
+            if (string.IsNullOrWhiteSpace(raw)) return null;
+            return Sam(raw).ToUpperInvariant();
+        }
+        // Normalize a login: remove "DOMAIN\" and "@domain", trim.
+        private static string NormalizeLogin(string? raw)
+        {
+            var s = raw ?? "";
+            var bs = s.LastIndexOf('\\');                  // DOMAIN\user
+            if (bs >= 0 && bs < s.Length - 1) s = s[(bs + 1)..];
+            var at = s.IndexOf('@');                       // user@domain
+            if (at > 0) s = s[..at];
+            return s.Trim();
+        }
+
+        // Try to extract a login (uppercased) from any directory object.
+        // Works with: ValueTuple<string,string> (Item1 = login), or objects having
+        // properties like Login, SamAccountName, UserName, Upn, Email, etc.
+        private static string? ExtractLoginUpper(object? person)
+        {
+            if (person == null) return null;
+
+            // (login, name) tuple support
+            if (person is (string login, string _))
+            {
+                var norm = NormalizeLogin(login);
+                return string.IsNullOrWhiteSpace(norm) ? null : norm.ToUpperInvariant();
+            }
+
+            // Reflection-based: try common property names
+            var type = person.GetType();
+            string? GetStr(string prop)
+                => type.GetProperty(prop)?.GetValue(person) as string;
+
+            var candidates = new[]
+            {
+        "Login", "Sam", "SamAccountName", "UserName", "User",
+        "Upn", "UPN", "Email", "EmailAddress", "Mail"
+    };
+
+            foreach (var prop in candidates)
+            {
+                var val = GetStr(prop);
+                if (!string.IsNullOrWhiteSpace(val))
+                {
+                    var norm = NormalizeLogin(val);
+                    if (!string.IsNullOrWhiteSpace(norm))
+                        return norm.ToUpperInvariant();
+                }
+            }
+
+            return null;
+        }
 
     }
 }
