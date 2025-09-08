@@ -1,13 +1,14 @@
 using System;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using System.Net;
+using System.Net; // WebUtility.HtmlEncode
 using System.Security.Claims;
 using KPIMonitor.Data;
 using KPIMonitor.Models;
-using KPIMonitor.Services;
-using KPIMonitor.Services.Abstractions;
+using KPIMonitor.Services;                  // IKpiAccessService, IEmployeeDirectory
+using KPIMonitor.Services.Abstractions;     // IKpiFactChangeService
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -46,18 +47,23 @@ namespace KPIMonitor.Controllers
             return s.Trim();
         }
         private string Sam() => Sam(User?.Identity?.Name);
-// add at top of the file if not present:
 
-// in KpiFactChangesController class, add this helper:
-private async Task<string?> CurrentEmpIdAsync(CancellationToken ct = default)
-{
-    var dir = HttpContext.RequestServices.GetRequiredService<IEmployeeDirectory>();
-    var sam = Sam(User?.Identity?.Name);
-    if (string.IsNullOrWhiteSpace(sam)) return null;
+        private async Task<string?> MyEmpIdAsync(CancellationToken ct = default)
+        {
+            var sam = Sam();
+            if (string.IsNullOrWhiteSpace(sam)) return null;
+            var dir = HttpContext.RequestServices.GetRequiredService<IEmployeeDirectory>();
+            var rec = await dir.TryGetByUserIdAsync(sam, ct);
+            return rec?.EmpId; // BADEA_ADDONS.EMPLOYEES.EMP_ID
+        }
 
-    var rec = await dir.TryGetByUserIdAsync(sam!, ct);
-    return rec?.EmpId; // string
-}
+        private static string PeriodLabel(DimPeriod? p)
+        {
+            if (p == null) return "—";
+            if (p.MonthNum.HasValue) return $"{p.Year} — {new DateTime(p.Year, p.MonthNum.Value, 1):MMM}";
+            if (p.QuarterNum.HasValue) return $"{p.Year} — Q{p.QuarterNum.Value}";
+            return p.Year.ToString();
+        }
 
         // ------------------------
         // Small JSONs
@@ -69,36 +75,32 @@ private async Task<string?> CurrentEmpIdAsync(CancellationToken ct = default)
             return Json(new { pending });
         }
 
-[HttpGet]
-public async Task<IActionResult> PendingCount()
-{
-    if (_admin.IsAdmin(User))
-    {
-        var countAll = await _db.KpiFactChanges
-            .AsNoTracking()
-            .CountAsync(c => c.ApprovalStatus == "pending");
-        return Json(new { count = countAll });
-    }
+        // Owners: pending approvals count (admin = all)
+        [HttpGet]
+        public async Task<IActionResult> PendingCount()
+        {
+            if (_admin.IsAdmin(User))
+            {
+                var countAll = await _db.KpiFactChanges.AsNoTracking()
+                    .CountAsync(c => c.ApprovalStatus == "pending");
+                return Json(new { count = countAll });
+            }
 
-    var myEmpId = await CurrentEmpIdAsync();
-    if (string.IsNullOrWhiteSpace(myEmpId))
-        return Json(new { count = 0 });
+            var myEmp = await MyEmpIdAsync();
+            if (string.IsNullOrWhiteSpace(myEmp)) return Json(new { count = 0 });
 
-    var count = await (
-        from c  in _db.KpiFactChanges.AsNoTracking()
-        join f  in _db.KpiFacts.AsNoTracking()      on c.KpiFactId     equals f.KpiFactId
-        join yp in _db.KpiYearPlans.AsNoTracking()  on f.KpiYearPlanId equals yp.KpiYearPlanId
-        where c.ApprovalStatus == "pending"
-              && yp.OwnerEmpId != null
-              && yp.OwnerEmpId == myEmpId
-        select 1
-    ).CountAsync();
+            var count = await (
+                from c in _db.KpiFactChanges.AsNoTracking()
+                join f in _db.KpiFacts.AsNoTracking() on c.KpiFactId equals f.KpiFactId
+                join yp in _db.KpiYearPlans.AsNoTracking() on f.KpiYearPlanId equals yp.KpiYearPlanId
+                where c.ApprovalStatus == "pending"
+                      && yp.OwnerEmpId != null
+                      && yp.OwnerEmpId == myEmp
+                select c.KpiFactChangeId
+            ).CountAsync();
 
-    return Json(new { count });
-}
-
-
-
+            return Json(new { count });
+        }
 
         // ------------------------
         // Submit / Approve / Reject
@@ -114,7 +116,7 @@ public async Task<IActionResult> PendingCount()
         {
             try
             {
-                // store the simple username (walid.salem), not DOMAIN\user
+                // store domainless username (e.g., "walid.salem")
                 var submittedBy = Sam();
                 if (string.IsNullOrWhiteSpace(submittedBy)) submittedBy = "editor";
 
@@ -138,7 +140,6 @@ public async Task<IActionResult> PendingCount()
         {
             try
             {
-                // load change → plan for ACL
                 var ch = await _db.KpiFactChanges
                     .Include(x => x.KpiFact)
                     .FirstOrDefaultAsync(x => x.KpiFactChangeId == changeId);
@@ -195,211 +196,296 @@ public async Task<IActionResult> PendingCount()
         [HttpGet]
         public IActionResult Inbox() => View();
 
-[HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> ListHtml(string? status = "pending")
-{
-    var s = (status ?? "pending").Trim().ToLowerInvariant();
-    if (s != "pending" && s != "approved" && s != "rejected") s = "pending";
-
-    var isAdmin = _admin.IsAdmin(User);
-
-    var showAll =
-        string.Equals(Request.Query["showAll"], "1", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(Request.Form["showAll"],  "1", StringComparison.OrdinalIgnoreCase);
-
-    var q = _db.KpiFactChanges
-        .AsNoTracking()
-        .Where(c => c.ApprovalStatus == s);
-
-    if (!isAdmin && !showAll)
-    {
-        var myEmpId = await CurrentEmpIdAsync();
-        if (string.IsNullOrWhiteSpace(myEmpId))
+        /// <summary>
+        /// HTML fragment: auto-mode.
+        /// Owners/Admin => approvals; others => requests (by editor)
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ListHtml(string? status = "pending", CancellationToken ct = default)
         {
-            // no identity → no items
-            return Content("<div class='text-muted small'>No items.</div>", "text/html");
-        }
+            var s = (status ?? "pending").Trim().ToLowerInvariant();
+            if (s != "pending" && s != "approved" && s != "rejected") s = "pending";
 
-        q = q.Where(c =>
-            (from f in _db.KpiFacts
-             join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
-             where f.KpiFactId == c.KpiFactId
-                   && yp.OwnerEmpId != null
-                   && yp.OwnerEmpId == myEmpId
-             select 1).Any()
-        );
-    }
+            var isAdmin = _admin.IsAdmin(User);
+            var myEmp = await MyEmpIdAsync(ct);
+            var mySam = Sam();
+            var mySamUp = mySam.ToUpperInvariant();
 
-    var items = await q
-        .OrderByDescending(c => c.SubmittedAt)
-        .Select(c => new
-        {
-            c.KpiFactChangeId,
-            c.KpiFactId,
-            c.ProposedActualValue,
-            c.ProposedTargetValue,
-            c.ProposedForecastValue,
-            c.ProposedStatusCode,
-            c.SubmittedBy,
-            c.SubmittedAt,
-            c.ApprovalStatus,
-            c.RejectReason
-        })
-        .ToListAsync();
+            // Decide MODE automatically (no client choice):
+            // Admin => owner mode (see all)
+            // If user owns any plan => owner mode
+            // else => editor mode (my requests on plans where I'm editor)
+            var isOwnerSomewhere = !string.IsNullOrWhiteSpace(myEmp) &&
+                                   await _db.KpiYearPlans.AsNoTracking()
+                                       .AnyAsync(p => p.OwnerEmpId == myEmp, ct);
 
-    var factIds = items.Select(i => i.KpiFactId).Distinct().ToList();
-    var curFacts = await _db.KpiFacts
-        .AsNoTracking()
-        .Where(f => factIds.Contains(f.KpiFactId))
-        .Select(f => new { f.KpiFactId, f.ActualValue, f.TargetValue, f.ForecastValue, f.StatusCode })
-        .ToDictionaryAsync(x => x.KpiFactId, x => x);
+            var mode = (isAdmin || isOwnerSomewhere) ? "owner" : "editor";
 
-    static string H(string? s2) => WebUtility.HtmlEncode(s2 ?? "");
-    static string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
-    static string LabelStatus(string code) => (code ?? "").Trim().ToLowerInvariant() switch
-    {
-        "conforme" => "Ok",
-        "ecart" => "Needs Attention",
-        "rattrapage" => "Catching Up",
-        "attente" => "Data Missing",
-        "" => "—",
-        _ => code!
-    };
+            // Base query by status
+            var q = _db.KpiFactChanges.AsNoTracking()
+                                      .Where(c => c.ApprovalStatus == s);
 
-    string DiffNum(string title, decimal? curV, decimal? newV)
-    {
-        var changed = (newV.HasValue && curV != newV);
-        var cls = changed ? "appr-diff" : "text-muted";
-        var cur = curV.HasValue ? curV.Value.ToString("0.###") : "—";
-        var pro = newV.HasValue ? newV.Value.ToString("0.###") : "—";
-        return $@"
+            if (mode == "owner" && !isAdmin)
+            {
+                // Only changes for plans I OWN
+                q = q.Where(c =>
+                    (from f in _db.KpiFacts
+                     join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
+                     where f.KpiFactId == c.KpiFactId
+                           && yp.OwnerEmpId != null
+                           && yp.OwnerEmpId == myEmp
+                     select 1).Any()
+                );
+            }
+            else if (mode == "editor")
+            {
+                // Only requests on plans where I am the EDITOR
+                q = q.Where(c =>
+                    (from f in _db.KpiFacts
+                     join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
+                     where f.KpiFactId == c.KpiFactId
+                           && yp.EditorEmpId != null
+                           && yp.EditorEmpId == myEmp
+                     select 1).Any()
+                );
+            }
+            // else admin: no extra filter (see all)
+
+            // Pull rows
+            var items = await q
+                .OrderByDescending(c => c.SubmittedAt)
+                .Select(c => new
+                {
+                    c.KpiFactChangeId,
+                    c.KpiFactId,
+                    c.ProposedActualValue,
+                    c.ProposedTargetValue,
+                    c.ProposedForecastValue,
+                    c.ProposedStatusCode,
+                    c.SubmittedBy,
+                    c.SubmittedAt,
+                    c.ApprovalStatus,
+                    c.RejectReason
+                })
+                .ToListAsync(ct);
+
+            // For diffs + header (KPI/period codes), fetch minimal head info
+            var factIds = items.Select(i => i.KpiFactId).Distinct().ToList();
+
+            var head = await _db.KpiFacts
+                .AsNoTracking()
+                .Where(f => factIds.Contains(f.KpiFactId))
+                .Select(f => new
+                {
+                    f.KpiFactId,
+                    f.ActualValue,
+                    f.TargetValue,
+                    f.ForecastValue,
+                    f.StatusCode,
+                    PerYear = f.Period != null ? (int?)f.Period.Year : null,
+                    PerMonth = f.Period != null ? f.Period.MonthNum : null,
+                    PerQuarter = f.Period != null ? f.Period.QuarterNum : null,
+                    PillarCode = f.Kpi != null && f.Kpi.Pillar != null ? f.Kpi.Pillar.PillarCode : null,
+                    ObjectiveCode = f.Kpi != null && f.Kpi.Objective != null ? f.Kpi.Objective.ObjectiveCode : null,
+                    KpiCode = f.Kpi != null ? f.Kpi.KpiCode : null,
+                    KpiName = f.Kpi != null ? f.Kpi.KpiName : null
+                })
+                .ToDictionaryAsync(x => x.KpiFactId, x => x, ct);
+
+            // helpers for HTML
+            static string H(string? s2) => WebUtility.HtmlEncode(s2 ?? "");
+            static string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
+            static string LabelStatus(string code) => (code ?? "").Trim().ToLowerInvariant() switch
+            {
+                "conforme" => "Ok",
+                "ecart" => "Needs Attention",
+                "rattrapage" => "Catching Up",
+                "attente" => "Data Missing",
+                "" => "—",
+                _ => code!
+            };
+
+            string DiffNum(string title, decimal? curV, decimal? newV)
+            {
+                var changed = (newV.HasValue && curV != newV);
+                var cls = changed ? "appr-diff" : "text-muted";
+                var cur = curV.HasValue ? curV.Value.ToString("0.###") : "—";
+                var pro = newV.HasValue ? newV.Value.ToString("0.###") : "—";
+                return $@"
 <div class='appr-cell'>
   <div class='small text-muted'>{H(title)}</div>
   <div class='{cls}'>{H(cur)} → <strong>{H(pro)}</strong></div>
 </div>";
-    }
+            }
 
-    string DiffStatus(string cur, string prop)
-    {
-        cur = cur?.Trim() ?? "";
-        prop = prop?.Trim() ?? "";
-        var changed = (!string.IsNullOrWhiteSpace(prop) &&
-                       !string.Equals(cur, prop, StringComparison.OrdinalIgnoreCase));
-        var cls = changed ? "appr-diff" : "text-muted";
-        return $@"
+            string DiffStatus(string cur, string prop)
+            {
+                cur = cur?.Trim() ?? "";
+                prop = prop?.Trim() ?? "";
+                var changed = (!string.IsNullOrWhiteSpace(prop) &&
+                               !string.Equals(cur, prop, StringComparison.OrdinalIgnoreCase));
+                var cls = changed ? "appr-diff" : "text-muted";
+                return $@"
 <div class='appr-cell'>
   <div class='small text-muted'>Status</div>
   <div class='{cls}'>{H(LabelStatus(cur))} → <strong>{H(LabelStatus(prop))}</strong></div>
 </div>";
-    }
+            }
 
-    var sb = new StringBuilder();
-    if (items.Count == 0)
-    {
-        sb.Append("<div class='text-muted small'>No items.</div>");
-    }
-    else
-    {
-        foreach (var c in items)
-        {
-            curFacts.TryGetValue(c.KpiFactId, out var cf);
+            var sb = new StringBuilder();
+            if (items.Count == 0)
+            {
+                sb.Append("<div class='text-muted small'>No items.</div>");
+            }
+            else
+            {
+                foreach (var c in items)
+                {
+                    head.TryGetValue(c.KpiFactId, out var h);
 
-            var rowHead = $@"
+                    // Build KPI header strings
+                    var code = (h == null)
+                        ? $"KPI {H(c.KpiFactId.ToString())}"
+                        : $"{H(h.PillarCode ?? "")}.{H(h.ObjectiveCode ?? "")} {H(h.KpiCode ?? "")} — {H(h.KpiName ?? "-")}";
+
+                    var perLabel = (h == null)
+                        ? "—"
+                        : (h.PerMonth.HasValue
+                            ? $"{h.PerYear} — {new DateTime(h.PerYear ?? 2000, h.PerMonth ?? 1, 1):MMM}"
+                            : h.PerQuarter.HasValue
+                                ? $"{h.PerYear} — Q{h.PerQuarter}"
+                                : $"{h.PerYear}");
+
+                    var canAct = (mode == "owner");
+
+                    var rowHead = $@"
 <div class='d-flex justify-content-between align-items-start'>
   <div>
-    <div class='fw-bold'>KPI Fact #{H(c.KpiFactId.ToString())}</div>
+    <div class='fw-bold'>{code}</div>
+    <div class='small text-muted'>Period: {H(perLabel)}</div>
     <div class='small text-muted'>Submitted by <strong>{H(c.SubmittedBy)}</strong> at {F(c.SubmittedAt)}</div>
   </div>
   <div class='text-end'>
-    {(c.ApprovalStatus == "pending" ? $@"
-      <div class='btn-group'>
-        <button type='button' class='btn btn-success btn-sm appr-btn' data-action='approve' data-id='{c.KpiFactChangeId}'>Approve</button>
-        <button type='button' class='btn btn-outline-danger btn-sm appr-btn' data-action='reject' data-id='{c.KpiFactChangeId}'>Reject</button>
-      </div>" :
-      c.ApprovalStatus == "approved" ? "<span class='badge text-bg-success'>Approved</span>" :
-        $"<span class='badge text-bg-danger'>Rejected</span><div class='small text-muted mt-1'>Reason: {H(c.RejectReason)}</div>"
-    )}
+    {(
+        c.ApprovalStatus == "pending" && canAct
+        ? $@"<div class='btn-group'>
+                <button type='button' class='btn btn-success btn-sm appr-btn' data-action='approve' data-id='{c.KpiFactChangeId}'>Approve</button>
+                <button type='button' class='btn btn-outline-danger btn-sm appr-btn' data-action='reject' data-id='{c.KpiFactChangeId}'>Reject</button>
+             </div>"
+        : c.ApprovalStatus == "approved"
+            ? "<span class='badge text-bg-success'>Approved</span>"
+            : $@"<span class='badge text-bg-danger'>Rejected</span>
+                 <div class='small text-muted mt-1'>Reason: {H(c.RejectReason)}</div>"
+      )}
   </div>
 </div>";
 
-            var rowDiffs = $@"
+                    var rowDiffs = $@"
 <div class='row g-3 mt-2'>
-  <div class='col-6 col-md-3'>{DiffNum("Actual",   cf?.ActualValue,   c.ProposedActualValue)}</div>
-  <div class='col-6 col-md-3'>{DiffNum("Target",   cf?.TargetValue,   c.ProposedTargetValue)}</div>
-  <div class='col-6 col-md-3'>{DiffNum("Forecast", cf?.ForecastValue, c.ProposedForecastValue)}</div>
-  <div class='col-6 col-md-3'>{DiffStatus(cf?.StatusCode ?? "",       c.ProposedStatusCode ?? "")}</div>
+  <div class='col-6 col-md-3'>{DiffNum("Actual", h?.ActualValue, c.ProposedActualValue)}</div>
+  <div class='col-6 col-md-3'>{DiffNum("Target", h?.TargetValue, c.ProposedTargetValue)}</div>
+  <div class='col-6 col-md-3'>{DiffNum("Forecast", h?.ForecastValue, c.ProposedForecastValue)}</div>
+  <div class='col-6 col-md-3'>{DiffStatus(h?.StatusCode ?? "", c.ProposedStatusCode ?? "")}</div>
 </div>";
 
-            sb.Append($@"
+                    sb.Append($@"
 <div class='border rounded-3 bg-white p-3 mb-2'>
   {rowHead}
   {rowDiffs}
 </div>");
+                }
+            }
+
+            return Content(sb.ToString(), "text/html");
         }
-    }
 
-    return Content(sb.ToString(), "text/html");
-}
+        private async Task<bool> IsOwnerOrAdminForChangeAsync(decimal changeId)
+        {
+            if (_admin.IsAdmin(User)) return true;
 
+            var myEmp = await MyEmpIdAsync();
+            if (string.IsNullOrWhiteSpace(myEmp)) return false;
 
-private async Task<bool> IsOwnerOrAdminForChangeAsync(decimal changeId)
-{
-    if (_admin.IsAdmin(User)) return true;
+            var ownerEmpId = await (
+                from c in _db.KpiFactChanges
+                join f in _db.KpiFacts on c.KpiFactId equals f.KpiFactId
+                join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
+                where c.KpiFactChangeId == changeId
+                select yp.OwnerEmpId
+            ).FirstOrDefaultAsync();
 
-    var myEmpId = await CurrentEmpIdAsync();
-    if (string.IsNullOrWhiteSpace(myEmpId)) return false;
-
-    var ownerEmpId = await (
-        from c  in _db.KpiFactChanges
-        join f  in _db.KpiFacts      on c.KpiFactId     equals f.KpiFactId
-        join yp in _db.KpiYearPlans  on f.KpiYearPlanId equals yp.KpiYearPlanId
-        where c.KpiFactChangeId == changeId
-        select yp.OwnerEmpId
-    ).FirstOrDefaultAsync();
-
-    return !string.IsNullOrWhiteSpace(ownerEmpId) && ownerEmpId == myEmpId;
-}
-
-
-
-[HttpGet]
-public async Task<IActionResult> DebugOwner()
-{
-    var meRaw = User?.Identity?.Name ?? "";
-    var meSam = Sam(meRaw);
-    var meUp  = meSam.ToUpperInvariant();
-
-    var totalPending = await _db.KpiFactChanges.AsNoTracking()
-        .CountAsync(c => c.ApprovalStatus == "pending");
-
-    var minePending = await (
-        from c  in _db.KpiFactChanges.AsNoTracking()
-        join f  in _db.KpiFacts.AsNoTracking()      on c.KpiFactId      equals f.KpiFactId
-        join yp in _db.KpiYearPlans.AsNoTracking()  on f.KpiYearPlanId  equals yp.KpiYearPlanId
-        where c.ApprovalStatus == "pending"
-              && yp.OwnerLogin != null
-              && yp.OwnerLogin.Trim().ToUpper() == meUp
-        select c.KpiFactChangeId
-    ).CountAsync();
-
-    var sample = await (
-        from c  in _db.KpiFactChanges.AsNoTracking()
-        join f  in _db.KpiFacts.AsNoTracking()      on c.KpiFactId      equals f.KpiFactId
-        join yp in _db.KpiYearPlans.AsNoTracking()  on f.KpiYearPlanId  equals yp.KpiYearPlanId
-        where c.ApprovalStatus == "pending"
-        orderby c.SubmittedAt descending
-        select new {
-            c.KpiFactChangeId, c.KpiFactId,
-            OwnerLoginRaw = yp.OwnerLogin,
-            OwnerLoginUp  = yp.OwnerLogin == null ? null : yp.OwnerLogin.Trim().ToUpper(),
-            MeUp          = meUp
+            return !string.IsNullOrWhiteSpace(ownerEmpId) && ownerEmpId == myEmp;
         }
-    ).Take(10).ToListAsync();
 
-    return Json(new { meRaw, meSam, meUp, totalPending, minePending, sample });
-}
+        // ------------------------
+        // NEW (additive only): ChangeOverlayInfo for Details modal/chart
+        // ------------------------
+        [HttpGet]
+        public async Task<IActionResult> ChangeOverlayInfo(decimal changeId, CancellationToken ct = default)
+        {
+            // Load the change + fact + period + kpi (with codes)
+            var ch = await _db.KpiFactChanges
+                .AsNoTracking()
+                .Where(x => x.KpiFactChangeId == changeId)
+                .Select(x => new
+                {
+                    Change = x,
+                    Fact = x.KpiFact,
+                    Period = x.KpiFact != null ? x.KpiFact.Period : null,
+                    Kpi = x.KpiFact != null ? x.KpiFact.Kpi : null,
+                    Pillar = x.KpiFact != null && x.KpiFact.Kpi != null ? x.KpiFact.Kpi.Pillar : null,
+                    Objective = x.KpiFact != null && x.KpiFact.Kpi != null ? x.KpiFact.Kpi.Objective : null
+                })
+                .FirstOrDefaultAsync(ct);
 
+            if (ch == null || ch.Fact == null || ch.Period == null || ch.Kpi == null)
+                return NotFound(new { ok = false, error = "Change or KPI/Period not found." });
 
+            // Access: admin OR owner of plan OR editor of plan
+            var myEmp = await MyEmpIdAsync(ct);
+            if (!_admin.IsAdmin(User))
+            {
+                var ownsOrEdits = await (
+                    from f in _db.KpiFacts
+                    join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
+                    where f.KpiFactId == ch.Fact.KpiFactId
+                          && (yp.OwnerEmpId == myEmp || yp.EditorEmpId == myEmp)
+                    select 1
+                ).AnyAsync(ct);
+
+                if (!ownsOrEdits)
+                    return StatusCode(403, new { ok = false, error = "Not allowed." });
+            }
+
+            // Build texts (same style you use in ListHtml)
+            var kpiText = $"{(ch.Pillar?.PillarCode ?? "")}.{(ch.Objective?.ObjectiveCode ?? "")} {(ch.Kpi?.KpiCode ?? "")} — {(ch.Kpi?.KpiName ?? "-")}";
+            var per = ch.Period;
+            var periodText = PeriodLabel(per);
+
+            // Return overlay info; front-end will fetch base chart from RedBoard/GetKpiPresentation?kpiId=...
+            return Json(new
+            {
+                ok = true,
+                kpiId = ch.Fact.KpiId,
+                kpiText,
+                period = new
+                {
+                    year = per.Year,
+                    month = per.MonthNum,
+                    quarter = per.QuarterNum,
+                    label = periodText
+                },
+                proposed = new
+                {
+                    actual = ch.Change.ProposedActualValue,
+                    target = ch.Change.ProposedTargetValue,
+                    forecast = ch.Change.ProposedForecastValue,
+                    status = ch.Change.ProposedStatusCode
+                },
+                submittedBy = ch.Change.SubmittedBy,
+                submittedAt = ch.Change.SubmittedAt
+            });
+        }
     }
 }

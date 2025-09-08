@@ -1,9 +1,10 @@
-
 @{
   ViewData["Title"] = "Approvals Inbox";
 }
 <style>
-  .appr-diff { color:#111; }
+  .appr-diff {
+    color: #111;
+  }
 </style>
 
 <div class="container py-4">
@@ -41,7 +42,7 @@
       <form id="rejectForm" method="post">
         @Html.AntiForgeryToken()
         <div class="modal-body">
-          <input type="hidden" id="rej_changeId" name="changeId"/>
+          <input type="hidden" id="rej_changeId" name="changeId" />
           <div class="mb-3">
             <label class="form-label">Reason</label>
             <textarea class="form-control" id="rej_reason" name="reason" rows="3" required></textarea>
@@ -56,107 +57,299 @@
   </div>
 </div>
 
+<!-- Details Modal (added; non-breaking) -->
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content rounded-3">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title" id="detailsLabel">Change Details</h5>
+          <div class="small text-muted" id="detailsSubtitle">—</div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2 small">
+          <span class="badge text-bg-secondary me-1">Proposed overlay</span>
+          <span class="text-muted">Shown at the specific period only</span>
+        </div>
+        <div class="border rounded p-2" style="height:360px">
+          <canvas id="apprChart"></canvas>
+        </div>
+        <div class="row small mt-3" id="proposedSummary" style="row-gap:.25rem">
+          <div class="col-6 col-md-3"><strong>Actual:</strong> <span id="pv_actual">—</span></div>
+          <div class="col-6 col-md-3"><strong>Target:</strong> <span id="pv_target">—</span></div>
+          <div class="col-6 col-md-3"><strong>Forecast:</strong> <span id="pv_forecast">—</span></div>
+          <div class="col-6 col-md-3"><strong>Status:</strong> <span id="pv_status">—</span></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 @section Scripts {
-<script>
-const $  = (id) => document.getElementById(id);
-const qs = (sel, root=document) => root.querySelector(sel);
-const anti = () => (qs('input[name="__RequestVerificationToken"]')?.value || '');
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // ---------- tiny helpers ----------
+    const $  = (id) => document.getElementById(id);
+    const qs = (sel, root=document) => root.querySelector(sel);
+    const anti = () => (qs('input[name="__RequestVerificationToken"]')?.value || '');
 
-let currentTab = 'pending';
+    let currentTab = 'pending';
+    let apprChart = null; // single instance
 
-async function loadList(tab) {
-  currentTab = tab || currentTab || 'pending';
-  const body = $('apprBody');
-  body.innerHTML = "<div class='text-muted small'>Loading…</div>";
-  try {
-    const listUrl = '@Url.Action("ListHtml","KpiFactChanges")' + (window.location.search || '');
-    const res = await fetch(listUrl, {
-      method: 'POST',
-      headers: {
-        'Accept': 'text/html',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'RequestVerificationToken': anti()
-      },
-      body: new URLSearchParams({ status: currentTab })
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    body.innerHTML = await res.text();
-  } catch (err) {
-    console.error(err);
-    body.innerHTML = "<div class='text-danger small'>Failed to load.</div>";
-  }
-}
-
-document.addEventListener('click', async (e) => {
-  // tab switching
-  const tabBtn = e.target.closest('[data-tab]');
-  if (tabBtn) {
-    e.preventDefault();
-    document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('btn-primary'));
-    document.querySelectorAll('[data-tab]').forEach(b => b.classList.add('btn-outline-secondary'));
-    tabBtn.classList.add('btn-primary'); tabBtn.classList.remove('btn-outline-secondary');
-    await loadList(tabBtn.getAttribute('data-tab'));
-    return;
-  }
-
-  // approve / reject
-  const btn = e.target.closest('.appr-btn');
-  if (!btn) return;
-
-  const id = btn.getAttribute('data-id');
-  const action = btn.getAttribute('data-action');
-
-  if (action === 'approve') {
-    btn.disabled = true;
-    try {
-      const fd = new FormData();
-      fd.append('__RequestVerificationToken', anti());
-      fd.append('changeId', id);
-      const res = await fetch('@Url.Action("Approve","KpiFactChanges")', {
-        method: 'POST',
-        headers: { 'X-Requested-With':'XMLHttpRequest','Accept':'application/json' },
-        body: fd
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(()=>null);
-        throw new Error(err?.error || 'Approve failed');
+    // ---------- list loader (unchanged, just calls decorate after load) ----------
+    async function loadList(tab) {
+      currentTab = tab || currentTab || 'pending';
+      const body = $('apprBody');
+      body.innerHTML = "<div class='text-muted small'>Loading…</div>";
+      try {
+        const listUrl = '@Url.Action("ListHtml","KpiFactChanges")' + (window.location.search || '');
+        const res = await fetch(listUrl, {
+          method: 'POST',
+          headers: {
+            'Accept': 'text/html',
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'RequestVerificationToken': anti()
+          },
+          body: new URLSearchParams({ status: currentTab })
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        body.innerHTML = await res.text();
+        decorateDetailsButtons(); // add non-breaking Details buttons
+      } catch (err) {
+        console.error(err);
+        body.innerHTML = "<div class='text-danger small'>Failed to load.</div>";
       }
-      await loadList(currentTab);
-    } catch (err) { alert(err.message); btn.disabled = false; }
-    return;
-  }
-
-  if (action === 'reject') {
-    $('rej_changeId').value = id;
-    $('rej_reason').value = '';
-    new bootstrap.Modal(document.getElementById('rejectModal')).show();
-    return;
-  }
-});
-
-$('rejectForm').addEventListener('submit', async (ev) => {
-  ev.preventDefault();
-  const id = $('rej_changeId').value;
-  const reason = $('rej_reason').value.trim();
-  if (!reason) { alert('Reason is required.'); return; }
-
-  try {
-    const fd = new FormData(ev.target);
-    const res = await fetch('@Url.Action("Reject","KpiFactChanges")', {
-      method: 'POST',
-      headers: { 'X-Requested-With':'XMLHttpRequest','Accept':'application/json' },
-      body: fd
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(()=>null);
-      throw new Error(err?.error || 'Reject failed');
     }
-    bootstrap.Modal.getInstance(document.getElementById('rejectModal')).hide();
-    await loadList(currentTab);
-  } catch (err) { alert(err.message); }
-});
 
-$('refreshBtn').addEventListener('click', (e) => { e.preventDefault(); loadList(currentTab); });
-document.addEventListener('DOMContentLoaded', () => loadList('pending'));
-</script>
+    // ---------- add “Details” button next to Approve/Reject in pending cards ----------
+    function decorateDetailsButtons() {
+      const cards = Array.from(document.querySelectorAll('#apprBody .border.rounded-3.bg-white.p-3.mb-2'));
+      for (const card of cards) {
+        const approveBtn = card.querySelector('.appr-btn[data-action="approve"]');
+        const changeId = approveBtn?.getAttribute('data-id');
+        if (!changeId) continue; // approved/rejected cards won't show Details
+        const right = card.querySelector('.text-end');
+        if (!right || right.querySelector('.appr-details')) continue;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-sm btn-outline-secondary ms-2 appr-details';
+        btn.setAttribute('data-id', changeId);
+        btn.textContent = 'Details';
+        right.appendChild(btn);
+      }
+    }
+
+    // ---------- click handlers (tabs, approve/reject, details) ----------
+    document.addEventListener('click', async (e) => {
+      // tabs
+      const tabBtn = e.target.closest('[data-tab]');
+      if (tabBtn) {
+        e.preventDefault();
+        document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('btn-primary'));
+        document.querySelectorAll('[data-tab]').forEach(b => b.classList.add('btn-outline-secondary'));
+        tabBtn.classList.add('btn-primary'); tabBtn.classList.remove('btn-outline-secondary');
+        await loadList(tabBtn.getAttribute('data-tab'));
+        return;
+      }
+
+      // approve / reject
+      const btn = e.target.closest('.appr-btn');
+      if (btn) {
+        const id = btn.getAttribute('data-id');
+        const action = btn.getAttribute('data-action');
+
+        if (action === 'approve') {
+          btn.disabled = true;
+          try {
+            const fd = new FormData();
+            fd.append('__RequestVerificationToken', anti());
+            fd.append('changeId', id);
+            const res = await fetch('@Url.Action("Approve","KpiFactChanges")', {
+              method: 'POST',
+              headers: { 'X-Requested-With':'XMLHttpRequest','Accept':'application/json' },
+              body: fd
+            });
+            if (!res.ok) {
+              const err = await res.json().catch(()=>null);
+              throw new Error(err?.error || 'Approve failed');
+            }
+            await loadList(currentTab);
+          } catch (err) { alert(err.message); btn.disabled = false; }
+          return;
+        }
+
+        if (action === 'reject') {
+          $('rej_changeId').value = id;
+          $('rej_reason').value = '';
+          new bootstrap.Modal(document.getElementById('rejectModal')).show();
+          return;
+        }
+      }
+
+      // details
+      const det = e.target.closest('.appr-details');
+      if (det) {
+        e.preventDefault();
+        const changeId = det.getAttribute('data-id');
+        if (changeId) openDetails(changeId);
+      }
+    });
+
+    $('rejectForm').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const id = $('rej_changeId').value;
+      const reason = $('rej_reason').value.trim();
+      if (!reason) { alert('Reason is required.'); return; }
+
+      try {
+        const fd = new FormData(ev.target);
+        const res = await fetch('@Url.Action("Reject","KpiFactChanges")', {
+          method: 'POST',
+          headers: { 'X-Requested-With':'XMLHttpRequest','Accept':'application/json' },
+          body: fd
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(()=>null);
+          throw new Error(err?.error || 'Reject failed');
+        }
+        bootstrap.Modal.getInstance(document.getElementById('rejectModal')).hide();
+        await loadList(currentTab);
+      } catch (err) { alert(err.message); }
+    });
+
+    $('refreshBtn').addEventListener('click', (e) => { e.preventDefault(); loadList(currentTab); });
+    document.addEventListener('DOMContentLoaded', () => loadList('pending'));
+
+    // ---------- details modal helpers (single definitions; no duplicates) ----------
+    const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const normalize = s => String(s ?? '').toLowerCase().replace(/[—–-]/g,'-').replace(/\s+/g,' ').trim();
+    function toNum(v){ return (v === null || v === undefined || v === '') ? null : Number(v); }
+    function isFiniteNum(v){ return typeof v === 'number' && isFinite(v); }
+
+    // robust label matcher
+    function findLabelIndex(labels, period){
+      const L = labels.map(normalize);
+      const y  = period?.year ?? null;
+      const qn = period?.quarterNum ?? null;
+      const mn = period?.monthNum ?? null;
+
+      if (y != null && (qn != null || mn != null)) {
+        const cand = qn != null ? `${y} - q${qn}` : `${y} - ${MONTH_ABBR[(mn-1)||0]}`;
+        const idx = L.findIndex(x => x === normalize(cand));
+        if (idx >= 0) return idx;
+      }
+
+      const lab = String(period?.label ?? '');
+      let m = lab.match(/(\d{4}).*q\s*([1-4])/i);
+      if (m) {
+        const idx = L.findIndex(x => x === normalize(`${m[1]} - q${m[2]}`));
+        if (idx >= 0) return idx;
+      }
+      m = lab.match(/(\d{4}).*([A-Za-z]{3})/);
+      if (m) {
+        const idx = L.findIndex(x => x === normalize(`${m[1]} - ${m[2]}`));
+        if (idx >= 0) return idx;
+      }
+      return -1;
+    }
+
+    // ---------- openDetails: builds chart with proposed overlay ----------
+    async function openDetails(changeId){
+      try {
+        // 1) change info (proposed + period)
+        const infoUrl = '@Url.Action("ChangeOverlayInfo","KpiFactChanges")' + '?changeId=' + encodeURIComponent(changeId);
+        const info = await fetch(infoUrl, { headers: { 'Accept':'application/json' } }).then(r => r.json());
+        if (!info?.ok) throw new Error(info?.error || 'Failed to load details.');
+
+        // 2) base chart payload (same as RedBoard)
+        const baseUrl = '@Url.Action("GetKpiPresentation","RedBoard")' + '?kpiId=' + encodeURIComponent(info.kpiId);
+        const base = await fetch(baseUrl, { headers: { 'Accept':'application/json' } }).then(r => r.json());
+
+        const baseLabels = base?.chart?.labels || [];
+        const actBase    = (base?.chart?.actual   || []).slice();
+        const tgtBase    = (base?.chart?.target   || []).slice();
+        const fctBase    = (base?.chart?.forecast || []).slice();
+
+        const yrs        = Array.isArray(base?.chart?.yearTargets) ? base.chart.yearTargets : [];
+        const yearLabels = yrs.map(y => String(y.year));
+        const yearVals   = yrs.map(y => (y?.value ?? null));
+
+        const labels = baseLabels.concat(yearLabels);
+        const pad    = new Array(yearLabels.length).fill(null);
+        const leftNulls = new Array(baseLabels.length).fill(null);
+
+        const act = actBase.concat(pad);
+        const tgt = tgtBase.concat(pad);
+        const fct = fctBase.concat(pad);
+        const yearBar = leftNulls.concat(yearVals); // 5-year bars
+
+        const pActual   = toNum(info?.proposed?.actual);
+        const pTarget   = toNum(info?.proposed?.target);
+        const pForecast = toNum(info?.proposed?.forecast);
+
+        const pIdx = findLabelIndex(labels, info.period);
+
+        const overlayActual   = new Array(labels.length).fill(null);
+        const overlayTarget   = new Array(labels.length).fill(null);
+        const overlayForecast = new Array(labels.length).fill(null);
+        if (pIdx >= 0) {
+          if (isFiniteNum(pActual))   overlayActual[pIdx]   = pActual;
+          if (isFiniteNum(pTarget))   overlayTarget[pIdx]   = pTarget;
+          if (isFiniteNum(pForecast)) overlayForecast[pIdx] = pForecast;
+        }
+
+        const overlayColor = '#0d6efd';
+        const datasets = [
+          { type:'bar',  label:'Actual',   data: act,  backgroundColor:'#800080', borderColor:'#800080', borderWidth:2, borderSkipped:'bottom' },
+          { type:'line', label:'Target',   data: tgt,  borderColor:'#7a7a7a', pointBackgroundColor:'#7a7a7a', pointBorderColor:'#7a7a7a', borderWidth:2, tension:.3, fill:false },
+          { type:'line', label:'Forecast', data: fct,  borderColor:'#fd7e14', pointBackgroundColor:'#fd7e14', pointBorderColor:'#fd7e14', borderDash:[5,5], borderWidth:2, tension:.3, fill:false },
+          { type:'bar',  label:'Year Target', data: yearBar, backgroundColor:'#7a7a7a', borderColor:'#7a7a7a', borderWidth:1 }
+        ];
+        if (overlayActual.some(v => v != null))
+          datasets.push({ type:'bar',  label:'Proposed Actual',   data: overlayActual,   backgroundColor:overlayColor, borderColor:overlayColor, borderWidth:2, borderSkipped:'bottom' });
+        if (overlayTarget.some(v => v != null))
+          datasets.push({ type:'line', label:'Proposed Target',   data: overlayTarget,   borderColor:overlayColor, pointBackgroundColor:overlayColor, pointBorderColor:overlayColor, borderWidth:2, tension:.3, fill:false });
+        if (overlayForecast.some(v => v != null))
+          datasets.push({ type:'line', label:'Proposed Forecast', data: overlayForecast, borderColor:overlayColor, pointBackgroundColor:overlayColor, pointBorderColor:overlayColor, borderDash:[2,2], borderWidth:2, tension:.3, fill:false });
+
+        // header text
+        $('detailsLabel').textContent = info.kpiText || 'Change Details';
+        $('detailsSubtitle').textContent =
+          'Period: ' + (info.period?.label || '—') +
+          (info.submittedBy ? ` • Submitted by ${info.submittedBy}` : '') +
+          (info.submittedAt ? ` at ${info.submittedAt}` : '');
+
+        $('pv_actual').textContent   = isFiniteNum(pActual)   ? String(pActual)   : '—';
+        $('pv_target').textContent   = isFiniteNum(pTarget)   ? String(pTarget)   : '—';
+        $('pv_forecast').textContent = isFiniteNum(pForecast) ? String(pForecast) : '—';
+        $('pv_status').textContent   = info?.proposed?.status || '—';
+
+        // show modal + render chart
+        new bootstrap.Modal(document.getElementById('detailsModal')).show();
+        const ctx = $('apprChart').getContext('2d');
+        if (apprChart) apprChart.destroy();
+        apprChart = new Chart(ctx, {
+          type: 'bar',
+          data: { labels, datasets },
+          options: {
+            responsive:true, maintainAspectRatio:false,
+            scales:{ x:{ grid:{display:false}}, y:{ grid:{display:false}, beginAtZero:true } },
+            plugins:{
+              legend:{ position:'top', labels:{ boxWidth:12, boxHeight:10, padding:12, font:{ size:10, weight:'700' } } },
+              tooltip:{ enabled:true }
+            }
+          }
+        });
+      } catch (err) {
+        console.error(err);
+        alert('Failed to load details.');
+      }
+    }
+  </script>
 }
+
