@@ -56,37 +56,50 @@ namespace KPIMonitor.Controllers
             return Json(new { pending });
         }
 
-        [HttpGet]
-        public async Task<IActionResult> PendingCount()
-        {
-            // Admin sees all
-            if (_admin.IsAdmin(User))
-            {
-                var countAll = await _db.KpiFactChanges
-                    .AsNoTracking()
-                    .CountAsync(c => c.ApprovalStatus == "pending");
-                return Json(new { count = countAll });
-            }
+[HttpGet]
+public async Task<IActionResult> PendingCount()
+{
+    if (_admin.IsAdmin(User))
+    {
+        var countAll = await _db.KpiFactChanges
+            .AsNoTracking()
+            .CountAsync(c => c.ApprovalStatus == "pending");
+        return Json(new { count = countAll });
+    }
 
-            var sam = Sam().ToUpperInvariant();
+    var sam   = Sam();
+    var samUp = sam.ToUpperInvariant();
 
-            // Owner filter: OWNER equals sam OR endswith \sam OR startswith sam@
-            var count = await (
-                from c in _db.KpiFactChanges.AsNoTracking()
-                join f in _db.KpiFacts.AsNoTracking() on c.KpiFactId equals f.KpiFactId
-                join yp in _db.KpiYearPlans.AsNoTracking() on f.KpiYearPlanId equals yp.KpiYearPlanId
-                where c.ApprovalStatus == "pending"
-                      && yp.Owner != null
-                      && (
-                           yp.Owner.Trim().ToUpper() == sam ||
-                           yp.Owner.ToUpper().EndsWith("\\" + sam) ||
-                           yp.Owner.ToUpper().StartsWith(sam + "@")
-                         )
-                select c.KpiFactChangeId
-            ).CountAsync();
+    var dot     = sam.IndexOf('.');
+    var firstUp = (dot > 0 ? sam[..dot] : sam).ToUpperInvariant();
+    var lastUp  = (dot > 0 ? sam[(dot + 1)..] : string.Empty).ToUpperInvariant();
 
-            return Json(new { count });
-        }
+    var count = await (
+        from c  in _db.KpiFactChanges.AsNoTracking()
+        join f  in _db.KpiFacts.AsNoTracking()      on c.KpiFactId     equals f.KpiFactId
+        join yp in _db.KpiYearPlans.AsNoTracking()  on f.KpiYearPlanId equals yp.KpiYearPlanId
+        where c.ApprovalStatus == "pending"
+              && (
+                   (yp.Owner != null && (
+                       yp.Owner.Trim().ToUpper() == samUp ||
+                       yp.Owner.ToUpper().EndsWith("\\" + samUp) ||
+                       yp.Owner.ToUpper().StartsWith(samUp + "@") ||
+                       (lastUp != "" && yp.Owner.ToUpper().Contains(firstUp) && yp.Owner.ToUpper().Contains(lastUp))
+                   ))
+                   ||
+                   (yp.Editor != null && (
+                       yp.Editor.Trim().ToUpper() == samUp ||
+                       yp.Editor.ToUpper().EndsWith("\\" + samUp) ||
+                       yp.Editor.ToUpper().StartsWith(samUp + "@") ||
+                       (lastUp != "" && yp.Editor.ToUpper().Contains(firstUp) && yp.Editor.ToUpper().Contains(lastUp))
+                   ))
+                 )
+        select c.KpiFactChangeId
+    ).CountAsync();
+
+    return Json(new { count });
+}
+
 
         // ------------------------
         // Submit / Approve / Reject
@@ -194,35 +207,52 @@ namespace KPIMonitor.Controllers
             var s = (status ?? "pending").Trim().ToLowerInvariant();
             if (s != "pending" && s != "approved" && s != "rejected") s = "pending";
 
-            var isAdmin = _admin.IsAdmin(User);
-            var samUpper = Sam().ToUpperInvariant();
+var isAdmin  = _admin.IsAdmin(User);
+var sam      = Sam();                    // e.g., "nashwa.ahmed"
+var samUp    = sam.ToUpperInvariant();
 
-            // allow override (?showAll=1) for debugging
-            var showAll =
-                string.Equals(Request.Query["showAll"], "1", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(Request.Form["showAll"], "1", StringComparison.OrdinalIgnoreCase);
+// split "first.last" if present
+var dot      = sam.IndexOf('.');
+var firstUp  = (dot > 0 ? sam[..dot] : sam).ToUpperInvariant();
+var lastUp   = (dot > 0 ? sam[(dot + 1)..] : string.Empty).ToUpperInvariant();
 
-            // base query: only KPIFACTCHANGES
-            var q = _db.KpiFactChanges
-                .AsNoTracking()
-                .Where(c => c.ApprovalStatus == s);
+var showAll =
+    string.Equals(Request.Query["showAll"], "1", StringComparison.OrdinalIgnoreCase) ||
+    string.Equals(Request.Form["showAll"],  "1", StringComparison.OrdinalIgnoreCase);
 
-            // owner filter (only when not admin and not showAll)
-            if (!isAdmin && !showAll)
-            {
-                q = q.Where(c =>
-                    (from f in _db.KpiFacts
-                     join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
-                     where f.KpiFactId == c.KpiFactId
-                           && yp.Owner != null
-                           && (
-                                yp.Owner.Trim().ToUpper() == samUpper ||
-                                yp.Owner.ToUpper().EndsWith("\\" + samUpper) ||
-                                yp.Owner.ToUpper().StartsWith(samUpper + "@")
-                              )
-                     select 1).Any()
-                );
-            }
+// base query by status only
+var q = _db.KpiFactChanges
+    .AsNoTracking()
+    .Where(c => c.ApprovalStatus == s);
+
+// owner/editor filter unless admin/debug
+if (!isAdmin && !showAll)
+{
+    q = q.Where(c =>
+        (from f in _db.KpiFacts
+         join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
+         where f.KpiFactId == c.KpiFactId
+               && (
+                    // Owner matches login shapes OR full-name contains first & last
+                    (yp.Owner != null && (
+                        yp.Owner.Trim().ToUpper() == samUp ||
+                        yp.Owner.ToUpper().EndsWith("\\" + samUp) ||
+                        yp.Owner.ToUpper().StartsWith(samUp + "@") ||
+                        (lastUp != "" && yp.Owner.ToUpper().Contains(firstUp) && yp.Owner.ToUpper().Contains(lastUp))
+                    ))
+                    ||
+                    // Editor matches login shapes OR full-name contains first & last
+                    (yp.Editor != null && (
+                        yp.Editor.Trim().ToUpper() == samUp ||
+                        yp.Editor.ToUpper().EndsWith("\\" + samUp) ||
+                        yp.Editor.ToUpper().StartsWith(samUp + "@") ||
+                        (lastUp != "" && yp.Editor.ToUpper().Contains(firstUp) && yp.Editor.ToUpper().Contains(lastUp))
+                    ))
+               )
+         select 1).Any()
+    );
+}
+
 
             // fetch minimal change rows
             var items = await q
@@ -349,29 +379,33 @@ private async Task<bool> IsOwnerOrAdminForChangeAsync(decimal changeId)
 {
     if (_admin.IsAdmin(User)) return true;
 
-    var samUpper = Sam().ToUpperInvariant();
+    var sam   = Sam();
+    var samUp = sam.ToUpperInvariant();
+
+    var dot     = sam.IndexOf('.');
+    var firstUp = (dot > 0 ? sam[..dot] : sam).ToUpperInvariant();
+    var lastUp  = (dot > 0 ? sam[(dot + 1)..] : string.Empty).ToUpperInvariant();
 
     var pair = await (
         from c  in _db.KpiFactChanges
-        join f  in _db.KpiFacts      on c.KpiFactId      equals f.KpiFactId
-        join yp in _db.KpiYearPlans  on f.KpiYearPlanId  equals yp.KpiYearPlanId
+        join f  in _db.KpiFacts      on c.KpiFactId     equals f.KpiFactId
+        join yp in _db.KpiYearPlans  on f.KpiYearPlanId equals yp.KpiYearPlanId
         where c.KpiFactChangeId == changeId
         select new { yp.Owner, yp.Editor }
     ).FirstOrDefaultAsync();
 
     if (pair == null) return false;
 
-    bool ownerMatch =
-        pair.Owner != null && (
-            pair.Owner.Trim().ToUpper() == samUpper ||
-            pair.Owner.ToUpper().EndsWith("\\" + samUpper) ||
-            pair.Owner.ToUpper().StartsWith(samUpper + "@")
-        );
-
-
+    bool ownerMatch = pair.Owner != null && (
+        pair.Owner.Trim().ToUpper() == samUp ||
+        pair.Owner.ToUpper().EndsWith("\\" + samUp) ||
+        pair.Owner.ToUpper().StartsWith(samUp + "@") ||
+        (lastUp != "" && pair.Owner.ToUpper().Contains(firstUp) && pair.Owner.ToUpper().Contains(lastUp))
+    );
 
     return ownerMatch;
 }
+
 [HttpGet]
 public async Task<IActionResult> DebugOwner()
 {
