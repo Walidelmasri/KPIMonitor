@@ -1,0 +1,122 @@
+@model KPIMonitor.Models.ViewModels.StrategyMapVm
+@{
+    ViewData["Title"] = "Strategy Map";
+}
+
+<style>
+  /* ===== Layout scaffolding (works with your page hero + side rails) ===== */
+  .strategy-wrap { padding-block: 1rem 2rem; }
+  .toolbar { display:flex; align-items:center; gap:.75rem; margin-bottom: .75rem; flex-wrap: wrap; }
+  .legend { display:flex; align-items:center; gap:.5rem; margin-left:auto; }
+  .legend .item { display:flex; align-items:center; gap:.35rem; font-size:.85rem; color:#6c757d; }
+  .legend .dot { inline-size:.75rem; block-size:.75rem; border-radius:50%; border:1px solid rgba(0,0,0,.15); }
+
+  .legend .g { background:#28a745; }
+  .legend .r { background:#dc3545; }
+  .legend .o { background:#fd7e14; }
+  .legend .b { background:#0d6efd; }
+
+  /* ===== Seven-column board (collapses responsibly) ===== */
+  .sm7-grid {
+    display:grid;
+    grid-template-columns: repeat(7, minmax(180px, 1fr));
+    gap: .9rem;
+  }
+  @@media (max-width: 1600px) { .sm7-grid { grid-template-columns: repeat(5, minmax(200px, 1fr)); } }
+  @@media (max-width: 1200px) { .sm7-grid { grid-template-columns: repeat(4, minmax(200px, 1fr)); } }
+  @@media (max-width: 992px)  { .sm7-grid { grid-template-columns: repeat(3, minmax(200px, 1fr)); } }
+  @@media (max-width: 768px)  { .sm7-grid { grid-template-columns: repeat(2, minmax(180px, 1fr)); } }
+  @@media (max-width: 520px)  { .sm7-grid { grid-template-columns: 1fr; } }
+
+  /* ===== Pillar column ===== */
+  .pillar {
+    display:flex; flex-direction:column; min-block-size: 340px;
+    border:1px solid #e9ecef; border-radius:12px; background:#fff;
+    box-shadow: 0 6px 16px rgba(0,0,0,.04);
+  }
+  .pillar-head {
+    position: sticky; top: calc(var(--rails-header-offset, 0px)); z-index:1;
+    background: linear-gradient(180deg, #0d6efd 0%, #0a58ca 100%);
+    color:#fff; border-top-left-radius:12px; border-top-right-radius:12px;
+    padding:.6rem .8rem; text-align:center; font-weight:700; letter-spacing:.2px;
+  }
+  .pillar-title-small { font-size:.82rem; opacity:.95; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pillar-body {
+    display:grid; gap:.55rem; padding:.7rem; align-content:flex-start;
+  }
+
+  /* ===== Objective cards (compact) ===== */
+  .objective-card {
+    color:#fff; border-radius:10px; padding:.5rem .6rem; border:1px solid rgba(255,255,255,.22);
+    box-shadow: 0 4px 10px rgba(0,0,0,.06);
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .objective-code { font-size:.78rem; font-weight:800; letter-spacing:.3px; opacity:.95; }
+  .objective-name { font-size:.8rem; line-height:1.25; margin-top:.15rem; word-break:break-word; }
+
+  /* Accessibility: ensure text stays readable on strong colors */
+  .objective-card { text-shadow: 0 1px 0 rgba(0,0,0,.2); }
+
+  /* ===== Print ===== */
+  @@media print {
+    .toolbar, .page-hero { display:none !important; }
+    .strategy-wrap { padding:0; }
+    .pillar { break-inside: avoid; box-shadow:none; }
+  }
+</style>
+
+<div class="container strategy-wrap">
+  @section PageHeader {
+        <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
+      <div class="page-hero-content">
+        <h1 class="page-title">Strategy Map</h1>
+        <div class="page-subtitle">Latest statuses • Year @Model.Year</div>
+      </div>
+    </div>
+  }
+
+  <div class="with-rails">
+    <div class="toolbar">
+      <form method="get" class="d-flex align-items-center gap-2">
+        <label for="year" class="form-label mb-0 small">Year (optional)</label>
+        <input id="year" name="year" type="number" class="form-control form-control-sm" style="width:110px" value="@Model.Year" />
+        <button class="btn btn-sm btn-outline-primary rounded-4">Apply</button>
+      </form>
+
+      <div class="legend" aria-label="Status legend">
+        <div class="item"><span class="dot r"></span><span>Needs Attention</span></div>
+        <div class="item"><span class="dot o"></span><span>Catching Up</span></div>
+        <div class="item"><span class="dot b"></span><span>Data Missing</span></div>
+        <div class="item"><span class="dot g"></span><span>Ok</span></div>
+      </div>
+    </div>
+
+    <div class="sm7-grid">
+      @foreach (var pillar in Model.Pillars)
+      {
+        <section class="pillar">
+          <header class="pillar-head">
+            <div class="pillar-title-small">@pillar.PillarCode — @pillar.PillarName</div>
+          </header>
+
+          <div class="pillar-body">
+            @if (pillar.Objectives?.Any() == true)
+            {
+              foreach (var o in pillar.Objectives)
+              {
+                <article class="objective-card" style="background:@o.StatusColor">
+                  <div class="objective-code">@o.ObjectiveCode</div>
+                  <div class="objective-name">@o.ObjectiveName</div>
+                </article>
+              }
+            }
+            else
+            {
+              <div class="text-muted small">No objectives.</div>
+            }
+          </div>
+        </section>
+      }
+    </div>
+  </div>
+</div>

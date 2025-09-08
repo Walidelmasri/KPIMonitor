@@ -27,6 +27,7 @@ builder.Services.AddScoped<IEmployeeDirectory, OracleEmployeeDirectory>();
 builder.Services.AddScoped<IKpiYearPlanOwnerEditorService, KpiYearPlanOwnerEditorService>();
 builder.Services.AddScoped<IKpiAccessService, KpiAccessService>();
 builder.Services.AddScoped<IKpiFactChangeService, KpiFactChangeService>();
+builder.Services.AddScoped<IStrategyMapService, StrategyMapService>();
 
 builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection("App"));
 builder.Services.AddScoped<IAdminAuthorizer, ConfigAdminAuthorizer>();

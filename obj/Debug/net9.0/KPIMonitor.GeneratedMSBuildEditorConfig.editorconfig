@@ -1,0 +1,201 @@
+is_global = true
+build_property.TargetFramework = net9.0
+build_property.TargetFramework = net9.0
+build_property.TargetPlatformMinVersion = 
+build_property.TargetPlatformMinVersion = 
+build_property.UsingMicrosoftNETSdkWeb = true
+build_property.UsingMicrosoftNETSdkWeb = true
+build_property.ProjectTypeGuids = 
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = 
+build_property.InvariantGlobalization = 
+build_property.PlatformNeutralAssembly = 
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property._SupportedPlatformList = Linux,macOS,Windows
+build_property._SupportedPlatformList = Linux,macOS,Windows
+build_property.RootNamespace = KPIMonitor
+build_property.RootNamespace = KPIMonitor
+build_property.ProjectDir = /Users/walidsalem/BADEA/KPIMonitor/
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 
+build_property.RazorLangVersion = 9.0
+build_property.SupportLocalizedComponentNames = 
+build_property.GenerateRazorMetadataSourceChecksumAttributes = 
+build_property.MSBuildProjectDirectory = /Users/walidsalem/BADEA/KPIMonitor
+build_property._RazorSourceGeneratorDebug = 
+build_property.EffectiveAnalysisLevelStyle = 9.0
+build_property.EnableCodeStyleSeverity = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/Account/AccessDenied.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWNjb3VudC9BY2Nlc3NEZW5pZWQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/Account/Login.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWNjb3VudC9Mb2dpbi5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/ActionPlans/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQWN0aW9uUGxhbnMvSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/Audit/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvQXVkaXQvSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/Home/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvSG9tZS9JbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/Home/Privacy.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvSG9tZS9Qcml2YWN5LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/HowTo/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvSG93VG8vSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/KpiData/AddKpiData.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpRGF0YS9BZGRLcGlEYXRhLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/KpiFactChanges/Inbox.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpRmFjdENoYW5nZXMvSW5ib3guY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/KpiFacts/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpRmFjdHMvQ3JlYXRlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/KpiFacts/Generate.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpRmFjdHMvR2VuZXJhdGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/KpiFacts/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpRmFjdHMvSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/KpiFiveYearTargets/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpRml2ZVllYXJUYXJnZXRzL0NyZWF0ZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/KpiFiveYearTargets/Edit.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpRml2ZVllYXJUYXJnZXRzL0VkaXQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/KpiFiveYearTargets/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpRml2ZVllYXJUYXJnZXRzL0luZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/KpiPeriods/Activate.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpUGVyaW9kcy9BY3RpdmF0ZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/KpiPeriods/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpUGVyaW9kcy9DcmVhdGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/KpiPeriods/Inactivate.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpUGVyaW9kcy9JbmFjdGl2YXRlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/KpiPeriods/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpUGVyaW9kcy9JbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/Kpis/Activate.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3Bpcy9BY3RpdmF0ZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/Kpis/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3Bpcy9DcmVhdGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/Kpis/Inactivate.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3Bpcy9JbmFjdGl2YXRlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/Kpis/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3Bpcy9JbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/KpiYearPlans/Activate.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpWWVhclBsYW5zL0FjdGl2YXRlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/KpiYearPlans/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpWWVhclBsYW5zL0NyZWF0ZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/KpiYearPlans/Deactivate.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpWWVhclBsYW5zL0RlYWN0aXZhdGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/KpiYearPlans/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpWWVhclBsYW5zL0luZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/KpiYearPlans/_KpiYearPlanEditModal.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpWWVhclBsYW5zL19LcGlZZWFyUGxhbkVkaXRNb2RhbC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/Objectives/Activate.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvT2JqZWN0aXZlcy9BY3RpdmF0ZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/Objectives/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvT2JqZWN0aXZlcy9DcmVhdGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/Objectives/Inactivate.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvT2JqZWN0aXZlcy9JbmFjdGl2YXRlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/Objectives/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvT2JqZWN0aXZlcy9JbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/Pillars/Activate.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvUGlsbGFycy9BY3RpdmF0ZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/Pillars/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvUGlsbGFycy9DcmVhdGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/Pillars/Inactivate.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvUGlsbGFycy9JbmFjdGl2YXRlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/Pillars/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvUGlsbGFycy9JbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/RedBoard/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvUmVkQm9hcmQvSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/Shared/Error.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvU2hhcmVkL0Vycm9yLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/Shared/_ValidationScriptsPartial.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvU2hhcmVkL19WYWxpZGF0aW9uU2NyaXB0c1BhcnRpYWwuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/StrategyMap/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvU3RyYXRlZ3lNYXAvSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/_ViewImports.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvX1ZpZXdJbXBvcnRzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/_ViewStart.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvX1ZpZXdTdGFydC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/Users/walidsalem/BADEA/KPIMonitor/Views/Shared/_Layout.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvU2hhcmVkL19MYXlvdXQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = b-znx5q45rab
