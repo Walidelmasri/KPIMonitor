@@ -39,7 +39,10 @@ namespace KPIMonitor.Models
         [Column("EDITOR")]
         [MaxLength(50)]
         public string? Editor { get; set; }
-
+        [Column("OWNERLOGIN")]
+        public string? OwnerLogin { get; set; }  // maps OWNERLOGIN
+        [Column("EDITORLOGIN")]
+        public string? EditorLogin { get; set; }  // maps EDITORLOGIN
         [Column("UNIT")]
         [MaxLength(10)]
         public string Unit { get; set; } = "";
@@ -61,7 +64,7 @@ namespace KPIMonitor.Models
         // Navigation
         public DimKpi? Kpi { get; set; }
         public DimPeriod? Period { get; set; }
-        public string? OwnerEmpId  { get; set; }   // maps to OWNEREMPID (VARCHAR2(5))
+        public string? OwnerEmpId { get; set; }   // maps to OWNEREMPID (VARCHAR2(5))
         public string? EditorEmpId { get; set; }   // maps to EDITOREMPID (VARCHAR2(5))
 
     }

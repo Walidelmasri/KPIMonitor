@@ -67,33 +67,15 @@ public async Task<IActionResult> PendingCount()
         return Json(new { count = countAll });
     }
 
-    var sam   = Sam();
-    var samUp = sam.ToUpperInvariant();
-
-    var dot     = sam.IndexOf('.');
-    var firstUp = (dot > 0 ? sam[..dot] : sam).ToUpperInvariant();
-    var lastUp  = (dot > 0 ? sam[(dot + 1)..] : string.Empty).ToUpperInvariant();
+    var samUp = Sam(User?.Identity?.Name).ToUpperInvariant();
 
     var count = await (
         from c  in _db.KpiFactChanges.AsNoTracking()
         join f  in _db.KpiFacts.AsNoTracking()      on c.KpiFactId     equals f.KpiFactId
         join yp in _db.KpiYearPlans.AsNoTracking()  on f.KpiYearPlanId equals yp.KpiYearPlanId
         where c.ApprovalStatus == "pending"
-              && (
-                   (yp.Owner != null && (
-                       yp.Owner.Trim().ToUpper() == samUp ||
-                       yp.Owner.ToUpper().EndsWith("\\" + samUp) ||
-                       yp.Owner.ToUpper().StartsWith(samUp + "@") ||
-                       (lastUp != "" && yp.Owner.ToUpper().Contains(firstUp) && yp.Owner.ToUpper().Contains(lastUp))
-                   ))
-                   ||
-                   (yp.Editor != null && (
-                       yp.Editor.Trim().ToUpper() == samUp ||
-                       yp.Editor.ToUpper().EndsWith("\\" + samUp) ||
-                       yp.Editor.ToUpper().StartsWith(samUp + "@") ||
-                       (lastUp != "" && yp.Editor.ToUpper().Contains(firstUp) && yp.Editor.ToUpper().Contains(lastUp))
-                   ))
-                 )
+              && yp.OwnerLogin != null
+              && yp.OwnerLogin == samUp
         select c.KpiFactChangeId
     ).CountAsync();
 
@@ -199,146 +181,114 @@ public async Task<IActionResult> PendingCount()
         /// <summary>
         /// HTML fragment for the approvals list. Default = pending.
         /// </summary>
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ListHtml(string? status = "pending")
-        {
-            // sanitize tab
-            var s = (status ?? "pending").Trim().ToLowerInvariant();
-            if (s != "pending" && s != "approved" && s != "rejected") s = "pending";
-
-var isAdmin  = _admin.IsAdmin(User);
-var sam      = Sam();                    // e.g., "nashwa.ahmed"
-var samUp    = sam.ToUpperInvariant();
-
-// split "first.last" if present
-var dot      = sam.IndexOf('.');
-var firstUp  = (dot > 0 ? sam[..dot] : sam).ToUpperInvariant();
-var lastUp   = (dot > 0 ? sam[(dot + 1)..] : string.Empty).ToUpperInvariant();
-
-var showAll =
-    string.Equals(Request.Query["showAll"], "1", StringComparison.OrdinalIgnoreCase) ||
-    string.Equals(Request.Form["showAll"],  "1", StringComparison.OrdinalIgnoreCase);
-
-// base query by status only
-var q = _db.KpiFactChanges
-    .AsNoTracking()
-    .Where(c => c.ApprovalStatus == s);
-
-// owner/editor filter unless admin/debug
-if (!isAdmin && !showAll)
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> ListHtml(string? status = "pending")
 {
-    q = q.Where(c =>
-        (from f in _db.KpiFacts
-         join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
-         where f.KpiFactId == c.KpiFactId
-               && (
-                    // Owner matches login shapes OR full-name contains first & last
-                    (yp.Owner != null && (
-                        yp.Owner.Trim().ToUpper() == samUp ||
-                        yp.Owner.ToUpper().EndsWith("\\" + samUp) ||
-                        yp.Owner.ToUpper().StartsWith(samUp + "@") ||
-                        (lastUp != "" && yp.Owner.ToUpper().Contains(firstUp) && yp.Owner.ToUpper().Contains(lastUp))
-                    ))
-                    ||
-                    // Editor matches login shapes OR full-name contains first & last
-                    (yp.Editor != null && (
-                        yp.Editor.Trim().ToUpper() == samUp ||
-                        yp.Editor.ToUpper().EndsWith("\\" + samUp) ||
-                        yp.Editor.ToUpper().StartsWith(samUp + "@") ||
-                        (lastUp != "" && yp.Editor.ToUpper().Contains(firstUp) && yp.Editor.ToUpper().Contains(lastUp))
-                    ))
-               )
-         select 1).Any()
-    );
-}
+    var s = (status ?? "pending").Trim().ToLowerInvariant();
+    if (s != "pending" && s != "approved" && s != "rejected") s = "pending";
 
+    var isAdmin = _admin.IsAdmin(User);
+    var samUp   = Sam(User?.Identity?.Name).ToUpperInvariant();
 
-            // fetch minimal change rows
-            var items = await q
-                .OrderByDescending(c => c.SubmittedAt)
-                .Select(c => new
-                {
-                    c.KpiFactChangeId,
-                    c.KpiFactId,
-                    c.ProposedActualValue,
-                    c.ProposedTargetValue,
-                    c.ProposedForecastValue,
-                    c.ProposedStatusCode,
-                    c.SubmittedBy,
-                    c.SubmittedAt,
-                    c.ApprovalStatus,
-                    c.RejectReason
-                })
-                .ToListAsync();
+    // keep ?showAll=1 for debugging
+    var showAll =
+        string.Equals(Request.Query["showAll"], "1", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(Request.Form["showAll"],  "1", StringComparison.OrdinalIgnoreCase);
 
-            // get current fact values to show diffs
-            var factIds = items.Select(i => i.KpiFactId).Distinct().ToList();
-            var curFacts = await _db.KpiFacts
-                .AsNoTracking()
-                .Where(f => factIds.Contains(f.KpiFactId))
-                .Select(f => new
-                {
-                    f.KpiFactId,
-                    f.ActualValue,
-                    f.TargetValue,
-                    f.ForecastValue,
-                    f.StatusCode
-                })
-                .ToDictionaryAsync(x => x.KpiFactId, x => x);
+    var q = _db.KpiFactChanges
+        .AsNoTracking()
+        .Where(c => c.ApprovalStatus == s);
 
-            // render HTML
-            static string H(string? s2) => WebUtility.HtmlEncode(s2 ?? "");
-            static string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
-            static string LabelStatus(string code) => (code ?? "").Trim().ToLowerInvariant() switch
-            {
-                "conforme" => "Ok",
-                "ecart" => "Needs Attention",
-                "rattrapage" => "Catching Up",
-                "attente" => "Data Missing",
-                "" => "—",
-                _ => code!
-            };
+    if (!isAdmin && !showAll)
+    {
+        q = q.Where(c =>
+            (from f in _db.KpiFacts
+             join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
+             where f.KpiFactId == c.KpiFactId
+                   && yp.OwnerLogin != null
+                   && yp.OwnerLogin == samUp
+             select 1).Any()
+        );
+    }
 
-            string DiffNum(string title, decimal? curV, decimal? newV)
-            {
-                var changed = (newV.HasValue && curV != newV);
-                var cls = changed ? "appr-diff" : "text-muted";
-                var cur = curV.HasValue ? curV.Value.ToString("0.###") : "—";
-                var pro = newV.HasValue ? newV.Value.ToString("0.###") : "—";
-                return $@"
+    var items = await q
+        .OrderByDescending(c => c.SubmittedAt)
+        .Select(c => new
+        {
+            c.KpiFactChangeId,
+            c.KpiFactId,
+            c.ProposedActualValue,
+            c.ProposedTargetValue,
+            c.ProposedForecastValue,
+            c.ProposedStatusCode,
+            c.SubmittedBy,
+            c.SubmittedAt,
+            c.ApprovalStatus,
+            c.RejectReason
+        })
+        .ToListAsync();
+
+    // pull current fact values for diffs
+    var factIds = items.Select(i => i.KpiFactId).Distinct().ToList();
+    var curFacts = await _db.KpiFacts
+        .AsNoTracking()
+        .Where(f => factIds.Contains(f.KpiFactId))
+        .Select(f => new { f.KpiFactId, f.ActualValue, f.TargetValue, f.ForecastValue, f.StatusCode })
+        .ToDictionaryAsync(x => x.KpiFactId, x => x);
+
+    // render minimal HTML (same markup you had)
+    static string H(string? s2) => WebUtility.HtmlEncode(s2 ?? "");
+    static string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
+    static string LabelStatus(string code) => (code ?? "").Trim().ToLowerInvariant() switch
+    {
+        "conforme" => "Ok",
+        "ecart" => "Needs Attention",
+        "rattrapage" => "Catching Up",
+        "attente" => "Data Missing",
+        "" => "—",
+        _ => code!
+    };
+
+    string DiffNum(string title, decimal? curV, decimal? newV)
+    {
+        var changed = (newV.HasValue && curV != newV);
+        var cls = changed ? "appr-diff" : "text-muted";
+        var cur = curV.HasValue ? curV.Value.ToString("0.###") : "—";
+        var pro = newV.HasValue ? newV.Value.ToString("0.###") : "—";
+        return $@"
 <div class='appr-cell'>
   <div class='small text-muted'>{H(title)}</div>
   <div class='{cls}'>{H(cur)} → <strong>{H(pro)}</strong></div>
 </div>";
-            }
+    }
 
-            string DiffStatus(string cur, string prop)
-            {
-                cur = cur?.Trim() ?? "";
-                prop = prop?.Trim() ?? "";
-                var changed = (!string.IsNullOrWhiteSpace(prop) &&
-                               !string.Equals(cur, prop, StringComparison.OrdinalIgnoreCase));
-                var cls = changed ? "appr-diff" : "text-muted";
-                return $@"
+    string DiffStatus(string cur, string prop)
+    {
+        cur = cur?.Trim() ?? "";
+        prop = prop?.Trim() ?? "";
+        var changed = (!string.IsNullOrWhiteSpace(prop) &&
+                       !string.Equals(cur, prop, StringComparison.OrdinalIgnoreCase));
+        var cls = changed ? "appr-diff" : "text-muted";
+        return $@"
 <div class='appr-cell'>
   <div class='small text-muted'>Status</div>
   <div class='{cls}'>{H(LabelStatus(cur))} → <strong>{H(LabelStatus(prop))}</strong></div>
 </div>";
-            }
+    }
 
-            var sb = new StringBuilder();
-            if (items.Count == 0)
-            {
-                sb.Append("<div class='text-muted small'>No items.</div>");
-            }
-            else
-            {
-                foreach (var c in items)
-                {
-                    curFacts.TryGetValue(c.KpiFactId, out var cf);
+    var sb = new StringBuilder();
+    if (items.Count == 0)
+    {
+        sb.Append("<div class='text-muted small'>No items.</div>");
+    }
+    else
+    {
+        foreach (var c in items)
+        {
+            curFacts.TryGetValue(c.KpiFactId, out var cf);
 
-                    var rowHead = $@"
+            var rowHead = $@"
 <div class='d-flex justify-content-between align-items-start'>
   <div>
     <div class='fw-bold'>KPI Fact #{H(c.KpiFactId.ToString())}</div>
@@ -356,55 +306,43 @@ if (!isAdmin && !showAll)
   </div>
 </div>";
 
-                    var rowDiffs = $@"
+            var rowDiffs = $@"
 <div class='row g-3 mt-2'>
-  <div class='col-6 col-md-3'>{DiffNum("Actual", cf?.ActualValue, c.ProposedActualValue)}</div>
-  <div class='col-6 col-md-3'>{DiffNum("Target", cf?.TargetValue, c.ProposedTargetValue)}</div>
+  <div class='col-6 col-md-3'>{DiffNum("Actual",   cf?.ActualValue,   c.ProposedActualValue)}</div>
+  <div class='col-6 col-md-3'>{DiffNum("Target",   cf?.TargetValue,   c.ProposedTargetValue)}</div>
   <div class='col-6 col-md-3'>{DiffNum("Forecast", cf?.ForecastValue, c.ProposedForecastValue)}</div>
-  <div class='col-6 col-md-3'>{DiffStatus(cf?.StatusCode ?? "", c.ProposedStatusCode ?? "")}</div>
+  <div class='col-6 col-md-3'>{DiffStatus(cf?.StatusCode ?? "",       c.ProposedStatusCode ?? "")}</div>
 </div>";
 
-                    sb.Append($@"
+            sb.Append($@"
 <div class='border rounded-3 bg-white p-3 mb-2'>
   {rowHead}
   {rowDiffs}
 </div>");
-                }
-            }
-
-            return Content(sb.ToString(), "text/html");
         }
+    }
+
+    return Content(sb.ToString(), "text/html");
+}
+
 
 private async Task<bool> IsOwnerOrAdminForChangeAsync(decimal changeId)
 {
     if (_admin.IsAdmin(User)) return true;
 
-    var sam   = Sam();
-    var samUp = sam.ToUpperInvariant();
+    var samUp = Sam(User?.Identity?.Name).ToUpperInvariant();
 
-    var dot     = sam.IndexOf('.');
-    var firstUp = (dot > 0 ? sam[..dot] : sam).ToUpperInvariant();
-    var lastUp  = (dot > 0 ? sam[(dot + 1)..] : string.Empty).ToUpperInvariant();
-
-    var pair = await (
+    var ownerLogin = await (
         from c  in _db.KpiFactChanges
         join f  in _db.KpiFacts      on c.KpiFactId     equals f.KpiFactId
         join yp in _db.KpiYearPlans  on f.KpiYearPlanId equals yp.KpiYearPlanId
         where c.KpiFactChangeId == changeId
-        select new { yp.Owner, yp.Editor }
+        select yp.OwnerLogin
     ).FirstOrDefaultAsync();
 
-    if (pair == null) return false;
-
-    bool ownerMatch = pair.Owner != null && (
-        pair.Owner.Trim().ToUpper() == samUp ||
-        pair.Owner.ToUpper().EndsWith("\\" + samUp) ||
-        pair.Owner.ToUpper().StartsWith(samUp + "@") ||
-        (lastUp != "" && pair.Owner.ToUpper().Contains(firstUp) && pair.Owner.ToUpper().Contains(lastUp))
-    );
-
-    return ownerMatch;
+    return !string.IsNullOrWhiteSpace(ownerLogin) && ownerLogin!.ToUpper() == samUp;
 }
+
 
 [HttpGet]
 public async Task<IActionResult> DebugOwner()
