@@ -265,20 +265,6 @@ namespace KPIMonitor.Data
                  .HasConstraintName("FK_KPI_ACT_HIST_ACTION");
             });
             modelBuilder.Entity<AuditLog>(e =>
-<<<<<<< Updated upstream
-{
-    e.ToTable("AUDITLOG");
-    e.HasKey(x => x.AuditId);
-    e.Property(x => x.AuditId).HasColumnName("AUDITID").ValueGeneratedOnAdd();
-    e.Property(x => x.TableName).HasColumnName("TABLENAME").HasMaxLength(128).IsRequired();
-    e.Property(x => x.KeyJson).HasColumnName("KEYJSON").IsRequired();              // CLOB/NVARCHAR2 under the hood
-    e.Property(x => x.Action).HasColumnName("ACTION").HasMaxLength(20).IsRequired();
-    e.Property(x => x.ChangedBy).HasColumnName("CHANGEDBY").HasMaxLength(150);
-    e.Property(x => x.ChangedAtUtc).HasColumnName("CHANGEDATUTC");
-    e.Property(x => x.ColumnChangesJson).HasColumnName("COLUMNCHANGESJSON").IsRequired();
-});
-        }
-=======
             {
                 e.ToTable("AUDITLOG");
                 e.HasKey(x => x.AuditId);
@@ -320,7 +306,6 @@ namespace KPIMonitor.Data
 }
 
         
->>>>>>> Stashed changes
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             // collect audit rows BEFORE saving

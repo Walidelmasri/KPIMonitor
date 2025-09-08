@@ -57,5 +57,7 @@ namespace KPIMonitor.Models
         public DimKpi? Kpi { get; set; }
         public DimPeriod? Period { get; set; }
         public KpiYearPlan? KpiYearPlan { get; set; }
+        public virtual ICollection<KpiFactChange> Changes { get; set; } = new List<KpiFactChange>();
+
     }
 }
