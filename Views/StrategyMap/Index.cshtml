@@ -36,8 +36,12 @@
   }
   .pillar-head {
     position: sticky; top: calc(var(--rails-header-offset, 0px)); z-index:1;
-    background: linear-gradient(180deg, #0d6efd 0%, #0a58ca 100%);
-    color:#fff; border-top-left-radius:12px; border-top-right-radius:12px;
+    /* CHANGED: neutral grey header instead of blue gradient */
+    background:#f8f9fa;
+    color:#212529;
+    border-top-left-radius:12px;
+    border-top-right-radius:12px;
+    border-bottom:1px solid #e9ecef;
     padding:.6rem .8rem; text-align:center; font-weight:700; letter-spacing:.2px;
   }
   .pillar-title-small { font-size:.82rem; opacity:.95; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -45,17 +49,15 @@
     display:grid; gap:.55rem; padding:.7rem; align-content:flex-start;
   }
 
-  /* ===== Objective cards (compact) ===== */
+  /* ===== Objective cards (unchanged sizing & full background color) ===== */
   .objective-card {
     color:#fff; border-radius:10px; padding:.5rem .6rem; border:1px solid rgba(255,255,255,.22);
     box-shadow: 0 4px 10px rgba(0,0,0,.06);
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    text-shadow: 0 1px 0 rgba(0,0,0,.2); /* readability on strong colors */
   }
   .objective-code { font-size:.78rem; font-weight:800; letter-spacing:.3px; opacity:.95; }
   .objective-name { font-size:.8rem; line-height:1.25; margin-top:.15rem; word-break:break-word; }
-
-  /* Accessibility: ensure text stays readable on strong colors */
-  .objective-card { text-shadow: 0 1px 0 rgba(0,0,0,.2); }
 
   /* ===== Print ===== */
   @@media print {
@@ -67,7 +69,7 @@
 
 <div class="container strategy-wrap">
   @section PageHeader {
-        <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
+    <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
       <div class="page-hero-content">
         <h1 class="page-title">Strategy Map</h1>
         <div class="page-subtitle">Latest statuses • Year @Model.Year</div>
@@ -80,7 +82,7 @@
       <form method="get" class="d-flex align-items-center gap-2">
         <label for="year" class="form-label mb-0 small">Year (optional)</label>
         <input id="year" name="year" type="number" class="form-control form-control-sm" style="width:110px" value="@Model.Year" />
-        <button class="btn btn-sm btn-outline-primary rounded-4">Apply</button>
+        <button class="btn btn-sm btn-outline-secondary rounded-4">Apply</button>
       </form>
 
       <div class="legend" aria-label="Status legend">

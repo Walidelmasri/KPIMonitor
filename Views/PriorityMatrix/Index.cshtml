@@ -1,0 +1,172 @@
+@model KPIMonitor.Models.ViewModels.PriorityMatrixVm
+@{
+  ViewData["Title"] = "Priority Matrix";
+}
+
+<style>
+  .pm-wrap { padding-block: 1rem 2rem; }
+
+  /* ---- Matrix layout (2×2) ---- */
+  .pm-grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 24px; /* more space between quadrants */
+  }
+  @@media (max-width: 992px){
+    .pm-grid { grid-template-columns: 1fr; grid-template-rows: auto auto auto auto; }
+  }
+
+  /* center cross lines drawn UNDER the tiles */
+  .pm-grid::before,
+  .pm-grid::after {
+    content:"";
+    position:absolute;
+    background:#dee2e6;
+    z-index:0; /* keep under cells */
+  }
+  .pm-grid::before { /* vertical */
+    top:0; left:50%; width:1px; height:100%; transform:translateX(-0.5px);
+  }
+  .pm-grid::after { /* horizontal */
+    left:0; top:50%; height:1px; width:100%; transform:translateY(-0.5px);
+  }
+  @@media (max-width: 992px){
+    .pm-grid::before, .pm-grid::after { display:none; }
+  }
+
+  /* ---- Quadrant cell ---- */
+  .pm-cell {
+    position: relative; z-index:1; /* above cross lines */
+    background:#fff;
+    border:1px solid #e9ecef;
+    border-radius:14px;
+    box-shadow:0 6px 16px rgba(0,0,0,.04);
+    padding:12px;
+    min-height: 420px; /* more vertical room */
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+
+  /* neutral header (no blue) */
+  .pm-head {
+    position: sticky;
+    top: calc(var(--rails-header-offset, 0px));
+    background:#f8f9fa;
+    color:#212529;
+    border:1px solid #e9ecef;
+    border-radius:10px;
+    padding:.5rem .75rem;
+    font-weight:800;
+    text-align:center;
+    letter-spacing:.2px;
+  }
+
+  /* ---- Tiles grid inside a quadrant ---- */
+  .pm-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); /* boxed tiles */
+    gap: 10px;
+    align-content: start;
+  }
+
+  /* ---- Objective tile (compact card with left color strip) ---- */
+  .pm-tile {
+    display: grid;
+    grid-template-columns: 8px 1fr;
+    gap: 10px;
+    align-items: start;
+    background:#fff;
+    border:1px solid #e9ecef;
+    border-radius:12px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.05);
+    padding:10px 12px;
+    min-height: 68px;
+  }
+  .pm-strip {
+    width:8px; height:100%;
+    border-radius:6px;
+  }
+  .pm-code {
+    font-size:.75rem;
+    font-weight:800;
+    letter-spacing:.3px;
+    color:#6c757d;
+    margin-bottom:2px;
+  }
+  .pm-name {
+    font-size:.82rem;
+    line-height:1.25;
+    color:#212529;
+    word-break:break-word;
+  }
+
+  /* print */
+  @@media print {
+    .page-hero, .pm-toolbar { display:none !important; }
+    .pm-wrap { padding:0; }
+    .pm-cell { box-shadow:none; break-inside:avoid; }
+  }
+</style>
+
+<div class="container pm-wrap">
+  @section PageHeader {
+    <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
+      <div class="page-hero-content">
+        <h1 class="page-title">Priority Matrix</h1>
+        <div class="page-subtitle">
+          Objectives by priority (1–4) • @((Model.Year.HasValue ? $"Year {Model.Year}" : "Latest statuses"))
+        </div>
+      </div>
+    </div>
+  }
+
+  <div class="with-rails">
+    <div class="pm-toolbar d-flex align-items-center gap-2 mb-2">
+      <form method="get" class="d-flex align-items-center gap-2">
+        <label for="year" class="form-label mb-0 small">Year (optional)</label>
+        <input id="year" name="year" type="number" class="form-control form-control-sm" style="width:110px" value="@Model.Year" />
+        <button class="btn btn-sm btn-outline-secondary rounded-4">Apply</button>
+      </form>
+    </div>
+
+    <div class="pm-grid">
+      @{
+        var q1 = Model.Quadrants.FirstOrDefault(q => q.Quadrant == 1);
+        var q2 = Model.Quadrants.FirstOrDefault(q => q.Quadrant == 2);
+        var q3 = Model.Quadrants.FirstOrDefault(q => q.Quadrant == 3);
+        var q4 = Model.Quadrants.FirstOrDefault(q => q.Quadrant == 4);
+        var arr = new[]{ q1, q2, q3, q4 };
+      }
+
+      @foreach (var q in arr)
+      {
+        <section class="pm-cell">
+          <header class="pm-head">Priority @q?.Quadrant</header>
+
+          <div class="pm-tiles">
+            @if (q?.Objectives?.Any() == true)
+            {
+              foreach (var o in q!.Objectives)
+              {
+                <article class="pm-tile">
+                  <span class="pm-strip" style="background:@o.StatusColor"></span>
+                  <div>
+                    <div class="pm-code">@o.ObjectiveCode</div>
+                    <div class="pm-name">@o.ObjectiveName</div>
+                  </div>
+                </article>
+              }
+            }
+            else
+            {
+              <div class="text-muted small">No objectives.</div>
+            }
+          </div>
+        </section>
+      }
+    </div>
+  </div>
+</div>
