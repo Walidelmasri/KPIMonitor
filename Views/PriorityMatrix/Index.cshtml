@@ -72,34 +72,37 @@
     align-content: start;
   }
 
-  /* ---- Objective tile (compact card with left color strip) ---- */
+  /* ---- Objective tile (compact card) ---- */
   .pm-tile {
+    --status:#6c757d;                /* injected per-card via style attr */
     display: grid;
-    grid-template-columns: 8px 1fr;
+    grid-template-columns: 1fr;      /* full fill (no left dash) */
     gap: 10px;
     align-items: start;
-    background:#fff;
-    border:1px solid #e9ecef;
+    background: var(--status);       /* <— fill with status color */
+    color:#fff;
+    border:1px solid transparent;
     border-radius:12px;
-    box-shadow: 0 3px 10px rgba(0,0,0,.05);
+    box-shadow: 0 3px 10px rgba(0,0,0,.10);
     padding:10px 12px;
     min-height: 68px;
+    text-shadow: 0 1px 0 rgba(0,0,0,.25); /* readability on strong colors */
   }
-  .pm-strip {
-    width:8px; height:100%;
-    border-radius:6px;
-  }
+  /* keep markup-compatible if a strip element remains */
+  .pm-tile .pm-strip { display:none; }
+
   .pm-code {
     font-size:.75rem;
     font-weight:800;
     letter-spacing:.3px;
-    color:#6c757d;
+    color:#fff;
+    opacity:.95;
     margin-bottom:2px;
   }
   .pm-name {
     font-size:.82rem;
     line-height:1.25;
-    color:#212529;
+    color:#fff;
     word-break:break-word;
   }
 
@@ -151,8 +154,9 @@
             {
               foreach (var o in q!.Objectives)
               {
-                <article class="pm-tile">
-                  <span class="pm-strip" style="background:@o.StatusColor"></span>
+                <article class="pm-tile" style="--status:@o.StatusColor">
+                  <!-- pm-strip kept for markup compatibility; hidden by CSS -->
+                  <span class="pm-strip"></span>
                   <div>
                     <div class="pm-code">@o.ObjectiveCode</div>
                     <div class="pm-name">@o.ObjectiveName</div>
