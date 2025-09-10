@@ -202,7 +202,7 @@ namespace KPIMonitor.Controllers
         /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ListHtml(string? status = "pending", CancellationToken ct = default)
+public async Task<IActionResult> ListHtml(string? status = "pending", string? modeOverride = null, CancellationToken ct = default)
         {
             var s = (status ?? "pending").Trim().ToLowerInvariant();
             if (s != "pending" && s != "approved" && s != "rejected") s = "pending";
@@ -221,6 +221,16 @@ namespace KPIMonitor.Controllers
                                        .AnyAsync(p => p.OwnerEmpId == myEmp, ct);
 
             var mode = (isAdmin || isOwnerSomewhere) ? "owner" : "editor";
+// Optional query override: ?mode=editor or ?mode=owner
+var forced = (modeOverride ?? Request?.Query["mode"].FirstOrDefault())?.Trim().ToLowerInvariant();
+if (forced == "editor")
+{
+    mode = "editor";
+}
+else if (forced == "owner" && (isAdmin || isOwnerSomewhere))
+{
+    mode = "owner";
+}
 
             // Base query by status
             var q = _db.KpiFactChanges.AsNoTracking()
@@ -238,18 +248,26 @@ namespace KPIMonitor.Controllers
                      select 1).Any()
                 );
             }
-            else if (mode == "editor")
-            {
-                // Only requests on plans where I am the EDITOR
-                q = q.Where(c =>
-                    (from f in _db.KpiFacts
-                     join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
-                     where f.KpiFactId == c.KpiFactId
-                           && yp.EditorEmpId != null
-                           && yp.EditorEmpId == myEmp
-                     select 1).Any()
-                );
-            }
+else if (mode == "editor")
+ {
+     if (string.IsNullOrWhiteSpace(myEmp))
+     {
+         // Fallback: show items I submitted if EmpId mapping is missing
+         q = q.Where(c => c.SubmittedBy != null && c.SubmittedBy.ToUpper() == mySamUp);
+     }
+     else
+     {
+         // Only requests on plans where I am the EDITOR
+         q = q.Where(c =>
+             (from f in _db.KpiFacts
+              join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
+              where f.KpiFactId == c.KpiFactId
+                    && yp.EditorEmpId != null
+                    && yp.EditorEmpId == myEmp
+              select 1).Any()
+         );
+     }
+ }
             // else admin: no extra filter (see all)
 
             // Pull rows
