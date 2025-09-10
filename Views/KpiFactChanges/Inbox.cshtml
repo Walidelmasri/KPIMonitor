@@ -18,16 +18,18 @@
 
   <!-- antiforgery for AJAX -->
   <form id="af" class="d-none" method="post">@Html.AntiForgeryToken()</form>
+  <div class="with-rails">
 
-  <div class="d-flex gap-2 mb-3">
-    <button class="btn btn-sm btn-primary" data-tab="pending">Pending</button>
-    <button class="btn btn-sm btn-outline-secondary" data-tab="approved">Approved</button>
-    <button class="btn btn-sm btn-outline-secondary" data-tab="rejected">Rejected</button>
-    <button class="btn btn-sm btn-outline-secondary ms-auto" id="refreshBtn">↻ Refresh</button>
-  </div>
+    <div class="d-flex gap-2 mb-3">
+      <button class="btn btn-sm btn-primary" data-tab="pending">Pending</button>
+      <button class="btn btn-sm btn-outline-secondary" data-tab="approved">Approved</button>
+      <button class="btn btn-sm btn-outline-secondary" data-tab="rejected">Rejected</button>
+      <button class="btn btn-sm btn-outline-secondary ms-auto" id="refreshBtn">↻ Refresh</button>
+    </div>
 
-  <div id="apprBody" class="bg-white border rounded-3 p-3">
-    <div class="text-muted small">Loading…</div>
+    <div id="apprBody" class="bg-white border rounded-3 p-3">
+      <div class="text-muted small">Loading…</div>
+    </div>
   </div>
 </div>
 
@@ -93,8 +95,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     // ---------- tiny helpers ----------
-    const $  = (id) => document.getElementById(id);
-    const qs = (sel, root=document) => root.querySelector(sel);
+    const $ = (id) => document.getElementById(id);
+    const qs = (sel, root = document) => root.querySelector(sel);
     const anti = () => (qs('input[name="__RequestVerificationToken"]')?.value || '');
 
     let currentTab = 'pending';
@@ -106,7 +108,7 @@
       const body = $('apprBody');
       body.innerHTML = "<div class='text-muted small'>Loading…</div>";
       try {
-        const listUrl = '@Url.Action("ListHtml","KpiFactChanges")' + (window.location.search || '');
+        const listUrl = '@Url.Action("ListHtml", "KpiFactChanges")' + (window.location.search || '');
         const res = await fetch(listUrl, {
           method: 'POST',
           headers: {
@@ -169,13 +171,13 @@
             const fd = new FormData();
             fd.append('__RequestVerificationToken', anti());
             fd.append('changeId', id);
-            const res = await fetch('@Url.Action("Approve","KpiFactChanges")', {
+            const res = await fetch('@Url.Action("Approve", "KpiFactChanges")', {
               method: 'POST',
-              headers: { 'X-Requested-With':'XMLHttpRequest','Accept':'application/json' },
+              headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
               body: fd
             });
             if (!res.ok) {
-              const err = await res.json().catch(()=>null);
+              const err = await res.json().catch(() => null);
               throw new Error(err?.error || 'Approve failed');
             }
             await loadList(currentTab);
@@ -208,13 +210,13 @@
 
       try {
         const fd = new FormData(ev.target);
-        const res = await fetch('@Url.Action("Reject","KpiFactChanges")', {
+        const res = await fetch('@Url.Action("Reject", "KpiFactChanges")', {
           method: 'POST',
-          headers: { 'X-Requested-With':'XMLHttpRequest','Accept':'application/json' },
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
           body: fd
         });
         if (!res.ok) {
-          const err = await res.json().catch(()=>null);
+          const err = await res.json().catch(() => null);
           throw new Error(err?.error || 'Reject failed');
         }
         bootstrap.Modal.getInstance(document.getElementById('rejectModal')).hide();
@@ -226,20 +228,20 @@
     document.addEventListener('DOMContentLoaded', () => loadList('pending'));
 
     // ---------- details modal helpers (single definitions; no duplicates) ----------
-    const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const normalize = s => String(s ?? '').toLowerCase().replace(/[—–-]/g,'-').replace(/\s+/g,' ').trim();
-    function toNum(v){ return (v === null || v === undefined || v === '') ? null : Number(v); }
-    function isFiniteNum(v){ return typeof v === 'number' && isFinite(v); }
+    const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const normalize = s => String(s ?? '').toLowerCase().replace(/[—–-]/g, '-').replace(/\s+/g, ' ').trim();
+    function toNum(v) { return (v === null || v === undefined || v === '') ? null : Number(v); }
+    function isFiniteNum(v) { return typeof v === 'number' && isFinite(v); }
 
     // robust label matcher
-    function findLabelIndex(labels, period){
+    function findLabelIndex(labels, period) {
       const L = labels.map(normalize);
-      const y  = period?.year ?? null;
+      const y = period?.year ?? null;
       const qn = period?.quarterNum ?? null;
       const mn = period?.monthNum ?? null;
 
       if (y != null && (qn != null || mn != null)) {
-        const cand = qn != null ? `${y} - q${qn}` : `${y} - ${MONTH_ABBR[(mn-1)||0]}`;
+        const cand = qn != null ? `${y} - q${qn}` : `${y} - ${MONTH_ABBR[(mn - 1) || 0]}`;
         const idx = L.findIndex(x => x === normalize(cand));
         if (idx >= 0) return idx;
       }
@@ -259,28 +261,28 @@
     }
 
     // ---------- openDetails: builds chart with proposed overlay ----------
-    async function openDetails(changeId){
+    async function openDetails(changeId) {
       try {
         // 1) change info (proposed + period)
-        const infoUrl = '@Url.Action("ChangeOverlayInfo","KpiFactChanges")' + '?changeId=' + encodeURIComponent(changeId);
-        const info = await fetch(infoUrl, { headers: { 'Accept':'application/json' } }).then(r => r.json());
+        const infoUrl = '@Url.Action("ChangeOverlayInfo", "KpiFactChanges")' + '?changeId=' + encodeURIComponent(changeId);
+        const info = await fetch(infoUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
         if (!info?.ok) throw new Error(info?.error || 'Failed to load details.');
 
         // 2) base chart payload (same as RedBoard)
-        const baseUrl = '@Url.Action("GetKpiPresentation","RedBoard")' + '?kpiId=' + encodeURIComponent(info.kpiId);
-        const base = await fetch(baseUrl, { headers: { 'Accept':'application/json' } }).then(r => r.json());
+        const baseUrl = '@Url.Action("GetKpiPresentation", "RedBoard")' + '?kpiId=' + encodeURIComponent(info.kpiId);
+        const base = await fetch(baseUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
 
         const baseLabels = base?.chart?.labels || [];
-        const actBase    = (base?.chart?.actual   || []).slice();
-        const tgtBase    = (base?.chart?.target   || []).slice();
-        const fctBase    = (base?.chart?.forecast || []).slice();
+        const actBase = (base?.chart?.actual || []).slice();
+        const tgtBase = (base?.chart?.target || []).slice();
+        const fctBase = (base?.chart?.forecast || []).slice();
 
-        const yrs        = Array.isArray(base?.chart?.yearTargets) ? base.chart.yearTargets : [];
+        const yrs = Array.isArray(base?.chart?.yearTargets) ? base.chart.yearTargets : [];
         const yearLabels = yrs.map(y => String(y.year));
-        const yearVals   = yrs.map(y => (y?.value ?? null));
+        const yearVals = yrs.map(y => (y?.value ?? null));
 
         const labels = baseLabels.concat(yearLabels);
-        const pad    = new Array(yearLabels.length).fill(null);
+        const pad = new Array(yearLabels.length).fill(null);
         const leftNulls = new Array(baseLabels.length).fill(null);
 
         const act = actBase.concat(pad);
@@ -288,34 +290,34 @@
         const fct = fctBase.concat(pad);
         const yearBar = leftNulls.concat(yearVals); // 5-year bars
 
-        const pActual   = toNum(info?.proposed?.actual);
-        const pTarget   = toNum(info?.proposed?.target);
+        const pActual = toNum(info?.proposed?.actual);
+        const pTarget = toNum(info?.proposed?.target);
         const pForecast = toNum(info?.proposed?.forecast);
 
         const pIdx = findLabelIndex(labels, info.period);
 
-        const overlayActual   = new Array(labels.length).fill(null);
-        const overlayTarget   = new Array(labels.length).fill(null);
+        const overlayActual = new Array(labels.length).fill(null);
+        const overlayTarget = new Array(labels.length).fill(null);
         const overlayForecast = new Array(labels.length).fill(null);
         if (pIdx >= 0) {
-          if (isFiniteNum(pActual))   overlayActual[pIdx]   = pActual;
-          if (isFiniteNum(pTarget))   overlayTarget[pIdx]   = pTarget;
+          if (isFiniteNum(pActual)) overlayActual[pIdx] = pActual;
+          if (isFiniteNum(pTarget)) overlayTarget[pIdx] = pTarget;
           if (isFiniteNum(pForecast)) overlayForecast[pIdx] = pForecast;
         }
 
         const overlayColor = '#0d6efd';
         const datasets = [
-          { type:'bar',  label:'Actual',   data: act,  backgroundColor:'#800080', borderColor:'#800080', borderWidth:2, borderSkipped:'bottom' },
-          { type:'line', label:'Target',   data: tgt,  borderColor:'#7a7a7a', pointBackgroundColor:'#7a7a7a', pointBorderColor:'#7a7a7a', borderWidth:2, tension:.3, fill:false },
-          { type:'line', label:'Forecast', data: fct,  borderColor:'#fd7e14', pointBackgroundColor:'#fd7e14', pointBorderColor:'#fd7e14', borderDash:[5,5], borderWidth:2, tension:.3, fill:false },
-          { type:'bar',  label:'Year Target', data: yearBar, backgroundColor:'#7a7a7a', borderColor:'#7a7a7a', borderWidth:1 }
+          { type: 'bar', label: 'Actual', data: act, backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
+          { type: 'line', label: 'Target', data: tgt, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
+          { type: 'line', label: 'Forecast', data: fct, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
+          { type: 'bar', label: 'Year Target', data: yearBar, backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
         ];
         if (overlayActual.some(v => v != null))
-          datasets.push({ type:'bar',  label:'Proposed Actual',   data: overlayActual,   backgroundColor:overlayColor, borderColor:overlayColor, borderWidth:2, borderSkipped:'bottom' });
+          datasets.push({ type: 'bar', label: 'Proposed Actual', data: overlayActual, backgroundColor: overlayColor, borderColor: overlayColor, borderWidth: 2, borderSkipped: 'bottom' });
         if (overlayTarget.some(v => v != null))
-          datasets.push({ type:'line', label:'Proposed Target',   data: overlayTarget,   borderColor:overlayColor, pointBackgroundColor:overlayColor, pointBorderColor:overlayColor, borderWidth:2, tension:.3, fill:false });
+          datasets.push({ type: 'line', label: 'Proposed Target', data: overlayTarget, borderColor: overlayColor, pointBackgroundColor: overlayColor, pointBorderColor: overlayColor, borderWidth: 2, tension: .3, fill: false });
         if (overlayForecast.some(v => v != null))
-          datasets.push({ type:'line', label:'Proposed Forecast', data: overlayForecast, borderColor:overlayColor, pointBackgroundColor:overlayColor, pointBorderColor:overlayColor, borderDash:[2,2], borderWidth:2, tension:.3, fill:false });
+          datasets.push({ type: 'line', label: 'Proposed Forecast', data: overlayForecast, borderColor: overlayColor, pointBackgroundColor: overlayColor, pointBorderColor: overlayColor, borderDash: [2, 2], borderWidth: 2, tension: .3, fill: false });
 
         // header text
         $('detailsLabel').textContent = info.kpiText || 'Change Details';
@@ -324,10 +326,10 @@
           (info.submittedBy ? ` • Submitted by ${info.submittedBy}` : '') +
           (info.submittedAt ? ` at ${info.submittedAt}` : '');
 
-        $('pv_actual').textContent   = isFiniteNum(pActual)   ? String(pActual)   : '—';
-        $('pv_target').textContent   = isFiniteNum(pTarget)   ? String(pTarget)   : '—';
+        $('pv_actual').textContent = isFiniteNum(pActual) ? String(pActual) : '—';
+        $('pv_target').textContent = isFiniteNum(pTarget) ? String(pTarget) : '—';
         $('pv_forecast').textContent = isFiniteNum(pForecast) ? String(pForecast) : '—';
-        $('pv_status').textContent   = info?.proposed?.status || '—';
+        $('pv_status').textContent = info?.proposed?.status || '—';
 
         // show modal + render chart
         new bootstrap.Modal(document.getElementById('detailsModal')).show();
@@ -337,11 +339,11 @@
           type: 'bar',
           data: { labels, datasets },
           options: {
-            responsive:true, maintainAspectRatio:false,
-            scales:{ x:{ grid:{display:false}}, y:{ grid:{display:false}, beginAtZero:true } },
-            plugins:{
-              legend:{ position:'top', labels:{ boxWidth:12, boxHeight:10, padding:12, font:{ size:10, weight:'700' } } },
-              tooltip:{ enabled:true }
+            responsive: true, maintainAspectRatio: false,
+            scales: { x: { grid: { display: false } }, y: { grid: { display: false }, beginAtZero: true } },
+            plugins: {
+              legend: { position: 'top', labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 10, weight: '700' } } },
+              tooltip: { enabled: true }
             }
           }
         });
@@ -352,4 +354,3 @@
     }
   </script>
 }
-

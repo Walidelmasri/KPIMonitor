@@ -202,7 +202,7 @@ namespace KPIMonitor.Controllers
         /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
-public async Task<IActionResult> ListHtml(string? status = "pending", string? modeOverride = null, CancellationToken ct = default)
+        public async Task<IActionResult> ListHtml(string? status = "pending", string? modeOverride = null, CancellationToken ct = default)
         {
             var s = (status ?? "pending").Trim().ToLowerInvariant();
             if (s != "pending" && s != "approved" && s != "rejected") s = "pending";
@@ -221,16 +221,16 @@ public async Task<IActionResult> ListHtml(string? status = "pending", string? mo
                                        .AnyAsync(p => p.OwnerEmpId == myEmp, ct);
 
             var mode = (isAdmin || isOwnerSomewhere) ? "owner" : "editor";
-// Optional query override: ?mode=editor or ?mode=owner
-var forced = (modeOverride ?? Request?.Query["mode"].FirstOrDefault())?.Trim().ToLowerInvariant();
-if (forced == "editor")
-{
-    mode = "editor";
-}
-else if (forced == "owner" && (isAdmin || isOwnerSomewhere))
-{
-    mode = "owner";
-}
+            // Optional query override: ?mode=editor or ?mode=owner
+            var forced = (modeOverride ?? Request?.Query["mode"].FirstOrDefault())?.Trim().ToLowerInvariant();
+            if (forced == "editor")
+            {
+                mode = "editor";
+            }
+            else if (forced == "owner" && (isAdmin || isOwnerSomewhere))
+            {
+                mode = "owner";
+            }
 
             // Base query by status
             var q = _db.KpiFactChanges.AsNoTracking()
@@ -248,26 +248,26 @@ else if (forced == "owner" && (isAdmin || isOwnerSomewhere))
                      select 1).Any()
                 );
             }
-else if (mode == "editor")
- {
-     if (string.IsNullOrWhiteSpace(myEmp))
-     {
-         // Fallback: show items I submitted if EmpId mapping is missing
-         q = q.Where(c => c.SubmittedBy != null && c.SubmittedBy.ToUpper() == mySamUp);
-     }
-     else
-     {
-         // Only requests on plans where I am the EDITOR
-         q = q.Where(c =>
-             (from f in _db.KpiFacts
-              join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
-              where f.KpiFactId == c.KpiFactId
-                    && yp.EditorEmpId != null
-                    && yp.EditorEmpId == myEmp
-              select 1).Any()
-         );
-     }
- }
+            else if (mode == "editor")
+            {
+                if (string.IsNullOrWhiteSpace(myEmp))
+                {
+                    // Fallback: show items I submitted if EmpId mapping is missing
+                    q = q.Where(c => c.SubmittedBy != null && c.SubmittedBy.ToUpper() == mySamUp);
+                }
+                else
+                {
+                    // Only requests on plans where I am the EDITOR
+                    q = q.Where(c =>
+                        (from f in _db.KpiFacts
+                         join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
+                         where f.KpiFactId == c.KpiFactId
+                               && yp.EditorEmpId != null
+                               && yp.EditorEmpId == myEmp
+                         select 1).Any()
+                    );
+                }
+            }
             // else admin: no extra filter (see all)
 
             // Pull rows
@@ -386,17 +386,20 @@ else if (mode == "editor")
   </div>
   <div class='text-end'>
     {(
-        c.ApprovalStatus == "pending" && canAct
-        ? $@"<div class='btn-group'>
-                <button type='button' class='btn btn-success btn-sm appr-btn' data-action='approve' data-id='{c.KpiFactChangeId}'>Approve</button>
-                <button type='button' class='btn btn-outline-danger btn-sm appr-btn' data-action='reject' data-id='{c.KpiFactChangeId}'>Reject</button>
-             </div>"
+        c.ApprovalStatus == "pending"
+        ? (canAct
+            ? $@"<div class='btn-group'>
+                    <button type='button' class='btn btn-success btn-sm appr-btn' data-action='approve' data-id='{c.KpiFactChangeId}'>Approve</button>
+                    <button type='button' class='btn btn-outline-danger btn-sm appr-btn' data-action='reject' data-id='{c.KpiFactChangeId}'>Reject</button>
+                 </div>"
+            : "<span class='badge text-bg-warning'>Pending</span>")
         : c.ApprovalStatus == "approved"
             ? "<span class='badge text-bg-success'>Approved</span>"
             : $@"<span class='badge text-bg-danger'>Rejected</span>
                  <div class='small text-muted mt-1'>Reason: {H(c.RejectReason)}</div>"
       )}
   </div>
+
 </div>";
 
                     var rowDiffs = $@"
