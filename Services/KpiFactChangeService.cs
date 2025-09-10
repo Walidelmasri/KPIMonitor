@@ -30,7 +30,7 @@ namespace KPIMonitor.Services
             if (await HasPendingAsync(kpiFactId))
                 throw new InvalidOperationException("A change is already pending for this KPI fact.");
 
-            // (optional) guard: ensure fact exists
+            // guard: ensure fact exists (and is active)
             var factExists = await _db.KpiFacts
                 .AsNoTracking()
                 .AnyAsync(f => f.KpiFactId == kpiFactId && f.IsActive == 1);
@@ -51,8 +51,40 @@ namespace KPIMonitor.Services
 
             _db.KpiFactChanges.Add(change);
             await _db.SaveChangesAsync();
+
+            // --- AUTO-APPROVE when OwnerEmpId == EditorEmpId for this KPI's plan ---
+            var who = await (
+                from f in _db.KpiFacts
+                join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
+                where f.KpiFactId == kpiFactId
+                select new { yp.OwnerEmpId, yp.EditorEmpId }
+            ).FirstOrDefaultAsync();
+
+            var owner = who?.OwnerEmpId?.Trim();
+            var editor = who?.EditorEmpId?.Trim();
+
+            if (!string.IsNullOrWhiteSpace(owner) &&
+                !string.IsNullOrWhiteSpace(editor) &&
+                string.Equals(owner, editor, StringComparison.Ordinal))
+            {
+                // Apply proposed values immediately (same as manual approval)
+                var fact = await _db.KpiFacts.FirstAsync(x => x.KpiFactId == kpiFactId);
+
+                if (change.ProposedActualValue.HasValue) fact.ActualValue = change.ProposedActualValue.Value;
+                if (change.ProposedTargetValue.HasValue) fact.TargetValue = change.ProposedTargetValue.Value;
+                if (change.ProposedForecastValue.HasValue) fact.ForecastValue = change.ProposedForecastValue.Value;
+                if (!string.IsNullOrWhiteSpace(change.ProposedStatusCode)) fact.StatusCode = change.ProposedStatusCode;
+
+                change.ApprovalStatus = "approved";
+                change.ReviewedAt = DateTime.UtcNow;  // real timestamp
+                change.ReviewedBy = owner;            // or "auto" if you prefer
+
+                await _db.SaveChangesAsync();
+            }
+
             return change;
         }
+
 
         public async Task ApproveAsync(decimal changeId, string reviewer)
         {
@@ -68,8 +100,8 @@ namespace KPIMonitor.Services
             if (fact == null) throw new InvalidOperationException("Target KPI fact not found.");
 
             // apply only the provided values
-            if (ch.ProposedActualValue.HasValue)   fact.ActualValue   = ch.ProposedActualValue.Value;
-            if (ch.ProposedTargetValue.HasValue)   fact.TargetValue   = ch.ProposedTargetValue.Value;
+            if (ch.ProposedActualValue.HasValue) fact.ActualValue = ch.ProposedActualValue.Value;
+            if (ch.ProposedTargetValue.HasValue) fact.TargetValue = ch.ProposedTargetValue.Value;
             if (ch.ProposedForecastValue.HasValue) fact.ForecastValue = ch.ProposedForecastValue.Value;
             if (!string.IsNullOrWhiteSpace(ch.ProposedStatusCode)) fact.StatusCode = ch.ProposedStatusCode;
 

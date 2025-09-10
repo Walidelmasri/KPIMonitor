@@ -126,7 +126,17 @@ namespace KPIMonitor.Controllers
                     ProposedStatusCode,
                     submittedBy);
 
-                return Json(new { ok = true, changeId = change.KpiFactChangeId, message = "Submitted for approval." });
+                var msg = string.Equals(change.ApprovalStatus, "approved", StringComparison.OrdinalIgnoreCase)
+                          ? "Saved & auto-approved."
+                          : "Submitted for approval.";
+
+                return Json(new
+                {
+                    ok = true,
+                    changeId = change.KpiFactChangeId,
+                    status = change.ApprovalStatus,
+                    message = msg
+                });
             }
             catch (Exception ex)
             {
@@ -284,7 +294,9 @@ namespace KPIMonitor.Controllers
                     c.SubmittedBy,
                     c.SubmittedAt,
                     c.ApprovalStatus,
-                    c.RejectReason
+                    c.RejectReason,
+                    c.ReviewedBy,     // ← add
+                    c.ReviewedAt
                 })
                 .ToListAsync(ct);
 
@@ -393,8 +405,12 @@ namespace KPIMonitor.Controllers
                     <button type='button' class='btn btn-outline-danger btn-sm appr-btn' data-action='reject' data-id='{c.KpiFactChangeId}'>Reject</button>
                  </div>"
             : "<span class='badge text-bg-warning'>Pending</span>")
-        : c.ApprovalStatus == "approved"
-            ? "<span class='badge text-bg-success'>Approved</span>"
+: c.ApprovalStatus == "approved"
+    ? "<span class='badge text-bg-success'>Approved</span>"
+      + (/* if you saved ReviewedBy as 'auto' */ string.Equals(c.ReviewedBy, "auto", StringComparison.OrdinalIgnoreCase)
+         ? "<div class='small text-muted mt-1'>Auto-approved</div>"
+         : "")
+
             : $@"<span class='badge text-bg-danger'>Rejected</span>
                  <div class='small text-muted mt-1'>Reason: {H(c.RejectReason)}</div>"
       )}
