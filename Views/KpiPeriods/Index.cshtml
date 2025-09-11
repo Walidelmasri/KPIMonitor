@@ -48,7 +48,9 @@
                     <th>Start</th>
                     <th>End</th>
                     <th style="width:100px;">Status</th>
+                    @if (isAdmin){
                     <th style="width:120px;">Actions</th>
+                    }
                 </tr>
             </thead>
             <tbody>
@@ -66,7 +68,9 @@
                             <td>@(p.MonthNum?.ToString() ?? "—")</td>
                             <td>@p.StartDate?.ToString("yyyy-MM-dd")</td>
                             <td>@p.EndDate?.ToString("yyyy-MM-dd")</td>
+                            
                             <td>
+                               
                                 @if (p.IsActive == 1)
                                 {
                                     <span class="badge bg-success rounded-pill px-3">Active</span>
@@ -76,6 +80,7 @@
                                     <span class="badge bg-secondary rounded-pill px-3">Inactive</span>
                                 }
                             </td>
+                            @if (isAdmin){
                             <td>
                                 <div class="btn-group">
                                     @if (p.IsActive == 1)
@@ -88,6 +93,7 @@
                                     }
                                 </div>
                             </td>
+                            }
                         </tr>
                     }
                 }

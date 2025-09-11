@@ -1,8 +1,12 @@
 @model IEnumerable<KPIMonitor.Models.KpiYearPlan>
+@using KPIMonitor.Services
+@inject IAdminAuthorizer AdminAuthorizer
 @{
     ViewData["Title"] = "KPI Year Plans";
     var filterYear = ViewBag.FilterYear as int?;
     var currentPillarId = ViewBag.CurrentPillarId as decimal?;
+    var isAdmin = AdminAuthorizer.IsAdmin(User);
+    var totalCols = isAdmin ? 9 : 8; // keep colspan correct when Actions is hidden
 }
 @if (TempData["Msg"] is string msg)
 {
@@ -65,7 +69,7 @@
                     <th>Editor</th>
                     <th>Annual Target</th>
                     <th>Priority</th>
-                    <th>Actions</th>
+                    @if (isAdmin) { <th>Actions</th> }
                 </tr>
             </thead>
             <tbody>
@@ -90,37 +94,40 @@
                             <td><span id="target-@p.KpiYearPlanId">@(p.AnnualTarget?.ToString("0.###") ?? "—")</span></td>
                             <td><span id="priority-@p.KpiYearPlanId">@(p.Priority?.ToString() ?? "—")</span></td>
 
-                            <td>
-                                <div class="btn-group">
-                                    @if (p.IsActive == 1)
-                                    {
-                                        <a class="btn btn-sm btn-outline-warning rounded-3"
-                                           href="@Url.Action("Deactivate", new { id = p.KpiYearPlanId })">Deactivate</a>
-                                    }
-                                    else
-                                    {
-                                        <a class="btn btn-sm btn-outline-success rounded-3"
-                                           href="@Url.Action("Activate", new { id = p.KpiYearPlanId })">Activate</a>
-                                    }
+                            @if (isAdmin)
+                            {
+                                <td>
+                                    <div class="btn-group">
+                                        @if (p.IsActive == 1)
+                                        {
+                                            <a class="btn btn-sm btn-outline-warning rounded-3"
+                                               href="@Url.Action("Deactivate", new { id = p.KpiYearPlanId })">Deactivate</a>
+                                        }
+                                        else
+                                        {
+                                            <a class="btn btn-sm btn-outline-success rounded-3"
+                                               href="@Url.Action("Activate", new { id = p.KpiYearPlanId })">Activate</a>
+                                        }
 
-                                    <a class="btn btn-sm btn-outline-primary rounded-3 ms-1" asp-admin-only
-                                       href="@Url.Action("Generate", "KpiFacts", new { kpiId = p.KpiId, planId = p.KpiYearPlanId })">
-                                        Generate Facts
-                                    </a>
+                                        <a class="btn btn-sm btn-outline-primary rounded-3 ms-1" asp-admin-only
+                                           href="@Url.Action("Generate", "KpiFacts", new { kpiId = p.KpiId, planId = p.KpiYearPlanId })">
+                                            Generate Facts
+                                        </a>
 
-                                    <button type="button"
-                                            class="btn btn-sm btn-outline-primary rounded-3 ms-1" asp-admin-only
-                                            onclick="openPlanEdit(@p.KpiYearPlanId)">
-                                        Edit
-                                    </button>
-                                </div>
-                            </td>
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-primary rounded-3 ms-1" asp-admin-only
+                                                onclick="openPlanEdit(@p.KpiYearPlanId)">
+                                            Edit
+                                        </button>
+                                    </div>
+                                </td>
+                            }
                         </tr>
                     }
                 }
                 else
                 {
-                    <tr><td colspan="9" class="text-center text-muted py-4">No year plans found.</td></tr>
+                    <tr><td colspan="@totalCols" class="text-center text-muted py-4">No year plans found.</td></tr>
                 }
             </tbody>
         </table>
@@ -192,7 +199,7 @@ async function openPlanEdit(id){
         console.log('[EditPlan] POST status', res.status);
 
         if (!res.ok) {
-          const txt = await res.text().catch(()=>'');
+          const txt = await res.text().catch(()=> '');
           console.error('[EditPlan] POST non-OK body:', txt);
           alert('Save failed: ' + (txt || res.status));
           return;

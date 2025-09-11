@@ -1,66 +1,41 @@
+@using KPIMonitor.Services
+@inject IAdminAuthorizer AdminAuthorizer
 @{
   ViewData["Title"] = "Action Plans";
+  var isAdmin = AdminAuthorizer.IsAdmin(User);
 }
 <style>
   /* equal width buttons */
-  .ap-action-btn {
-    min-width: 140px;
-  }
+  .ap-action-btn { min-width: 140px; }
 
   /* optional: remove if you’re not using the old “badge” header */
-  .ap-colbadge {
-    font-size: 0.95rem;
-    padding: .5rem .75rem;
-    letter-spacing: .1px;
-  }
+  .ap-colbadge { font-size: 0.95rem; padding: .5rem .75rem; letter-spacing: .1px; }
 
   /* column wrapper (the controller outputs <div class="ap-col"> … ) */
-  .ap-col {
-    display: flex;
-    flex-direction: column;
-    gap: .75rem;
-  }
+  .ap-col { display: flex; flex-direction: column; gap: .75rem; }
 
   /* full-width column header bar */
-  .ap-col-header {
-    width: 100%;
-    border-radius: .75rem;
-    padding: .45rem .75rem;
-    font-weight: 700;
-    line-height: 1.2;
-  }
+  .ap-col-header { width: 100%; border-radius: .75rem; padding: .45rem .75rem; font-weight: 700; line-height: 1.2; }
 
-/* solid Bootstrap palette */
-.ap-col-header--todo  { background: #6c757d; color: #fff; }   /* secondary */
-.ap-col-header--prog  { background: #ffc107; color: #000; }   /* warning (black text for contrast) */
-.ap-col-header--done  { background: #198754; color: #fff; }   /* success */
-
+  /* solid Bootstrap palette */
+  .ap-col-header--todo  { background: #6c757d; color: #fff; }   /* secondary */
+  .ap-col-header--prog  { background: #ffc107; color: #000; }   /* warning (black text for contrast) */
+  .ap-col-header--done  { background: #198754; color: #fff; }   /* success */
 
   /* ensure no parent kills sticky */
-  #apBody,
-  #apBody .row,
-  #apBody .col-md-4 {
-    overflow: visible;
-  }
+  #apBody, #apBody .row, #apBody .col-md-4 { overflow: visible; }
 
   /* local scroller for the board */
   .ap-scroll {
     max-height: calc(100vh - 220px);
-    /* adjust if your header is taller/shorter */
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 4px;
-    /* avoid scrollbar overlaying content */
   }
 
   /* make column headers stick to top of the local scroller */
   @@media (min-width: 992px) {
-    .ap-col-header {
-      position: sticky;
-      top: 0;
-      /* stick to top of .ap-scroll, not the viewport */
-      z-index: 5;
-    }
+    .ap-col-header { position: sticky; top: 0; z-index: 5; }
   }
 </style>
 <div class="container py-4">
@@ -77,12 +52,12 @@
       @Html.AntiForgeryToken()
     </form>
 
-
     <div id="apBody" class="bg-white border rounded-3 p-3">
       <div class="text-muted small">Loading…</div>
     </div>
   </div>
 </div>
+
 <!-- Move Deadline Modal -->
 <div class="modal fade" id="moveDeadlineModal" tabindex="-1" aria-labelledby="moveDeadlineLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -113,6 +88,7 @@
     </div>
   </div>
 </div>
+
 <!-- Edit Plan Modal -->
 <div class="modal fade" id="editPlanModal" tabindex="-1" aria-labelledby="editPlanLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -166,14 +142,43 @@
     </div>
   </div>
 </div>
+
 @section Scripts {
   <script>
+    const IS_ADMIN = @(isAdmin ? "true" : "false");
     const $ = (id) => document.getElementById(id);
     const qs = (sel, root = document) => root.querySelector(sel);
     const anti = () => (qs('input[name="__RequestVerificationToken"]')?.value || '');
     const getJSON = (url) => fetch(url, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
 
     let apKpiIds = [];
+
+    function stripAdminControls(){
+      if (IS_ADMIN) return;
+      const root = $('apBody');
+      if (!root) return;
+
+      // remove typical admin-only action buttons inside each card/row
+      const selectors = [
+        '[data-action="move-deadline"]',
+        '[data-action="edit-plan"]',
+        '[data-action="delete-action"]',
+        '[data-action="close-action"]',
+        '[data-admin-only]',
+        '[asp-admin-only]'
+      ];
+      selectors.forEach(sel => {
+        root.querySelectorAll(sel).forEach(n => n.remove());
+      });
+
+      // clean up any now-empty button groups/containers
+      root.querySelectorAll('.btn-group, .ap-actions, .card-actions').forEach(group => {
+        const hasVisibleChild = Array.from(group.children).some(ch => !!(ch.offsetParent));
+        if (!hasVisibleChild || group.children.length === 0) {
+          group.remove();
+        }
+      });
+    }
 
     async function refreshBoard() {
       try {
@@ -192,6 +197,10 @@
         });
         if (!res.ok) throw 0;
         $('apBody').innerHTML = "<div class='ap-scroll'>" + (await res.text()) + "</div>";
+
+        // hide per-card admin controls for non-admins
+        stripAdminControls();
+
       } catch {
         $('apBody').innerHTML = "<div class='text-danger small'>Failed to load actions.</div>";
       }
@@ -202,7 +211,7 @@
     // Move Deadline — open
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-action="move-deadline"]');
-      if (!btn) return;
+      if (!btn || !IS_ADMIN) return;
       $('md_actionId').value = btn.getAttribute('data-id');
       $('md_reason').value = '';
       $('md_due').value = '';
@@ -212,6 +221,7 @@
     // Move Deadline — submit
     document.getElementById('moveDeadlineForm').addEventListener('submit', async (ev) => {
       ev.preventDefault();
+      if (!IS_ADMIN) return; // hard stop on client
       try {
         const fd = new FormData(ev.target);
         const res = await fetch('@Url.Action("MoveDeadline", "KpiActions")', {
@@ -230,7 +240,7 @@
     // Edit Plan — open
     document.addEventListener('click', async (e) => {
       const btn = e.target.closest('[data-action="edit-plan"]');
-      if (!btn) return;
+      if (!btn || !IS_ADMIN) return;
 
       const id = btn.getAttribute('data-id');
       try {
@@ -250,6 +260,7 @@
     // Edit Plan — submit
     document.getElementById('editPlanForm').addEventListener('submit', async (ev) => {
       ev.preventDefault();
+      if (!IS_ADMIN) return; // hard stop on client
       try {
         const fd = new FormData(ev.target);
         if (!fd.get('__RequestVerificationToken')) fd.append('__RequestVerificationToken', anti());

@@ -1,7 +1,11 @@
 @model IEnumerable<KPIMonitor.Models.KpiFiveYearTarget>
+@using KPIMonitor.Services
+@inject IAdminAuthorizer AdminAuthorizer
 @{
     ViewData["Title"] = "Five-Year Targets";
     var kpis = ViewBag.Kpis as Microsoft.AspNetCore.Mvc.Rendering.SelectList;
+    var isAdmin = AdminAuthorizer.IsAdmin(User);
+    var totalCols = isAdmin ? 9 : 8; // KPI, Base, P1..P5 (5), Audit, [Actions?]
 }
 
 @if (TempData["Msg"] is string msg)
@@ -57,8 +61,11 @@
         }
     </form>
 
-    <!-- Add button -->
-    <a class="btn btn-add" href="@Url.Action("Create")">➕ Add Five-Year Target</a>
+    <!-- Add button (admin only) -->
+    @if (isAdmin)
+    {
+        <a class="btn btn-add" asp-admin-only href="@Url.Action("Create")">➕ Add Five-Year Target</a>
+    }
 </div>
 
                 <div class="table-responsive shadow-sm rounded-4 border bg-white">
@@ -73,7 +80,7 @@
                                 <th>Period 4</th>
                                 <th>Period 5</th>
                                 <th style="width:170px;">Audit</th>
-                                <th style="width:110px;">Actions</th>
+                                @if (isAdmin) { <th style="width:110px;">Actions</th> }
                             </tr>
                         </thead>
                         <tbody>
@@ -105,17 +112,20 @@
                                         <td class="small text-muted">
                                             @t.CreatedDate?.ToString("yyyy-MM-dd") by @t.CreatedBy
                                         </td>
-                                        <td>
-                                            <a class="btn btn-sm btn-outline-primary rounded-3"
-                                               href="@Url.Action("Edit", new { id = t.KpiFiveYearTargetId })">Edit</a>
-                                        </td>
+                                        @if (isAdmin)
+                                        {
+                                            <td>
+                                                <a class="btn btn-sm btn-outline-primary rounded-3"
+                                                   href="@Url.Action("Edit", new { id = t.KpiFiveYearTargetId })">Edit</a>
+                                            </td>
+                                        }
                                     </tr>
                                 }
                             }
                             else
                             {
                                 <tr>
-                                    <td colspan="9" class="text-center text-muted py-4">No five-year targets yet.</td>
+                                    <td colspan="@totalCols" class="text-center text-muted py-4">No five-year targets yet.</td>
                                 </tr>
                             }
                         </tbody>
