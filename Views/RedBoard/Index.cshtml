@@ -11,8 +11,13 @@
         border-color: #f8d7da !important;
         box-shadow: 0 2px 8px rgba(220, 53, 69, .10) !important;
     }
+
     .alert-tint .card-title,
-    .alert-tint h6 { color: #842029; }
+    .alert-tint h6 {
+        color: #842029;
+    }
+    #redCountBadge { font-weight: 700; font-size: 0.95rem; }
+
 </style>
 
 @section Scripts {
@@ -58,13 +63,13 @@
 
             // Hide buttons/links the server may render
             ['[data-action="move-deadline"]',
-             '[data-action="delete-action"]',
-             '[data-action="close-action"]',
-             '[data-action="edit-action"]',
-             '[data-admin-only]',
-             '[asp-admin-only]'].forEach(sel => {
-                root.querySelectorAll(sel).forEach(n => n.remove());
-             });
+                '[data-action="delete-action"]',
+                '[data-action="close-action"]',
+                '[data-action="edit-action"]',
+                '[data-admin-only]',
+                '[asp-admin-only]'].forEach(sel => {
+                    root.querySelectorAll(sel).forEach(n => n.remove());
+                });
 
             // Disable status dropdowns (keep label visible)
             root.querySelectorAll('select[data-action="set-status"]').forEach(sel => {
@@ -99,7 +104,7 @@
         }
 
         // === SmartValueLabels (same as Home) ===
-        const SmartValueLabels = { /* unchanged plugin body from your code */ 
+        const SmartValueLabels = { /* unchanged plugin body from your code */
             id: 'smartValueLabels',
             afterDatasetsDraw(chart, _args, opts) {
                 const { ctx, data, chartArea } = chart;
@@ -230,9 +235,10 @@
             const badge = $('redCountBadge');
             if (badge) {
                 const n = Array.isArray(redList) ? redList.length : 0;
-                badge.textContent = n;
+                badge.textContent = `${n} KPI${n === 1 ? '' : 's'} need attention`;
                 badge.classList.toggle('d-none', n === 0);
             }
+
 
             if (!redList || redList.length === 0) {
                 $('emptyMsg').classList.remove('d-none');
@@ -342,10 +348,10 @@
             const chartData = {
                 labels: allLabels,
                 datasets: [
-                    { type:'bar',  label:'Actual',   data: act.concat(pad),  backgroundColor:'#800080', borderColor:'#800080', borderWidth:2, borderSkipped:'bottom' },
-                    { type:'line', label:'Target',   data: tgt.concat(pad),  borderColor:'#7a7a7a', pointBackgroundColor:'#7a7a7a', pointBorderColor:'#7a7a7a', borderWidth:2, tension:.3, fill:false },
-                    { type:'line', label:'Forecast', data: fct.concat(pad),  borderColor:'#fd7e14', pointBackgroundColor:'#fd7e14', pointBorderColor:'#fd7e14', borderDash:[5,5], borderWidth:2, tension:.3, fill:false },
-                    { type:'bar',  label:'Year Target', data: leftNulls.concat(yearVals), backgroundColor:'#7a7a7a', borderColor:'#7a7a7a', borderWidth:1 }
+                    { type: 'bar', label: 'Actual', data: act.concat(pad), backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
+                    { type: 'line', label: 'Target', data: tgt.concat(pad), borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
+                    { type: 'line', label: 'Forecast', data: fct.concat(pad), borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
+                    { type: 'bar', label: 'Year Target', data: leftNulls.concat(yearVals), backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
                 ]
             };
 
@@ -353,15 +359,19 @@
                 kpiChart = new Chart($('rbChart').getContext('2d'), {
                     data: chartData,
                     options: {
-                        responsive:true, maintainAspectRatio:false, layout:{ padding:{ top:28, bottom:8 }},
-                        scales:{ x:{ grid:{display:false}, ticks:{ padding:8, callback:function(v){ return String(this.getLabelForValue(v)).replace(/^\s*\d{4}\s*[\-–—]\s*/, ''); }}},
-                                 y:{ display:false, grid:{display:false}, beginAtZero:true } },
-                        plugins:{
-                            datalabels:false,
-                            smartValueLabels:{ formatter:_fmtShort, fontSize:12, fontWeight:'700', minGap:14, padTop:12, padBottom:4, outline:true,
-                                perDataset:[ {dy:-12,dx:0,color:'#800080'}, {dy:12,dx:-8,color:'#7a7a7a'}, {dy:-16,dx:8,color:'#fd7e14'}, {dy:-12,dx:0,color:'#7a7a7a'} ] },
-                            tooltip:{ enabled:true },
-                            legend:{ position:'top', labels:{ boxWidth:12, boxHeight:10, padding:12, font:{ size:8, weight:'700' } } }
+                        responsive: true, maintainAspectRatio: false, layout: { padding: { top: 28, bottom: 8 } },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { padding: 8, callback: function (v) { return String(this.getLabelForValue(v)).replace(/^\s*\d{4}\s*[\-–—]\s*/, ''); } } },
+                            y: { display: false, grid: { display: false }, beginAtZero: true }
+                        },
+                        plugins: {
+                            datalabels: false,
+                            smartValueLabels: {
+                                formatter: _fmtShort, fontSize: 12, fontWeight: '700', minGap: 14, padTop: 12, padBottom: 4, outline: true,
+                                perDataset: [{ dy: -12, dx: 0, color: '#800080' }, { dy: 12, dx: -8, color: '#7a7a7a' }, { dy: -16, dx: 8, color: '#fd7e14' }, { dy: -12, dx: 0, color: '#7a7a7a' }]
+                            },
+                            tooltip: { enabled: true },
+                            legend: { position: 'top', labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 8, weight: '700' } } }
                         }
                     }
                 });
@@ -575,11 +585,14 @@
 
                 <div class="d-flex align-items-center gap-2">
                     <span class="text-muted" id="slideCounter">0 / 0</span>
-                    <button id="redCountBadge" class="btn btn-danger d-none" type="button" disabled title="Red KPIs">0</button>
-                    <button id="btnFirst" class="btn btn-outline-secondary" type="button" onclick="firstSlide()" title="Go to first slide">⏮</button>
+                    <span id="redCountBadge" class="badge rounded-pill text-bg-danger d-none px-3 py-2"
+                        title="Red KPIs">0 KPIs need attention</span>
+                    <button id="btnFirst" class="btn btn-outline-secondary" type="button" onclick="firstSlide()"
+                        title="Go to first slide">⏮</button>
                     <button class="btn btn-outline-secondary" type="button" onclick="prevSlide()">◀</button>
                     <button class="btn btn-outline-secondary" type="button" onclick="nextSlide()">▶</button>
-                    <button id="btnLast" class="btn btn-outline-secondary" type="button" onclick="lastSlide()" title="Go to decisions">⏭</button>
+                    <button id="btnLast" class="btn btn-outline-secondary" type="button" onclick="lastSlide()"
+                        title="Go to decisions">⏭</button>
                 </div>
             </div>
 
@@ -628,11 +641,8 @@
                                         <span id="m_status" class="status-pill">—</span>
                                     </div>
                                     <div class="text-center mt-3">
-                                        <button id="btnAddAction"
-                                                class="btn btn-primary@(isAdmin ? "" : " d-none")"
-                                                type="button"
-                                                onclick="openAddAction()"
-                                                disabled>
+                                        <button id="btnAddAction" class="btn btn-primary@(isAdmin ? "" : " d-none")"
+                                            type="button" onclick="openAddAction()" disabled>
                                             ➕ Add Action
                                         </button>
                                     </div>
@@ -658,9 +668,8 @@
                 <div class="bg-white border rounded-3 p-3">
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <h5 class="mb-0">Decisions</h5>
-                        <button id="btnAddGeneralAction"
-                                type="button"
-                                class="btn btn-primary btn-sm@(isAdmin ? "" : " d-none")">
+                        <button id="btnAddGeneralAction" type="button"
+                            class="btn btn-primary btn-sm@(isAdmin ? "" : " d-none")">
                             Add General Action
                         </button>
                     </div>
@@ -694,7 +703,8 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Action</label>
-                            <textarea class="form-control" name="Description" id="af_description" rows="3" required></textarea>
+                            <textarea class="form-control" name="Description" id="af_description" rows="3"
+                                required></textarea>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Due Date</label>
@@ -727,25 +737,25 @@
                     <h5 class="modal-title" id="moveDeadlineLabel">Move Deadline</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-        <form id="moveDeadlineForm" method="post" onsubmit="submitMoveDeadline(event)">
-            @Html.AntiForgeryToken()
-            <div class="modal-body">
-                <input type="hidden" name="actionId" id="md_actionId" />
-                <div class="mb-3">
-                    <label class="form-label">New Due Date</label>
-                    <input type="datetime-local" class="form-control" name="newDueDate" id="md_due" required />
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Reason (optional)</label>
-                    <textarea class="form-control" name="reason" id="md_reason" rows="2"></textarea>
-                </div>
-                <div class="text-muted small">Max 3 extensions enforced.</div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-primary">Move</button>
-            </div>
-        </form>
+                <form id="moveDeadlineForm" method="post" onsubmit="submitMoveDeadline(event)">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-body">
+                        <input type="hidden" name="actionId" id="md_actionId" />
+                        <div class="mb-3">
+                            <label class="form-label">New Due Date</label>
+                            <input type="datetime-local" class="form-control" name="newDueDate" id="md_due" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Reason (optional)</label>
+                            <textarea class="form-control" name="reason" id="md_reason" rows="2"></textarea>
+                        </div>
+                        <div class="text-muted small">Max 3 extensions enforced.</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Move</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

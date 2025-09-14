@@ -81,7 +81,7 @@
                         @if (isAuth)
                         {
                             <!-- ===== Catalog ===== -->
-                            <li class="nav-item dropdown">
+                            <li class="nav-item dropdown" asp-admin-only>
                                 <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Catalog</a>
                                 <ul class="dropdown-menu">
                                     <!-- Pillars submenu -->
@@ -123,7 +123,7 @@
                             </li>
 
                             <!-- ===== Planning ===== -->
-                            <li class="nav-item dropdown">
+                            <li class="nav-item dropdown" asp-admin-only>
                                 <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Planning</a>
                                 <ul class="dropdown-menu">
                                     <!-- KPI Periods -->
@@ -163,7 +163,7 @@
                             </li>
 
                             <!-- ===== Monitoring ===== -->
-                            <li class="nav-item dropdown">
+                            <li class="nav-item dropdown" asp-admin-only>
                                 <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Monitoring</a>
                                 <ul class="dropdown-menu">
                                     <!-- KPI Facts -->

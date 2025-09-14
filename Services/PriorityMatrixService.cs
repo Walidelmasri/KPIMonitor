@@ -63,8 +63,15 @@ namespace KPIMonitor.Services
                 .AsNoTracking()
                 .Where(o => o.IsActive == 1)
                 .OrderBy(o => o.PillarId).ThenBy(o => o.ObjectiveCode)
-                .Select(o => new { o.ObjectiveId, o.ObjectiveCode, o.ObjectiveName })
+                .Select(o => new
+                {
+                    o.ObjectiveId,
+                    o.ObjectiveCode,
+                    o.ObjectiveName,
+                    PillarCode = o.Pillar != null ? o.Pillar.PillarCode : null
+                })
                 .ToListAsync();
+
 
             var kpis = await _db.DimKpis
                 .AsNoTracking()
@@ -108,12 +115,15 @@ namespace KPIMonitor.Services
                     Quadrant = objPriority,
                     Card = new ObjectiveCardVm
                     {
-                        ObjectiveId   = o.ObjectiveId,
-                        ObjectiveCode = o.ObjectiveCode ?? "",
+                        ObjectiveId = o.ObjectiveId,
+                        ObjectiveCode = string.IsNullOrWhiteSpace(o.PillarCode)
+                    ? (o.ObjectiveCode ?? "")
+                    : $"{o.PillarCode}.{o.ObjectiveCode}",
                         ObjectiveName = o.ObjectiveName ?? "",
-                        StatusCode    = canonical,
-                        StatusColor   = hex
+                        StatusCode = canonical,
+                        StatusColor = hex
                     }
+
                 };
             }).ToList();
 

@@ -16,17 +16,15 @@
   .legend .o { background:#fd7e14; }
   .legend .b { background:#0d6efd; }
 
-  /* ===== Seven-column board (collapses responsibly) ===== */
-  .sm7-grid {
-    display:grid;
-    grid-template-columns: repeat(7, minmax(180px, 1fr));
-    gap: .9rem;
-  }
-  @@media (max-width: 1600px) { .sm7-grid { grid-template-columns: repeat(5, minmax(200px, 1fr)); } }
-  @@media (max-width: 1200px) { .sm7-grid { grid-template-columns: repeat(4, minmax(200px, 1fr)); } }
-  @@media (max-width: 992px)  { .sm7-grid { grid-template-columns: repeat(3, minmax(200px, 1fr)); } }
-  @@media (max-width: 768px)  { .sm7-grid { grid-template-columns: repeat(2, minmax(180px, 1fr)); } }
-  @@media (max-width: 520px)  { .sm7-grid { grid-template-columns: 1fr; } }
+/* ===== Seven-column board → wider tracks, centered, auto-wrap ===== */
+.sm7-grid{
+  display:grid;
+  /* each column is 320–360px; grid adds as many as fits, then wraps */
+  grid-template-columns: repeat(auto-fit, minmax(320px, 360px));
+  gap: 1rem;
+  justify-content: center; /* center the tracks when there’s extra space */
+}
+
 
   /* ===== Pillar column ===== */
   .pillar {
@@ -44,20 +42,38 @@
     border-bottom:1px solid #e9ecef;
     padding:.6rem .8rem; text-align:center; font-weight:700; letter-spacing:.2px;
   }
-  .pillar-title-small { font-size:.82rem; opacity:.95; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pillar-title-small{
+  font-size:.95rem;
+  line-height:1.2;
+  white-space: normal;      /* was: nowrap */
+  overflow: visible;        /* was: hidden */
+  text-overflow: clip;      /* was: ellipsis */
+}
   .pillar-body {
     display:grid; gap:.55rem; padding:.7rem; align-content:flex-start;
   }
 
   /* ===== Objective cards (unchanged sizing & full background color) ===== */
-  .objective-card {
-    color:#fff; border-radius:10px; padding:.5rem .6rem; border:1px solid rgba(255,255,255,.22);
-    box-shadow: 0 4px 10px rgba(0,0,0,.06);
-    -webkit-print-color-adjust: exact; print-color-adjust: exact;
-    text-shadow: 0 1px 0 rgba(0,0,0,.2); /* readability on strong colors */
-  }
-  .objective-code { font-size:.78rem; font-weight:800; letter-spacing:.3px; opacity:.95; }
-  .objective-name { font-size:.8rem; line-height:1.25; margin-top:.15rem; word-break:break-word; }
+.objective-card{
+  color:#fff;
+  border-radius:12px;
+  padding:.75rem 1rem;      /* more breathing room */
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow: 0 4px 10px rgba(0,0,0,.06);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  text-shadow: 0 1px 0 rgba(0,0,0,.2);
+  min-height: 72px;         /* optional: keeps cards “big” */
+}
+.objective-code{ font-size:.9rem; font-weight:800; letter-spacing:.3px; }
+.objective-name{
+  font-size:.95rem;
+  line-height:1.35;
+  margin-top:.25rem;
+  overflow-wrap:anywhere;   /* wrap long words/names */
+  word-break: normal;
+}
+
 
   /* ===== Print ===== */
   @@media print {
