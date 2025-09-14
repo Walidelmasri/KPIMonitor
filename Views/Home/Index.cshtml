@@ -58,14 +58,10 @@
           <div class="card-body d-flex flex-column justify-content-between h-100">
             <div>
               <h6 class="card-title text-secondary fw-bold mb-3">KPI Details</h6>
-              <p class="mb-2" style="font-size: larger;"><strong>👁️ Owner:</strong> <span id="metaOwner"
-                  class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>✍️ Editor:</strong> <span id="metaEditor"
-                  class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>📅 Frequency:</strong> <span id="metaFrequency"
-                  class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>🔢 Unit:</strong> <span id="metaUnit"
-                  class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>👁️ Owner:</strong> <span id="metaOwner" class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>✍️ Editor:</strong> <span id="metaEditor" class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>📅 Frequency:</strong> <span id="metaFrequency" class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>🔢 Unit:</strong> <span id="metaUnit" class="text-dark">—</span></p>
             </div>
             <div class="mt-auto">
               <div class="mb-4 text-center">
@@ -82,6 +78,14 @@
       </div>
     </div>
 
+    <!-- KPI-level Edit Button -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h6 class="m-0 text-secondary">Facts</h6>
+      <button id="openEditKpiBtn" class="btn btn-primary btn-sm" disabled>
+        ✏️ Edit KPI (Actual & Forecast)
+      </button>
+    </div>
+
     <!-- Data Table -->
     <div class="table-responsive shadow-sm rounded-4 mt-4">
       <table class="table table-striped table-bordered mb-0 align-middle" aria-describedby="dataTableCaption">
@@ -94,12 +98,11 @@
             <th>Actual</th>
             <th>Target</th>
             <th>Forecast</th>
-            <th>Edit</th>
           </tr>
         </thead>
         <tbody id="factsTbody">
           <tr>
-            <td colspan="7" class="text-center text-muted">—</td>
+            <td colspan="6" class="text-center text-muted">—</td>
           </tr>
         </tbody>
       </table>
@@ -107,63 +110,13 @@
   </div>
 </div>
 
-@* Edit KPI Fact Modal *@
-<div class="modal fade" id="editFactModal" tabindex="-1" aria-labelledby="editFactLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content rounded-4">
-      <div class="modal-header">
-        <h5 class="modal-title" id="editFactLabel">✏️ Edit KPI Fact</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-
-      <form asp-action="UpdateKpiFact" asp-controller="Home" method="post" id="editFactForm">
-        @Html.AntiForgeryToken()
-        <div class="modal-body">
-          <div class="mb-2 text-muted" id="editFactPeriod">—</div>
-          <div class="mb-3">
-            <label for="editLastBy" class="form-label">Last edited by</label>
-            <input type="text" class="form-control" id="editLastBy" name="LastChangedBy" value="">
-          </div>
-          <!-- primary key + context -->
-          <input type="hidden" name="KpiFactId" id="editFactId" />
-          <input type="hidden" id="editPillarId" name="PillarId" />
-          <input type="hidden" id="editObjectiveId" name="ObjectiveId" />
-          <input type="hidden" id="editKpiId" name="KpiId" />
-
-          <div class="row g-3">
-            <div class="col-md-3">
-              <label class="form-label">Actual</label>
-              <input type="number" step="0.001" class="form-control" name="ActualValue" id="editActual" />
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Target</label>
-              <input type="number" step="0.001" class="form-control" name="TargetValue" id="editTarget" />
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Forecast</label>
-              <input type="number" step="0.001" class="form-control" name="ForecastValue" id="editForecast" />
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Status</label>
-              <select class="form-select" name="StatusCode" id="editStatus">
-                <option value="">—</option>
-                <option value="conforme">Ok</option>
-                <option value="rattrapage">Catching Up</option>
-                <option value="ecart">Needs Attention</option>
-                <option value="attente">Data Missing</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-text mt-2">Leave a field empty to keep its current value.</div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-          <button class="btn btn-primary" type="submit">💾 Save</button>
-        </div>
-      </form>
-    </div>
+<!-- Bulk Edit Modal (content loaded via AJAX) -->
+<div class="modal fade" id="editKpiModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content"></div>
   </div>
 </div>
+
 @section Scripts {
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
@@ -189,16 +142,16 @@
 
         const fontSize = o.fontSize || 12;
         const fontWeight = o.fontWeight || '700';
-        const minGap = o.minGap || 14;   // vertical separation when colliding
-        const padTop = o.padTop || 4;    // keep inside chart area
+        const minGap = o.minGap || 14;
+        const padTop = o.padTop || 4;
         const padBottom = o.padBottom || 4;
-        const maxShift = o.maxShift || 40;   // how far a label may move from its value
+        const maxShift = o.maxShift || 40;
 
         const barDY = (o.barDY != null ? o.barDY : -12);
         const barDYNeg = (o.barDYNeg != null ? o.barDYNeg : 14);
         const lineDY = (o.lineDY != null ? o.lineDY : -12);
 
-        const perDataset = o.perDataset || []; // [{dx,dy,color,step,onlyLast}...]
+        const perDataset = o.perDataset || [];
         const lineStepDefault = o.lineStep || 1;
         const onlyLastForLinesDefault = !!o.onlyLastForLines;
 
@@ -207,9 +160,8 @@
         ctx.textBaseline = 'bottom';
         ctx.font = `${fontWeight} ${fontSize}px system-ui,-apple-system,Segoe UI,Roboto,Arial`;
 
-        const byIndex = new Map(); // i -> [{x,y,baseY,val,text,color,w,h,priority}]
+        const byIndex = new Map();
 
-        // collect candidates per x index
         data.datasets.forEach((ds, di) => {
           if (!chart.isDatasetVisible(di)) return;
           const meta = chart.getDatasetMeta(di);
@@ -244,7 +196,7 @@
 
             const text = fmt(val);
             const w = ctx.measureText(text).width;
-            const h = fontSize * 1.2; // enough for collision math
+            const h = fontSize * 1.2;
 
             const item = {
               x: x + dx,
@@ -254,7 +206,7 @@
               text,
               color: per.color || o.color || '#111',
               w, h,
-              priority: isBar ? 0 : 1 // bars first, lines adapt
+              priority: isBar ? 0 : 1
             };
 
             const arr = byIndex.get(i);
@@ -262,14 +214,12 @@
           });
         });
 
-        const topLimitBase = chartArea.top + padTop;   // baseline is text bottom
+        const topLimitBase = chartArea.top + padTop;
         const botLimit = chartArea.bottom - padBottom;
 
-        // layout & draw per-x-index
         byIndex.forEach((items) => {
-          // natural position + clamp helper
           const clampNearBase = (it) => {
-            const topLimit = topLimitBase + it.h;  // ensure text not clipped
+            const topLimit = topLimitBase + it.h;
             if (it.y < topLimit) it.y = topLimit;
 
             const low = it.baseY - maxShift;
@@ -282,7 +232,6 @@
 
           items.forEach(it => { it.y = it.baseY; clampNearBase(it); });
 
-          // resolve collisions: if two overlap, push the bigger value UP
           let guard = 0;
           while (guard++ < 10) {
             let changed = false;
@@ -295,8 +244,8 @@
                 if (overlap) {
                   const hi = (a.val >= b.val) ? a : b;
                   const lo = (hi === a) ? b : a;
-                  hi.y -= minGap;                      // bigger number up
-                  lo.y += Math.min(4, minGap / 2);     // smaller number down a touch
+                  hi.y -= minGap;
+                  lo.y += Math.min(4, minGap / 2);
                   clampNearBase(hi);
                   clampNearBase(lo);
                   changed = true;
@@ -306,7 +255,6 @@
             if (!changed) break;
           }
 
-          // draw (bars first so lines adapt visually)
           items.sort((a, b) => (a.priority - b.priority));
           items.forEach(it => {
             ctx.fillStyle = it.color;
@@ -325,29 +273,19 @@
     Chart.register(SmartValueLabels);
     // === SmartValueLabels END ===
 
-
-
     // ---- register plugin + global defaults for labels ----
     Chart.register(ChartDataLabels);
     Chart.defaults.set('plugins.datalabels', {
-      display: (ctx) => ctx.raw != null,   // show for all non-null values
+      display: (ctx) => ctx.raw != null,
       formatter: (v) => _fmtShort(v),
       anchor: 'end',
       align: 'end',
       offset: 2,
       clamp: true,
-      clip: false,                          // allow slight overflow when y-axis hidden
+      clip: false,
       color: '#111',
       font: { weight: 'bold' }
     });
-
-    // (kept even if unused)
-    const _isLastNonNull = (arr, idx) => {
-      for (let i = arr.length - 1; i >= 0; i--) {
-        if (arr[i] != null && !Number.isNaN(arr[i])) return idx === i;
-      }
-      return false;
-    };
 
     // ---------- tiny helpers ----------
     const $ = (id) => document.getElementById(id);
@@ -356,23 +294,24 @@
         .then(r => { if (!r.ok) throw new Error('Network error'); return r.json(); });
 
     // ---------- elements ----------
-    const selPillar = $('pillarSelector');
-    const selObjective = $('objectiveSelector');
-    const selKpi = $('kpiSelector');
+    const selPillar   = $('pillarSelector');
+    const selObjective= $('objectiveSelector');
+    const selKpi      = $('kpiSelector');
 
-    const metaOwner = $('metaOwner');
-    const metaEditor = $('metaEditor');
-    const metaFrequency = $('metaFrequency');
-    const metaUnit = $('metaUnit');
+    const metaOwner      = $('metaOwner');
+    const metaEditor     = $('metaEditor');
+    const metaFrequency  = $('metaFrequency');
+    const metaUnit       = $('metaUnit');
 
-    const metaPriority = $('metaPriority');
-    const metaStatus = $('metaStatus');
+    const metaPriority   = $('metaPriority');
+    const metaStatus     = $('metaStatus');
 
-    const tableBody = $('factsTbody');
+    const tableBody   = $('factsTbody');
+    const btnEditKpi  = document.getElementById('openEditKpiBtn');
 
     // NEW: ACL state
     let currentPlanId = null;
-    let canEditFacts = false;
+    let canEditFacts  = false;
 
     function resetSelect(sel, placeholder) {
       sel.innerHTML = '';
@@ -382,94 +321,6 @@
       sel.appendChild(opt);
       sel.disabled = true;
     }
-
-    // ----- Edit Fact modal handlers -----
-    window.openEditModal = function (btn) {
-      const id = btn.getAttribute('data-fact-id');
-      const period = btn.getAttribute('data-period') || '—';
-      const actual = btn.getAttribute('data-actual') || '';
-      const target = btn.getAttribute('data-target') || '';
-      const forecast = btn.getAttribute('data-forecast') || '';
-      const status = btn.getAttribute('data-status') || '';
-      const lastBy = btn.getAttribute('data-lastby') || '';
-
-      // selection IDs carried on the button
-      const pId = btn.getAttribute('data-pillar-id') || '';
-      const oId = btn.getAttribute('data-objective-id') || '';
-      const kId = btn.getAttribute('data-kpi-id') || '';
-
-      // fill the form fields
-      $('editFactId').value = id;
-      $('editFactPeriod').innerText = period;
-      $('editActual').value = (actual === '—') ? '' : actual;
-      $('editTarget').value = (target === '-') ? '' : target;
-      $('editForecast').value = (forecast === '—') ? '' : forecast;
-      $('editStatus').value = status;
-      $('editLastBy').value = lastBy;
-
-      // preserve current selections for (fallback) redirect or later use
-      $('editPillarId').value = pId;
-      $('editObjectiveId').value = oId;
-      $('editKpiId').value = kId;
-
-      // show modal
-      new bootstrap.Modal(document.getElementById('editFactModal')).show();
-    };
-
-    // Intercept the modal form submit and do AJAX save
-    (function () {
-      const form = document.getElementById('editFactForm');
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-const url = '@Url.Action("Submit", "KpiFactChanges")';
-const fd = new FormData(form); // has token + current fields
-
-// remove noise
-fd.delete('LastChangedBy');
-fd.delete('PillarId');
-fd.delete('ObjectiveId');
-fd.delete('KpiId');
-
-// rename Actual/Target/Forecast/Status -> Proposed*
-const renameToProposed = (oldKey, newKey) => {
-  const v = fd.get(oldKey);
-  fd.delete(oldKey);
-  if (v != null && String(v).trim() !== '') fd.append(newKey, String(v).trim());
-};
-renameToProposed('ActualValue',   'ProposedActualValue');
-renameToProposed('TargetValue',   'ProposedTargetValue');
-renameToProposed('ForecastValue', 'ProposedForecastValue');
-renameToProposed('StatusCode',    'ProposedStatusCode');
-
-// guard: at least one proposed field
-if (!['ProposedActualValue','ProposedTargetValue','ProposedForecastValue','ProposedStatusCode'].some(k => fd.has(k))) {
-  alert('No changes to submit.');
-  return;
-}
-
-
-        try {
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-            body: fd
-          });
-          if (!res.ok) {
-            const err = await res.json().catch(() => null);
-            throw new Error(err?.error || 'Save failed');
-          }
-
-          // Close modal
-          bootstrap.Modal.getInstance(document.getElementById('editFactModal'))?.hide();
-
-          // Refresh chart/table/meta for the already-selected KPI
-          await loadKpiSummary();
-        } catch (err) {
-          alert('Could not save. ' + (err?.message || ''));
-        }
-      });
-    })();
 
     // ---------- cascading dropdowns ----------
     async function loadPillars() {
@@ -554,54 +405,16 @@ if (!['ProposedActualValue','ProposedTargetValue','ProposedForecastValue','Propo
       data: {
         labels: [],
         datasets: [
-          { // Actual as bars (purple)
-            type: 'bar',
-            label: 'Actual',
-            data: [],
-            backgroundColor: '#800080',
-            borderColor: '#800080',
-            borderWidth: 2,
-            borderSkipped: 'bottom'
-          },
-          { // Target as a flat gray line
-            type: 'line',
-            label: 'Target',
-            data: [],
-            borderWidth: 2,
-            borderColor: '#7a7a7a',
-            pointBackgroundColor: '#7a7a7a',
-            pointBorderColor: '#7a7a7a',
-            tension: 0.3,
-            fill: false
-          },
-          { // Forecast as dashed orange line
-            type: 'line',
-            label: 'Forecast',
-            data: [],
-            borderWidth: 2,
-            borderColor: '#fd7e14',
-            pointBackgroundColor: '#fd7e14',
-            pointBorderColor: '#fd7e14',
-            borderDash: [5, 5],
-            tension: 0.3,
-            fill: false
-          },
-          { // Year Targets (bars appended to the RIGHT)
-            type: 'bar',
-            label: 'Year Target',
-            data: [],
-            backgroundColor: '#7a7a7a',
-            borderColor: '#7a7a7a',
-            borderWidth: 1
-          }
+          { type: 'bar',  label: 'Actual',   data: [], backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
+          { type: 'line', label: 'Target',   data: [], borderWidth: 2, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', tension: 0.3, fill: false },
+          { type: 'line', label: 'Forecast', data: [], borderWidth: 2, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], tension: 0.3, fill: false },
+          { type: 'bar',  label: 'Year Target', data: [], backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        layout: { padding: { top: 28, bottom: 8 } }, // a bit of head/foot room
-
-        // no grid, no Y labels
+        layout: { padding: { top: 28, bottom: 8 } },
         scales: {
           x: {
             grid: { display: false },
@@ -609,18 +422,16 @@ if (!['ProposedActualValue','ProposedTargetValue','ProposedForecastValue','Propo
               padding: 8,
               callback: function (value) {
                 const label = this.getLabelForValue(value);
-                @* return String(label).replace(/^\s*[\-–—]\s*/, ''); // remove leading dash *@
-                      // If your labels are "2025 – Jan", use this instead:
-                      return String(label).replace(/^\s*\d{4}\s*[\-–—]\s*/, '');
+                // If your labels are "2025 – Jan", strip the left year prefix:
+                return String(label).replace(/^\s*\d{4}\s*[\-–—]\s*/, '');
               }
             }
           },
           y: { display: false, grid: { display: false }, beginAtZero: true }
         },
-
         plugins: {
-          datalabels: false,                 // keep the other plugin off for this chart
-          smartValueLabels: {                // <-- must match Chart.register(SmartValueLabels)
+          datalabels: false,
+          smartValueLabels: {
             formatter: _fmtShort,
             fontSize: 12,
             fontWeight: '700',
@@ -628,16 +439,12 @@ if (!['ProposedActualValue','ProposedTargetValue','ProposedForecastValue','Propo
             padTop: 12,
             padBottom: 4,
             outline: true,
-            // per dataset: [Actual(bar), Target(line), Forecast(line), YearTarget(bar)]
             perDataset: [
               { dy: -12, dx: 0, color: '#800080' }, // Actual (bar)
-              { dy: 12, dx: -8, color: '#7a7a7a' }, // Target (line) below
-              { dy: -16, dx: 8, color: '#fd7e14' }, // Forecast (line) above/right
-              { dy: -12, dx: 0, color: '#7a7a7a' }  // Year Target (bar)
+              { dy:  12, dx: -8, color: '#7a7a7a' }, // Target (line)
+              { dy: -16, dx:  8, color: '#fd7e14' }, // Forecast (line)
+              { dy: -12, dx:  0, color: '#7a7a7a' }  // Year Target (bar)
             ]
-            // optional thinning:
-            // lineStep: 2,            // show every 2nd line point
-            // onlyLastForLines: true, // or just the last point for lines
           },
           tooltip: { enabled: true },
           legend: {
@@ -646,17 +453,14 @@ if (!['ProposedActualValue','ProposedTargetValue','ProposedForecastValue','Propo
           }
         }
       }
-
     });
 
     function clearChartAndTable() {
-      // chart
       kpiChart.data.labels = [];
       for (const ds of kpiChart.data.datasets) ds.data = [];
       kpiChart.update();
 
-      // table
-      tableBody.innerHTML = '<tr class="placeholder-row"><td colspan="7" class="text-center text-muted">—</td></tr>';
+      tableBody.innerHTML = '<tr class="placeholder-row"><td colspan="6" class="text-center text-muted">—</td></tr>';
     }
 
     function clearMeta() {
@@ -668,6 +472,45 @@ if (!['ProposedActualValue','ProposedTargetValue','ProposedForecastValue','Propo
       metaStatus.textContent = '—';
       metaStatus.className = 'status-pill';
       metaStatus.style.background = '';
+
+      btnEditKpi.disabled = true;
+      btnEditKpi.textContent = '✏️ Edit KPI (Actual & Forecast)';
+    }
+
+    // ====== AJAX binder for the modal form (ALWAYS intercept submit) ======
+    function wireKpiModalAjax() {
+      const modal = document.getElementById('editKpiModal');
+      const form  = modal ? modal.querySelector('#kpi-edit-form') : null;
+      if (!form || form.dataset.wired === '1') return;
+      form.dataset.wired = '1';
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const url = form.getAttribute('action'); // /KpiFactChanges/SubmitBatch
+        const fd  = new FormData(form);          // includes antiforgery token
+
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+              'Accept': 'application/json'
+            },
+            body: fd
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => null);
+            throw new Error(err?.error || 'Save failed');
+          }
+
+          // success: close modal + refresh KPI chart/table/meta
+          const modalEl = document.getElementById('editKpiModal');
+          bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+          await loadKpiSummary();
+        } catch (err) {
+          alert(err?.message || 'Save failed');
+        }
+      });
     }
 
     async function loadKpiSummary() {
@@ -679,123 +522,122 @@ if (!['ProposedActualValue','ProposedTargetValue','ProposedForecastValue','Propo
 
       const res = await api('@Url.Action("GetKpiSummary", "Home")?kpiId=' + encodeURIComponent(kpiId));
 
-      // NEW: ACL state from server
+      // ACL state from server
       currentPlanId = res?.meta?.planId ?? null;
-      canEditFacts = !!res?.meta?.canEdit;
+      canEditFacts  = !!res?.meta?.canEdit;
 
-      // ---- title above chart ----
+      // Title "PC.OC KPICode — Name"
       const leftParts = [];
-      if (res?.meta?.pillarCode) leftParts.push(res.meta.pillarCode);
+      if (res?.meta?.pillarCode)    leftParts.push(res.meta.pillarCode);
       if (res?.meta?.objectiveCode) leftParts.push(res.meta.objectiveCode);
-
       let left = leftParts.join('.');
-      if (res?.meta?.code) {
-        left = left ? `${left} ${res.meta.code}` : res.meta.code;
-      }
-
+      if (res?.meta?.code) left = left ? `${left} ${res.meta.code}` : res.meta.code;
       const finalTitle = (left ? `${left} — ` : '') + (res?.meta?.title || '—');
       $('kpiTitle').textContent = finalTitle;
 
-      // ---- meta ----
-      metaOwner.textContent = res?.meta?.owner || '—';
-      metaEditor.textContent = res?.meta?.editor || '—';
-      metaFrequency.textContent = res?.meta?.valueType || '—';
-      metaUnit.textContent = res?.meta?.unit || '—';
-      metaPriority.textContent = (res?.meta?.priority ?? '—');
+      // Meta
+      metaOwner.textContent      = res?.meta?.owner || '—';
+      metaEditor.textContent     = res?.meta?.editor || '—';
+      metaFrequency.textContent  = res?.meta?.valueType || '—';
+      metaUnit.textContent       = res?.meta?.unit || '—';
+      metaPriority.textContent   = (res?.meta?.priority ?? '—');
 
       const label = (res?.meta?.statusLabel || '—');
       const color = (res?.meta?.statusColor || '');
       metaStatus.textContent = label;
-      metaStatus.className = 'status-pill';
+      metaStatus.className   = 'status-pill';
       if (color) metaStatus.style.background = color;
 
-      // ---- series ----
-      const baseLabels = res?.chart?.labels || [];
-      const actual = res?.chart?.actual || [];
-      const target = res?.chart?.target || [];
-      const forecast = res?.chart?.forecast || [];
+      // Series
+      const baseLabels = res?.chart?.labels   || [];
+      const actual     = res?.chart?.actual   || [];
+      const target     = res?.chart?.target   || [];
+      const forecast   = res?.chart?.forecast || [];
 
-      // ---- five-year targets to the RIGHT as bars ----
-      const yrArr = Array.isArray(res?.chart?.yearTargets) ? res.chart.yearTargets : []; // [{year, value}]
+      // Five-year targets appended on the right
+      const yrArr      = Array.isArray(res?.chart?.yearTargets) ? res.chart.yearTargets : [];
       const yearLabels = yrArr.map(y => String(y.year));
-      const yearBarVals = yrArr.map(y => y.value ?? null);
+      const yearBarVals= yrArr.map(y => y.value ?? null);
 
-      const allLabels = baseLabels.concat(yearLabels);
-      const pad = new Array(yearLabels.length).fill(null);
-      const leftNulls = new Array(baseLabels.length).fill(null);
+      const allLabels  = baseLabels.concat(yearLabels);
+      const pad        = new Array(yearLabels.length).fill(null);
+      const leftNulls  = new Array(baseLabels.length).fill(null);
 
-      kpiChart.data.labels = allLabels;
-      kpiChart.data.datasets[0].data = actual.concat(pad);            // Actual
-      kpiChart.data.datasets[1].data = target.concat(pad);            // Target
-      kpiChart.data.datasets[2].data = forecast.concat(pad);          // Forecast
-      kpiChart.data.datasets[3].data = leftNulls.concat(yearBarVals); // Year Targets
-
+      kpiChart.data.labels           = allLabels;
+      kpiChart.data.datasets[0].data = actual.concat(pad);
+      kpiChart.data.datasets[1].data = target.concat(pad);
+      kpiChart.data.datasets[2].data = forecast.concat(pad);
+      kpiChart.data.datasets[3].data = leftNulls.concat(yearBarVals);
       kpiChart.update();
 
-      // ---- table under chart ----
+      // Table
       const rows = res?.table || [];
       if (rows.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No facts for this plan/year.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No facts for this plan/year.</td></tr>';
       } else {
         tableBody.innerHTML = '';
         for (const r of rows) {
           const tr = document.createElement('tr');
-
-          // NEW: conditional Edit cell based on ACL
-          const editCellHtml =
-            (canEditFacts && !r.hasPending)
-              ? `<button class="btn btn-sm btn-outline-primary"
-                     data-fact-id="${r.id}"
-                     data-period="${r.period ?? ''}"
-                     data-actual="${r.actual ?? ''}"
-                     data-target="${r.target ?? ''}"
-                     data-forecast="${r.forecast ?? ''}"
-                     data-status="${r.statusCode ?? ''}"
-                     data-lastby="${r.lastBy ?? ''}"
-                     data-pillar-id="${selPillar.value || ''}"
-                     data-objective-id="${selObjective.value || ''}"
-                     data-kpi-id="${selKpi.value || ''}"
-                     onclick="openEditModal(this)">
-                     ✏️ Edit
-                   </button>`
-              : (r.hasPending
-                ? `<button class="btn btn-sm btn-outline-secondary" data-pending="1" title="A change is already pending for this period">
-                 ⏳ Pending
-               </button>`
-                : `<button class="btn btn-sm btn-outline-secondary" data-noaccess="1" title="You do not have access to edit these facts">
-                 ✏️ Edit
-               </button>`);
-
           tr.innerHTML = `
-    <td>
-      ${r.period ?? '—'}
-      ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}
-    </td>                            <td>${r.startDate ?? '—'}</td>
-                                <td>${r.endDate ?? '—'}</td>
-                                <td>${r.actual ?? '—'}</td>
-                                <td>${r.target ?? '—'}</td>
-                                <td>${r.forecast ?? '—'}</td>
-                                <td>${editCellHtml}</td>
-                              `;
+            <td>
+              ${r.period ?? '—'}
+              ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}
+            </td>
+            <td>${r.startDate ?? '—'}</td>
+            <td>${r.endDate ?? '—'}</td>
+            <td>${r.actual ?? '—'}</td>
+            <td>${r.target ?? '—'}</td>
+            <td>${r.forecast ?? '—'}</td>
+          `;
           tableBody.appendChild(tr);
         }
       }
+
+      // KPI-level edit button state (editor check + pending)
+      const anyPending = Array.isArray(res?.table) && res.table.some(r => r.hasPending);
+      if (!selKpi.value) {
+        btnEditKpi.disabled = true;
+        btnEditKpi.textContent = '✏️ Edit KPI (Actual & Forecast)';
+      } else if (!canEditFacts) {
+        btnEditKpi.disabled = true;
+        btnEditKpi.textContent = '✏️ Edit KPI (no access)';
+      } else if (anyPending) {
+        btnEditKpi.disabled = true;
+        btnEditKpi.textContent = '⏳ Pending approval';
+      } else {
+        btnEditKpi.disabled = false;
+        btnEditKpi.textContent = '✏️ Edit KPI (Actual & Forecast)';
+      }
     }
 
-    // Friendly alert for users without access
-    document.addEventListener('click', function (e) {
-      const btn = e.target.closest('[data-noaccess="1"]');
-      if (!btn) return;
-      e.preventDefault();
-      alert('You do not have access to edit these facts.\nOnly the KPI Year Plan Owner/Editor (or an Admin) can edit.');
+    // Open the bulk-edit modal (fetch partial, then wire AJAX)
+    document.getElementById('openEditKpiBtn').addEventListener('click', async () => {
+      const kpiId = selKpi.value;
+      if (!kpiId) return;
+
+      const url = '@Url.Action("EditKpiFactsModal", "Home")' + '?kpiId=' + encodeURIComponent(kpiId);
+      const modalContent = document.querySelector('#editKpiModal .modal-content');
+      modalContent.innerHTML = '<div class="p-4 text-center text-muted">Loading…</div>';
+
+      try {
+        const html = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+          .then(r => {
+            if (r.status === 403) throw new Error('You do not have access to edit this KPI.');
+            if (!r.ok) throw new Error('Failed to load edit modal.');
+            return r.text();
+          });
+
+        modalContent.innerHTML = html;
+
+        // IMPORTANT: bind the AJAX handler AFTER inserting the form
+        wireKpiModalAjax();
+
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).show();
+      } catch (e) {
+        alert(e.message || 'Could not open edit modal.');
+      }
     });
-    // Friendly alert for rows with a pending change
-    document.addEventListener('click', function (e) {
-      const btn = e.target.closest('[data-pending="1"]');
-      if (!btn) return;
-      e.preventDefault();
-      alert('A change is already pending approval for this period.\nYou can edit again after it is approved or rejected.');
-    });
+
     // kick things off
     initPage().catch(console.error);
   </script>

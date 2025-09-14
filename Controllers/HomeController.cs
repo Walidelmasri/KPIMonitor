@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using KPIMonitor.Data;
 using KPIMonitor.Models;
 using KPIMonitor.Services;
+using KPIMonitor.ViewModels; // for KpiEditModalVm
 
 namespace KPIMonitor.Controllers
 {
@@ -143,17 +144,17 @@ namespace KPIMonitor.Controllers
                      && f.Period.Year == planYear)
             .OrderBy(f => f.Period!.StartDate)   // <-- use StartDate for natural order
             .ToListAsync();
-// --- compute "hasPending" per fact (for Dashboard edit button) ---
-var factIds = facts.Select(f => f.KpiFactId).ToList();
+            // --- compute "hasPending" per fact (for Dashboard edit button) ---
+            var factIds = facts.Select(f => f.KpiFactId).ToList();
 
-var pendingFactIds = await _db.KpiFactChanges
-    .AsNoTracking()
-    .Where(ch => ch.ApprovalStatus == "pending" && factIds.Contains(ch.KpiFactId))
-    .Select(ch => ch.KpiFactId)
-    .Distinct()
-    .ToListAsync();
+            var pendingFactIds = await _db.KpiFactChanges
+                .AsNoTracking()
+                .Where(ch => ch.ApprovalStatus == "pending" && factIds.Contains(ch.KpiFactId))
+                .Select(ch => ch.KpiFactId)
+                .Distinct()
+                .ToListAsync();
 
-var pendingSet = new HashSet<decimal>(pendingFactIds);
+            var pendingSet = new HashSet<decimal>(pendingFactIds);
 
             static string LabelFor(DimPeriod p)
             {
@@ -207,21 +208,21 @@ var pendingSet = new HashSet<decimal>(pendingFactIds);
 
             // 5) Table rows
             string fmt(DateTime? d) => d?.ToString("yyyy-MM-dd") ?? "—";
-var table = facts.Select(f => new
-{
-    id        = f.KpiFactId,
-    period    = LabelFor(f.Period),
-    startDate = f.Period?.StartDate?.ToString("yyyy-MM-dd") ?? "—",
-    endDate   = f.Period?.EndDate?.ToString("yyyy-MM-dd") ?? "—",
+            var table = facts.Select(f => new
+            {
+                id = f.KpiFactId,
+                period = LabelFor(f.Period),
+                startDate = f.Period?.StartDate?.ToString("yyyy-MM-dd") ?? "—",
+                endDate = f.Period?.EndDate?.ToString("yyyy-MM-dd") ?? "—",
 
-    actual    = f.ActualValue?.ToString("0.###"),
-    target    = f.TargetValue?.ToString("0.###"),
-    forecast  = f.ForecastValue?.ToString("0.###"),
-    statusCode= f.StatusCode,
-    lastBy    = f.LastChangedBy,
+                actual = f.ActualValue?.ToString("0.###"),
+                target = f.TargetValue?.ToString("0.###"),
+                forecast = f.ForecastValue?.ToString("0.###"),
+                statusCode = f.StatusCode,
+                lastBy = f.LastChangedBy,
 
-    hasPending = pendingSet.Contains(f.KpiFactId)   // <-- THIS drives "⏳ Pending"
-}).ToList();
+                hasPending = pendingSet.Contains(f.KpiFactId)   // <-- THIS drives "⏳ Pending"
+            }).ToList();
 
             var kpi = await _db.DimKpis
                 .Include(x => x.Objective)
@@ -328,5 +329,101 @@ var table = facts.Select(f => new
             // Fallback (normal form post): redirect
             return RedirectToAction("Index", "Home", new { pillarId, objectiveId, kpiId });
         }
+// GET: modal with Actual + Forecast grid for the active plan (strict grace windows)
+[HttpGet]
+public async Task<IActionResult> EditKpiFactsModal(decimal kpiId)
+{
+    // 1) Find most recent ACTIVE year plan for this KPI (same rule as GetKpiSummary)
+    var plan = await _db.KpiYearPlans
+        .Include(p => p.Period)
+        .AsNoTracking()
+        .Where(p => p.KpiId == kpiId && p.IsActive == 1 && p.Period != null)
+        .OrderByDescending(p => p.KpiYearPlanId)
+        .FirstOrDefaultAsync();
+
+    if (plan == null || plan.Period == null)
+        return Content("No active year plan found for this KPI.", "text/plain");
+
+    // 2) ACL: only Owner/Editor/Admin should even open the modal
+    var canEdit = await _acl.CanEditPlanAsync(plan.KpiYearPlanId, User);
+    if (!canEdit) return StatusCode(403);
+
+    int year = plan.Period.Year;
+
+    // 3) Load KPI with codes to build the composed title
+    var kpi = await _db.DimKpis
+        .Include(x => x.Objective)
+            .ThenInclude(o => o.Pillar)
+        .AsNoTracking()
+        .FirstOrDefaultAsync(k => k.KpiId == kpiId);
+
+    string pillarCode    = kpi?.Objective?.Pillar?.PillarCode ?? "";
+    string objectiveCode = kpi?.Objective?.ObjectiveCode ?? "";
+    string kpiCode       = kpi?.KpiCode ?? "";
+    string left  = string.Join('.', new[] { pillarCode, objectiveCode }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    string prefix = string.Join(' ', new[] { left, kpiCode }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    string displayTitle = string.IsNullOrWhiteSpace(prefix) ? (kpi?.KpiName ?? "—") : $"{prefix} — {kpi?.KpiName ?? "—"}";
+
+    // 4) Load all facts for that KPI + plan year
+    var facts = await _db.KpiFacts
+        .Include(f => f.Period)
+        .AsNoTracking()
+        .Where(f => f.KpiId == kpiId
+                 && f.IsActive == 1
+                 && f.KpiYearPlanId == plan.KpiYearPlanId
+                 && f.Period != null
+                 && f.Period.Year == year)
+        .OrderBy(f => f.Period!.StartDate)
+        .ToListAsync();
+
+    // Determine granularity (monthly if any MonthNum exists, otherwise quarterly)
+    bool isMonthly = facts.Any(f => f.Period!.MonthNum.HasValue);
+
+    // 5) Build the VM
+    var vm = new KpiEditModalVm
+    {
+        KpiId     = kpiId,                 // decimal (matches your DB)
+        Year      = year,
+        IsMonthly = isMonthly,
+        KpiName   = displayTitle,          // <-- full "PC.OC KPICode — Name"
+        Unit      = string.IsNullOrWhiteSpace(plan.Unit) ? "—" : plan.Unit
+    };
+
+    if (isMonthly)
+    {
+        // Pre-fill current month values
+        for (int m = 1; m <= 12; m++)
+        {
+            var f = facts.FirstOrDefault(x => x.Period!.MonthNum == m);
+            vm.Actuals[m]   = f?.ActualValue;
+            vm.Forecasts[m] = f?.ForecastValue;
+        }
+
+        // Strict grace window (Asia/Riyadh): only last closed month within +1 month; forecasts = current..Dec
+        var w = PeriodEditPolicy.ComputeMonthlyWindow(year, DateTime.UtcNow);
+        vm.EditableActualKeys   = w.ActualMonths;
+        vm.EditableForecastKeys = w.ForecastMonths;
+    }
+    else
+    {
+        // Quarterly pre-fill
+        for (int q = 1; q <= 4; q++)
+        {
+            var f = facts.FirstOrDefault(x => x.Period!.QuarterNum == q);
+            vm.Actuals[q]   = f?.ActualValue;
+            vm.Forecasts[q] = f?.ForecastValue;
+        }
+
+        // Strict grace window (quarters)
+        var w = PeriodEditPolicy.ComputeQuarterlyWindow(year, DateTime.UtcNow);
+        vm.EditableActualKeys   = w.ActualQuarters;
+        vm.EditableForecastKeys = w.ForecastQuarters;
+    }
+
+    // 6) Return the partial your step 3 created (keeps AJAX flow)
+    return PartialView("_EditKpiFactsModal", vm);
+}
+
+
     }
 }
