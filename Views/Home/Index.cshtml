@@ -619,23 +619,23 @@
       const modalContent = document.querySelector('#editKpiModal .modal-content');
       modalContent.innerHTML = '<div class="p-4 text-center text-muted">Loading…</div>';
 
-      try {
-        const html = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-          .then(r => {
-            if (r.status === 403) throw new Error('You do not have access to edit this KPI.');
-            if (!r.ok) throw new Error('Failed to load edit modal.');
-            return r.text();
-          });
+try {
+  const r = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+  const text = await r.text();                 // <-- read body even on errors
 
-        modalContent.innerHTML = html;
+  if (r.status === 403) throw new Error('You do not have access to edit this KPI.');
+  if (!r.ok) {
+    console.error('EditKpiFactsModal failed', r.status, text); // <-- see real server error
+    throw new Error('Failed to load edit modal. (' + r.status + ')');
+  }
 
-        // IMPORTANT: bind the AJAX handler AFTER inserting the form
-        wireKpiModalAjax();
+  modalContent.innerHTML = text;
+  wireKpiModalAjax();                          // re-wire the form AFTER injecting HTML
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).show();
+} catch (e) {
+  alert(e.message || 'Could not open edit modal.');
+}
 
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).show();
-      } catch (e) {
-        alert(e.message || 'Could not open edit modal.');
-      }
     });
 
     // kick things off
