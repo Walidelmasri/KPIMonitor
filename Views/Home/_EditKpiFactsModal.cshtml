@@ -1,4 +1,20 @@
 @model KPIMonitor.ViewModels.KpiEditModalVm
+<style>
+  /* Shade/grey out anything not editable inside the modal */
+  #editKpiModal input.form-control[readonly] {
+    background-color: #f3f4f6 !important; /* light grey */
+    color: #6c757d !important;            /* muted text */
+    border-color: #e5e7eb !important;
+    cursor: not-allowed;
+  }
+  /* Optional tiny lock badge */
+  #editKpiModal td.readonly-cell { position: relative; }
+  #editKpiModal td.readonly-cell .ro-badge {
+    position: absolute; right: 8px; top: 6px;
+    font-size: 0.8rem; color: #6c757d;
+    pointer-events: none;
+  }
+</style>
 
 <div class="modal-header">
   <h5 class="modal-title">Edit @Model.KpiName (@Model.Year)</h5>
@@ -27,22 +43,29 @@
           </tr>
         </thead>
         <tbody>
-          @for (var m = 1; m <= 12; m++)
-          {
-            var canA = Model.EditableActualKeys.Contains(m);
-            var canF = Model.EditableForecastKeys.Contains(m);
-            <tr>
-              <td>@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedMonthName(m)</td>
-              <td>
-                <input class="form-control form-control-sm" type="number" step="any" name="Actuals[@m]"
-                  value="@(Model.Actuals.ContainsKey(m) ? Model.Actuals[m] : null)" @(!canA ? "readonly" : "") />
-              </td>
-              <td>
-                <input class="form-control form-control-sm" type="number" step="any" name="Forecasts[@m]"
-                  value="@(Model.Forecasts.ContainsKey(m) ? Model.Forecasts[m] : null)" @(!canF ? "readonly" : "") />
-              </td>
-            </tr>
-          }
+@for (var m = 1; m <= 12; m++)
+{
+    var canA = Model.EditableActualKeys.Contains(m);
+    var canF = Model.EditableForecastKeys.Contains(m);
+    <tr>
+      <td>@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedMonthName(m)</td>
+      <td class="@(canA ? "" : "readonly-cell")">
+        <input class="form-control form-control-sm"
+               type="number" step="any" name="Actuals[@m]"
+               value="@(Model.Actuals.ContainsKey(m) ? Model.Actuals[m] : null)"
+               @(canA ? "" : "readonly aria-readonly=\"true\" title=\"Not editable (outside grace window)\"") />
+        @if (!canA) { <span class="ro-badge">🔒</span> }
+      </td>
+      <td class="@(canF ? "" : "readonly-cell")">
+        <input class="form-control form-control-sm"
+               type="number" step="any" name="Forecasts[@m]"
+               value="@(Model.Forecasts.ContainsKey(m) ? Model.Forecasts[m] : null)"
+               @(canF ? "" : "readonly aria-readonly=\"true\" title=\"Not editable (outside allowed range)\"") />
+        @if (!canF) { <span class="ro-badge">🔒</span> }
+      </td>
+    </tr>
+}
+
         </tbody>
       </table>
     }
@@ -57,22 +80,29 @@
           </tr>
         </thead>
         <tbody>
-          @for (var q = 1; q <= 4; q++)
-          {
-            var canA = Model.EditableActualKeys.Contains(q);
-            var canF = Model.EditableForecastKeys.Contains(q);
-            <tr>
-              <td>@($"Q{q}")</td>
-              <td>
-                <input class="form-control form-control-sm" type="number" step="any" name="ActualQuarters[@q]"
-                  value="@(Model.Actuals.ContainsKey(q) ? Model.Actuals[q] : null)" @(!canA ? "readonly" : "") />
-              </td>
-              <td>
-                <input class="form-control form-control-sm" type="number" step="any" name="ForecastQuarters[@q]"
-                  value="@(Model.Forecasts.ContainsKey(q) ? Model.Forecasts[q] : null)" @(!canF ? "readonly" : "") />
-              </td>
-            </tr>
-          }
+@for (var q = 1; q <= 4; q++)
+{
+    var canA = Model.EditableActualKeys.Contains(q);
+    var canF = Model.EditableForecastKeys.Contains(q);
+    <tr>
+      <td>@($"Q{q}")</td>
+      <td class="@(canA ? "" : "readonly-cell")">
+        <input class="form-control form-control-sm"
+               type="number" step="any" name="ActualQuarters[@q]"
+               value="@(Model.Actuals.ContainsKey(q) ? Model.Actuals[q] : null)"
+               @(canA ? "" : "readonly aria-readonly=\"true\" title=\"Not editable (outside grace window)\"") />
+        @if (!canA) { <span class="ro-badge">🔒</span> }
+      </td>
+      <td class="@(canF ? "" : "readonly-cell")">
+        <input class="form-control form-control-sm"
+               type="number" step="any" name="ForecastQuarters[@q]"
+               value="@(Model.Forecasts.ContainsKey(q) ? Model.Forecasts[q] : null)"
+               @(canF ? "" : "readonly aria-readonly=\"true\" title=\"Not editable (outside allowed range)\"") />
+        @if (!canF) { <span class="ro-badge">🔒</span> }
+      </td>
+    </tr>
+}
+
         </tbody>
       </table>
     }
