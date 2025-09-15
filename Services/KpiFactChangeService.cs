@@ -24,7 +24,8 @@ namespace KPIMonitor.Services
             decimal kpiFactId,
             decimal? actual, decimal? target, decimal? forecast,
             string? statusCode,
-            string submittedBy)
+            string submittedBy,
+            decimal? batchId = null)  // <-- NEW param (optional)
         {
             // guard: existing pending
             if (await HasPendingAsync(kpiFactId))
@@ -46,7 +47,8 @@ namespace KPIMonitor.Services
                 ProposedStatusCode = string.IsNullOrWhiteSpace(statusCode) ? null : statusCode.Trim().ToLowerInvariant(),
                 SubmittedBy = submittedBy,
                 SubmittedAt = DateTime.UtcNow,
-                ApprovalStatus = "pending"
+                ApprovalStatus = "pending",
+                BatchId = batchId   // <-- save batch link if provided
             };
 
             _db.KpiFactChanges.Add(change);
@@ -76,8 +78,8 @@ namespace KPIMonitor.Services
                 if (!string.IsNullOrWhiteSpace(change.ProposedStatusCode)) fact.StatusCode = change.ProposedStatusCode;
 
                 change.ApprovalStatus = "approved";
-                change.ReviewedAt = DateTime.UtcNow;  // real timestamp
-                change.ReviewedBy = owner;            // or "auto" if you prefer
+                change.ReviewedAt = DateTime.UtcNow;
+                change.ReviewedBy = owner;    // or "auto"
 
                 await _db.SaveChangesAsync();
             }
@@ -85,10 +87,8 @@ namespace KPIMonitor.Services
             return change;
         }
 
-
         public async Task ApproveAsync(decimal changeId, string reviewer)
         {
-            // load change + fact
             var ch = await _db.KpiFactChanges
                 .FirstOrDefaultAsync(c => c.KpiFactChangeId == changeId);
 
@@ -99,9 +99,8 @@ namespace KPIMonitor.Services
             var fact = await _db.KpiFacts.FirstOrDefaultAsync(f => f.KpiFactId == ch.KpiFactId);
             if (fact == null) throw new InvalidOperationException("Target KPI fact not found.");
 
-            // apply only the provided values
-            if (ch.ProposedActualValue.HasValue) fact.ActualValue = ch.ProposedActualValue.Value;
-            if (ch.ProposedTargetValue.HasValue) fact.TargetValue = ch.ProposedTargetValue.Value;
+            if (ch.ProposedActualValue.HasValue)   fact.ActualValue   = ch.ProposedActualValue.Value;
+            if (ch.ProposedTargetValue.HasValue)   fact.TargetValue   = ch.ProposedTargetValue.Value;
             if (ch.ProposedForecastValue.HasValue) fact.ForecastValue = ch.ProposedForecastValue.Value;
             if (!string.IsNullOrWhiteSpace(ch.ProposedStatusCode)) fact.StatusCode = ch.ProposedStatusCode;
 

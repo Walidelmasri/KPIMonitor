@@ -18,6 +18,7 @@ namespace KPIMonitor.Data
         public DbSet<KpiActionDeadlineHistory> KpiActionDeadlineHistories { get; set; } = default!;
         public DbSet<AuditLog> AuditLogs { get; set; } = default!;
         public DbSet<KpiFactChange> KpiFactChanges { get; set; } = null!;
+        public DbSet<KPIMonitor.Models.KpiFactChangeBatch> KpiFactChangeBatches { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -298,6 +299,7 @@ namespace KPIMonitor.Data
                 e.Property(x => x.ApprovalStatus).HasColumnName("APPROVALSTATUS");
                 e.Property(x => x.ReviewedBy).HasColumnName("REVIEWEDBY");
                 e.Property(x => x.ReviewedAt).HasColumnName("REVIEWEDAT");
+                e.Property(x => x.BatchId).HasColumnName("BATCHID");
                 e.Property(x => x.RejectReason).HasColumnName("REJECTREASON");
 
                 // FK → KpiFacts (leave this if KpiFacts already works in your app)
@@ -305,9 +307,61 @@ namespace KPIMonitor.Data
                  .WithMany(f => f.Changes)
                  .HasForeignKey(x => x.KpiFactId);
             });
+            // ---- KpiFactChange (fix BATCHID mapping) ----
+            modelBuilder.Entity<KpiFactChange>(e =>
+            {
+                e.ToTable("KPIFACTCHANGES");
+                e.HasKey(x => x.KpiFactChangeId);
+
+                e.Property(x => x.KpiFactChangeId).HasColumnName("KPIFACTCHANGEID").ValueGeneratedOnAdd();
+                e.Property(x => x.KpiFactId).HasColumnName("KPIFACTID");
+                e.Property(x => x.ProposedActualValue).HasColumnName("PROPOSEDACTUALVALUE");
+                e.Property(x => x.ProposedTargetValue).HasColumnName("PROPOSEDTARGETVALUE");
+                e.Property(x => x.ProposedForecastValue).HasColumnName("PROPOSEDFORECASTVALUE");
+                e.Property(x => x.ProposedStatusCode).HasColumnName("PROPOSEDSTATUSCODE");
+                e.Property(x => x.SubmittedBy).HasColumnName("SUBMITTEDBY");
+                e.Property(x => x.SubmittedAt).HasColumnName("SUBMITTEDAT");
+                e.Property(x => x.ApprovalStatus).HasColumnName("APPROVALSTATUS");
+                e.Property(x => x.ReviewedBy).HasColumnName("REVIEWEDBY");
+                e.Property(x => x.ReviewedAt).HasColumnName("REVIEWEDAT");
+                e.Property(x => x.RejectReason).HasColumnName("REJECTREASON");
+                e.Property(x => x.BatchId).HasColumnName("BATCHID"); // <-- was "BatchId" (wrong case)
+
+                e.HasOne(x => x.KpiFact)
+                 .WithMany(f => f.Changes)
+                 .HasForeignKey(x => x.KpiFactId)
+                 .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // ---- KpiFactChangeBatch (map EVERY column to UPPERCASE) ----
+            modelBuilder.Entity<KpiFactChangeBatch>(e =>
+            {
+                e.ToTable("KPIFACTCHANGEBATCHES");
+                e.HasKey(x => x.BatchId);
+
+                e.Property(x => x.BatchId).HasColumnName("BATCHID").ValueGeneratedOnAdd();
+                e.Property(x => x.KpiId).HasColumnName("KPIID");
+                e.Property(x => x.KpiYearPlanId).HasColumnName("KPIYEARPLANID");
+                e.Property(x => x.Year).HasColumnName("YEAR");                  // <-- this fixes ORA-00904
+                e.Property(x => x.Frequency).HasColumnName("FREQUENCY");
+                e.Property(x => x.PeriodMin).HasColumnName("PERIODMIN");
+                e.Property(x => x.PeriodMax).HasColumnName("PERIODMAX");
+
+                e.Property(x => x.RowCount).HasColumnName("ROWCOUNT");
+                e.Property(x => x.SkippedCount).HasColumnName("SKIPPEDCOUNT");
+
+                e.Property(x => x.SubmittedBy).HasColumnName("SUBMITTEDBY");
+                e.Property(x => x.SubmittedAt).HasColumnName("SUBMITTEDAT").HasColumnType("TIMESTAMP(0)");
+
+                e.Property(x => x.ApprovalStatus).HasColumnName("APPROVALSTATUS");
+                e.Property(x => x.ReviewedBy).HasColumnName("REVIEWEDBY");
+                e.Property(x => x.ReviewedAt).HasColumnName("REVIEWEDAT").HasColumnType("TIMESTAMP(0)");
+                e.Property(x => x.RejectReason).HasColumnName("REJECTREASON");
+            });
+
         }
 
-        
+
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             // collect audit rows BEFORE saving

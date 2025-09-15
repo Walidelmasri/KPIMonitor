@@ -21,6 +21,7 @@ namespace KPIMonitor.Models
 
         // NULL | 'pending' | 'approved' | 'rejected'
         public string?  ApprovalStatus { get; set; }
+        public decimal? BatchId { get; set; }
 
         public string?  ReviewedBy { get; set; }
         public DateTime? ReviewedAt { get; set; }

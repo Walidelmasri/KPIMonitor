@@ -12,7 +12,10 @@ namespace KPIMonitor.Services.Abstractions
             decimal kpiFactId,
             decimal? actual, decimal? target, decimal? forecast,
             string? statusCode,
-            string submittedBy);
+            string submittedBy,
+                        decimal? batchId = null  // <-- NEW optional param
+
+            );
 
         /// <summary>Applies the change into KpiFacts and marks it approved.</summary>
         Task ApproveAsync(decimal changeId, string reviewer);
