@@ -454,143 +454,147 @@ namespace KPIMonitor.Controllers
 
             return !string.IsNullOrWhiteSpace(ownerEmpId) && ownerEmpId == myEmp;
         }
-[HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> SubmitBatch(
-    decimal kpiId,
-    int year,
-    bool isMonthly,
-    Dictionary<int, decimal?>? Actuals,
-    Dictionary<int, decimal?>? Forecasts,
-    Dictionary<int, decimal?>? ActualQuarters,
-    Dictionary<int, decimal?>? ForecastQuarters)
-{
-    try
-    {
-        // 1) Locate most recent ACTIVE year plan for this KPI
-        var plan = await _db.KpiYearPlans
-            .Include(p => p.Period)
-            .AsNoTracking()
-            .Where(p => p.KpiId == kpiId && p.IsActive == 1 && p.Period != null)
-            .OrderByDescending(p => p.KpiYearPlanId)
-            .FirstOrDefaultAsync();
-
-        if (plan == null || plan.Period == null)
-            return BadRequest(new { ok = false, error = "No active year plan found for this KPI." });
-
-        if (plan.Period.Year != year)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SubmitBatch(
+            decimal kpiId,
+            int year,
+            bool isMonthly,
+            Dictionary<int, decimal?>? Actuals,
+            Dictionary<int, decimal?>? Forecasts,
+            Dictionary<int, decimal?>? ActualQuarters,
+            Dictionary<int, decimal?>? ForecastQuarters)
         {
-            // We only batch-post to the year of the active plan
-            return BadRequest(new { ok = false, error = $"Year mismatch. Active plan year is {plan.Period.Year}." });
-        }
-
-        // 2) ACL: only Owner/Editor/Admin can submit changes
-        if (!await _acl.CanEditPlanAsync(plan.KpiYearPlanId, User))
-            return StatusCode(403, new { ok = false, error = "You do not have access to edit these facts." });
-
-        // 3) Load the facts for this KPI + plan year
-        var facts = await _db.KpiFacts
-            .Include(f => f.Period)
-            .Where(f => f.KpiId == kpiId
-                     && f.IsActive == 1
-                     && f.KpiYearPlanId == plan.KpiYearPlanId
-                     && f.Period != null
-                     && f.Period.Year == year)
-            .OrderBy(f => f.Period!.StartDate)
-            .ToListAsync();
-
-        // 4) Decide granularity (trust DB more than form)
-        bool monthly = isMonthly && facts.Any(f => f.Period!.MonthNum.HasValue);
-        var postedActuals   = monthly ? (Actuals ?? new Dictionary<int, decimal?>())
-                                      : (ActualQuarters ?? new Dictionary<int, decimal?>());
-        var postedForecasts = monthly ? (Forecasts ?? new Dictionary<int, decimal?>())
-                                      : (ForecastQuarters ?? new Dictionary<int, decimal?>());
-
-// 5) Edit windows (match your UI)
-var nowUtc = DateTime.UtcNow;
-
-HashSet<int> editableA;
-HashSet<int> editableF;
-
-if (monthly)
-{
-    var mw = PeriodEditPolicy.ComputeMonthlyWindow(year, nowUtc);
-    editableA = new HashSet<int>(mw.ActualMonths);
-    editableF = new HashSet<int>(mw.ForecastMonths);
-}
-else
-{
-    var qw = PeriodEditPolicy.ComputeQuarterlyWindow(year, nowUtc);
-    editableA = new HashSet<int>(qw.ActualQuarters);
-    editableF = new HashSet<int>(qw.ForecastQuarters);
-}
-
-
-        // 6) Process each fact
-        var submittedBy = Sam();
-        if (string.IsNullOrWhiteSpace(submittedBy)) submittedBy = "editor";
-
-        int created = 0, skipped = 0;
-        var errors = new System.Collections.Generic.List<object>();
-
-        foreach (var f in facts)
-        {
-            int key = monthly ? (f.Period!.MonthNum ?? 0) : (f.Period!.QuarterNum ?? 0);
-            if (key == 0) { skipped++; continue; }
-
-            postedActuals.TryGetValue(key, out var newA);
-            postedForecasts.TryGetValue(key, out var newF);
-
-            bool changeA = newA.HasValue && (f.ActualValue != newA);
-            bool changeF = newF.HasValue && (f.ForecastValue != newF);
-
-            if (!changeA && !changeF) { skipped++; continue; }
-
-            // Window enforcement
-            if ((changeA && !editableA.Contains(key)) || (changeF && !editableF.Contains(key)))
-            {
-                skipped++;
-                errors.Add(new { factId = f.KpiFactId, period = key, error = "Period not within edit window." });
-                continue;
-            }
-
-            // Pending guard
-            if (await _svc.HasPendingAsync(f.KpiFactId))
-            {
-                skipped++;
-                errors.Add(new { factId = f.KpiFactId, period = key, error = "A pending change already exists for this period." });
-                continue;
-            }
-
             try
             {
-                // Only Actual & Forecast are edited in this modal; keep Target/Status null (no-change)
-                _ = await _svc.SubmitAsync(
-                        f.KpiFactId,
-                        changeA ? newA : null,
-                        null, // ProposedTargetValue (not in this modal)
-                        changeF ? newF : null,
-                        null, // ProposedStatusCode (not in this modal)
-                        submittedBy);
+                var traceId = HttpContext.TraceIdentifier ?? Guid.NewGuid().ToString("n");
 
-                created++;
+                // 1) Active plan for this KPI
+                var plan = await _db.KpiYearPlans
+                    .Include(p => p.Period)
+                    .AsNoTracking()
+                    .Where(p => p.KpiId == kpiId && p.IsActive == 1 && p.Period != null)
+                    .OrderByDescending(p => p.KpiYearPlanId)
+                    .FirstOrDefaultAsync();
+
+                if (plan == null || plan.Period == null)
+                    return BadRequest(new { ok = false, error = "No active year plan found for this KPI.", traceId });
+
+                if (plan.Period.Year != year)
+                    return BadRequest(new { ok = false, error = $"Year mismatch. Active plan year is {plan.Period.Year}.", traceId });
+
+                // 2) ACL
+                if (!await _acl.CanEditPlanAsync(plan.KpiYearPlanId, User))
+                    return StatusCode(403, new { ok = false, error = "You do not have access to edit these facts.", traceId });
+
+                // 3) Facts for this KPI/year/plan
+                var facts = await _db.KpiFacts
+                    .Include(f => f.Period)
+                    .Where(f => f.KpiId == kpiId
+                             && f.IsActive == 1
+                             && f.KpiYearPlanId == plan.KpiYearPlanId
+                             && f.Period != null
+                             && f.Period.Year == year)
+                    .OrderBy(f => f.Period!.StartDate)
+                    .ToListAsync();
+
+                // 4) Granularity: prefer DB; fallback to posted only if no facts
+                bool monthly = facts.Any(f => f.Period!.MonthNum.HasValue) || (!facts.Any() && isMonthly);
+
+                var postedActuals = monthly ? (Actuals ?? new Dictionary<int, decimal?>())
+                                             : (ActualQuarters ?? new Dictionary<int, decimal?>());
+                var postedForecast = monthly ? (Forecasts ?? new Dictionary<int, decimal?>())
+                                             : (ForecastQuarters ?? new Dictionary<int, decimal?>());
+
+                // 5) Edit windows
+                var nowUtc = DateTime.UtcNow;
+                HashSet<int> editableA, editableF;
+                if (monthly)
+                {
+                    var mw = PeriodEditPolicy.ComputeMonthlyWindow(year, nowUtc);
+                    editableA = new HashSet<int>(mw.ActualMonths);
+                    editableF = new HashSet<int>(mw.ForecastMonths);
+                }
+                else
+                {
+                    var qw = PeriodEditPolicy.ComputeQuarterlyWindow(year, nowUtc);
+                    editableA = new HashSet<int>(qw.ActualQuarters);
+                    editableF = new HashSet<int>(qw.ForecastQuarters);
+                }
+
+                // 6) Submit
+                var submittedBy = Sam();
+                if (string.IsNullOrWhiteSpace(submittedBy)) submittedBy = "editor";
+
+                int created = 0, skipped = 0;
+                var errors = new System.Collections.Generic.List<object>();
+
+                foreach (var f in facts)
+                {
+                    int key = monthly ? (f.Period!.MonthNum ?? 0) : (f.Period!.QuarterNum ?? 0);
+                    if (key == 0) { skipped++; continue; }
+
+                    // only consider changes for keys actually supplied by the form
+                    bool aProvided = postedActuals.ContainsKey(key) && postedActuals[key].HasValue;
+                    bool fProvided = postedForecast.ContainsKey(key) && postedForecast[key].HasValue;
+
+                    postedActuals.TryGetValue(key, out var newA);
+                    postedForecast.TryGetValue(key, out var newF);
+
+                    bool changeA = aProvided && (f.ActualValue != newA);
+                    bool changeF = fProvided && (f.ForecastValue != newF);
+
+                    if (!changeA && !changeF) { skipped++; continue; }
+
+                    // edit window
+                    if ((changeA && !editableA.Contains(key)) || (changeF && !editableF.Contains(key)))
+                    { skipped++; continue; }
+
+                    // pending guard
+                    if (await _svc.HasPendingAsync(f.KpiFactId))
+                    { skipped++; continue; }
+
+                    try
+                    {
+                        await _svc.SubmitAsync(
+                            f.KpiFactId,
+                            changeA ? newA : null,   // Actual
+                            null,                    // Target (not in this modal)
+                            changeF ? newF : null,   // Forecast
+                            null,                    // Status (not in this modal)
+                            submittedBy);
+                        created++;
+                    }
+                    catch (Exception ex)
+                    {
+                        skipped++;
+                        // keep a tiny error list if you want; or comment this out entirely
+                        errors.Add(new { factId = f.KpiFactId, periodKey = key, error = ex.Message });
+                    }
+                }
+
+                if (created == 0 && errors.Count > 0)
+                    return BadRequest(new { ok = false, created, skipped, errors, traceId });
+
+                return Json(new
+                {
+                    ok = true,
+                    kpiId,
+                    planId = plan.KpiYearPlanId,
+                    year,
+                    monthly,
+                    created,
+                    skipped,
+                    traceId
+                });
             }
             catch (Exception ex)
             {
-                errors.Add(new { factId = f.KpiFactId, period = key, error = ex.Message });
+                return BadRequest(new { ok = false, error = ex.Message, traceId = HttpContext.TraceIdentifier });
             }
         }
 
-        if (created == 0 && errors.Count > 0)
-            return BadRequest(new { ok = false, created, skipped, errors });
 
-        return Json(new { ok = true, created, skipped, errors });
-    }
-    catch (Exception ex)
-    {
-        return BadRequest(new { ok = false, error = ex.Message });
-    }
-}
 
         // ------------------------
         // NEW (additive only): ChangeOverlayInfo for Details modal/chart

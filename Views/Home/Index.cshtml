@@ -490,23 +490,36 @@
         const fd  = new FormData(form);          // includes antiforgery token
 
         try {
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: {
-              'X-Requested-With': 'XMLHttpRequest',
-              'Accept': 'application/json'
-            },
-            body: fd
-          });
-          if (!res.ok) {
-            const err = await res.json().catch(() => null);
-            throw new Error(err?.error || 'Save failed');
-          }
+// inside wireKpiModalAjax() submit handler, replace the fetch+success part with:
+const res  = await fetch(url, {
+  method: 'POST',
+  headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+  body: fd
+});
+const text = await res.text();        // read body even if not OK
+let data = null;
+try { data = JSON.parse(text); } catch { /* non-JSON or HTML */ }
 
-          // success: close modal + refresh KPI chart/table/meta
-          const modalEl = document.getElementById('editKpiModal');
-          bootstrap.Modal.getOrCreateInstance(modalEl).hide();
-          await loadKpiSummary();
+if (!res.ok) {
+  console.error('[Submit] HTTP', res.status, text);
+  const msg = (data && data.error) ? data.error : ('Save failed (' + res.status + ')');
+  throw new Error(msg);
+}
+
+console.log('[Submit] result:', data);
+
+// Optional: quick visible feedback (works for single or batch)
+if (data && typeof data === 'object') {
+  if (typeof data.createdCount === 'number') {
+    alert(`Submitted: ${data.createdCount} change(s)` + (data.skippedCount ? `, skipped: ${data.skippedCount}` : ''));
+  } else if (data.status) {
+    alert(data.status === 'approved' ? 'Saved & auto-approved.' : 'Submitted for approval.');
+  }
+}
+
+bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).hide();
+await loadKpiSummary();
+
         } catch (err) {
           alert(err?.message || 'Save failed');
         }
