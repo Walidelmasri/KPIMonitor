@@ -1,43 +1,27 @@
 @using KPIMonitor.Services
 @inject IAdminAuthorizer AdminAuthorizer
+@inject IEmployeeDirectory EmpDir
 @{
   ViewData["Title"] = "Action Plans";
   var isAdmin = AdminAuthorizer.IsAdmin(User);
+
+  // Pull ALL employees once at render (no filtering or preselection)
+  // EmployeePickDto => EmpId, Label
+  var employees = await EmpDir.GetAllForPickAsync();
 }
 <style>
-  /* equal width buttons */
   .ap-action-btn { min-width: 140px; }
-
-  /* optional: remove if you’re not using the old “badge” header */
   .ap-colbadge { font-size: 0.95rem; padding: .5rem .75rem; letter-spacing: .1px; }
-
-  /* column wrapper (the controller outputs <div class="ap-col"> … ) */
   .ap-col { display: flex; flex-direction: column; gap: .75rem; }
-
-  /* full-width column header bar */
   .ap-col-header { width: 100%; border-radius: .75rem; padding: .45rem .75rem; font-weight: 700; line-height: 1.2; }
-
-  /* solid Bootstrap palette */
-  .ap-col-header--todo  { background: #6c757d; color: #fff; }   /* secondary */
-  .ap-col-header--prog  { background: #ffc107; color: #000; }   /* warning (black text for contrast) */
-  .ap-col-header--done  { background: #198754; color: #fff; }   /* success */
-
-  /* ensure no parent kills sticky */
+  .ap-col-header--todo  { background: #6c757d; color: #fff; }
+  .ap-col-header--prog  { background: #ffc107; color: #000; }
+  .ap-col-header--done  { background: #198754; color: #fff; }
   #apBody, #apBody .row, #apBody .col-md-4 { overflow: visible; }
-
-  /* local scroller for the board */
-  .ap-scroll {
-    max-height: calc(100vh - 220px);
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding-right: 4px;
-  }
-
-  /* make column headers stick to top of the local scroller */
-  @@media (min-width: 992px) {
-    .ap-col-header { position: sticky; top: 0; z-index: 5; }
-  }
+  .ap-scroll { max-height: calc(100vh - 220px); overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
+  @@media (min-width: 992px) { .ap-col-header { position: sticky; top: 0; z-index: 5; } }
 </style>
+
 <div class="container py-4">
   @section PageHeader {
     <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
@@ -105,7 +89,16 @@
 
           <div class="mb-3">
             <label class="form-label">Owner</label>
-            <input class="form-control" name="owner" id="ep_owner" required />
+            <!-- keep name="owner" so KpiActions.UpdateAction(owner, …) still binds -->
+            <select class="form-select" name="owner" id="ep_owner" required>
+              <option value="">— Select —</option>
+              @foreach (var e in employees ?? Enumerable.Empty<KPIMonitor.ViewModels.EmployeePickDto>())
+              {
+                  // post the human-friendly label (UpdateAction expects a string name)
+                  <option value="@e.Label">@e.Label</option>
+              }
+            </select>
+            <div class="form-text">Pick a person.</div>
           </div>
 
           <div class="mb-3">
@@ -146,10 +139,13 @@
 @section Scripts {
   <script>
     const IS_ADMIN = @(isAdmin ? "true" : "false");
-    const $ = (id) => document.getElementById(id);
+    const $  = (id) => document.getElementById(id);
     const qs = (sel, root = document) => root.querySelector(sel);
     const anti = () => (qs('input[name="__RequestVerificationToken"]')?.value || '');
-    const getJSON = (url) => fetch(url, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+    const getJSON = (url) => fetch(url, { headers: { 'Accept': 'application/json' } }).then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
 
     let apKpiIds = [];
 
@@ -158,7 +154,6 @@
       const root = $('apBody');
       if (!root) return;
 
-      // remove typical admin-only action buttons inside each card/row
       const selectors = [
         '[data-action="move-deadline"]',
         '[data-action="edit-plan"]',
@@ -167,16 +162,11 @@
         '[data-admin-only]',
         '[asp-admin-only]'
       ];
-      selectors.forEach(sel => {
-        root.querySelectorAll(sel).forEach(n => n.remove());
-      });
+      selectors.forEach(sel => { root.querySelectorAll(sel).forEach(n => n.remove()); });
 
-      // clean up any now-empty button groups/containers
       root.querySelectorAll('.btn-group, .ap-actions, .card-actions').forEach(group => {
         const hasVisibleChild = Array.from(group.children).some(ch => !!(ch.offsetParent));
-        if (!hasVisibleChild || group.children.length === 0) {
-          group.remove();
-        }
+        if (!hasVisibleChild || group.children.length === 0) group.remove();
       });
     }
 
@@ -195,13 +185,11 @@
           },
           body: JSON.stringify(apKpiIds)
         });
-        if (!res.ok) throw 0;
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         $('apBody').innerHTML = "<div class='ap-scroll'>" + (await res.text()) + "</div>";
-
-        // hide per-card admin controls for non-admins
         stripAdminControls();
-
-      } catch {
+      } catch (err) {
+        console.error('[AP] BoardHtml failed:', err);
         $('apBody').innerHTML = "<div class='text-danger small'>Failed to load actions.</div>";
       }
     }
@@ -221,7 +209,7 @@
     // Move Deadline — submit
     document.getElementById('moveDeadlineForm').addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      if (!IS_ADMIN) return; // hard stop on client
+      if (!IS_ADMIN) return;
       try {
         const fd = new FormData(ev.target);
         const res = await fetch('@Url.Action("MoveDeadline", "KpiActions")', {
@@ -229,15 +217,16 @@
           body: fd,
           headers: { 'Accept': 'text/html', 'X-Requested-With': 'XMLHttpRequest' }
         });
-        if (!res.ok) throw 0;
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         bootstrap.Modal.getInstance(document.getElementById('moveDeadlineModal')).hide();
         await refreshBoard();
-      } catch {
+      } catch (err) {
+        console.error('[AP] MoveDeadline failed:', err);
         alert('Failed to move deadline (check max 3 extensions).');
       }
     });
 
-    // Edit Plan — open
+    // Edit Plan — open (now uses the pre-rendered full Owner dropdown; we DO NOT filter or preselect)
     document.addEventListener('click', async (e) => {
       const btn = e.target.closest('[data-action="edit-plan"]');
       if (!btn || !IS_ADMIN) return;
@@ -245,14 +234,20 @@
       const id = btn.getAttribute('data-id');
       try {
         const data = await getJSON('@Url.Action("GetAction", "KpiActions")?actionId=' + encodeURIComponent(id));
-        $('ep_actionId').value = data.actionId;
-        $('ep_owner').value = data.owner || '';
-        $('ep_desc').value = data.description || '';
-        $('ep_status').value = data.statusCode || 'todo';
+
+        $('ep_actionId').value   = data.actionId;
+        $('ep_desc').value       = data.description || '';
+        $('ep_status').value     = data.statusCode || 'todo';
         $('ep_assignedAt').value = data.assignedAtLocal || '';
-        $('ep_due').value = data.dueDateLocal || '';
+        $('ep_due').value        = data.dueDateLocal || '';
+
+        // IMPORTANT: Do NOT auto-select the current owner (user asked to disregard).
+        const ownerSel = $('ep_owner');
+        ownerSel.value = '';
+
         new bootstrap.Modal(document.getElementById('editPlanModal')).show();
-      } catch {
+      } catch (err) {
+        console.error('[AP] GetAction failed:', err);
         alert('Failed to load the action.');
       }
     });
@@ -260,7 +255,7 @@
     // Edit Plan — submit
     document.getElementById('editPlanForm').addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      if (!IS_ADMIN) return; // hard stop on client
+      if (!IS_ADMIN) return;
       try {
         const fd = new FormData(ev.target);
         if (!fd.get('__RequestVerificationToken')) fd.append('__RequestVerificationToken', anti());
@@ -269,10 +264,11 @@
           body: fd,
           headers: { 'Accept': 'text/html', 'X-Requested-With': 'XMLHttpRequest' }
         });
-        if (!res.ok) throw 0;
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         bootstrap.Modal.getInstance(document.getElementById('editPlanModal')).hide();
         await refreshBoard();
-      } catch {
+      } catch (err) {
+        console.error('[AP] UpdateAction failed:', err);
         alert('Save failed.');
       }
     });

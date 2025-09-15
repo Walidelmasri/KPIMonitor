@@ -2,9 +2,7 @@
   ViewData["Title"] = "Approvals Inbox";
 }
 <style>
-  .appr-diff {
-    color: #111;
-  }
+  .appr-diff { color: #111; }
 </style>
 
 <div class="container py-4">
@@ -59,7 +57,7 @@
   </div>
 </div>
 
-<!-- Details Modal (added; non-breaking) -->
+<!-- Details Modal (Target & Status removed) -->
 <div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content rounded-3">
@@ -79,10 +77,8 @@
           <canvas id="apprChart"></canvas>
         </div>
         <div class="row small mt-3" id="proposedSummary" style="row-gap:.25rem">
-          <div class="col-6 col-md-3"><strong>Actual:</strong> <span id="pv_actual">—</span></div>
-          <div class="col-6 col-md-3"><strong>Target:</strong> <span id="pv_target">—</span></div>
-          <div class="col-6 col-md-3"><strong>Forecast:</strong> <span id="pv_forecast">—</span></div>
-          <div class="col-6 col-md-3"><strong>Status:</strong> <span id="pv_status">—</span></div>
+          <div class="col-6"><strong>Actual:</strong> <span id="pv_actual">—</span></div>
+          <div class="col-6"><strong>Forecast:</strong> <span id="pv_forecast">—</span></div>
         </div>
       </div>
       <div class="modal-footer">
@@ -91,6 +87,7 @@
     </div>
   </div>
 </div>
+
 @section Scripts {
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
@@ -102,7 +99,26 @@
     let currentTab = 'pending';
     let apprChart = null; // single instance
 
-    // ---------- list loader (unchanged, just calls decorate after load) ----------
+    // Remove Target & Status diff tiles coming from server HTML
+    function stripTargetStatusFromCards() {
+      // Remove any diff "cardlets" whose label is Target or Status
+      document.querySelectorAll('#apprBody .appr-cell .small').forEach(el => {
+        const label = (el.textContent || '').trim().toLowerCase();
+        if (label === 'target' || label === 'status') {
+          const col = el.closest('[class*="col-"]') || el.parentElement;
+          if (col) col.remove();
+        }
+      });
+      // Also remove any badges or text blobs that say "Status" explicitly
+      document.querySelectorAll('#apprBody .small.text-muted').forEach(el => {
+        if ((el.textContent || '').trim().toLowerCase().startsWith('status')) {
+          const col = el.closest('[class*="col-"]') || el.parentElement;
+          if (col) col.remove();
+        }
+      });
+    }
+
+    // ---------- list loader (calls strip after load) ----------
     async function loadList(tab) {
       currentTab = tab || currentTab || 'pending';
       const body = $('apprBody');
@@ -120,7 +136,10 @@
         });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         body.innerHTML = await res.text();
-        decorateDetailsButtons(); // add non-breaking Details buttons
+
+        stripTargetStatusFromCards();   // <— hide Target & Status
+        decorateDetailsButtons();       // add Details buttons
+
       } catch (err) {
         console.error(err);
         body.innerHTML = "<div class='text-danger small'>Failed to load.</div>";
@@ -227,13 +246,12 @@
     $('refreshBtn').addEventListener('click', (e) => { e.preventDefault(); loadList(currentTab); });
     document.addEventListener('DOMContentLoaded', () => loadList('pending'));
 
-    // ---------- details modal helpers (single definitions; no duplicates) ----------
+    // ---------- details modal helpers ----------
     const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const normalize = s => String(s ?? '').toLowerCase().replace(/[—–-]/g, '-').replace(/\s+/g, ' ').trim();
     function toNum(v) { return (v === null || v === undefined || v === '') ? null : Number(v); }
     function isFiniteNum(v) { return typeof v === 'number' && isFinite(v); }
 
-    // robust label matcher
     function findLabelIndex(labels, period) {
       const L = labels.map(normalize);
       const y = period?.year ?? null;
@@ -260,7 +278,7 @@
       return -1;
     }
 
-    // ---------- openDetails: builds chart with proposed overlay ----------
+    // ---------- openDetails: builds chart WITH ONLY Actual/Forecast (+Year Target bars stay) ----------
     async function openDetails(changeId) {
       try {
         // 1) change info (proposed + period)
@@ -268,54 +286,46 @@
         const info = await fetch(infoUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
         if (!info?.ok) throw new Error(info?.error || 'Failed to load details.');
 
-        // 2) base chart payload (same as RedBoard)
+        // 2) base chart payload
         const baseUrl = '@Url.Action("GetKpiPresentation", "RedBoard")' + '?kpiId=' + encodeURIComponent(info.kpiId);
         const base = await fetch(baseUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
 
         const baseLabels = base?.chart?.labels || [];
         const actBase = (base?.chart?.actual || []).slice();
-        const tgtBase = (base?.chart?.target || []).slice();
         const fctBase = (base?.chart?.forecast || []).slice();
 
         const yrs = Array.isArray(base?.chart?.yearTargets) ? base.chart.yearTargets : [];
         const yearLabels = yrs.map(y => String(y.year));
         const yearVals = yrs.map(y => (y?.value ?? null));
 
-        const labels = baseLabels.concat(yearLabels);
-        const pad = new Array(yearLabels.length).fill(null);
-        const leftNulls = new Array(baseLabels.length).fill(null);
+        const labels   = baseLabels.concat(yearLabels);
+        const pad      = new Array(yearLabels.length).fill(null);
+        const leftNulls= new Array(baseLabels.length).fill(null);
 
-        const act = actBase.concat(pad);
-        const tgt = tgtBase.concat(pad);
-        const fct = fctBase.concat(pad);
+        const act     = actBase.concat(pad);
+        const fct     = fctBase.concat(pad);
         const yearBar = leftNulls.concat(yearVals); // 5-year bars
 
-        const pActual = toNum(info?.proposed?.actual);
-        const pTarget = toNum(info?.proposed?.target);
+        // proposed overlay (only Actual & Forecast)
+        const pActual   = toNum(info?.proposed?.actual);
         const pForecast = toNum(info?.proposed?.forecast);
-
         const pIdx = findLabelIndex(labels, info.period);
 
-        const overlayActual = new Array(labels.length).fill(null);
-        const overlayTarget = new Array(labels.length).fill(null);
+        const overlayActual   = new Array(labels.length).fill(null);
         const overlayForecast = new Array(labels.length).fill(null);
         if (pIdx >= 0) {
-          if (isFiniteNum(pActual)) overlayActual[pIdx] = pActual;
-          if (isFiniteNum(pTarget)) overlayTarget[pIdx] = pTarget;
+          if (isFiniteNum(pActual))   overlayActual[pIdx]   = pActual;
           if (isFiniteNum(pForecast)) overlayForecast[pIdx] = pForecast;
         }
 
         const overlayColor = '#0d6efd';
         const datasets = [
-          { type: 'bar', label: 'Actual', data: act, backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
-          { type: 'line', label: 'Target', data: tgt, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
-          { type: 'line', label: 'Forecast', data: fct, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
-          { type: 'bar', label: 'Year Target', data: yearBar, backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
+          { type: 'bar',  label: 'Actual',   data: act,     backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
+          { type: 'line', label: 'Forecast', data: fct,     borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
+          { type: 'bar',  label: 'Year Target', data: yearBar, backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
         ];
         if (overlayActual.some(v => v != null))
           datasets.push({ type: 'bar', label: 'Proposed Actual', data: overlayActual, backgroundColor: overlayColor, borderColor: overlayColor, borderWidth: 2, borderSkipped: 'bottom' });
-        if (overlayTarget.some(v => v != null))
-          datasets.push({ type: 'line', label: 'Proposed Target', data: overlayTarget, borderColor: overlayColor, pointBackgroundColor: overlayColor, pointBorderColor: overlayColor, borderWidth: 2, tension: .3, fill: false });
         if (overlayForecast.some(v => v != null))
           datasets.push({ type: 'line', label: 'Proposed Forecast', data: overlayForecast, borderColor: overlayColor, pointBackgroundColor: overlayColor, pointBorderColor: overlayColor, borderDash: [2, 2], borderWidth: 2, tension: .3, fill: false });
 
@@ -326,10 +336,8 @@
           (info.submittedBy ? ` • Submitted by ${info.submittedBy}` : '') +
           (info.submittedAt ? ` at ${info.submittedAt}` : '');
 
-        $('pv_actual').textContent = isFiniteNum(pActual) ? String(pActual) : '—';
-        $('pv_target').textContent = isFiniteNum(pTarget) ? String(pTarget) : '—';
+        $('pv_actual').textContent   = isFiniteNum(pActual)   ? String(pActual)   : '—';
         $('pv_forecast').textContent = isFiniteNum(pForecast) ? String(pForecast) : '—';
-        $('pv_status').textContent = info?.proposed?.status || '—';
 
         // show modal + render chart
         new bootstrap.Modal(document.getElementById('detailsModal')).show();
