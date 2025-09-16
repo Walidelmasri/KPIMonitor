@@ -862,7 +862,7 @@ namespace KPIMonitor.Controllers
                     headerRight = $@"
 <div class='btn-group'>
   {(canAct ? $@"<button type='button' class='btn btn-success btn-sm appr-btn' data-action='approve-batch' data-batch-id='{b.BatchId}'>Approve All</button>
-                <button type='button' class='btn btn-outline-danger btn-sm appr-btn' data-action='reject-batch' data-batch-id='{b.BatchId}'>Reject</button>" 
+                <button type='button' class='btn btn-outline-danger btn-sm appr-btn' data-action='reject-batch' data-batch-id='{b.BatchId}'>Reject</button>"
               : "<span class='badge text-bg-warning'>Pending</span>")}
   <button type='button' class='btn btn-sm btn-outline-secondary ms-2 appr-batch-details' data-batch-id='{b.BatchId}' data-kpi-id='{b.KpiId}'>Details</button>
 </div>";
@@ -898,7 +898,7 @@ namespace KPIMonitor.Controllers
                 // child table (Actual + Forecast ONLY; NO per-row Details)
                 if (rows.Count == 0)
                 {
-                    sb.Append("<div class='text-muted small mt-2'>No child changes in this batch.</div>");
+                    sb.Append("<div class='text-muted small mt-2'>No changes.</div>");
                 }
                 else
                 {
@@ -1048,7 +1048,8 @@ namespace KPIMonitor.Controllers
             // Child changes
             var rows = await _db.KpiFactChanges.AsNoTracking()
                          .Where(c => c.BatchId == batchId)
-                         .Select(c => new {
+                         .Select(c => new
+                         {
                              c.KpiFactId,
                              c.ProposedActualValue,
                              c.ProposedForecastValue,
@@ -1066,8 +1067,11 @@ namespace KPIMonitor.Controllers
             // KPI header
             var k = await _db.DimKpis.AsNoTracking()
                      .Where(x => x.KpiId == b.KpiId)
-                     .Select(x => new {
-                         x.KpiId, x.KpiCode, x.KpiName,
+                     .Select(x => new
+                     {
+                         x.KpiId,
+                         x.KpiCode,
+                         x.KpiName,
                          PillarCode = x.Pillar != null ? x.Pillar.PillarCode : null,
                          ObjectiveCode = x.Objective != null ? x.Objective.ObjectiveCode : null
                      })

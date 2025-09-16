@@ -2,8 +2,13 @@
   ViewData["Title"] = "Approvals Inbox";
 }
 <style>
-  .appr-diff { color: #111; }
-  .appr-card + .appr-card { margin-top: .75rem; }
+  .appr-diff {
+    color: #111;
+  }
+
+  .appr-card+.appr-card {
+    margin-top: .75rem;
+  }
 </style>
 
 <div class="container py-4">
@@ -44,7 +49,7 @@
         @Html.AntiForgeryToken()
         <div class="modal-body">
           <input type="hidden" id="rej_changeId" name="changeId" />
-          <input type="hidden" id="rej_batchId"  name="batchId" />
+          <input type="hidden" id="rej_batchId" name="batchId" />
           <div class="mb-3">
             <label class="form-label">Reason</label>
             <textarea class="form-control" id="rej_reason" name="reason" rows="3" required></textarea>
@@ -71,10 +76,6 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <div class="mb-2 small">
-          <span class="badge text-bg-secondary me-1">Proposed overlay</span>
-          <span class="text-muted">Multiple points shown for this batch</span>
-        </div>
         <div class="border rounded p-2" style="height:360px">
           <canvas id="apprChart"></canvas>
         </div>
@@ -97,7 +98,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     // ---------- tiny helpers ----------
-    const $  = (id) => document.getElementById(id);
+    const $ = (id) => document.getElementById(id);
     const qs = (sel, root = document) => root.querySelector(sel);
     const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
     const anti = () => (qs('input[name="__RequestVerificationToken"]')?.value || '');
@@ -197,8 +198,8 @@
         const batchId = btn.getAttribute('data-batch-id');
         if (!batchId) return;
         $('rej_changeId').value = '';
-        $('rej_batchId').value  = batchId;
-        $('rej_reason').value   = '';
+        $('rej_batchId').value = batchId;
+        $('rej_reason').value = '';
         new bootstrap.Modal(document.getElementById('rejectModal')).show();
         return;
       }
@@ -229,9 +230,9 @@
       if (btn.classList.contains('appr-btn') && btn.getAttribute('data-action') === 'reject') {
         const id = btn.getAttribute('data-id');
         if (!id) return;
-        $('rej_batchId').value  = '';
+        $('rej_batchId').value = '';
         $('rej_changeId').value = id;
-        $('rej_reason').value   = '';
+        $('rej_reason').value = '';
         new bootstrap.Modal(document.getElementById('rejectModal')).show();
         return;
       }
@@ -258,8 +259,8 @@
     $('rejectForm').addEventListener('submit', async (ev) => {
       ev.preventDefault();
       const changeId = $('rej_changeId').value;
-      const batchId  = $('rej_batchId').value;
-      const reason   = $('rej_reason').value.trim();
+      const batchId = $('rej_batchId').value;
+      const reason = $('rej_reason').value.trim();
       if (!reason) { alert('Reason is required.'); return; }
 
       try {
@@ -356,11 +357,11 @@
         const yearBar = leftNulls.concat(yearVals);
 
         // 3) Build overlay arrays for ALL proposed points
-        const overlayActual   = new Array(labels.length).fill(null);
+        const overlayActual = new Array(labels.length).fill(null);
         const overlayForecast = new Array(labels.length).fill(null);
-        const changedPeriods  = [];
+        const changedPeriods = [];
 
-        const items = Array.isArray(info?.items) ? info.items : []; 
+        const items = Array.isArray(info?.items) ? info.items : [];
         // expect items like: { period:{year,month|quarter,label}, proposed:{actual,forecast}, submittedBy, submittedAt }
 
         for (const it of items) {
@@ -378,10 +379,10 @@
         // 4) Compose datasets (Target kept for context; no edit on target/status)
         const overlayColor = '#0d6efd';
         const datasets = [
-          { type: 'bar',  label: 'Actual',   data: act, backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
-          { type: 'line', label: 'Target',   data: tgt, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
+          { type: 'bar', label: 'Actual', data: act, backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
+          { type: 'line', label: 'Target', data: tgt, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
           { type: 'line', label: 'Forecast', data: fct, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
-          { type: 'bar',  label: 'Year Target', data: yearBar, backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
+          { type: 'bar', label: 'Year Target', data: yearBar, backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
         ];
         if (overlayActual.some(v => v != null))
           datasets.push({ type: 'bar', label: 'Proposed Actual', data: overlayActual, backgroundColor: overlayColor, borderColor: overlayColor, borderWidth: 2, borderSkipped: 'bottom' });
@@ -452,7 +453,7 @@
         const fct = fctBase.concat(pad);
         const yearBar = leftNulls.concat(yearVals);
 
-        const pActual   = toNum(info?.proposed?.actual);
+        const pActual = toNum(info?.proposed?.actual);
         const pForecast = toNum(info?.proposed?.forecast);
 
         const pIdx = findLabelIndex(labels, info.period);
@@ -466,10 +467,10 @@
 
         const overlayColor = '#0d6efd';
         const datasets = [
-          { type: 'bar',  label: 'Actual',   data: act, backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
-          { type: 'line', label: 'Target',   data: tgt, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
+          { type: 'bar', label: 'Actual', data: act, backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
+          { type: 'line', label: 'Target', data: tgt, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
           { type: 'line', label: 'Forecast', data: fct, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
-          { type: 'bar',  label: 'Year Target', data: yearBar, backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
+          { type: 'bar', label: 'Year Target', data: yearBar, backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
         ];
         if (overlayActual.some(v => v != null))
           datasets.push({ type: 'bar', label: 'Proposed Actual', data: overlayActual, backgroundColor: overlayColor, borderColor: overlayColor, borderWidth: 2, borderSkipped: 'bottom' });
@@ -509,7 +510,7 @@
 
     function summarizePeriod(p) {
       if (!p) return '';
-      if (p.month)   return `${p.year} - ${MONTH_ABBR[(p.month - 1) || 0]}`;
+      if (p.month) return `${p.year} - ${MONTH_ABBR[(p.month - 1) || 0]}`;
       if (p.quarter) return `${p.year} - Q${p.quarter}`;
       if (p.monthNum) return `${p.year} - ${MONTH_ABBR[(p.monthNum - 1) || 0]}`;
       if (p.quarterNum) return `${p.year} - Q${p.quarterNum}`;

@@ -32,6 +32,7 @@ builder.Services.AddScoped<IPriorityMatrixService, PriorityMatrixService>();
 builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection("App"));
 builder.Services.AddScoped<IAdminAuthorizer, ConfigAdminAuthorizer>();
 builder.Services.AddScoped<IKpiFactChangeBatchService, KpiFactChangeBatchService>();
+builder.Services.AddScoped<IKpiStatusService, KpiStatusService>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>

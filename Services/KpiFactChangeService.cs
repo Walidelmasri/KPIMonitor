@@ -11,7 +11,13 @@ namespace KPIMonitor.Services
     public class KpiFactChangeService : IKpiFactChangeService
     {
         private readonly AppDbContext _db;
-        public KpiFactChangeService(AppDbContext db) { _db = db; }
+        private readonly IKpiStatusService _status;
+
+        public KpiFactChangeService(AppDbContext db, IKpiStatusService status)
+        {
+            _db = db;
+            _status = status;
+        }
 
         public async Task<bool> HasPendingAsync(decimal kpiFactId)
         {
@@ -25,7 +31,7 @@ namespace KPIMonitor.Services
             decimal? actual, decimal? target, decimal? forecast,
             string? statusCode,
             string submittedBy,
-            decimal? batchId = null)  // <-- NEW param (optional)
+            decimal? batchId = null)  // stays optional; callers don’t have to pass it
         {
             // guard: existing pending
             if (await HasPendingAsync(kpiFactId))
@@ -48,7 +54,7 @@ namespace KPIMonitor.Services
                 SubmittedBy = submittedBy,
                 SubmittedAt = DateTime.UtcNow,
                 ApprovalStatus = "pending",
-                BatchId = batchId   // <-- save batch link if provided
+                BatchId = batchId
             };
 
             _db.KpiFactChanges.Add(change);
@@ -72,8 +78,8 @@ namespace KPIMonitor.Services
                 // Apply proposed values immediately (same as manual approval)
                 var fact = await _db.KpiFacts.FirstAsync(x => x.KpiFactId == kpiFactId);
 
-                if (change.ProposedActualValue.HasValue) fact.ActualValue = change.ProposedActualValue.Value;
-                if (change.ProposedTargetValue.HasValue) fact.TargetValue = change.ProposedTargetValue.Value;
+                if (change.ProposedActualValue.HasValue)   fact.ActualValue   = change.ProposedActualValue.Value;
+                if (change.ProposedTargetValue.HasValue)   fact.TargetValue   = change.ProposedTargetValue.Value;
                 if (change.ProposedForecastValue.HasValue) fact.ForecastValue = change.ProposedForecastValue.Value;
                 if (!string.IsNullOrWhiteSpace(change.ProposedStatusCode)) fact.StatusCode = change.ProposedStatusCode;
 
@@ -81,7 +87,11 @@ namespace KPIMonitor.Services
                 change.ReviewedAt = DateTime.UtcNow;
                 change.ReviewedBy = owner;    // or "auto"
 
+                // Save the applied values and approval flags first
                 await _db.SaveChangesAsync();
+
+                // Then recompute & persist the status (uses the just-saved values)
+                await _status.ComputeAndSetAsync(kpiFactId);
             }
 
             return change;
@@ -89,6 +99,7 @@ namespace KPIMonitor.Services
 
         public async Task ApproveAsync(decimal changeId, string reviewer)
         {
+            // load change + fact
             var ch = await _db.KpiFactChanges
                 .FirstOrDefaultAsync(c => c.KpiFactChangeId == changeId);
 
@@ -99,6 +110,7 @@ namespace KPIMonitor.Services
             var fact = await _db.KpiFacts.FirstOrDefaultAsync(f => f.KpiFactId == ch.KpiFactId);
             if (fact == null) throw new InvalidOperationException("Target KPI fact not found.");
 
+            // apply only the provided values
             if (ch.ProposedActualValue.HasValue)   fact.ActualValue   = ch.ProposedActualValue.Value;
             if (ch.ProposedTargetValue.HasValue)   fact.TargetValue   = ch.ProposedTargetValue.Value;
             if (ch.ProposedForecastValue.HasValue) fact.ForecastValue = ch.ProposedForecastValue.Value;
@@ -108,7 +120,11 @@ namespace KPIMonitor.Services
             ch.ReviewedBy = reviewer;
             ch.ReviewedAt = DateTime.UtcNow;
 
+            // Save applied values + approval flags first
             await _db.SaveChangesAsync();
+
+            // Then recompute & persist the status (uses the just-saved values)
+            await _status.ComputeAndSetAsync(ch.KpiFactId);
         }
 
         public async Task RejectAsync(decimal changeId, string reviewer, string reason)
