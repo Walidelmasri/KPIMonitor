@@ -179,7 +179,7 @@ namespace KPIMonitor.Services
                         });
 
                         // push classification down near page bottom, then render it ABOVE the footer image
-                        col.Item().ExtendVertical();
+                        // col.Item().ExtendVertical();
 
                         // Classification block (centered, bilingual, with ticks) + bottom padding above footer image
                         col.Item().AlignCenter().Width(FieldWidthPt).PaddingBottom(FooterReservePt).Column(c =>
