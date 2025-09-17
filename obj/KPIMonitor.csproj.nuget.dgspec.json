@@ -58,6 +58,10 @@
               "target": "Package",
               "version": "[23.9.1, )"
             },
+            "QuestPDF": {
+              "target": "Package",
+              "version": "[2025.7.1, )"
+            },
             "System.DirectoryServices.Protocols": {
               "target": "Package",
               "version": "[9.0.8, )"

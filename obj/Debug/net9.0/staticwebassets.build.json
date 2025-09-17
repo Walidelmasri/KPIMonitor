@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "LAEsyV1ErCXOZSshDQU22d6ePNCnEvTjo5hz4CwNjsU=",
+  "Hash": "Qc1RxKSqEpffwet/7GSE0jyRC4EU09kDbaykJqhI55w=",
   "Source": "KPIMonitor",
   "BasePath": "_content/KPIMonitor",
   "Mode": "Default",
@@ -1485,6 +1485,48 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot/images/logo-fr.png"
+    },
+    {
+      "Identity": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/memo-banner.png",
+      "SourceId": "KPIMonitor",
+      "SourceType": "Discovered",
+      "ContentRoot": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/",
+      "BasePath": "_content/KPIMonitor",
+      "RelativePath": "images/memo-banner#[.{fingerprint}]?.png",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "Fingerprint": "zlpxror68w",
+      "Integrity": "54qvwyR7FhoZt075LoPK1B9ovua2MMpLhBSDMlxi84Q=",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot/images/memo-banner.png"
+    },
+    {
+      "Identity": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/memo-footer.png",
+      "SourceId": "KPIMonitor",
+      "SourceType": "Discovered",
+      "ContentRoot": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/",
+      "BasePath": "_content/KPIMonitor",
+      "RelativePath": "images/memo-footer#[.{fingerprint}]?.png",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "Fingerprint": "cakaa9nhza",
+      "Integrity": "NEMvS0dgded15XqOBmQMAXl6FSI5Q8aZvsQNQTquF3U=",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot/images/memo-footer.png"
     },
     {
       "Identity": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/pic1.jpg",
@@ -3652,6 +3694,170 @@
         {
           "Name": "integrity",
           "Value": "sha256-DQrr0bevJg5ivo5n4rBDw8kHJa+s7aG7hJR6L2uDMO0="
+        }
+      ]
+    },
+    {
+      "Route": "images/memo-banner.png",
+      "AssetFile": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/memo-banner.png",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "348946"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "image/png"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"54qvwyR7FhoZt075LoPK1B9ovua2MMpLhBSDMlxi84Q=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Wed, 17 Sep 2025 09:13:30 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=3600, must-revalidate"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "integrity",
+          "Value": "sha256-54qvwyR7FhoZt075LoPK1B9ovua2MMpLhBSDMlxi84Q="
+        }
+      ]
+    },
+    {
+      "Route": "images/memo-banner.zlpxror68w.png",
+      "AssetFile": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/memo-banner.png",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "348946"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "image/png"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"54qvwyR7FhoZt075LoPK1B9ovua2MMpLhBSDMlxi84Q=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Wed, 17 Sep 2025 09:13:30 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "zlpxror68w"
+        },
+        {
+          "Name": "label",
+          "Value": "images/memo-banner.png"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-54qvwyR7FhoZt075LoPK1B9ovua2MMpLhBSDMlxi84Q="
+        }
+      ]
+    },
+    {
+      "Route": "images/memo-footer.cakaa9nhza.png",
+      "AssetFile": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/memo-footer.png",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "142451"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "image/png"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"NEMvS0dgded15XqOBmQMAXl6FSI5Q8aZvsQNQTquF3U=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Wed, 17 Sep 2025 10:16:13 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "cakaa9nhza"
+        },
+        {
+          "Name": "label",
+          "Value": "images/memo-footer.png"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-NEMvS0dgded15XqOBmQMAXl6FSI5Q8aZvsQNQTquF3U="
+        }
+      ]
+    },
+    {
+      "Route": "images/memo-footer.png",
+      "AssetFile": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/memo-footer.png",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "142451"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "image/png"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"NEMvS0dgded15XqOBmQMAXl6FSI5Q8aZvsQNQTquF3U=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Wed, 17 Sep 2025 10:16:13 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=3600, must-revalidate"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "integrity",
+          "Value": "sha256-NEMvS0dgded15XqOBmQMAXl6FSI5Q8aZvsQNQTquF3U="
         }
       ]
     },

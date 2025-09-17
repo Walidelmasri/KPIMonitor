@@ -25,6 +25,14 @@
       "PackagePath": "staticwebassets/images/logo-fr.png"
     },
     {
+      "Id": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/memo-banner.png",
+      "PackagePath": "staticwebassets/images/memo-banner.png"
+    },
+    {
+      "Id": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/memo-footer.png",
+      "PackagePath": "staticwebassets/images/memo-footer.png"
+    },
+    {
       "Id": "/Users/walidsalem/BADEA/KPIMonitor/wwwroot/images/pic1.jpg",
       "PackagePath": "staticwebassets/images/pic1.jpg"
     },
