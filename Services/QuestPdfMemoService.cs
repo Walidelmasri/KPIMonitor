@@ -10,6 +10,21 @@ namespace KPIMonitor.Services
 {
     public sealed class QuestPdfMemoService : IMemoPdfService
     {
+        // Tiny helper: detect Arabic characters to switch alignment/RTL per line
+        static bool ContainsArabic(string? s)
+        {
+            if (string.IsNullOrEmpty(s)) return false;
+            foreach (var ch in s)
+            {
+                int code = ch;
+                if ((code >= 0x0600 && code <= 0x06FF) ||
+                    (code >= 0x0750 && code <= 0x077F) ||
+                    (code >= 0x08A0 && code <= 0x08FF))
+                    return true;
+            }
+            return false;
+        }
+
         public Task<byte[]> GenerateAsync(MemoDocument m)
         {
             QuestPDF.Settings.License = LicenseType.Community;
@@ -28,15 +43,15 @@ namespace KPIMonitor.Services
             }
 
             // colors
-            var labelHex     = HexOr(m.LabelColorHex,     "#137B3C");
+            var labelHex = HexOr(m.LabelColorHex, "#137B3C");
             var underlineHex = HexOr(m.UnderlineColorHex, "#137B3C");
-            var bodyHex      = "#000000";
+            var bodyHex = "#000000";
 
-            // layout numbers
-            const float FieldWidthPt  = 420f; // To/From/Subject block width
-            const float DateWidthPt   = 260f; // Date block width
+            // layout numbers (preserved)
+            const float FieldWidthPt = 420f; // To/From/Subject block width
+            const float DateWidthPt = 260f;  // kept for compatibility if you reuse elsewhere
             const float LineThickness = 0.8f;
-            const float FooterReservePt = 84f; // visual gap above background footer image
+            const float FooterReservePt = 84f;  // visual gap above background footer image
 
             // text styles
             var baseText = TextStyle.Default.FontSize(11).FontColor(bodyHex);
@@ -51,16 +66,14 @@ namespace KPIMonitor.Services
             byte[]? bannerBytes = (m.BannerImage is { Length: > 0 }) ? m.BannerImage : null;
             byte[]? footerBytes = (m.FooterImage is { Length: > 0 }) ? m.FooterImage : null;
 
-            // classification ticks
-            const string CheckedBox   = "☑";
-            const string UncheckedBox = "☐";
+            // classification (value only; rendered compact in footer)
+            string classificationValue = (m.Classification ?? "").Trim();
 
-            string pick = (m.Classification ?? "").Trim().ToLowerInvariant();
-            bool isConfidential = pick is "confidential" or "confidentiel" or "سري" or "secret";
-            bool isInternal     = pick is "internal" or "interne" or "داخلي" or "for internal use";
-            bool isPublic       = pick is "public" or "publique" or "عام" or "general";
+            // safe memo number + date (service-side fallbacks so UI/controller can omit them)
+            string memoNumber = string.IsNullOrWhiteSpace(m.MemoNumber)
+                ? $"M-{DateTime.UtcNow:yyyyMMdd-HHmmss}"
+                : m.MemoNumber!.Trim();
 
-            // auto date if not provided
             string dateText = string.IsNullOrWhiteSpace(m.DateText)
                 ? OrdinalDate(DateTime.UtcNow)
                 : m.DateText!.Trim();
@@ -70,7 +83,7 @@ namespace KPIMonitor.Services
                 doc.Page(page =>
                 {
                     page.Size(PageSizes.A4);
-                    page.Margin(m.PageMarginPt);   // all sides the same (points)
+                    page.Margin(m.PageMarginPt);   // all sides in points
                     page.DefaultTextStyle(baseText);
 
                     // Background: pin footer image at the bottom (behind content)
@@ -80,59 +93,76 @@ namespace KPIMonitor.Services
                             bg.AlignBottom().Image(footerBytes).FitWidth();
                     });
 
-                    // Header: banner on first page, add small top padding so it never clips
+                    // Header: banner on first page
                     page.Header().ShowOnce().PaddingTop(6).Element(h =>
                     {
                         if (bannerBytes != null)
                             h.Image(bannerBytes).FitWidth();
                     });
 
-                    // (EDIT 1) Classification moved OUT of Footer and INTO Content near the end
-
-                    // Content
-                    page.Content().Column(col =>
+                    // Content (reserves bottom space so nothing collides with footer art/classification)
+                    page.Content()
+                        .PaddingBottom(FooterReservePt)
+                        .Column(col =>
                     {
                         col.Spacing(m.ContentSpacingPt);
 
-                        // DATE (centered, narrow block, short underline)
-                        col.Item().AlignCenter().Width(DateWidthPt).Column(b =>
+                        // Memo No. (left) + Date (right)
+                        col.Item().AlignCenter().Width(FieldWidthPt).Row(r =>
                         {
-                            b.Spacing(2);
-                            // bilingual label row
-                            b.Item().Row(r =>
+                            // Memo No.
+                            r.RelativeItem().Column(c =>
                             {
-                                r.RelativeItem().Text(t =>
+                                c.Spacing(2);
+                                c.Item().Row(rr =>
                                 {
-                                    t.Span("Date").SemiBold().FontColor(labelHex);
+                                    rr.RelativeItem().Text(t => t.Span("Memo No.").SemiBold().FontColor(labelHex));
+                                    rr.RelativeItem().AlignRight().Text(t => t.Span("رقم المذكرة").SemiBold().FontColor(labelHex).Style(arabicText));
                                 });
-                                r.RelativeItem().AlignRight().Text(t =>
-                                {
-                                    t.Span("التاريخ").SemiBold().FontColor(labelHex).Style(arabicText);
-                                });
+                                c.Item()
+                                 .PaddingTop(2)
+                                 .BorderBottom(LineThickness).BorderColor(underlineHex)
+                                 .PaddingBottom(2)
+                                 .Text(t =>
+                                 {
+                                     t.AlignCenter();
+                                     t.Span(memoNumber);
+                                 });
                             });
 
-                            // short underline with centered date
-                            b.Item().PaddingTop(2)
-                                   .BorderBottom(LineThickness).BorderColor(underlineHex)
-                                   .PaddingBottom(2)
-                                   .Text(t =>
-                                   {
-                                       t.DefaultTextStyle(ds => ds.LineHeight(1.35f));
-                                       t.AlignCenter();
-                                       t.Span(dateText);
-                                   });
+                            r.ConstantItem(24).Text(""); // spacer
+
+                            // Date
+                            r.RelativeItem().Column(c =>
+                            {
+                                c.Spacing(2);
+                                c.Item().Row(rr =>
+                                {
+                                    rr.RelativeItem().Text(t => t.Span("Date").SemiBold().FontColor(labelHex));
+                                    rr.RelativeItem().AlignRight().Text(t => t.Span("التاريخ").SemiBold().FontColor(labelHex).Style(arabicText));
+                                });
+                                c.Item()
+                                 .PaddingTop(2)
+                                 .BorderBottom(LineThickness).BorderColor(underlineHex)
+                                 .PaddingBottom(2)
+                                 .Text(t =>
+                                 {
+                                     t.AlignCenter();
+                                     t.Span(dateText);
+                                 });
+                            });
                         });
 
-                        col.Item().Height(6);
+                        col.Item().Height(2);
 
                         // local helper to render a bilingual field block
                         void FieldBlock(string en, string ar, string? value)
                         {
                             col.Item().AlignCenter().Width(FieldWidthPt).Column(b =>
                             {
-                                b.Spacing(2);
+                                b.Spacing(0);
 
-                                // bilingual labels on one line (ends not full width)
+                                // bilingual labels on one line
                                 b.Item().Row(r =>
                                 {
                                     r.RelativeItem().Text(t =>
@@ -146,9 +176,9 @@ namespace KPIMonitor.Services
                                 });
 
                                 // short underline with centered value
-                                b.Item().PaddingTop(2)
+                                b.Item().PaddingTop(0)
                                        .BorderBottom(LineThickness).BorderColor(underlineHex)
-                                       .PaddingBottom(2)
+                                       .PaddingBottom(0)
                                        .Text(t =>
                                        {
                                            t.DefaultTextStyle(ds => ds.LineHeight(1.35f));
@@ -158,66 +188,76 @@ namespace KPIMonitor.Services
                             });
                         }
 
-                        // To / From / Subject (title is part of the banner; not repeated)
-                        FieldBlock("To",      "إلى",     m.To);
-                        FieldBlock("From",    "من",      m.From);
+                        // To → Through → From → Subject
+                        FieldBlock("To", "إلى", m.To);
+                        FieldBlock("Through", "بواسطة", m.Through);   // NEW
+                        FieldBlock("From", "من", m.From);
                         FieldBlock("Subject", "الموضوع", m.Subject);
 
-                        // (EDIT 2) Body respects line breaks: use Line() per line (not Span)
-                        col.Item().PaddingTop(10).Element(body =>
+                        // Body — clamped to FieldWidthPt; per-line alignment (LTR left, RTL right)
+                        col.Item()
+                           .AlignCenter()
+                           .Width(FieldWidthPt)
+                           .PaddingTop(10)
+                           .Element(body =>
                         {
                             var text = (m.Body ?? "").Replace("\r\n", "\n");
-                            body.Text(t =>
+
+                            body.Column(c =>
                             {
-                                t.DefaultTextStyle(ds => ds.LineHeight(1.35f));
-                                foreach (var line in text.Split('\n'))
+                                foreach (var raw in text.Split('\n'))
                                 {
-                                    if (string.IsNullOrWhiteSpace(line)) t.EmptyLine();
-                                    else t.Line(line.TrimEnd());
+                                    var line = raw.TrimEnd();
+
+                                    if (string.IsNullOrWhiteSpace(line))
+                                    {
+                                        // approximate empty line spacing
+                                        c.Item().Height(12);
+                                        continue;
+                                    }
+
+                                    if (ContainsArabic(line))
+                                    {
+                                        // Arabic: RTL and right-aligned
+                                        c.Item().Text(t =>
+                                        {
+                                            t.DefaultTextStyle(ds => ds.LineHeight(1.35f));
+                                            t.AlignRight();
+                                            t.Span(line).Style(arabicText);
+                                        });
+                                    }
+                                    else
+                                    {
+                                        // English/Latin: LTR and left-aligned
+                                        c.Item().Text(t =>
+                                        {
+                                            t.DefaultTextStyle(ds => ds.LineHeight(1.35f));
+                                            t.AlignLeft();
+                                            t.Span(line);
+                                        });
+                                    }
                                 }
                             });
                         });
 
-                        // push classification down near page bottom, then render it ABOVE the footer image
-                        // col.Item().ExtendVertical();
+                        // (no classification block here — it's in the footer)
+                    });
 
-                        // Classification block (centered, bilingual, with ticks) + bottom padding above footer image
-                        col.Item().AlignCenter().Width(FieldWidthPt).PaddingBottom(FooterReservePt).Column(c =>
+                    // Footer: compact (Classification: …) line above the background footer image
+                    page.Footer().Column(f =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(classificationValue))
                         {
-                            c.Spacing(3);
-
-                            c.Item().Text(t =>
+                            f.Item().PaddingBottom(6).Text(t =>
                             {
                                 t.AlignCenter();
+                                t.Span("(");
                                 t.Span("Classification").SemiBold().FontColor(labelHex);
-                                t.Span(" / ");
-                                t.Span("التصنيف").SemiBold().FontColor(labelHex).Style(arabicText);
+                                t.Span(": ");
+                                t.Span(classificationValue);
+                                t.Span(")");
                             });
-
-                            c.Item().Text(t =>
-                            {
-                                t.AlignCenter();
-
-                                // Arabic options
-                                t.Span(isConfidential ? CheckedBox : UncheckedBox).FontSize(11);
-                                t.Span(" سري  ").Style(arabicText);
-                                t.Span(isInternal ? CheckedBox : UncheckedBox).FontSize(11);
-                                t.Span(" للاستخدام الداخلي  ").Style(arabicText);
-                                t.Span(isPublic ? CheckedBox : UncheckedBox).FontSize(11);
-                                t.Span(" عام   ").Style(arabicText);
-
-                                // spacer
-                                t.Span("   ");
-
-                                // English options
-                                t.Span(isConfidential ? CheckedBox : UncheckedBox).FontSize(11);
-                                t.Span(" Confidential   ").SemiBold().FontColor(labelHex);
-                                t.Span(isInternal ? CheckedBox : UncheckedBox).FontSize(11);
-                                t.Span(" For Internal use   ").SemiBold().FontColor(labelHex);
-                                t.Span(isPublic ? CheckedBox : UncheckedBox).FontSize(11);
-                                t.Span(" General").SemiBold().FontColor(labelHex);
-                            });
-                        });
+                        }
                     });
                 });
             }).GeneratePdf();

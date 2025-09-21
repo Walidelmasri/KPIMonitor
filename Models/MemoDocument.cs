@@ -15,7 +15,8 @@ namespace KPIMonitor.Models
         public string? Classification { get; set; }
         /// <summary>Display string for the date (already formatted as you want it to appear).</summary>
         public string? DateText { get; set; }
-
+        public string? MemoNumber { get; set; }
+        public string? Through { get; set; }
         // --- Content (AR) ---
         /// <summary>Arabic counterpart values if you want different rendering; if null, fall back to EN value.</summary>
         public string? ToAr { get; set; }

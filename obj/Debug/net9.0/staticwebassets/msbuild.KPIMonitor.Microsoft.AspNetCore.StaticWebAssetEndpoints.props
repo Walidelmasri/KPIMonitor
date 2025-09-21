@@ -160,13 +160,13 @@
       <AssetFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\KPIMonitor.d4grdp65po.bundle.scp.css'))</AssetFile>
       <Selectors><![CDATA[[]]]></Selectors>
       <EndpointProperties><![CDATA[[{"Name":"integrity","Value":"sha256-o6TaeyjhfDL57itNcyIYsln\u002Bw2Mq3C1086Ojs6j80dE="}]]]></EndpointProperties>
-      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"no-cache"},{"Name":"Content-Length","Value":"1079"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022o6TaeyjhfDL57itNcyIYsln\u002Bw2Mq3C1086Ojs6j80dE=\u0022"},{"Name":"Last-Modified","Value":"Mon, 08 Sep 2025 17:12:04 GMT"}]]]></ResponseHeaders>
+      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"no-cache"},{"Name":"Content-Length","Value":"1079"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022o6TaeyjhfDL57itNcyIYsln\u002Bw2Mq3C1086Ojs6j80dE=\u0022"},{"Name":"Last-Modified","Value":"Sun, 21 Sep 2025 05:48:41 GMT"}]]]></ResponseHeaders>
     </StaticWebAssetEndpoint>
     <StaticWebAssetEndpoint Include="_content/KPIMonitor/KPIMonitor.d4grdp65po.bundle.scp.css">
       <AssetFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\KPIMonitor.d4grdp65po.bundle.scp.css'))</AssetFile>
       <Selectors><![CDATA[[]]]></Selectors>
       <EndpointProperties><![CDATA[[{"Name":"fingerprint","Value":"d4grdp65po"},{"Name":"integrity","Value":"sha256-o6TaeyjhfDL57itNcyIYsln\u002Bw2Mq3C1086Ojs6j80dE="},{"Name":"label","Value":"_content/KPIMonitor/KPIMonitor.bundle.scp.css"}]]]></EndpointProperties>
-      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"max-age=31536000, immutable"},{"Name":"Content-Length","Value":"1079"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022o6TaeyjhfDL57itNcyIYsln\u002Bw2Mq3C1086Ojs6j80dE=\u0022"},{"Name":"Last-Modified","Value":"Mon, 08 Sep 2025 17:12:04 GMT"}]]]></ResponseHeaders>
+      <ResponseHeaders><![CDATA[[{"Name":"Accept-Ranges","Value":"bytes"},{"Name":"Cache-Control","Value":"max-age=31536000, immutable"},{"Name":"Content-Length","Value":"1079"},{"Name":"Content-Type","Value":"text/css"},{"Name":"ETag","Value":"\u0022o6TaeyjhfDL57itNcyIYsln\u002Bw2Mq3C1086Ojs6j80dE=\u0022"},{"Name":"Last-Modified","Value":"Sun, 21 Sep 2025 05:48:41 GMT"}]]]></ResponseHeaders>
     </StaticWebAssetEndpoint>
     <StaticWebAssetEndpoint Include="_content/KPIMonitor/lib/bootstrap/dist/css/bootstrap-grid.bqjiyaj88i.css">
       <AssetFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\staticwebassets\lib\bootstrap\dist\css\bootstrap-grid.css'))</AssetFile>
