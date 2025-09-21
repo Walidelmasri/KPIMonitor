@@ -94,7 +94,7 @@ namespace KPIMonitor.Services
                     });
 
                     // Header: banner on first page
-                    page.Header().ShowOnce().PaddingTop(6).Element(h =>
+                    page.Header().ShowOnce().PaddingTop(2).Element(h =>
                     {
                         if (bannerBytes != null)
                             h.Image(bannerBytes).FitWidth();
