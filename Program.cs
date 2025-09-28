@@ -33,7 +33,6 @@ builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection("App")
 builder.Services.AddScoped<IAdminAuthorizer, ConfigAdminAuthorizer>();
 builder.Services.AddScoped<IKpiFactChangeBatchService, KpiFactChangeBatchService>();
 builder.Services.AddScoped<IKpiStatusService, KpiStatusService>();
-builder.Services.AddSingleton<KPIMonitor.Services.Abstractions.IMemoPdfService, KPIMonitor.Services.QuestPdfMemoService>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>
