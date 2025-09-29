@@ -7,9 +7,10 @@ public sealed class AdminOnlyHandler : AuthorizationHandler<AdminOnlyRequirement
 
     protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, AdminOnlyRequirement requirement)
     {
-        if (_auth.IsAdmin(context.User))
+        if (_auth.IsAdmin(context.User) || _auth.IsSuperAdmin(context.User))
             context.Succeed(requirement);
 
         return Task.CompletedTask;
     }
+
 }

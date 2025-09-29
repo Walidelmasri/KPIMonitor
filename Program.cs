@@ -85,6 +85,7 @@ app.UseRouting();
 app.UseAuthentication();
 
 app.UseAuthorization();
+PeriodEditPolicy.Configure(app.Services.GetRequiredService<IAdminAuthorizer>());
 
 app.MapControllerRoute(
     name: "default",

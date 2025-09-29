@@ -86,7 +86,8 @@ namespace KPIMonitor.Controllers
         [HttpGet]
         public async Task<IActionResult> PendingCount()
         {
-            if (_admin.IsAdmin(User))
+            if (_admin.IsAdmin(User) || _admin.IsSuperAdmin(User))
+
             {
                 var countAll = await _db.KpiFactChanges.AsNoTracking()
                     .CountAsync(c => c.ApprovalStatus == "pending");
@@ -227,7 +228,7 @@ namespace KPIMonitor.Controllers
             var s = (status ?? "pending").Trim().ToLowerInvariant();
             if (s != "pending" && s != "approved" && s != "rejected") s = "pending";
 
-            var isAdmin = _admin.IsAdmin(User);
+            var isAdmin = _admin.IsAdmin(User) || _admin.IsSuperAdmin(User);
             var myEmp = await MyEmpIdAsync(ct);
             var mySam = Sam();
             var mySamUp = mySam.ToUpperInvariant();
@@ -429,7 +430,8 @@ namespace KPIMonitor.Controllers
 
         private async Task<bool> IsOwnerOrAdminForChangeAsync(decimal changeId)
         {
-            if (_admin.IsAdmin(User)) return true;
+            if (_admin.IsAdmin(User) || _admin.IsSuperAdmin(User))
+                return true;
 
             var myEmp = await MyEmpIdAsync();
             if (string.IsNullOrWhiteSpace(myEmp)) return false;
@@ -636,7 +638,8 @@ namespace KPIMonitor.Controllers
         // ------------------------
         private async Task<bool> IsOwnerOrAdminForBatchAsync(decimal batchId, CancellationToken ct = default)
         {
-            if (_admin.IsAdmin(User)) return true;
+            if (_admin.IsAdmin(User) || _admin.IsSuperAdmin(User))
+                return true;
 
             var myEmp = await MyEmpIdAsync(ct);
             if (string.IsNullOrWhiteSpace(myEmp)) return false;
@@ -709,7 +712,7 @@ namespace KPIMonitor.Controllers
             var s = (status ?? "pending").Trim().ToLowerInvariant();
             if (s != "pending" && s != "approved" && s != "rejected") s = "pending";
 
-            var isAdmin = _admin.IsAdmin(User);
+            var isAdmin = _admin.IsAdmin(User) || _admin.IsSuperAdmin(User);
             var myEmp = await MyEmpIdAsync(ct);
 
             // Auto-decide mode (owner vs editor)
@@ -993,7 +996,7 @@ namespace KPIMonitor.Controllers
 
             // ACL: admin OR owner/editor of the plan
             var myEmp = await MyEmpIdAsync(ct);
-            if (!_admin.IsAdmin(User))
+            if (!(_admin.IsAdmin(User) || _admin.IsSuperAdmin(User)))
             {
                 var ownsOrEdits = await (
                     from f in _db.KpiFacts
@@ -1047,7 +1050,7 @@ namespace KPIMonitor.Controllers
             if (b == null) return NotFound(new { ok = false, error = "Batch not found." });
 
             // ACL: admin OR owner/editor of the plan
-            if (!_admin.IsAdmin(User))
+            if (!(_admin.IsAdmin(User) || _admin.IsSuperAdmin(User)))
             {
                 var myEmp = await MyEmpIdAsync(ct);
                 if (string.IsNullOrWhiteSpace(myEmp))
