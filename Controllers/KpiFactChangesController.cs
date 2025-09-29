@@ -12,6 +12,7 @@ using KPIMonitor.Services.Abstractions;     // IKpiFactChangeService, IKpiFactCh
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging; // PATCH 5: logging
 
 namespace KPIMonitor.Controllers
 {
@@ -22,19 +23,22 @@ namespace KPIMonitor.Controllers
         private readonly AppDbContext _db;
         private readonly global::IAdminAuthorizer _admin;
         private readonly IKpiFactChangeBatchService _batches;
+        private readonly ILogger<KpiFactChangesController> _log; // PATCH 5: logger
 
         public KpiFactChangesController(
             IKpiFactChangeService svc,
             IKpiAccessService acl,
             AppDbContext db,
             global::IAdminAuthorizer admin,
-            IKpiFactChangeBatchService batches)
+            IKpiFactChangeBatchService batches,
+            ILogger<KpiFactChangesController> log) // PATCH 5: logger DI (additive)
         {
             _svc = svc;
             _acl = acl;
             _db = db;
             _admin = admin;
             _batches = batches;
+            _log = log; // PATCH 5
         }
 
         // ------------------------
@@ -139,6 +143,7 @@ namespace KPIMonitor.Controllers
                     changeId = change.KpiFactChangeId,
                     status = change.ApprovalStatus,
                     message = msg
+                    // PATCH 5: not adding extra fields here to keep single-change payload identical
                 });
             }
             catch (Exception ex)
@@ -497,16 +502,17 @@ namespace KPIMonitor.Controllers
 
                 // 5) Edit windows
                 var nowUtc = DateTime.UtcNow;
+                var isSuperAdmin = _admin.IsSuperAdmin(User); // PATCH 5: detect once for audit
                 HashSet<int> editableA, editableF;
                 if (monthly)
                 {
-                    var mw = PeriodEditPolicy.ComputeMonthlyWindow(year, nowUtc);
+                    var mw = PeriodEditPolicy.ComputeMonthlyWindow(year, nowUtc, User); // already from Patch 4
                     editableA = new HashSet<int>(mw.ActualMonths);
                     editableF = new HashSet<int>(mw.ForecastMonths);
                 }
                 else
                 {
-                    var qw = PeriodEditPolicy.ComputeQuarterlyWindow(year, nowUtc);
+                    var qw = PeriodEditPolicy.ComputeQuarterlyWindow(year, nowUtc, User); // already from Patch 4
                     editableA = new HashSet<int>(qw.ActualQuarters);
                     editableF = new HashSet<int>(qw.ForecastQuarters);
                 }
@@ -596,6 +602,13 @@ namespace KPIMonitor.Controllers
                     await _db.SaveChangesAsync();
 
                     batchId = newBatchId;
+
+                    // PATCH 5: log audit line if super-admin performed a bypassable operation
+                    if (isSuperAdmin)
+                    {
+                        _log.LogInformation("SUPERADMIN_BYPASS SubmitBatch user={User} kpiId={KpiId} planId={PlanId} year={Year} monthly={Monthly} created={Created} skipped={Skipped} batchId={BatchId} traceId={TraceId}",
+                            Sam(), kpiId, plan.KpiYearPlanId, year, monthly, created, skipped, batchId, traceId);
+                    }
                 }
 
                 return Json(new
@@ -608,7 +621,8 @@ namespace KPIMonitor.Controllers
                     created,
                     skipped,
                     batchId,     // for the client
-                    traceId
+                    traceId,
+                    superAdminBypass = isSuperAdmin // PATCH 5: additive flag
                 });
             }
             catch (Exception ex)

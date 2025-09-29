@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 
 namespace KPIMonitor.Services
 {
@@ -9,6 +10,15 @@ namespace KPIMonitor.Services
     {
         // Cross-platform: try IANA first, then Windows, then safe UTC+3 fallback (KSA has no DST).
         private static readonly TimeZoneInfo RiyadhTz = ResolveRiyadhTz();
+
+        // NEW: static reference (safe in a static class). Optional to set via Configure(...)
+        private static IAdminAuthorizer? _authorizer;
+
+        /// <summary>
+        /// Optional initializer: call once at startup to enable policy-level super-admin checks.
+        /// If not called, bypass never triggers and behavior stays exactly the same.
+        /// </summary>
+        public static void Configure(IAdminAuthorizer authorizer) => _authorizer = authorizer;
 
         private static TimeZoneInfo ResolveRiyadhTz()
         {
@@ -35,6 +45,7 @@ namespace KPIMonitor.Services
             return TimeZoneInfo.ConvertTimeFromUtc(utcNow, RiyadhTz);
         }
 
+        // ---------- Result types (unchanged) ----------
         public sealed class MonthlyWindow
         {
             public HashSet<int> ActualMonths   { get; } = new();
@@ -47,6 +58,16 @@ namespace KPIMonitor.Services
             public HashSet<int> ForecastQuarters { get; } = new();
         }
 
+        // ---------- Helper: super-admin detection (safe no-throw) ----------
+        private static bool ShouldBypassFor(ClaimsPrincipal? user)
+        {
+            if (user is null) return false;
+            if (_authorizer is null) return false; // not configured => no bypass
+            try { return _authorizer.IsSuperAdmin(user); }
+            catch { return false; }
+        }
+
+        // ---------- ORIGINAL PUBLIC API (kept intact) ----------
         public static MonthlyWindow ComputeMonthlyWindow(int year, DateTime utcNow)
         {
             var now = ToRiyadh(utcNow);
@@ -117,6 +138,44 @@ namespace KPIMonitor.Services
                 for (int q = 1; q <= 4; q++) w.ForecastQuarters.Add(q);
             }
 
+            return w;
+        }
+
+        // ---------- NEW OPTIONAL OVERLOADS (unchanged behavior unless used) ----------
+        public static MonthlyWindow ComputeMonthlyWindow(int year, DateTime utcNow, ClaimsPrincipal user)
+        {
+            if (ShouldBypassFor(user))
+                return CreateFullMonthlyWindow();
+            return ComputeMonthlyWindow(year, utcNow);
+        }
+
+        public static QuarterlyWindow ComputeQuarterlyWindow(int year, DateTime utcNow, ClaimsPrincipal user)
+        {
+            if (ShouldBypassFor(user))
+                return CreateFullQuarterlyWindow();
+            return ComputeQuarterlyWindow(year, utcNow);
+        }
+
+        // ---------- Helper constructors for full-edit windows ----------
+        private static MonthlyWindow CreateFullMonthlyWindow()
+        {
+            var w = new MonthlyWindow();
+            for (int m = 1; m <= 12; m++)
+            {
+                w.ActualMonths.Add(m);
+                w.ForecastMonths.Add(m);
+            }
+            return w;
+        }
+
+        private static QuarterlyWindow CreateFullQuarterlyWindow()
+        {
+            var w = new QuarterlyWindow();
+            for (int q = 1; q <= 4; q++)
+            {
+                w.ActualQuarters.Add(q);
+                w.ForecastQuarters.Add(q);
+            }
             return w;
         }
 
