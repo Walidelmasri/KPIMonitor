@@ -15,7 +15,7 @@ public sealed class AdminOnlyTagHelper : TagHelper
     public override void Process(TagHelperContext context, TagHelperOutput output)
     {
         var user = _http.HttpContext?.User;
-        if (user is null || !_auth.IsAdmin(user))
+    if (user is null || (! _auth.IsAdmin(user) && !_auth.IsSuperAdmin(user)))
             output.SuppressOutput(); // element simply won’t render
     }
 }

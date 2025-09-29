@@ -4,7 +4,7 @@
 
 @{
     ViewData["Title"] = "Pillars";
-    var isAdmin = AdminAuthorizer.IsAdmin(User);
+var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User);
 }
 
 

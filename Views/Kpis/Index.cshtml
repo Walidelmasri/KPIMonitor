@@ -4,7 +4,7 @@
 
 @{
     ViewData["Title"] = "KPIs";
-    var isAdmin = AdminAuthorizer.IsAdmin(User);
+var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User);
 }
 <div class="container py-5">
     @if (TempData["Msg"] is string msg)

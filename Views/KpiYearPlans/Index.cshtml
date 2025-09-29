@@ -5,7 +5,7 @@
     ViewData["Title"] = "KPI Year Plans";
     var filterYear = ViewBag.FilterYear as int?;
     var currentPillarId = ViewBag.CurrentPillarId as decimal?;
-    var isAdmin = AdminAuthorizer.IsAdmin(User);
+var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User);
     var totalCols = isAdmin ? 9 : 8; // keep colspan correct when Actions is hidden
 }
 @if (TempData["Msg"] is string msg)

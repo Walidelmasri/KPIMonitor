@@ -4,7 +4,7 @@
 @{
     ViewData["Title"] = "Five-Year Targets";
     var kpis = ViewBag.Kpis as Microsoft.AspNetCore.Mvc.Rendering.SelectList;
-    var isAdmin = AdminAuthorizer.IsAdmin(User);
+var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User);
     var totalCols = isAdmin ? 9 : 8; // KPI, Base, P1..P5 (5), Audit, [Actions?]
 }
 

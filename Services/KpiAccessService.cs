@@ -73,18 +73,31 @@ namespace KPIMonitor.Services
         private bool IsAdmin(ClaimsPrincipal user)
         {
             var sam = GetSam(user);
+
+            // read both AdminUsers and SuperAdminUsers from config (additive, no logic removed)
             var admins = _cfg.GetSection("App:AdminUsers").Get<string[]>() ?? new string[0];
-            var ok = admins.Any(a => string.Equals(a?.Trim(), sam, System.StringComparison.OrdinalIgnoreCase));
+            var superAdmins = _cfg.GetSection("App:SuperAdminUsers").Get<string[]>() ?? new string[0];
+
+            var ok =
+                admins.Any(a => string.Equals(a?.Trim(), sam, System.StringComparison.OrdinalIgnoreCase)) ||
+                superAdmins.Any(a => string.Equals(a?.Trim(), sam, System.StringComparison.OrdinalIgnoreCase));
+
             if (ok) _log.LogDebug("ACL admin override for {User}", sam);
             return ok;
         }
 
         private static string GetSam(ClaimsPrincipal user)
         {
-            // ClaimTypes.Name like "BADEA\\walid.salem"
+            // ClaimTypes.Name like "BADEA\\walid.salem" or "walid.salem@badea.local"
             var raw = user?.Identity?.Name ?? "";
+
             var idx = raw.LastIndexOf('\\');
-            return idx >= 0 ? raw[(idx + 1)..] : raw;
+            var name = idx >= 0 ? raw[(idx + 1)..] : raw;   // strip DOMAIN\
+
+            var at = name.IndexOf('@');
+            if (at > 0) name = name[..at];                  // strip @domain
+
+            return name;
         }
     }
 }

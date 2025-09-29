@@ -3,7 +3,7 @@
 @inject IEmployeeDirectory EmpDir
 @{
   ViewData["Title"] = "Action Plans";
-  var isAdmin = AdminAuthorizer.IsAdmin(User);
+var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User);
 
   // Pull ALL employees once at render (no filtering or preselection)
   // EmployeePickDto => EmpId, Label

@@ -4,7 +4,7 @@
 @{
     ViewData["Title"] = "Periods";
     var filterYear = ViewBag.FilterYear as int?;
-    var isAdmin = AdminAuthorizer.IsAdmin(User);
+var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User);
 
 }
 @if (TempData["Msg"] is string msg)

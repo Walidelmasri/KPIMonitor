@@ -4,7 +4,7 @@
 
 @{
   ViewData["Title"] = "KPI Facts";
-  var isAdmin = AdminAuthorizer.IsAdmin(User);
+var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User);
 }
 <!-- Local styles just for this view (you can move these to site.css later) -->
 <style>

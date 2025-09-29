@@ -2,7 +2,7 @@
 @inject IAdminAuthorizer AdminAuthorizer
 @{
     ViewData["Title"] = "RedBoard";
-    var isAdmin = AdminAuthorizer.IsAdmin(User);
+var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User);
 }
 <style>
     /* subtle alert tint for RedBoard */
