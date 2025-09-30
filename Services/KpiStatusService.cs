@@ -58,24 +58,42 @@ namespace KPIMonitor.Services
         {
             if (period == null) return false;
 
-            // Extra “due” grace: delay due-ness by +1 month beyond the edit window.
-            // This keeps editability as-is (controllers still use current nowUtc),
-            // but status won't show "Data Missing" until one more month passes.
-            var shiftedNow = nowUtc.AddMonths(-2);
-
-            if (period.MonthNum.HasValue)
+            // Determine the period end (prefer DB EndDate; otherwise compute)
+            DateTime periodEnd;
+            if (period.EndDate.HasValue)
             {
-                var mw = PeriodEditPolicy.ComputeMonthlyWindow(period.Year, shiftedNow);
-                return mw.ActualMonths.Contains(period.MonthNum.Value);
+                // assume EndDate is UTC (your DimPeriod already uses StartDate/EndDate for ordering)
+                periodEnd = DateTime.SpecifyKind(period.EndDate.Value, DateTimeKind.Utc);
             }
-            if (period.QuarterNum.HasValue)
+            else
             {
-                var qw = PeriodEditPolicy.ComputeQuarterlyWindow(period.Year, shiftedNow);
-                return qw.ActualQuarters.Contains(period.QuarterNum.Value);
+                // Compute end in UTC if EndDate is missing
+                if (period.MonthNum.HasValue)
+                {
+                    int y = period.Year, m = period.MonthNum.Value;
+                    int d = DateTime.DaysInMonth(y, m);
+                    periodEnd = new DateTime(y, m, d, 23, 59, 59, DateTimeKind.Utc);
+                }
+                else if (period.QuarterNum.HasValue)
+                {
+                    int y = period.Year, q = period.QuarterNum.Value;
+                    int m = q * 3;
+                    int d = DateTime.DaysInMonth(y, m);
+                    periodEnd = new DateTime(y, m, d, 23, 59, 59, DateTimeKind.Utc);
+                }
+                else
+                {
+                    // Year-only row
+                    int y = period.Year;
+                    periodEnd = new DateTime(y, 12, 31, 23, 59, 59, DateTimeKind.Utc);
+                }
             }
 
-            // Year-only rows: treat as due only after an extra month past year end.
-            return (period.EndDate ?? DateTime.MinValue) <= shiftedNow;
+            // “Due” ONE MONTH after the period end
+            var dueAt = periodEnd.AddMonths(1);
+
+            // If now is on/after dueAt → due; otherwise not due yet.
+            return nowUtc >= dueAt;
         }
 
 
