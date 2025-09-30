@@ -13,13 +13,18 @@ namespace KPIMonitor.Controllers
         private readonly ILogger<HomeController> _logger;
         private readonly AppDbContext _db;
         private readonly IKpiAccessService _acl;
+        private readonly global::IAdminAuthorizer _admin;
 
-
-        public HomeController(ILogger<HomeController> logger, AppDbContext db, IKpiAccessService acl)
+        public HomeController(
+            ILogger<HomeController> logger,
+            AppDbContext db,
+            IKpiAccessService acl,
+            global::IAdminAuthorizer admin)
         {
             _logger = logger;
             _db = db;
             _acl = acl;
+            _admin = admin;
         }
 
         // Page
@@ -36,7 +41,6 @@ namespace KPIMonitor.Controllers
         // JSON endpoints used by Index.cshtml
         // --------------------------
 
-        // Pillars (active)
         [HttpGet]
         public async Task<IActionResult> GetPillars()
         {
@@ -54,7 +58,6 @@ namespace KPIMonitor.Controllers
             return Json(data);
         }
 
-        // Objectives (active) by Pillar
         [HttpGet]
         public async Task<IActionResult> GetObjectives(decimal pillarId)
         {
@@ -72,7 +75,6 @@ namespace KPIMonitor.Controllers
             return Json(data);
         }
 
-        // KPIs (active) by Objective
         [HttpGet]
         public async Task<IActionResult> GetKpis(decimal objectiveId)
         {
@@ -94,15 +96,15 @@ namespace KPIMonitor.Controllers
         [HttpGet]
         public async Task<IActionResult> GetKpiSummary(decimal kpiId)
         {
-            // 1) Most recent active year plan for this KPI
             var plan = await _db.KpiYearPlans
                 .Include(p => p.Period)
                 .AsNoTracking()
                 .Where(p => p.KpiId == kpiId && p.IsActive == 1 && p.Period != null)
                 .OrderByDescending(p => p.KpiYearPlanId)
                 .FirstOrDefaultAsync();
-            var planId = plan.KpiYearPlanId;
-            var canEdit = await _acl.CanEditPlanAsync(planId, User);
+
+            var planId = plan?.KpiYearPlanId ?? 0;
+            var canEdit = plan != null && await _acl.CanEditPlanAsync(planId, User);
 
             if (plan == null || plan.Period == null)
             {
@@ -133,18 +135,17 @@ namespace KPIMonitor.Controllers
 
             int planYear = plan.Period.Year;
 
-            // 2) Facts for that plan year (months or quarters)
             var facts = await _db.KpiFacts
-            .Include(f => f.Period)
-            .AsNoTracking()
-            .Where(f => f.KpiId == kpiId
-                     && f.IsActive == 1
-                     && f.KpiYearPlanId == plan.KpiYearPlanId
-                     && f.Period != null
-                     && f.Period.Year == planYear)
-            .OrderBy(f => f.Period!.StartDate)   // <-- use StartDate for natural order
-            .ToListAsync();
-            // --- compute "hasPending" per fact (for Dashboard edit button) ---
+                .Include(f => f.Period)
+                .AsNoTracking()
+                .Where(f => f.KpiId == kpiId
+                         && f.IsActive == 1
+                         && f.KpiYearPlanId == plan.KpiYearPlanId
+                         && f.Period != null
+                         && f.Period.Year == planYear)
+                .OrderBy(f => f.Period!.StartDate)
+                .ToListAsync();
+
             var factIds = facts.Select(f => f.KpiFactId).ToList();
 
             var pendingFactIds = await _db.KpiFactChanges
@@ -168,7 +169,6 @@ namespace KPIMonitor.Controllers
             var target = facts.Select(f => (decimal?)f.TargetValue).ToList();
             var forecast = facts.Select(f => (decimal?)f.ForecastValue).ToList();
 
-            // 3) Status from the most recent fact that has a non-empty StatusCode
             var lastWithStatus = facts.LastOrDefault(f => !string.IsNullOrWhiteSpace(f.StatusCode));
             string? latestStatusCode = lastWithStatus?.StatusCode;
 
@@ -185,7 +185,6 @@ namespace KPIMonitor.Controllers
                 _ => ("—", "")
             };
 
-            // 4) Five-year targets (append to the RIGHT as bars)
             var fy = await _db.KpiFiveYearTargets
                 .AsNoTracking()
                 .Where(t => t.KpiId == kpiId && t.IsActive == 1)
@@ -206,8 +205,6 @@ namespace KPIMonitor.Controllers
                 Add(4, fy.Period5Value);
             }
 
-            // 5) Table rows
-            string fmt(DateTime? d) => d?.ToString("yyyy-MM-dd") ?? "—";
             var table = facts.Select(f => new
             {
                 id = f.KpiFactId,
@@ -221,7 +218,7 @@ namespace KPIMonitor.Controllers
                 statusCode = f.StatusCode,
                 lastBy = f.LastChangedBy,
 
-                hasPending = pendingSet.Contains(f.KpiFactId)   // <-- THIS drives "⏳ Pending"
+                hasPending = pendingSet.Contains(f.KpiFactId)
             }).ToList();
 
             var kpi = await _db.DimKpis
@@ -229,16 +226,14 @@ namespace KPIMonitor.Controllers
                     .ThenInclude(o => o.Pillar)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.KpiId == kpiId);
-            // 6) Meta
+
             var meta = new
             {
-                // NEW: for the title above the chart
                 title = kpi?.KpiName ?? "—",
                 code = kpi?.KpiCode ?? "",
                 pillarCode = kpi?.Objective?.Pillar?.PillarCode ?? "",
                 objectiveCode = kpi?.Objective?.ObjectiveCode ?? "",
 
-                // existing fields
                 owner = plan.Owner ?? "—",
                 editor = plan.Editor ?? "—",
                 valueType = string.IsNullOrWhiteSpace(plan.Frequency) ? "—" : plan.Frequency,
@@ -252,7 +247,6 @@ namespace KPIMonitor.Controllers
                 canEdit = canEdit
             };
 
-            // 7) Payload
             return Json(new
             {
                 meta,
@@ -267,7 +261,7 @@ namespace KPIMonitor.Controllers
                 table
             });
         }
-        // GET a single fact (optional; handy if later you want to fetch fresh values by id)
+
         [HttpGet]
         public async Task<IActionResult> GetKpiFact(decimal id)
         {
@@ -303,7 +297,6 @@ namespace KPIMonitor.Controllers
 
             var fact = await _db.KpiFacts.FirstOrDefaultAsync(x => x.KpiFactId == input.KpiFactId);
             if (fact == null) return NotFound("Fact not found.");
-            // BLOCK if user is not owner/editor/admin for the plan that owns this fact
             if (!await _acl.CanEditPlanAsync(fact.KpiYearPlanId, User))
             {
                 if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
@@ -316,26 +309,23 @@ namespace KPIMonitor.Controllers
             fact.ForecastValue = input.ForecastValue;
             fact.StatusCode = input.StatusCode;
 
-            // Save "Last edited by" only if user typed something, else keep existing
             fact.LastChangedBy = string.IsNullOrWhiteSpace(input.LastChangedBy)
                 ? fact.LastChangedBy
                 : input.LastChangedBy;
             await _db.SaveChangesAsync();
 
-            // If the request came from fetch (AJAX), just return OK so the page can refresh the widgets.
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 return Ok(new { ok = true });
 
-            // Fallback (normal form post): redirect
             return RedirectToAction("Index", "Home", new { pillarId, objectiveId, kpiId });
         }
-        // GET: modal with Actual + Forecast grid for the active plan (strict grace windows)
+
+        // GET: modal with Actual + Forecast (+ Target for superadmin) grid for the active plan
         [HttpGet]
         public async Task<IActionResult> EditKpiFactsModal(decimal kpiId)
         {
             try
             {
-                // 1) Find most recent ACTIVE year plan for this KPI (same rule as GetKpiSummary)
                 var plan = await _db.KpiYearPlans
                     .Include(p => p.Period)
                     .AsNoTracking()
@@ -346,27 +336,24 @@ namespace KPIMonitor.Controllers
                 if (plan == null || plan.Period == null)
                     return Content("No active year plan found for this KPI.", "text/plain");
 
-                // 2) ACL: only Owner/Editor/Admin should even open the modal
                 var canEdit = await _acl.CanEditPlanAsync(plan.KpiYearPlanId, User);
                 if (!canEdit) return StatusCode(403, "Not allowed");
 
                 int year = plan.Period.Year;
 
-                // 3) Load KPI with codes to build the composed title
                 var kpi = await _db.DimKpis
                     .Include(x => x.Objective)
                         .ThenInclude(o => o.Pillar)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(k => k.KpiId == kpiId);
 
-                string pillarCode = kpi?.Objective?.Pillar?.PillarCode ?? "";
+                string pillarCode    = kpi?.Objective?.Pillar?.PillarCode ?? "";
                 string objectiveCode = kpi?.Objective?.ObjectiveCode ?? "";
-                string kpiCode = kpi?.KpiCode ?? "";
-                string left = string.Join('.', new[] { pillarCode, objectiveCode }.Where(s => !string.IsNullOrWhiteSpace(s)));
+                string kpiCode       = kpi?.KpiCode ?? "";
+                string left  = string.Join('.', new[] { pillarCode, objectiveCode }.Where(s => !string.IsNullOrWhiteSpace(s)));
                 string prefix = string.Join(' ', new[] { left, kpiCode }.Where(s => !string.IsNullOrWhiteSpace(s)));
                 string displayTitle = string.IsNullOrWhiteSpace(prefix) ? (kpi?.KpiName ?? "—") : $"{prefix} — {kpi?.KpiName ?? "—"}";
 
-                // 4) Load all facts for that KPI + plan year
                 var facts = await _db.KpiFacts
                     .Include(f => f.Period)
                     .AsNoTracking()
@@ -380,31 +367,33 @@ namespace KPIMonitor.Controllers
 
                 bool isMonthly = facts.Any(f => f.Period!.MonthNum.HasValue);
 
-                // 5) Build the VM (ensure collections are non-null even if server has old VM)
                 var vm = new KpiEditModalVm
                 {
-                    KpiId = kpiId,
-                    Year = year,
+                    KpiId     = kpiId,
+                    Year      = year,
                     IsMonthly = isMonthly,
-                    KpiName = displayTitle,
-                    Unit = string.IsNullOrWhiteSpace(plan.Unit) ? "—" : plan.Unit
+                    KpiName   = displayTitle,
+                    Unit      = string.IsNullOrWhiteSpace(plan.Unit) ? "—" : plan.Unit,
+                    IsSuperAdmin = _admin.IsSuperAdmin(User)
                 };
-                vm.Actuals ??= new Dictionary<int, decimal?>();
-                vm.Forecasts ??= new Dictionary<int, decimal?>();
-                vm.EditableActualKeys ??= new HashSet<int>();
-                vm.EditableForecastKeys ??= new HashSet<int>();
+                vm.Actuals               ??= new Dictionary<int, decimal?>();
+                vm.Forecasts             ??= new Dictionary<int, decimal?>();
+                vm.EditableActualKeys    ??= new HashSet<int>();
+                vm.EditableForecastKeys  ??= new HashSet<int>();
+                vm.Targets               ??= new Dictionary<int, decimal?>();
 
                 if (isMonthly)
                 {
                     for (int m = 1; m <= 12; m++)
                     {
                         var f = facts.FirstOrDefault(x => x.Period!.MonthNum == m);
-                        vm.Actuals[m] = f?.ActualValue;
+                        vm.Actuals[m]   = f?.ActualValue;
                         vm.Forecasts[m] = f?.ForecastValue;
+                        vm.Targets[m]   = f?.TargetValue;
                     }
 
                     var w = PeriodEditPolicy.ComputeMonthlyWindow(year, DateTime.UtcNow, User);
-                    vm.EditableActualKeys = new HashSet<int>(w.ActualMonths ?? Enumerable.Empty<int>());
+                    vm.EditableActualKeys   = new HashSet<int>(w.ActualMonths ?? Enumerable.Empty<int>());
                     vm.EditableForecastKeys = new HashSet<int>(w.ForecastMonths ?? Enumerable.Empty<int>());
                 }
                 else
@@ -412,12 +401,13 @@ namespace KPIMonitor.Controllers
                     for (int q = 1; q <= 4; q++)
                     {
                         var f = facts.FirstOrDefault(x => x.Period!.QuarterNum == q);
-                        vm.Actuals[q] = f?.ActualValue;
+                        vm.Actuals[q]   = f?.ActualValue;
                         vm.Forecasts[q] = f?.ForecastValue;
+                        vm.Targets[q]   = f?.TargetValue;
                     }
 
                     var w = PeriodEditPolicy.ComputeQuarterlyWindow(year, DateTime.UtcNow, User);
-                    vm.EditableActualKeys = new HashSet<int>(w.ActualQuarters ?? Enumerable.Empty<int>());
+                    vm.EditableActualKeys   = new HashSet<int>(w.ActualQuarters ?? Enumerable.Empty<int>());
                     vm.EditableForecastKeys = new HashSet<int>(w.ForecastQuarters ?? Enumerable.Empty<int>());
                 }
 
@@ -427,15 +417,11 @@ namespace KPIMonitor.Controllers
             {
                 _logger.LogError(ex, "EditKpiFactsModal failed for KPI {KpiId}", kpiId);
 
-                // Help the front-end show the real cause during debugging:
                 if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                     return StatusCode(500, $"EditKpiFactsModal error: {ex.GetType().Name}: {ex.Message}");
 
                 throw;
             }
         }
-
-
-
     }
 }

@@ -12,7 +12,7 @@ using KPIMonitor.Services.Abstractions;     // IKpiFactChangeService, IKpiFactCh
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging; // PATCH 5: logging
+using Microsoft.Extensions.Logging;
 
 namespace KPIMonitor.Controllers
 {
@@ -23,7 +23,7 @@ namespace KPIMonitor.Controllers
         private readonly AppDbContext _db;
         private readonly global::IAdminAuthorizer _admin;
         private readonly IKpiFactChangeBatchService _batches;
-        private readonly ILogger<KpiFactChangesController> _log; // PATCH 5: logger
+        private readonly ILogger<KpiFactChangesController> _log;
 
         public KpiFactChangesController(
             IKpiFactChangeService svc,
@@ -31,14 +31,14 @@ namespace KPIMonitor.Controllers
             AppDbContext db,
             global::IAdminAuthorizer admin,
             IKpiFactChangeBatchService batches,
-            ILogger<KpiFactChangesController> log) // PATCH 5: logger DI (additive)
+            ILogger<KpiFactChangesController> log)
         {
             _svc = svc;
             _acl = acl;
             _db = db;
             _admin = admin;
             _batches = batches;
-            _log = log; // PATCH 5
+            _log = log;
         }
 
         // ------------------------
@@ -82,12 +82,10 @@ namespace KPIMonitor.Controllers
             return Json(new { pending });
         }
 
-        // Owners: pending approvals count (admin = all)
         [HttpGet]
         public async Task<IActionResult> PendingCount()
         {
             if (_admin.IsAdmin(User) || _admin.IsSuperAdmin(User))
-
             {
                 var countAll = await _db.KpiFactChanges.AsNoTracking()
                     .CountAsync(c => c.ApprovalStatus == "pending");
@@ -124,7 +122,6 @@ namespace KPIMonitor.Controllers
         {
             try
             {
-                // store domainless username (e.g., "walid.salem")
                 var submittedBy = Sam();
                 if (string.IsNullOrWhiteSpace(submittedBy)) submittedBy = "editor";
 
@@ -133,6 +130,13 @@ namespace KPIMonitor.Controllers
                     ProposedActualValue, ProposedTargetValue, ProposedForecastValue,
                     ProposedStatusCode,
                     submittedBy);
+
+                // Auto-approve if SuperAdmin
+                if (_admin.IsSuperAdmin(User))
+                {
+                    await _svc.ApproveAsync(change.KpiFactChangeId, submittedBy);
+                    change.ApprovalStatus = "approved"; // keep response consistent
+                }
 
                 var msg = string.Equals(change.ApprovalStatus, "approved", StringComparison.OrdinalIgnoreCase)
                           ? "Saved & auto-approved."
@@ -144,7 +148,6 @@ namespace KPIMonitor.Controllers
                     changeId = change.KpiFactChangeId,
                     status = change.ApprovalStatus,
                     message = msg
-                    // PATCH 5: not adding extra fields here to keep single-change payload identical
                 });
             }
             catch (Exception ex)
@@ -218,9 +221,6 @@ namespace KPIMonitor.Controllers
         [HttpGet]
         public IActionResult Inbox() => View();
 
-        /// <summary>
-        /// Legacy row-by-row list (kept so nothing else breaks).
-        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ListHtml(string? status = "pending", string? modeOverride = null, CancellationToken ct = default)
@@ -233,7 +233,6 @@ namespace KPIMonitor.Controllers
             var mySam = Sam();
             var mySamUp = mySam.ToUpperInvariant();
 
-            // Decide MODE automatically
             var isOwnerSomewhere = !string.IsNullOrWhiteSpace(myEmp) &&
                                    await _db.KpiYearPlans.AsNoTracking()
                                        .AnyAsync(p => p.OwnerEmpId == myEmp, ct);
@@ -243,7 +242,6 @@ namespace KPIMonitor.Controllers
             if (forced == "editor") mode = "editor";
             else if (forced == "owner" && (isAdmin || isOwnerSomewhere)) mode = "owner";
 
-            // Base query by status
             var q = _db.KpiFactChanges.AsNoTracking()
                                       .Where(c => c.ApprovalStatus == s);
 
@@ -277,7 +275,6 @@ namespace KPIMonitor.Controllers
                 }
             }
 
-            // Pull rows
             var items = await q
                 .OrderByDescending(c => c.SubmittedAt)
                 .Select(c => new
@@ -297,7 +294,6 @@ namespace KPIMonitor.Controllers
                 })
                 .ToListAsync(ct);
 
-            // Head info
             var factIds = items.Select(i => i.KpiFactId).Distinct().ToList();
 
             var head = await _db.KpiFacts
@@ -320,7 +316,6 @@ namespace KPIMonitor.Controllers
                 })
                 .ToDictionaryAsync(x => x.KpiFactId, x => x, ct);
 
-            // helpers
             static string H(string? s2) => WebUtility.HtmlEncode(s2 ?? "");
             static string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
             static string LabelStatus(string code) => (code ?? "").Trim().ToLowerInvariant() switch
@@ -459,13 +454,14 @@ namespace KPIMonitor.Controllers
             Dictionary<int, decimal?>? Actuals,
             Dictionary<int, decimal?>? Forecasts,
             Dictionary<int, decimal?>? ActualQuarters,
-            Dictionary<int, decimal?>? ForecastQuarters)
+            Dictionary<int, decimal?>? ForecastQuarters,
+            Dictionary<int, decimal?>? Targets,
+            Dictionary<int, decimal?>? TargetQuarters)
         {
             try
             {
                 var traceId = HttpContext.TraceIdentifier ?? Guid.NewGuid().ToString("n");
 
-                // 1) Active plan for this KPI
                 var plan = await _db.KpiYearPlans
                     .Include(p => p.Period)
                     .AsNoTracking()
@@ -479,11 +475,9 @@ namespace KPIMonitor.Controllers
                 if (plan.Period.Year != year)
                     return BadRequest(new { ok = false, error = $"Year mismatch. Active plan year is {plan.Period.Year}.", traceId });
 
-                // 2) ACL
                 if (!await _acl.CanEditPlanAsync(plan.KpiYearPlanId, User))
                     return StatusCode(403, new { ok = false, error = "You do not have access to edit these facts.", traceId });
 
-                // 3) Facts for this KPI/year/plan
                 var facts = await _db.KpiFacts
                     .Include(f => f.Period)
                     .Where(f => f.KpiId == kpiId
@@ -494,32 +488,31 @@ namespace KPIMonitor.Controllers
                     .OrderBy(f => f.Period!.StartDate)
                     .ToListAsync();
 
-                // 4) Granularity
                 bool monthly = facts.Any(f => f.Period!.MonthNum.HasValue) || (!facts.Any() && isMonthly);
 
-                var postedActuals = monthly ? (Actuals ?? new Dictionary<int, decimal?>())
+                var postedActuals  = monthly ? (Actuals ?? new Dictionary<int, decimal?>())
                                              : (ActualQuarters ?? new Dictionary<int, decimal?>());
                 var postedForecast = monthly ? (Forecasts ?? new Dictionary<int, decimal?>())
                                              : (ForecastQuarters ?? new Dictionary<int, decimal?>());
+                var postedTargets  = monthly ? (Targets ?? new Dictionary<int, decimal?>())
+                                             : (TargetQuarters ?? new Dictionary<int, decimal?>());
 
-                // 5) Edit windows
                 var nowUtc = DateTime.UtcNow;
-                var isSuperAdmin = _admin.IsSuperAdmin(User); // PATCH 5: detect once for audit
+                var isSuperAdmin = _admin.IsSuperAdmin(User);
                 HashSet<int> editableA, editableF;
                 if (monthly)
                 {
-                    var mw = PeriodEditPolicy.ComputeMonthlyWindow(year, nowUtc, User); // already from Patch 4
+                    var mw = PeriodEditPolicy.ComputeMonthlyWindow(year, nowUtc, User);
                     editableA = new HashSet<int>(mw.ActualMonths);
                     editableF = new HashSet<int>(mw.ForecastMonths);
                 }
                 else
                 {
-                    var qw = PeriodEditPolicy.ComputeQuarterlyWindow(year, nowUtc, User); // already from Patch 4
+                    var qw = PeriodEditPolicy.ComputeQuarterlyWindow(year, nowUtc, User);
                     editableA = new HashSet<int>(qw.ActualQuarters);
                     editableF = new HashSet<int>(qw.ForecastQuarters);
                 }
 
-                // 6) Submit
                 var submittedBy = Sam();
                 if (string.IsNullOrWhiteSpace(submittedBy)) submittedBy = "editor";
 
@@ -535,20 +528,21 @@ namespace KPIMonitor.Controllers
 
                     bool aProvided = postedActuals.ContainsKey(key) && postedActuals[key].HasValue;
                     bool fProvided = postedForecast.ContainsKey(key) && postedForecast[key].HasValue;
+                    bool tProvided = postedTargets.ContainsKey(key) && postedTargets[key].HasValue;
 
                     postedActuals.TryGetValue(key, out var newA);
                     postedForecast.TryGetValue(key, out var newF);
+                    postedTargets.TryGetValue(key, out var newT);
 
                     bool changeA = aProvided && (f.ActualValue != newA);
                     bool changeF = fProvided && (f.ForecastValue != newF);
+                    bool changeT = isSuperAdmin && tProvided && (f.TargetValue != newT);
 
-                    if (!changeA && !changeF) { skipped++; continue; }
+                    if (!changeA && !changeF && !changeT) { skipped++; continue; }
 
-                    // edit window
                     if ((changeA && !editableA.Contains(key)) || (changeF && !editableF.Contains(key)))
                     { skipped++; continue; }
 
-                    // pending guard
                     if (await _svc.HasPendingAsync(f.KpiFactId))
                     { skipped++; continue; }
 
@@ -557,10 +551,16 @@ namespace KPIMonitor.Controllers
                         var change = await _svc.SubmitAsync(
                             f.KpiFactId,
                             changeA ? newA : null,   // Actual
-                            null,                    // Target (not edited in this modal)
+                            changeT ? newT : null,   // Target (super-admin only)
                             changeF ? newF : null,   // Forecast
-                            null,                    // Status (not edited)
+                            null,                    // Status
                             submittedBy);
+
+                        // Auto-approve immediately for SuperAdmin
+                        if (isSuperAdmin)
+                        {
+                            await _svc.ApproveAsync(change.KpiFactChangeId, submittedBy);
+                        }
 
                         created++;
                         createdIds.Add(change.KpiFactChangeId);
@@ -578,7 +578,6 @@ namespace KPIMonitor.Controllers
                 if (created == 0 && errors.Count > 0)
                     return BadRequest(new { ok = false, created, skipped, errors, traceId });
 
-                // 7) Create batch and link children (only if we created anything)
                 decimal? batchId = null;
                 if (created > 0)
                 {
@@ -605,7 +604,6 @@ namespace KPIMonitor.Controllers
 
                     batchId = newBatchId;
 
-                    // PATCH 5: log audit line if super-admin performed a bypassable operation
                     if (isSuperAdmin)
                     {
                         _log.LogInformation("SUPERADMIN_BYPASS SubmitBatch user={User} kpiId={KpiId} planId={PlanId} year={Year} monthly={Monthly} created={Created} skipped={Skipped} batchId={BatchId} traceId={TraceId}",
@@ -622,9 +620,9 @@ namespace KPIMonitor.Controllers
                     monthly,
                     created,
                     skipped,
-                    batchId,     // for the client
+                    batchId,
                     traceId,
-                    superAdminBypass = isSuperAdmin // PATCH 5: additive flag
+                    superAdminBypass = isSuperAdmin
                 });
             }
             catch (Exception ex)
@@ -703,7 +701,7 @@ namespace KPIMonitor.Controllers
         }
 
         // ------------------------
-        // List batches: one tile per batch (no per-row Details)
+        // List batches (cards)
         // ------------------------
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -715,7 +713,6 @@ namespace KPIMonitor.Controllers
             var isAdmin = _admin.IsAdmin(User) || _admin.IsSuperAdmin(User);
             var myEmp = await MyEmpIdAsync(ct);
 
-            // Auto-decide mode (owner vs editor)
             var isOwnerSomewhere = !string.IsNullOrWhiteSpace(myEmp) &&
                                    await _db.KpiYearPlans.AsNoTracking()
                                        .AnyAsync(p => p.OwnerEmpId == myEmp, ct);
@@ -724,7 +721,6 @@ namespace KPIMonitor.Controllers
             if (forced == "editor") mode = "editor";
             else if (forced == "owner" && (isAdmin || isOwnerSomewhere)) mode = "owner";
 
-            // Base: batches by status
             var qb = _db.KpiFactChangeBatches.AsNoTracking()
                         .Where(b => b.ApprovalStatus == s);
 
@@ -747,7 +743,6 @@ namespace KPIMonitor.Controllers
                      select 1).Any());
             }
 
-            // Pull batches
             var batches = await qb
                 .OrderByDescending(b => b.SubmittedAt)
                 .Select(b => new
@@ -773,7 +768,6 @@ namespace KPIMonitor.Controllers
             if (batches.Count == 0)
                 return Content("<div class='text-muted small'>No items.</div>", "text/html");
 
-            // Header (KPI codes & names)
             var kpiIds = batches.Select(b => b.KpiId).Distinct().ToList();
             var kpiHead = await _db.DimKpis
                 .AsNoTracking()
@@ -788,7 +782,6 @@ namespace KPIMonitor.Controllers
                 })
                 .ToDictionaryAsync(x => x.KpiId, x => x, ct);
 
-            // Children for all shown batches, filtered by same status
             var batchIds = batches.Select(b => b.BatchId).ToList();
             var children = await _db.KpiFactChanges
                 .AsNoTracking()
@@ -805,7 +798,6 @@ namespace KPIMonitor.Controllers
                 })
                 .ToListAsync(ct);
 
-            // Facts for period labels and current values
             var factIds = children.Select(c => c.KpiFactId).Distinct().ToList();
             var facts = await _db.KpiFacts
                 .AsNoTracking()
@@ -819,7 +811,6 @@ namespace KPIMonitor.Controllers
                 })
                 .ToDictionaryAsync(x => x.KpiFactId, x => x, ct);
 
-            // helpers
             static string H(string? s2) => WebUtility.HtmlEncode(s2 ?? "");
             static string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
             string DiffNum(decimal? curV, decimal? newV)
@@ -840,10 +831,8 @@ namespace KPIMonitor.Controllers
                     ? $"KPI {H(b.KpiId.ToString())}"
                     : $"{H(kh.PillarCode ?? "")}.{H(kh.ObjectiveCode ?? "")} {H(kh.KpiCode ?? "")} — {H(kh.KpiName ?? "-")}";
 
-                // Pull rows for this batch (typed, never null → no CS8619)
                 var rows = children.Where(c => c.BatchId == b.BatchId).ToList();
 
-                // stable ascending by period
                 rows.Sort((a, z) =>
                 {
                     facts.TryGetValue(a.KpiFactId, out var fa);
@@ -871,7 +860,6 @@ namespace KPIMonitor.Controllers
                     return da.CompareTo(dz);
                 });
 
-                // header right (actions + ONE Details per batch)
                 var canAct = (mode == "owner");
                 string headerRight;
                 if (b.ApprovalStatus == "pending")
@@ -900,7 +888,6 @@ namespace KPIMonitor.Controllers
                 var perText = (b.PeriodMin.HasValue && b.PeriodMax.HasValue)
                                 ? $"{b.PeriodMin}–{b.PeriodMax}" : "—";
 
-                // card header
                 sb.Append($@"
 <div class='appr-card border rounded-3 bg-white p-3 mb-2' data-batch-id='{b.BatchId}' data-kpi-id='{b.KpiId}'>
   <div class='d-flex justify-content-between align-items-start'>
@@ -912,7 +899,6 @@ namespace KPIMonitor.Controllers
     <div class='text-end'>{headerRight}</div>
   </div>");
 
-                // child table (Actual + Forecast ONLY; NO per-row Details)
                 if (rows.Count == 0)
                 {
                     sb.Append("<div class='text-muted small mt-2'>No changes.</div>");
@@ -956,7 +942,6 @@ namespace KPIMonitor.Controllers
   </div>");
                 }
 
-                // reviewer info
                 if (b.ApprovalStatus != "pending")
                 {
                     sb.Append($@"
@@ -965,14 +950,14 @@ namespace KPIMonitor.Controllers
   </div>");
                 }
 
-                sb.Append("</div>"); // card
+                sb.Append("</div>");
             }
 
             return Content(sb.ToString(), "text/html");
         }
 
         // ------------------------
-        // Single-row Details JSON (kept for compatibility)
+        // Single-row Details JSON
         // ------------------------
         [HttpGet]
         public async Task<IActionResult> ChangeOverlayInfo(decimal changeId, CancellationToken ct = default)
@@ -994,7 +979,6 @@ namespace KPIMonitor.Controllers
             if (ch == null || ch.Fact == null || ch.Period == null || ch.Kpi == null)
                 return NotFound(new { ok = false, error = "Change or KPI/Period not found." });
 
-            // ACL: admin OR owner/editor of the plan
             var myEmp = await MyEmpIdAsync(ct);
             if (!(_admin.IsAdmin(User) || _admin.IsSuperAdmin(User)))
             {
@@ -1039,17 +1023,15 @@ namespace KPIMonitor.Controllers
         }
 
         // ------------------------
-        // NEW: Batch Details JSON (one chart overlay for all items in batch)
+        // Batch Details JSON
         // ------------------------
         [HttpGet]
         public async Task<IActionResult> ChangeOverlayInfoBatch(decimal batchId, CancellationToken ct = default)
         {
-            // Load batch
             var b = await _db.KpiFactChangeBatches.AsNoTracking()
                      .FirstOrDefaultAsync(x => x.BatchId == batchId, ct);
             if (b == null) return NotFound(new { ok = false, error = "Batch not found." });
 
-            // ACL: admin OR owner/editor of the plan
             if (!(_admin.IsAdmin(User) || _admin.IsSuperAdmin(User)))
             {
                 var myEmp = await MyEmpIdAsync(ct);
@@ -1062,7 +1044,6 @@ namespace KPIMonitor.Controllers
                 if (!allowed) return StatusCode(403, new { ok = false, error = "Not allowed." });
             }
 
-            // Child changes
             var rows = await _db.KpiFactChanges.AsNoTracking()
                          .Where(c => c.BatchId == batchId)
                          .Select(c => new
@@ -1081,7 +1062,6 @@ namespace KPIMonitor.Controllers
                             .Select(f => new { f.KpiFactId, P = f.Period })
                             .ToDictionaryAsync(x => x.KpiFactId, x => x.P, ct);
 
-            // KPI header
             var k = await _db.DimKpis.AsNoTracking()
                      .Where(x => x.KpiId == b.KpiId)
                      .Select(x => new
