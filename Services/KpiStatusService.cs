@@ -61,7 +61,7 @@ namespace KPIMonitor.Services
             // Extra “due” grace: delay due-ness by +1 month beyond the edit window.
             // This keeps editability as-is (controllers still use current nowUtc),
             // but status won't show "Data Missing" until one more month passes.
-            var shiftedNow = nowUtc.AddMonths(-1);
+            var shiftedNow = nowUtc.AddMonths(-2);
 
             if (period.MonthNum.HasValue)
             {
