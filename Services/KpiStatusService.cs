@@ -44,7 +44,7 @@ namespace KPIMonitor.Services
                 .ToListAsync(ct);
 
             decimal? first = targets.FirstOrDefault(v => v.HasValue);
-            decimal? last  = targets.LastOrDefault(v => v.HasValue);
+            decimal? last = targets.LastOrDefault(v => v.HasValue);
 
             var dir = (first.HasValue && last.HasValue && last.Value < first.Value)
                 ? TrendDirection.Descending
@@ -58,21 +58,26 @@ namespace KPIMonitor.Services
         {
             if (period == null) return false;
 
-            // "Due" == inside the edit window for actuals (your policy covers grace)
+            // Extra “due” grace: delay due-ness by +1 month beyond the edit window.
+            // This keeps editability as-is (controllers still use current nowUtc),
+            // but status won't show "Data Missing" until one more month passes.
+            var shiftedNow = nowUtc.AddMonths(-1);
+
             if (period.MonthNum.HasValue)
             {
-                var mw = PeriodEditPolicy.ComputeMonthlyWindow(period.Year, nowUtc);
+                var mw = PeriodEditPolicy.ComputeMonthlyWindow(period.Year, shiftedNow);
                 return mw.ActualMonths.Contains(period.MonthNum.Value);
             }
             if (period.QuarterNum.HasValue)
             {
-                var qw = PeriodEditPolicy.ComputeQuarterlyWindow(period.Year, nowUtc);
+                var qw = PeriodEditPolicy.ComputeQuarterlyWindow(period.Year, shiftedNow);
                 return qw.ActualQuarters.Contains(period.QuarterNum.Value);
             }
 
-            // Year-only rows (rare)
-            return period.EndDate <= nowUtc;
+            // Year-only rows: treat as due only after an extra month past year end.
+            return (period.EndDate ?? DateTime.MinValue) <= shiftedNow;
         }
+
 
         /// <summary>
         /// Interface-required: SAME-PERIOD logic only.
@@ -115,8 +120,8 @@ namespace KPIMonitor.Services
                 throw new InvalidOperationException("KPI fact not found or missing period.");
 
             var period = fact.Period;
-            var now    = DateTime.UtcNow;
-            var isDue  = IsDue(period, now);
+            var now = DateTime.UtcNow;
+            var isDue = IsDue(period, now);
 
             var dir = await InferDirectionAsync(fact.KpiId, fact.KpiYearPlanId, period.Year, ct);
 
