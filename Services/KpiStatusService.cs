@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace KPIMonitor.Services
 {
     /// <summary>
-    /// Status engine: infers plan direction per (KPI, Plan, Year),
+    /// Status engine: uses plan TargetDirection (no guessing),
     /// evaluates status per period, and writes it to KPIFacts.StatusCode.
     /// Implements your "look-ahead (k+1)" rule.
     /// </summary>
@@ -19,39 +18,27 @@ namespace KPIMonitor.Services
     {
         private readonly AppDbContext _db;
 
-        // Per-operation in-memory cache to avoid repeated direction queries
-        private readonly Dictionary<(decimal KpiId, decimal PlanId, int Year), TrendDirection> _dirCache = new();
-
         public KpiStatusService(AppDbContext db) => _db = db;
 
+        /// <summary>
+        /// Return the plan's explicit direction (1 = Ascending, -1 = Descending).
+        /// </summary>
         public async Task<TrendDirection> InferDirectionAsync(
             decimal kpiId,
             decimal kpiYearPlanId,
             int year,
             CancellationToken ct = default)
         {
-            var key = (kpiId, kpiYearPlanId, year);
-            if (_dirCache.TryGetValue(key, out var cached)) return cached;
+            var dir = await _db.KpiYearPlans
+                .Where(p => p.KpiYearPlanId == kpiYearPlanId)
+                .Select(p => (int?)p.TargetDirection)
+                .FirstOrDefaultAsync(ct);
 
-            var targets = await _db.KpiFacts.AsNoTracking()
-                .Include(f => f.Period)
-                .Where(f => f.KpiYearPlanId == kpiYearPlanId
-                         && f.IsActive == 1
-                         && f.Period != null
-                         && f.Period.Year == year)
-                .OrderBy(f => f.Period!.StartDate)
-                .Select(f => f.TargetValue)
-                .ToListAsync(ct);
+            if (dir is 1)  return TrendDirection.Ascending;
+            if (dir is -1) return TrendDirection.Descending;
 
-            decimal? first = targets.FirstOrDefault(v => v.HasValue);
-            decimal? last = targets.LastOrDefault(v => v.HasValue);
-
-            var dir = (first.HasValue && last.HasValue && last.Value < first.Value)
-                ? TrendDirection.Descending
-                : TrendDirection.Ascending; // default ascending when unsure
-
-            _dirCache[key] = dir;
-            return dir;
+            // You said it will always be set; fail loudly if not.
+            throw new InvalidOperationException("Year plan TargetDirection must be 1 or -1.");
         }
 
         public bool IsDue(DimPeriod period, DateTime nowUtc)
@@ -59,46 +46,38 @@ namespace KPIMonitor.Services
             if (period == null) return false;
 
             // Determine the period end (prefer DB EndDate; otherwise compute)
-            DateTime periodEnd;
+            DateTime periodEndUtc;
             if (period.EndDate.HasValue)
             {
-                // assume EndDate is UTC (your DimPeriod already uses StartDate/EndDate for ordering)
-                periodEnd = DateTime.SpecifyKind(period.EndDate.Value, DateTimeKind.Utc);
+                // Treat EndDate as UTC timestamp
+                periodEndUtc = DateTime.SpecifyKind(period.EndDate.Value, DateTimeKind.Utc);
+            }
+            else if (period.MonthNum.HasValue)
+            {
+                int y = period.Year, m = period.MonthNum.Value;
+                int d = DateTime.DaysInMonth(y, m);
+                periodEndUtc = new DateTime(y, m, d, 23, 59, 59, DateTimeKind.Utc);
+            }
+            else if (period.QuarterNum.HasValue)
+            {
+                int y = period.Year, q = period.QuarterNum.Value;
+                int m = q * 3;
+                int d = DateTime.DaysInMonth(y, m);
+                periodEndUtc = new DateTime(y, m, d, 23, 59, 59, DateTimeKind.Utc);
             }
             else
             {
-                // Compute end in UTC if EndDate is missing
-                if (period.MonthNum.HasValue)
-                {
-                    int y = period.Year, m = period.MonthNum.Value;
-                    int d = DateTime.DaysInMonth(y, m);
-                    periodEnd = new DateTime(y, m, d, 23, 59, 59, DateTimeKind.Utc);
-                }
-                else if (period.QuarterNum.HasValue)
-                {
-                    int y = period.Year, q = period.QuarterNum.Value;
-                    int m = q * 3;
-                    int d = DateTime.DaysInMonth(y, m);
-                    periodEnd = new DateTime(y, m, d, 23, 59, 59, DateTimeKind.Utc);
-                }
-                else
-                {
-                    // Year-only row
-                    int y = period.Year;
-                    periodEnd = new DateTime(y, 12, 31, 23, 59, 59, DateTimeKind.Utc);
-                }
+                int y = period.Year;
+                periodEndUtc = new DateTime(y, 12, 31, 23, 59, 59, DateTimeKind.Utc);
             }
 
             // “Due” ONE MONTH after the period end
-            var dueAt = periodEnd.AddMonths(1);
-
-            // If now is on/after dueAt → due; otherwise not due yet.
+            var dueAt = periodEndUtc.AddMonths(1);
             return nowUtc >= dueAt;
         }
 
-
         /// <summary>
-        /// Interface-required: SAME-PERIOD logic only.
+        /// SAME-PERIOD logic only.
         /// Order: Actual vs Target → Actual vs Forecast → DataMissing (if due & no actual) → NeedsAttention (if actual present) → null (not due & no actual).
         /// </summary>
         public string? Evaluate(
@@ -110,7 +89,8 @@ namespace KPIMonitor.Services
             decimal tolerance = 0.0001m)
         {
             static bool Meets(decimal lhs, decimal rhs, TrendDirection d, decimal tol)
-                => d == TrendDirection.Ascending ? lhs + tol >= rhs : lhs - tol <= rhs;
+                => d == TrendDirection.Ascending ? lhs + tol >= rhs
+                                                 : lhs - tol <= rhs;
 
             // no actual recorded
             if (!actual.HasValue)
@@ -138,21 +118,17 @@ namespace KPIMonitor.Services
                 throw new InvalidOperationException("KPI fact not found or missing period.");
 
             var period = fact.Period;
-            var now = DateTime.UtcNow;
-            var isDue = IsDue(period, now);
+            var now    = DateTime.UtcNow;
+            var isDue  = IsDue(period, now);
 
+            // Direction from plan field (required to be 1 or -1)
             var dir = await InferDirectionAsync(fact.KpiId, fact.KpiYearPlanId, period.Year, ct);
 
-            // 1) Same-period evaluation (interface contract)
+            // 1) Same-period evaluation
             var same = Evaluate(fact.ActualValue, fact.TargetValue, fact.ForecastValue, isDue, dir);
-
             string? decided = same;
 
-            // 2) If the same-period result is "NeedsAttention" (or null in some edge paths),
-            //    apply your look-ahead (k+1) rule:
-            //    - if T(k+1) missing -> DataMissing
-            //    - else if F(k+1) meets T(k+1) -> CatchingUp
-            //    - else -> NeedsAttention
+            // 2) Look-ahead (k+1) rule only if Actual exists and same is null/red
             if (fact.ActualValue.HasValue && (same == null || same == StatusCodes.NeedsAttention))
             {
                 var next = await GetNextSameGranularityAsync(fact.KpiYearPlanId, period.Year, period, ct);
@@ -164,6 +140,7 @@ namespace KPIMonitor.Services
                 else
                 {
                     var (tNext, fNext) = next.Value;
+
                     if (!tNext.HasValue)
                         decided = StatusCodes.DataMissing;   // rule: missing T(k+1) => blue
                     else if (fNext.HasValue && Meets(fNext.Value, tNext.Value, dir))
@@ -173,7 +150,6 @@ namespace KPIMonitor.Services
                 }
             }
 
-            // Persist only if we decided something and it differs
             var effective = decided ?? (fact.StatusCode ?? "");
             if (decided != null &&
                 !string.Equals(decided, fact.StatusCode, StringComparison.OrdinalIgnoreCase))

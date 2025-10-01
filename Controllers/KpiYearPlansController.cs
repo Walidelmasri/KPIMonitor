@@ -6,7 +6,6 @@ using KPIMonitor.Models;
 using KPIMonitor.Services;
 using System.Threading;
 
-
 namespace KPIMonitor.Controllers
 {
     public class KpiYearPlansController : Controller
@@ -14,33 +13,15 @@ namespace KPIMonitor.Controllers
         private readonly AppDbContext _db;
         public KpiYearPlansController(AppDbContext db) => _db = db;
 
-        // // GET: /KpiYearPlans
-        // public async Task<IActionResult> Index(int? year)
-        // {
-        //     var q = _db.KpiYearPlans
-        //                .Include(p => p.Kpi)
-        //                .Include(p => p.Period)
-        //                .AsNoTracking();
-
-        //     if (year.HasValue)
-        //         q = q.Where(x => x.Period != null && x.Period.Year == year.Value);
-
-        //     var data = await q.OrderBy(x => x.Period!.Year)
-        //                       .ThenBy(x => x.KpiId)
-        //                       .ToListAsync();
-
-        //     ViewBag.FilterYear = year;
-        //     return View(data);
-        // }
         // GET: /KpiYearPlans
         public async Task<IActionResult> Index(int? year, decimal? pillarId)
         {
             var q = _db.KpiYearPlans
                        .Include(p => p.Period)
                        .Include(p => p.Kpi)
-                        .ThenInclude(k => k.Pillar)
+                           .ThenInclude(k => k.Pillar)
                        .Include(p => p.Kpi)
-                        .ThenInclude(k => k.Objective)
+                           .ThenInclude(k => k.Objective)
                        .AsNoTracking();
 
             if (year.HasValue)
@@ -50,11 +31,11 @@ namespace KPIMonitor.Controllers
                 q = q.Where(x => x.Kpi != null && x.Kpi.PillarId == pillarId.Value);
 
             var data = await q
-            .OrderBy(x => x.Period!.Year)
-            .ThenBy(x => x.Kpi!.Pillar!.PillarCode)
-            .ThenBy(x => x.Kpi!.Objective!.ObjectiveCode)
-            .ThenBy(x => x.Kpi!.KpiCode)
-            .ToListAsync();
+                .OrderBy(x => x.Period!.Year)
+                .ThenBy(x => x.Kpi!.Pillar!.PillarCode)
+                .ThenBy(x => x.Kpi!.Objective!.ObjectiveCode)
+                .ThenBy(x => x.Kpi!.KpiCode)
+                .ToListAsync();
 
             // for the filters
             ViewBag.FilterYear = year;
@@ -72,13 +53,14 @@ namespace KPIMonitor.Controllers
 
             return View(data);
         }
+
         // GET: /KpiYearPlans/Create
         public async Task<IActionResult> Create()
         {
             await LoadKpisAsync();
             await LoadYearPeriodsAsync();
             var user = User?.Identity?.Name ?? "system";
-            return View(new KpiYearPlan { IsActive = 1, CreatedBy = user, LastChangedBy = user });
+            return View(new KpiYearPlan { IsActive = 1, CreatedBy = user, LastChangedBy = user, TargetDirection = 1 });
         }
 
         // POST: /KpiYearPlans/Create
@@ -101,6 +83,10 @@ namespace KPIMonitor.Controllers
             if (string.IsNullOrWhiteSpace(vm.LastChangedBy))
                 ModelState.AddModelError(nameof(vm.LastChangedBy), "Last Changed By is required.");
 
+            // Require direction explicitly (1 or -1)
+            if (vm.TargetDirection != 1 && vm.TargetDirection != -1)
+                ModelState.AddModelError(nameof(vm.TargetDirection), "Select whether higher or lower is better.");
+
             if (!ModelState.IsValid)
             {
                 await LoadKpisAsync(vm.KpiId);
@@ -109,7 +95,7 @@ namespace KPIMonitor.Controllers
             }
 
             vm.CreatedDate = DateTime.UtcNow;
-            _db.KpiYearPlans.Add(vm);
+            _db.KpiYearPlans.Add(vm); // <-- FIX: proper Add
 
             try
             {
@@ -227,7 +213,8 @@ namespace KPIMonitor.Controllers
                                 .ToListAsync();
             ViewBag.YearPeriods = new SelectList(list, "PeriodId", "Label", selected);
         }
-        // GET: full edit modal (frequency, unit, annual target, priority, owner/editor)
+
+        // GET: full edit modal (frequency, unit, annual target, priority, owner/editor, direction)
         [HttpGet]
         public async Task<IActionResult> EditModal(decimal id, CancellationToken ct)
         {
@@ -258,9 +245,11 @@ namespace KPIMonitor.Controllers
             ViewBag.AnnualTargetText = plan.AnnualTarget?.ToString("0.###") ?? "";
             ViewBag.PriorityText = plan.Priority?.ToString() ?? "";
 
+            // Direction (1 or -1)
+            ViewBag.TargetDirection = plan.TargetDirection;
+
             return PartialView("_KpiYearPlanEditModal", vm);
         }
-
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -287,45 +276,47 @@ namespace KPIMonitor.Controllers
                 return NotFound("Plan not found.");
             }
 
-            // Basic fields (even if you hid freq/unit in the table, we persist them safely)
+            // Basic fields
             plan.Frequency = string.IsNullOrWhiteSpace(frequency) ? null : frequency.Trim();
             plan.Unit = string.IsNullOrWhiteSpace(unit) ? null : unit.Trim();
             plan.AnnualTarget = annualTarget;
             plan.Priority = priority;
 
+            // Target direction (required; must be 1 or -1)
+            var dirRaw = Request.Form["targetDirection"].ToString();
+            if (!int.TryParse(dirRaw, out var targetDir) || (targetDir != 1 && targetDir != -1))
+                return BadRequest("Invalid Target Direction. Choose 1 or -1.");
+            plan.TargetDirection = targetDir;
+
             // Directory lookups for owners/editors
-            var dir = HttpContext.RequestServices.GetRequiredService<IEmployeeDirectory>();
+            var directory = HttpContext.RequestServices.GetRequiredService<IEmployeeDirectory>();
 
             if (!string.IsNullOrWhiteSpace(ownerEmpId))
             {
-                var owner = await dir.TryGetByEmpIdAsync(ownerEmpId!, ct);
+                var owner = await directory.TryGetByEmpIdAsync(ownerEmpId!, ct);
                 if (owner == null)
                     return BadRequest("Invalid Owner.");
 
-                // NAME for UI
-                plan.Owner = owner.Value.NameEng;     // keep your NAME_ENG behavior
+                plan.Owner = owner.Value.NameEng;     // keep NAME_ENG behavior
                 plan.OwnerEmpId = owner.Value.EmpId;
 
-                // LOGIN for approvals (uppercased + normalized)
                 var ownerLoginUp = ExtractLoginUpper(owner.Value)
-                                   ?? ExtractLoginUpper(ownerEmpId)   // try from id if it’s a login-like string
+                                   ?? ExtractLoginUpper(ownerEmpId)
                                    ?? (string?)null;
 
                 plan.OwnerLogin = string.IsNullOrWhiteSpace(ownerLoginUp)
                     ? null
-                    : ownerLoginUp;                   // store already UPPER
+                    : ownerLoginUp; // already UPPER
             }
             else
             {
                 plan.OwnerEmpId = null;
-                // leave plan.Owner as-is if you want, or clear it:
-                // plan.Owner = null;
                 plan.OwnerLogin = null;
             }
 
             if (!string.IsNullOrWhiteSpace(editorEmpId))
             {
-                var editor = await dir.TryGetByEmpIdAsync(editorEmpId!, ct);
+                var editor = await directory.TryGetByEmpIdAsync(editorEmpId!, ct);
                 if (editor == null)
                     return BadRequest("Invalid Editor.");
 
@@ -338,19 +329,21 @@ namespace KPIMonitor.Controllers
 
                 plan.EditorLogin = string.IsNullOrWhiteSpace(editorLoginUp)
                     ? null
-                    : editorLoginUp;                  // store already UPPER
+                    : editorLoginUp;
             }
             else
             {
                 plan.EditorEmpId = null;
-                // plan.Editor = null;
                 plan.EditorLogin = null;
             }
 
-
-
             await _db.SaveChangesAsync(ct);
             log.LogInformation("UpdatePlan SAVED planId={PlanId}", plan.KpiYearPlanId);
+
+            // friendly label for optional display
+            string directionText = plan.TargetDirection == 1
+                ? "Higher is better (≥)"
+                : "Lower is better (≤)";
 
             // send back what the table expects (strings preformatted)
             return Json(new
@@ -362,7 +355,8 @@ namespace KPIMonitor.Controllers
                 annualTargetText = plan.AnnualTarget?.ToString("0.###") ?? "—",
                 priorityText = plan.Priority?.ToString() ?? "—",
                 owner = plan.Owner ?? "—",   // NAME_ENG
-                editor = plan.Editor ?? "—"  // NAME_ENG
+                editor = plan.Editor ?? "—", // NAME_ENG
+                directionText
             });
         }
 
@@ -376,21 +370,6 @@ namespace KPIMonitor.Controllers
             return s.Trim();
         }
 
-        // Try to extract a login from the directory record, then normalize+UPPER it
-        private static string? ToOwnerEditorLoginUpper(dynamic person)
-        {
-            // adapt these property names to whatever your IEmployeeDirectory returns
-            // Try common fields in order of preference:
-            string? raw =
-                  (person?.Login as string)
-               ?? (person?.SamAccountName as string)
-               ?? (person?.UserPrincipalName as string)   // e.g., user@corp
-               ?? (person?.Email as string)
-               ?? (person?.EmailAddress as string);
-
-            if (string.IsNullOrWhiteSpace(raw)) return null;
-            return Sam(raw).ToUpperInvariant();
-        }
         // Normalize a login: remove "DOMAIN\" and "@domain", trim.
         private static string NormalizeLogin(string? raw)
         {
@@ -402,9 +381,7 @@ namespace KPIMonitor.Controllers
             return s.Trim();
         }
 
-        // Try to extract a login (uppercased) from any directory object.
-        // Works with: ValueTuple<string,string> (Item1 = login), or objects having
-        // properties like Login, SamAccountName, UserName, Upn, Email, etc.
+        // Try to extract a login (uppercased) from any directory object or string.
         private static string? ExtractLoginUpper(object? person)
         {
             if (person == null) return null;
@@ -423,9 +400,9 @@ namespace KPIMonitor.Controllers
 
             var candidates = new[]
             {
-        "Login", "Sam", "SamAccountName", "UserName", "User",
-        "Upn", "UPN", "Email", "EmailAddress", "Mail"
-    };
+                "Login", "Sam", "SamAccountName", "UserName", "User",
+                "Upn", "UPN", "Email", "EmailAddress", "Mail"
+            };
 
             foreach (var prop in candidates)
             {
@@ -440,6 +417,5 @@ namespace KPIMonitor.Controllers
 
             return null;
         }
-
     }
 }

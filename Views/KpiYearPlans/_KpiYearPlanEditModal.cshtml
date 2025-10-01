@@ -1,11 +1,4 @@
 @model KPIMonitor.ViewModels.OwnerEditorEditVm
-@* We’ll reuse OwnerEditorEditVm to avoid new files:
-   - PlanId
-   - OwnerEmpId / EditorEmpId
-   - CurrentOwnerName / CurrentEditorName
-   - Employees (EmpId/Label)
-   We’ll bind extra fields (Frequency/Unit/AnnualTarget/Priority) as plain inputs
-   and read them from Request.Form in the controller. *@
 
 <div class="modal fade" id="planEditModal" tabindex="-1" aria-labelledby="peLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -43,6 +36,17 @@
               <input type="number" class="form-control"
                      name="priority" id="pe_priority"
                      value="@(ViewBag.PriorityText ?? "")" />
+            </div>
+
+            <div class="col-md-12">
+              <label class="form-label">Target Direction</label>
+              <select class="form-select" name="targetDirection" id="pe_targetDirection" required>
+                @{
+                    var td = (int?)ViewBag.TargetDirection ?? 1;
+                }
+                <option value="1" selected="@(td == 1 ? "selected" : null)">Higher is better (≥ target)</option>
+                <option value="-1" selected="@(td == -1 ? "selected" : null)">Lower is better (≤ target)</option>
+              </select>
             </div>
 
             <div class="col-md-6">
@@ -83,76 +87,3 @@
     </div>
   </div>
 </div>
-
-<script>
-(() => {
-  const form = document.getElementById('planEditForm');
-
-  function getAntiToken() {
-    const el = form.querySelector('input[name="__RequestVerificationToken"]');
-    return el ? el.value : '';
-  }
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const fd = new FormData(form);
-    const planId = fd.get('planId');
-
-    // DEBUG: dump outgoing form
-    console.log('[EditPlan] SUBMIT -> planId=', planId);
-    for (const [k,v] of fd.entries()) console.log('  ', k, '=', v);
-
-    try {
-      const res = await fetch('@Url.Action("UpdatePlan","KpiYearPlans")', {
-        method: 'POST',
-        body: fd,
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-          'Accept': 'application/json',
-          // belt & suspenders: header token too
-          'RequestVerificationToken': getAntiToken()
-        },
-        credentials: 'same-origin'
-      });
-
-      console.log('[EditPlan] RESPONSE status=', res.status);
-
-      if (!res.ok) {
-        const txt = await res.text().catch(()=>'');
-        console.error('[EditPlan] Non-OK response body:', txt);
-        alert('Save failed: ' + (txt || res.status));
-        return;
-      }
-
-      const data = await res.json().catch(() => ({}));
-      console.log('[EditPlan] JSON:', data);
-
-      // Close modal
-      const m = bootstrap.Modal.getInstance(document.getElementById('planEditModal'));
-      m && m.hide();
-
-      // Update row cells inline using SERVER values (ensures NAME_ENG)
-      const setText = (id, txt) => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = (txt ?? '—');
-      };
-
-      setText(`target-${data.planId}`,   data.annualTargetText);
-      setText(`priority-${data.planId}`, data.priorityText);
-      setText(`ownerName-${data.planId}`,  data.owner);   // NAME_ENG from server
-      setText(`editorName-${data.planId}`, data.editor);  // NAME_ENG from server
-
-      // If you kept freq/unit spans, they’ll update; if not, it’s a no-op.
-      setText(`freq-${data.planId}`,    data.frequency);
-      setText(`unit-${data.planId}`,    data.unit);
-
-      console.log('[EditPlan] Row updated for plan', data.planId);
-    } catch (err) {
-      console.error('[EditPlan] ERROR:', err);
-      alert('Save failed. Check console for details.');
-    }
-  }, { once: true });
-})();
-</script>
-

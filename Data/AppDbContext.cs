@@ -117,6 +117,7 @@ namespace KPIMonitor.Data
                 e.Property(x => x.Unit).HasColumnName("UNIT").HasMaxLength(2);
                 e.Property(x => x.AnnualTarget).HasColumnName("ANNUALTARGET");
                 e.Property(x => x.AnnualBudget).HasColumnName("ANNUALBUDGET");
+                e.Property(x => x.TargetDirection).HasColumnName("TARGET_DIRECTION");
                 e.Property(x => x.Priority).HasColumnName("PRIORITY");
                 e.Property(x => x.Owner).HasColumnName("OWNER").HasMaxLength(50);
                 e.Property(x => x.Editor).HasColumnName("EDITOR").HasMaxLength(50);

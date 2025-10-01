@@ -46,7 +46,7 @@ namespace KPIMonitor.Models
         [Column("UNIT")]
         [MaxLength(10)]
         public string Unit { get; set; } = "";
-
+        public int TargetDirection { get; set; }
         [Required, MaxLength(50)]
         [Column("CREATEDBY")]
         public string CreatedBy { get; set; } = "";
