@@ -60,21 +60,32 @@ namespace KPIMonitor.Controllers
                     return View(vm);
                 }
 
-                _log.LogInformation("AD validation success for '{User}'. Issuing cookie.", normalizedUser);
+                // NEW: enforce Steervision membership
+                var inGroup = await _ad.IsMemberOfAllowedGroupAsync(vm.Username!.Trim(), vm.Password!);
+                if (!inGroup)
+                {
+                    _log.LogWarning("User '{User}' authenticated but not in allowed group.", vm.Username);
+                    // AuthZ pipeline will route to /Account/AccessDenied thanks to cookie options
+                    return Forbid(CookieAuthenticationDefaults.AuthenticationScheme);
+                }
+
+                _log.LogInformation("AD validation + group check success for '{User}'. Issuing cookie.", normalizedUser);
 
                 var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.Name, normalizedUser),
-                    new Claim("ad_user", vm.Username ?? "")
+                    new Claim("ad_user", vm.Username ?? ""),
+                    // mark membership; Program.cs fallback policy requires this claim
+                    new Claim("ad:inSteervision", "true")
                 };
+
                 var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
                 await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
 
                 if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
                     return Redirect(returnUrl);
 
-                return RedirectToAction("Index", "Home"); // 🔁 Dashboard
-
+                return RedirectToAction("Index", "Home");
             }
             catch (Exception ex)
             {
@@ -100,10 +111,11 @@ namespace KPIMonitor.Controllers
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction(nameof(Login));
         }
+
         [AllowAnonymous]
         public IActionResult AccessDenied()
         {
-            Response.StatusCode = StatusCodes.Status403Forbidden; // return a real 403
+            Response.StatusCode = StatusCodes.Status403Forbidden; // real 403
             return View();
         }
     }

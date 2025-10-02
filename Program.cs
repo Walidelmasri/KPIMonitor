@@ -56,6 +56,7 @@ builder.Services.AddAuthorization(options =>
 {
     options.FallbackPolicy = new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
+        .RequireClaim("ad:inSteervision", "true")
         .Build();
 
     // Admin-only policy (uses IAdminAuthorizer via AdminOnlyHandler)
