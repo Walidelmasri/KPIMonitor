@@ -52,7 +52,11 @@ namespace KPIMonitor.Controllers
 
             try
             {
-                var normalizedUser = await _ad.ValidateAsync(vm!.Username?.Trim() ?? "", vm.Password ?? "");
+                var inputUser = vm!.Username?.Trim() ?? string.Empty;
+                var inputPass = vm.Password ?? string.Empty;
+
+                // 1) Credentials check (bind to AD)
+                var normalizedUser = await _ad.ValidateAsync(inputUser, inputPass);
                 if (normalizedUser is null)
                 {
                     _log.LogWarning("AD validation failed for '{User}'.", vm.Username);
@@ -60,28 +64,31 @@ namespace KPIMonitor.Controllers
                     return View(vm);
                 }
 
-                // NEW: enforce Steervision membership
-                var inGroup = await _ad.IsMemberOfAllowedGroupAsync(vm.Username!.Trim(), vm.Password!);
+                // 2) Group gate (must be in allowed AD group, e.g., Steervision)
+                var inGroup = await _ad.IsMemberOfAllowedGroupAsync(inputUser, inputPass);
                 if (!inGroup)
                 {
-                    _log.LogWarning("User '{User}' authenticated but not in allowed group.", vm.Username);
-                    // AuthZ pipeline will route to /Account/AccessDenied thanks to cookie options
+                    _log.LogWarning("User '{User}' authenticated but not in allowed group.", inputUser);
+                    // AuthZ pipeline will route to /Account/AccessDenied (configured in Program.cs)
                     return Forbid(CookieAuthenticationDefaults.AuthenticationScheme);
                 }
 
                 _log.LogInformation("AD validation + group check success for '{User}'. Issuing cookie.", normalizedUser);
 
+                // 3) Issue auth cookie
                 var claims = new List<Claim>
                 {
-                    new Claim(ClaimTypes.Name, normalizedUser),
-                    new Claim("ad_user", vm.Username ?? ""),
-                    // mark membership; Program.cs fallback policy requires this claim
-                    new Claim("ad:inSteervision", "true")
+                    new Claim(ClaimTypes.Name, normalizedUser),     // SAM (lowercase) per authenticator
+                    new Claim("ad_user", vm.Username ?? string.Empty),
+                    new Claim("ad:inSteervision", "true")           // mark membership for downstream checks
                 };
 
                 var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
+                await HttpContext.SignInAsync(
+                    CookieAuthenticationDefaults.AuthenticationScheme,
+                    new ClaimsPrincipal(identity));
 
+                // 4) Post-login redirect
                 if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
                     return Redirect(returnUrl);
 

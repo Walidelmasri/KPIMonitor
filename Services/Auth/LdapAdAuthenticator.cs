@@ -27,11 +27,11 @@ namespace KPIMonitor.Services.Auth
             }
 
             var ad = _cfg.GetSection("Ad");
-            var server  = ad.GetValue<string>("Server") ?? "badea.local";
-            var port    = ad.GetValue<int?>("Port") ?? 389;
-            var useSsl  = ad.GetValue<bool?>("UseSsl") ?? false;
+            var server = ad.GetValue<string>("Server") ?? "badea.local";
+            var port = ad.GetValue<int?>("Port") ?? 389;
+            var useSsl = ad.GetValue<bool?>("UseSsl") ?? false;
             var netbios = ad.GetValue<string>("DomainNetbios") ?? "BADEA";
-            var upnSuf  = ad.GetValue<string>("UserPrincipalSuffix") ?? "@badea.local";
+            var upnSuf = ad.GetValue<string>("UserPrincipalSuffix") ?? "@badea.local";
 
             string bindUser = (username.Contains('\\') || username.Contains('@'))
                 ? username
@@ -53,11 +53,11 @@ namespace KPIMonitor.Services.Auth
 
                 conn.Bind(new NetworkCredential(bindUser, password));
 
-                var sam = ExtractSam(bindUser);
-                var normalized = $"{netbios}\\{sam}";
+                var sam = ExtractSam(bindUser).ToLowerInvariant();
 
-                _log.LogInformation("LDAP bind successful for {User}.", normalized);
-                return Task.FromResult<string?>(normalized);
+                _log.LogInformation("LDAP bind successful for SAM {User}.", sam);
+                return Task.FromResult<string?>(sam);
+
             }
             catch (LdapException lex)
             {
@@ -75,13 +75,13 @@ namespace KPIMonitor.Services.Auth
         {
             // Config
             var ad = _cfg.GetSection("Ad");
-            var server   = ad.GetValue<string>("Server") ?? "badea.local";
-            var port     = ad.GetValue<int?>("Port") ?? 389;
-            var useSsl   = ad.GetValue<bool?>("UseSsl") ?? false;
-            var baseDn   = ad.GetValue<string>("BaseDn") ?? "DC=badea,DC=local";
-            var grpSam   = ad.GetValue<string>("AllowedGroupSam");
-            var grpDn    = ad.GetValue<string>("AllowedGroupDn");
-            var upnSuf   = ad.GetValue<string>("UserPrincipalSuffix") ?? "@badea.local";
+            var server = ad.GetValue<string>("Server") ?? "badea.local";
+            var port = ad.GetValue<int?>("Port") ?? 389;
+            var useSsl = ad.GetValue<bool?>("UseSsl") ?? false;
+            var baseDn = ad.GetValue<string>("BaseDn") ?? "DC=badea,DC=local";
+            var grpSam = ad.GetValue<string>("AllowedGroupSam");
+            var grpDn = ad.GetValue<string>("AllowedGroupDn");
+            var upnSuf = ad.GetValue<string>("UserPrincipalSuffix") ?? "@badea.local";
 
             if (string.IsNullOrWhiteSpace(grpSam) && string.IsNullOrWhiteSpace(grpDn))
             {
@@ -211,11 +211,11 @@ namespace KPIMonitor.Services.Auth
                 switch (c)
                 {
                     case '\\': sb.Append("\\5c"); break;
-                    case '*':  sb.Append("\\2a"); break;
-                    case '(':  sb.Append("\\28"); break;
-                    case ')':  sb.Append("\\29"); break;
+                    case '*': sb.Append("\\2a"); break;
+                    case '(': sb.Append("\\28"); break;
+                    case ')': sb.Append("\\29"); break;
                     case '\0': sb.Append("\\00"); break;
-                    default:   sb.Append(c);      break;
+                    default: sb.Append(c); break;
                 }
             }
             return sb.ToString();
