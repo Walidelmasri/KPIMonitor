@@ -24,6 +24,7 @@ namespace KPIMonitor.Controllers
         [AllowAnonymous]
         public IActionResult Login(string? returnUrl = null)
         {
+            // If already authenticated, skip the login view
             if (User?.Identity?.IsAuthenticated == true)
             {
                 if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
@@ -51,8 +52,11 @@ namespace KPIMonitor.Controllers
 
             try
             {
-                // 1) Validate credentials -> returns NETBIOS\sam (e.g., "BADEA\\jdoe")
-                var normalizedUser = await _ad.ValidateAsync(vm!.Username?.Trim() ?? "", vm.Password ?? "");
+                var userInput = vm!.Username?.Trim() ?? "";
+                var pwd = vm.Password ?? "";
+
+                // 1) Validate credentials (exact same flow you had)
+                var normalizedUser = await _ad.ValidateAsync(userInput, pwd);
                 if (normalizedUser is null)
                 {
                     _log.LogWarning("AD validation failed for '{User}'.", vm.Username);
@@ -60,23 +64,23 @@ namespace KPIMonitor.Controllers
                     return View(vm);
                 }
 
-                // 2) Enforce Steervision group membership BEFORE issuing cookie
-                var inGroup = await _ad.IsMemberOfAllowedGroupAsync(vm.Username!.Trim(), vm.Password!);
+                // 2) Check Steervision membership using the SAME creds
+                var inGroup = await _ad.IsMemberOfAllowedGroupAsync(userInput, pwd);
                 if (!inGroup)
                 {
                     _log.LogWarning("User '{User}' authenticated but not in allowed AD group.", normalizedUser);
-                    // No cookie issued; return 403 -> AccessDenied
-                    return Forbid(CookieAuthenticationDefaults.AuthenticationScheme);
+                    // Stay on the Login page with a clear error (no cookie issued)
+                    ModelState.AddModelError("", "Access denied: you are not authorized for this application.");
+                    return View(vm);
                 }
 
                 _log.LogInformation("Login success + group OK for '{User}'. Issuing cookie.", normalizedUser);
 
-                // 3) Issue auth cookie with required claim
+                // 3) Issue the auth cookie (unchanged behavior)
                 var claims = new List<Claim>
                 {
-                    new Claim(ClaimTypes.Name, normalizedUser),       // EXACT old format (BADEA\sam)
-                    new Claim("ad_user", vm.Username ?? ""),
-                    new Claim("ad:inSteervision", "true")
+                    new Claim(ClaimTypes.Name, normalizedUser), // e.g., BADEA\jdoe
+                    new Claim("ad_user", vm.Username ?? "")
                 };
 
                 var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -117,7 +121,7 @@ namespace KPIMonitor.Controllers
         [AllowAnonymous]
         public IActionResult AccessDenied()
         {
-            Response.StatusCode = 403; // render as a real 403
+            Response.StatusCode = 403; // return a real 403
             return View();
         }
     }

@@ -20,7 +20,8 @@ namespace KPIMonitor.Services.Auth
 
         /// <summary>
         /// Validate credentials against AD and return normalized login in the
-        /// old, working format: NETBIOS\sam (e.g., "BADEA\jdoe").
+        /// original, working format: NETBIOS\sam (e.g., "BADEA\jdoe").
+        /// No service account: bind is done with the user’s own credentials.
         /// </summary>
         public Task<string?> ValidateAsync(string username, string password)
         {
@@ -37,7 +38,7 @@ namespace KPIMonitor.Services.Auth
             var netbios = ad.GetValue<string>("DomainNetbios") ?? "BADEA";
             var upnSuf  = ad.GetValue<string>("UserPrincipalSuffix") ?? "@badea.local";
 
-            // If user typed bare "jdoe", bind as "jdoe@badea.local"
+            // If bare "jdoe", bind as "jdoe@badea.local"
             string bindUser = (username.Contains('\\') || username.Contains('@'))
                 ? username
                 : username + upnSuf;
@@ -56,10 +57,12 @@ namespace KPIMonitor.Services.Auth
                 using var conn = new LdapConnection(id) { AuthType = authType };
                 conn.SessionOptions.SecureSocketLayer = useSsl;
 
+                // Bind with the user's credentials
                 conn.Bind(new NetworkCredential(bindUser, password));
 
-                var sam = ExtractSam(bindUser);            // keep original case
-                var normalized = $"{netbios}\\{sam}";      // EXACT format you had before
+                // Keep the exact pattern you were using: NETBIOS\sam
+                var sam = ExtractSam(bindUser);           // preserve case from login/upn
+                var normalized = $"{netbios}\\{sam}";
 
                 _log.LogInformation("LDAP bind OK. Normalized user = {User}", normalized);
                 return Task.FromResult<string?>(normalized);
@@ -77,10 +80,10 @@ namespace KPIMonitor.Services.Auth
         }
 
         /// <summary>
-        /// Checks if the authenticated user is a member of the allowed AD group
-        /// (supports either AllowedGroupDn or AllowedGroupSam in appsettings).
-        /// Uses nested group check with 1.2.840.113556.1.4.1941.
-        ///</summary>
+        /// Check if the authenticated user is a member of the allowed AD group (nested membership supported).
+        /// Uses the same user credentials — no service account.
+        /// Configure either Ad:AllowedGroupSam (e.g., "Steervision") or Ad:AllowedGroupDn.
+        /// </summary>
         public async Task<bool> IsMemberOfAllowedGroupAsync(string username, string password, CancellationToken ct = default)
         {
             var ad     = _cfg.GetSection("Ad");
@@ -88,11 +91,9 @@ namespace KPIMonitor.Services.Auth
             var port   = ad.GetValue<int?>("Port") ?? 389;
             var useSsl = ad.GetValue<bool?>("UseSsl") ?? false;
 
-            // These two determine how we search:
             var baseDn = ad.GetValue<string>("BaseDn") ?? "DC=badea,DC=local";
-            var grpSam = ad.GetValue<string>("AllowedGroupSam");   // e.g., "Steervision"
-            var grpDn  = ad.GetValue<string>("AllowedGroupDn");    // optional direct DN
-
+            var grpSam = ad.GetValue<string>("AllowedGroupSam") ?? "Steervision"; // default to your group name
+            var grpDn  = ad.GetValue<string>("AllowedGroupDn");                   // optional exact DN
             var upnSuf = ad.GetValue<string>("UserPrincipalSuffix") ?? "@badea.local";
 
             if (string.IsNullOrWhiteSpace(grpSam) && string.IsNullOrWhiteSpace(grpDn))
@@ -115,7 +116,7 @@ namespace KPIMonitor.Services.Auth
                 using var conn = new LdapConnection(id) { AuthType = authType };
                 conn.SessionOptions.SecureSocketLayer = useSsl;
 
-                // Bind as the user (no service account needed)
+                // Bind as the user (no service account)
                 conn.Bind(new NetworkCredential(bindUser, password));
 
                 // 1) Resolve user DN
@@ -126,15 +127,26 @@ namespace KPIMonitor.Services.Auth
                     return false;
                 }
 
-                // 2) Check membership (DN preferred, else SAM)
-                if (!string.IsNullOrWhiteSpace(grpDn))
+                // 2) Resolve group DN then check nested membership
+                string? groupDn = !string.IsNullOrWhiteSpace(grpDn)
+                    ? grpDn
+                    : await FindGroupDnBySamAsync(conn, baseDn, grpSam!, ct);
+
+                if (string.IsNullOrWhiteSpace(groupDn))
                 {
-                    return await IsUserMemberOfGroupDnAsync(conn, baseDn, userDn, grpDn!, ct);
+                    _log.LogWarning("Group not found. SAM={Sam}, DN={Dn}", grpSam, grpDn);
+                    return false;
                 }
-                else
-                {
-                    return await IsUserMemberOfGroupSamAsync(conn, baseDn, userDn, grpSam!, ct);
-                }
+
+                // Nested membership check (LDAP_MATCHING_RULE_IN_CHAIN)
+                string filter = $"(&(distinguishedName={Escape(groupDn)})(member:1.2.840.113556.1.4.1941:={Escape(userDn)}))";
+                var req = new SearchRequest(baseDn, filter, SearchScope.Subtree, new[] { "distinguishedName" });
+                var res = (SearchResponse)await Task.Factory.FromAsync(
+                    conn.BeginSendRequest, conn.EndSendRequest, req, PartialResultProcessing.NoPartialResultSupport, null);
+
+                bool ok = res.Entries.Count > 0;
+                _log.LogInformation("Group check for {User}: inGroup={InGroup} (groupDn={GroupDn})", bindUser, ok, groupDn);
+                return ok;
             }
             catch (Exception ex)
             {
@@ -143,7 +155,7 @@ namespace KPIMonitor.Services.Auth
             }
         }
 
-        // --- LDAP helpers ---
+        // -------- LDAP helpers --------
 
         private static string ExtractSam(string user)
         {
@@ -159,61 +171,28 @@ namespace KPIMonitor.Services.Auth
             string sam = ExtractSam(userLogin);
             string filter = $"(|(sAMAccountName={Escape(sam)})(userPrincipalName={Escape(userLogin)}))";
 
-            var req = new SearchRequest(
-                baseDn,
-                filter,
-                SearchScope.Subtree,
-                new[] { "distinguishedName" }
-            );
-
+            var req = new SearchRequest(baseDn, filter, SearchScope.Subtree, new[] { "distinguishedName" });
             var res = (SearchResponse)await Task.Factory.FromAsync(
                 conn.BeginSendRequest, conn.EndSendRequest, req, PartialResultProcessing.NoPartialResultSupport, null);
 
             foreach (SearchResultEntry entry in res.Entries)
             {
                 var dn = entry.DistinguishedName;
-                if (!string.IsNullOrEmpty(dn))
-                    return dn;
+                if (!string.IsNullOrEmpty(dn)) return dn;
             }
             return null;
         }
 
-        private static async Task<bool> IsUserMemberOfGroupDnAsync(LdapConnection conn, string baseDn, string userDn, string groupDn, CancellationToken ct)
+        private static async Task<string?> FindGroupDnBySamAsync(LdapConnection conn, string baseDn, string groupSam, CancellationToken ct)
         {
-            // Nested membership rule
-            string filter = $"(&(distinguishedName={Escape(groupDn)})(member:1.2.840.113556.1.4.1941:={Escape(userDn)}))";
-
-            var req = new SearchRequest(
-                baseDn,
-                filter,
-                SearchScope.Subtree,
-                new[] { "distinguishedName" }
-            );
-
-            var res = (SearchResponse)await Task.Factory.FromAsync(
-                conn.BeginSendRequest, conn.EndSendRequest, req, PartialResultProcessing.NoPartialResultSupport, null);
-
-            return res.Entries.Count > 0;
-        }
-
-        private static async Task<bool> IsUserMemberOfGroupSamAsync(LdapConnection conn, string baseDn, string userDn, string groupSam, CancellationToken ct)
-        {
-            // Resolve group DN by sAMAccountName
             string grpFilter = $"(&(objectClass=group)(sAMAccountName={Escape(groupSam)}))";
-            var grpReq = new SearchRequest(
-                baseDn,
-                grpFilter,
-                SearchScope.Subtree,
-                new[] { "distinguishedName" }
-            );
+            var grpReq = new SearchRequest(baseDn, grpFilter, SearchScope.Subtree, new[] { "distinguishedName" });
 
             var grpRes = (SearchResponse)await Task.Factory.FromAsync(
                 conn.BeginSendRequest, conn.EndSendRequest, grpReq, PartialResultProcessing.NoPartialResultSupport, null);
 
-            if (grpRes.Entries.Count == 0) return false;
-
-            string groupDn = grpRes.Entries[0].DistinguishedName;
-            return await IsUserMemberOfGroupDnAsync(conn, baseDn, userDn, groupDn, ct);
+            if (grpRes.Entries.Count == 0) return null;
+            return grpRes.Entries[0].DistinguishedName;
         }
 
         // Minimal DN filter escaping
