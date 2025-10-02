@@ -6,6 +6,7 @@ using System.Security.Claims;
 using KPIMonitor.Models;
 using KPIMonitor.Services.Auth;
 using Microsoft.Extensions.Logging;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace KPIMonitor.Controllers
@@ -25,7 +26,6 @@ namespace KPIMonitor.Controllers
         [AllowAnonymous]
         public IActionResult Login(string? returnUrl = null)
         {
-            // If already authenticated, skip the login view
             if (User?.Identity?.IsAuthenticated == true)
             {
                 if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
@@ -67,7 +67,7 @@ namespace KPIMonitor.Controllers
 
                 _log.LogInformation("Login VALIDATED. normalizedUser={NormalizedUser}", normalizedUser);
 
-                // 2) ISSUE COOKIE FIRST (same behavior as before)
+                // 2) ISSUE COOKIE FIRST (like before)
                 var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.Name, normalizedUser), // EXACT old format (BADEA\sam)
@@ -79,13 +79,14 @@ namespace KPIMonitor.Controllers
                     CookieAuthenticationDefaults.AuthenticationScheme,
                     new ClaimsPrincipal(identity));
 
-                // 3) AFTER sign-in: check Steervision membership using the SAME sam
+                // 3) AFTER sign-in: check Steervision membership using the SAME identity
+                // Extract sam from "DOMAIN\sam"
                 var idx = normalizedUser.IndexOf('\\');
                 var sam = idx >= 0 ? normalizedUser[(idx + 1)..] : normalizedUser;
 
                 _log.LogInformation("Post-login GROUP CHECK for sam={Sam}", sam);
 
-                var inGroup = await _ad.IsMemberOfAllowedGroupAsync(sam, pwd);
+                var inGroup = await _ad.IsMemberOfAllowedGroupAsync(normalizedUser, pwd);
                 if (!inGroup)
                 {
                     _log.LogWarning("User '{User}' NOT in allowed AD group. Signing out.", normalizedUser);
@@ -93,12 +94,12 @@ namespace KPIMonitor.Controllers
                     // Remove cookie we just set
                     await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
-                    // Send them to access denied with a reason and who
+                    // Send them to AccessDenied with a reason and who
                     var reason = "Not in Steervision AD group.";
                     return RedirectToAction(nameof(AccessDenied), new { reason, who = normalizedUser, returnUrl });
                 }
 
-                // 4) If in group, optionally stamp a claim (helps with fallback policy if you use it)
+                // 4) If in group, optionally stamp a claim for later use
                 var addlClaims = new List<Claim> { new Claim("ad:inSteervision", "true") };
                 var addlIdentity = new ClaimsIdentity(addlClaims, CookieAuthenticationDefaults.AuthenticationScheme);
                 var principal = new ClaimsPrincipal(new[] { identity, addlIdentity });
@@ -140,32 +141,35 @@ namespace KPIMonitor.Controllers
         {
             Response.StatusCode = 403;
 
-            var model = new
+            var vm = new KPIMonitor.Models.AuthDebugVm
             {
-                reason = reason ?? "Access denied: you are not authorized for this application.",
-                who = who ?? (User?.Identity?.Name ?? "(unknown)"),
-                isAuthenticated = User?.Identity?.IsAuthenticated == true,
-                claims = (User?.Claims ?? Enumerable.Empty<System.Security.Claims.Claim>())
-                            .Select(c => new { type = c.Type, value = c.Value })
-                            .ToArray(),
-                requestUrl = HttpContext?.Request?.Path.Value + HttpContext?.Request?.QueryString.Value,
-                referer = Request.Headers["Referer"].ToString(),
-                returnUrl = returnUrl ?? ""
+                Reason = reason ?? "Access denied: you are not authorized for this application.",
+                UserName = who ?? (User?.Identity?.Name ?? "(unknown)"),
+                IsAuthenticated = User?.Identity?.IsAuthenticated == true,
+                RequestUrl = HttpContext?.Request?.Path.Value + HttpContext?.Request?.QueryString.Value,
+                ReturnUrl = returnUrl ?? "",
+                Method = Request?.Method ?? "",
+                RemoteIp = HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "",
+                HasSteervisionClaim = User?.Claims?.Any(c => c.Type == "ad:inSteervision") == true,
+                SteervisionClaimValue = User?.Claims?.FirstOrDefault(c => c.Type == "ad:inSteervision")?.Value ?? "",
+                Claims = (User?.Claims ?? Enumerable.Empty<System.Security.Claims.Claim>())
+                         .Select(c => new KPIMonitor.Models.AuthDebugClaim { Type = c.Type, Value = c.Value })
+                         .ToList(),
+                Headers = new Dictionary<string, string>
+                {
+                    ["Referer"] = Request.Headers["Referer"].ToString(),
+                    ["User-Agent"] = Request.Headers["User-Agent"].ToString()
+                },
+                Cookies = Request.Cookies.Keys.ToList()
             };
 
-            // If caller asked for JSON, return JSON (great for quick debugging in the browser/network tab)
             if (string.Equals(format, "json", StringComparison.OrdinalIgnoreCase) ||
                 Request.Headers["Accept"].ToString().Contains("application/json", StringComparison.OrdinalIgnoreCase))
             {
-                return Json(model);
+                return Json(vm);
             }
 
-            // Otherwise keep your current view behavior
-            ViewBag.Reason = model.reason;
-            ViewBag.Who = model.who;
-            ViewBag.ReturnUrl = model.returnUrl;
-            return View();
+            return View(vm);
         }
-
     }
 }

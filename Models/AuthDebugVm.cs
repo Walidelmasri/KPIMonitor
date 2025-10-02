@@ -1,26 +1,27 @@
+// Models/AuthDebugVm.cs
+using System.Collections.Generic;
+
 namespace KPIMonitor.Models
 {
     public sealed class AuthDebugVm
     {
-        public int StatusCode { get; set; } = 403;
-
-        public string? UserName { get; set; }
+        public string Reason { get; set; } = "";
+        public string UserName { get; set; } = "";
         public bool IsAuthenticated { get; set; }
-
-        public string? ReturnUrl { get; set; }
-        public string? RequestUrl { get; set; }
-        public string? Method { get; set; }
-        public string? RemoteIp { get; set; }
-
-        public List<(string Type, string Value)> Claims { get; set; } = new();
-
+        public string RequestUrl { get; set; } = "";
+        public string ReturnUrl { get; set; } = "";
+        public string Method { get; set; } = "";
+        public string RemoteIp { get; set; } = "";
         public bool HasSteervisionClaim { get; set; }
-        public string? SteervisionClaimValue { get; set; }
-
-        public string Reason { get; set; } = "Unknown";
-
-        // A few useful headers (don’t dump everything)
+        public string SteervisionClaimValue { get; set; } = "";
+        public List<AuthDebugClaim> Claims { get; set; } = new();
         public Dictionary<string, string> Headers { get; set; } = new();
         public List<string> Cookies { get; set; } = new();
+    }
+
+    public sealed class AuthDebugClaim
+    {
+        public string Type { get; set; } = "";
+        public string Value { get; set; } = "";
     }
 }
