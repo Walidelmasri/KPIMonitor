@@ -4,6 +4,8 @@ using System.Runtime.InteropServices;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace KPIMonitor.Services.Auth
 {
@@ -21,7 +23,7 @@ namespace KPIMonitor.Services.Auth
         /// <summary>
         /// Validate credentials against AD and return normalized login in the
         /// original, working format: NETBIOS\sam (e.g., "BADEA\jdoe").
-        /// No service account: bind is done with the user’s own credentials.
+        /// We bind with the user's own credentials (no service account).
         /// </summary>
         public Task<string?> ValidateAsync(string username, string password)
         {
@@ -38,7 +40,7 @@ namespace KPIMonitor.Services.Auth
             var netbios = ad.GetValue<string>("DomainNetbios") ?? "BADEA";
             var upnSuf  = ad.GetValue<string>("UserPrincipalSuffix") ?? "@badea.local";
 
-            // If bare "jdoe", bind as "jdoe@badea.local"
+            // If user typed bare "jdoe", bind as "jdoe@badea.local"
             string bindUser = (username.Contains('\\') || username.Contains('@'))
                 ? username
                 : username + upnSuf;
@@ -61,7 +63,7 @@ namespace KPIMonitor.Services.Auth
                 conn.Bind(new NetworkCredential(bindUser, password));
 
                 // Keep the exact pattern you were using: NETBIOS\sam
-                var sam = ExtractSam(bindUser);           // preserve case from login/upn
+                var sam = ExtractSam(bindUser);  // preserve casing the user typed for SAM
                 var normalized = $"{netbios}\\{sam}";
 
                 _log.LogInformation("LDAP bind OK. Normalized user = {User}", normalized);
@@ -80,11 +82,11 @@ namespace KPIMonitor.Services.Auth
         }
 
         /// <summary>
-        /// Check if the authenticated user is a member of the allowed AD group (nested membership supported).
-        /// Uses the same user credentials — no service account.
-        /// Configure either Ad:AllowedGroupSam (e.g., "Steervision") or Ad:AllowedGroupDn.
+        /// Check if a user (identified by SAM) is a member of the allowed AD group (nested membership supported).
+        /// We bind with the SAME user credentials (no service account).
+        /// Configure either Ad:AllowedGroupDn or Ad:AllowedGroupSam ("Steervision" by default).
         /// </summary>
-        public async Task<bool> IsMemberOfAllowedGroupAsync(string username, string password, CancellationToken ct = default)
+        public async Task<bool> IsMemberOfAllowedGroupAsync(string usernameOrSam, string password, CancellationToken ct = default)
         {
             var ad     = _cfg.GetSection("Ad");
             var server = ad.GetValue<string>("Server") ?? "badea.local";
@@ -92,23 +94,19 @@ namespace KPIMonitor.Services.Auth
             var useSsl = ad.GetValue<bool?>("UseSsl") ?? false;
 
             var baseDn = ad.GetValue<string>("BaseDn") ?? "DC=badea,DC=local";
-            var grpSam = ad.GetValue<string>("AllowedGroupSam") ?? "Steervision"; // default to your group name
+            var grpSam = ad.GetValue<string>("AllowedGroupSam") ?? "Steervision"; // default to your group
             var grpDn  = ad.GetValue<string>("AllowedGroupDn");                   // optional exact DN
             var upnSuf = ad.GetValue<string>("UserPrincipalSuffix") ?? "@badea.local";
 
-            if (string.IsNullOrWhiteSpace(grpSam) && string.IsNullOrWhiteSpace(grpDn))
-            {
-                _log.LogError("AD group not configured. Set Ad:AllowedGroupSam or Ad:AllowedGroupDn.");
-                return false;
-            }
-
-            string bindUser = (username.Contains('\\') || username.Contains('@'))
-                ? username
-                : username + upnSuf;
+            // Normalize: we always operate on SAM for identity equality (same as cookie Name value parsing below)
+            var sam = ExtractSam(usernameOrSam);
+            var bindUser = sam + upnSuf; // bind as UPN constructed from that SAM, consistent every time
 
             var authType = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
                 ? AuthType.Negotiate
                 : AuthType.Basic;
+
+            _log.LogInformation("GROUP-CHECK start sam={Sam} bindUser={BindUser}", sam, bindUser);
 
             try
             {
@@ -116,7 +114,7 @@ namespace KPIMonitor.Services.Auth
                 using var conn = new LdapConnection(id) { AuthType = authType };
                 conn.SessionOptions.SecureSocketLayer = useSsl;
 
-                // Bind as the user (no service account)
+                // Bind as the user
                 conn.Bind(new NetworkCredential(bindUser, password));
 
                 // 1) Resolve user DN
@@ -126,6 +124,7 @@ namespace KPIMonitor.Services.Auth
                     _log.LogWarning("User DN not found for {User}.", bindUser);
                     return false;
                 }
+                _log.LogInformation("GROUP-CHECK userDn={UserDn}", userDn);
 
                 // 2) Resolve group DN then check nested membership
                 string? groupDn = !string.IsNullOrWhiteSpace(grpDn)
@@ -137,6 +136,7 @@ namespace KPIMonitor.Services.Auth
                     _log.LogWarning("Group not found. SAM={Sam}, DN={Dn}", grpSam, grpDn);
                     return false;
                 }
+                _log.LogInformation("GROUP-CHECK groupDn={GroupDn}", groupDn);
 
                 // Nested membership check (LDAP_MATCHING_RULE_IN_CHAIN)
                 string filter = $"(&(distinguishedName={Escape(groupDn)})(member:1.2.840.113556.1.4.1941:={Escape(userDn)}))";
@@ -145,7 +145,7 @@ namespace KPIMonitor.Services.Auth
                     conn.BeginSendRequest, conn.EndSendRequest, req, PartialResultProcessing.NoPartialResultSupport, null);
 
                 bool ok = res.Entries.Count > 0;
-                _log.LogInformation("Group check for {User}: inGroup={InGroup} (groupDn={GroupDn})", bindUser, ok, groupDn);
+                _log.LogInformation("GROUP-CHECK result user={User} inGroup={InGroup}", bindUser, ok);
                 return ok;
             }
             catch (Exception ex)
@@ -159,6 +159,7 @@ namespace KPIMonitor.Services.Auth
 
         private static string ExtractSam(string user)
         {
+            // Accepts NETBIOS\sam, sam@domain, or bare sam and returns "sam"
             var bs = user.LastIndexOf('\\');
             if (bs >= 0 && bs < user.Length - 1) return user[(bs + 1)..];
             var at = user.IndexOf('@');

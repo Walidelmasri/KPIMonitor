@@ -6,6 +6,7 @@ using System.Security.Claims;
 using KPIMonitor.Models;
 using KPIMonitor.Services.Auth;
 using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
 
 namespace KPIMonitor.Controllers
 {
@@ -52,11 +53,11 @@ namespace KPIMonitor.Controllers
 
             try
             {
-                var userInput = vm!.Username?.Trim() ?? "";
+                var inputUser = vm!.Username?.Trim() ?? "";
                 var pwd = vm.Password ?? "";
 
-                // 1) Validate credentials (exact same flow you had)
-                var normalizedUser = await _ad.ValidateAsync(userInput, pwd);
+                // 1) Validate credentials -> returns NETBIOS\sam (e.g., "BADEA\\jdoe")
+                var normalizedUser = await _ad.ValidateAsync(inputUser, pwd);
                 if (normalizedUser is null)
                 {
                     _log.LogWarning("AD validation failed for '{User}'.", vm.Username);
@@ -64,23 +65,13 @@ namespace KPIMonitor.Controllers
                     return View(vm);
                 }
 
-                // 2) Check Steervision membership using the SAME creds
-                var inGroup = await _ad.IsMemberOfAllowedGroupAsync(userInput, pwd);
-                if (!inGroup)
-                {
-                    _log.LogWarning("User '{User}' authenticated but not in allowed AD group.", normalizedUser);
-                    // Stay on the Login page with a clear error (no cookie issued)
-                    ModelState.AddModelError("", "Access denied: you are not authorized for this application.");
-                    return View(vm);
-                }
+                _log.LogInformation("Login VALIDATED. normalizedUser={NormalizedUser}", normalizedUser);
 
-                _log.LogInformation("Login success + group OK for '{User}'. Issuing cookie.", normalizedUser);
-
-                // 3) Issue the auth cookie (unchanged behavior)
+                // 2) ISSUE COOKIE FIRST (same behavior as before)
                 var claims = new List<Claim>
                 {
-                    new Claim(ClaimTypes.Name, normalizedUser), // e.g., BADEA\jdoe
-                    new Claim("ad_user", vm.Username ?? "")
+                    new Claim(ClaimTypes.Name, normalizedUser), // EXACT old format (BADEA\sam)
+                    new Claim("ad_user", inputUser)
                 };
 
                 var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -88,6 +79,32 @@ namespace KPIMonitor.Controllers
                     CookieAuthenticationDefaults.AuthenticationScheme,
                     new ClaimsPrincipal(identity));
 
+                // 3) AFTER sign-in: check Steervision membership using the SAME sam
+                var idx = normalizedUser.IndexOf('\\');
+                var sam = idx >= 0 ? normalizedUser[(idx + 1)..] : normalizedUser;
+
+                _log.LogInformation("Post-login GROUP CHECK for sam={Sam}", sam);
+
+                var inGroup = await _ad.IsMemberOfAllowedGroupAsync(sam, pwd);
+                if (!inGroup)
+                {
+                    _log.LogWarning("User '{User}' NOT in allowed AD group. Signing out.", normalizedUser);
+
+                    // Remove cookie we just set
+                    await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+                    // Send them to access denied with a reason and who
+                    var reason = "Not in Steervision AD group.";
+                    return RedirectToAction(nameof(AccessDenied), new { reason, who = normalizedUser, returnUrl });
+                }
+
+                // 4) If in group, optionally stamp a claim (helps with fallback policy if you use it)
+                var addlClaims = new List<Claim> { new Claim("ad:inSteervision", "true") };
+                var addlIdentity = new ClaimsIdentity(addlClaims, CookieAuthenticationDefaults.AuthenticationScheme);
+                var principal = new ClaimsPrincipal(new[] { identity, addlIdentity });
+                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+
+                // 5) Normal redirect
                 if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
                     return Redirect(returnUrl);
 
@@ -119,9 +136,12 @@ namespace KPIMonitor.Controllers
         }
 
         [AllowAnonymous]
-        public IActionResult AccessDenied()
+        public IActionResult AccessDenied(string? reason = null, string? who = null, string? returnUrl = null)
         {
-            Response.StatusCode = 403; // return a real 403
+            Response.StatusCode = 403; // render as a real 403
+            ViewBag.Reason = reason ?? "Access denied: you are not authorized for this application.";
+            ViewBag.Who = who ?? "(unknown)";
+            ViewBag.ReturnUrl = returnUrl ?? "";
             return View();
         }
     }
