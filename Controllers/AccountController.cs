@@ -136,13 +136,36 @@ namespace KPIMonitor.Controllers
         }
 
         [AllowAnonymous]
-        public IActionResult AccessDenied(string? reason = null, string? who = null, string? returnUrl = null)
+        public IActionResult AccessDenied(string? reason = null, string? who = null, string? returnUrl = null, string? format = null)
         {
-            Response.StatusCode = 403; // render as a real 403
-            ViewBag.Reason = reason ?? "Access denied: you are not authorized for this application.";
-            ViewBag.Who = who ?? "(unknown)";
-            ViewBag.ReturnUrl = returnUrl ?? "";
+            Response.StatusCode = 403;
+
+            var model = new
+            {
+                reason = reason ?? "Access denied: you are not authorized for this application.",
+                who = who ?? (User?.Identity?.Name ?? "(unknown)"),
+                isAuthenticated = User?.Identity?.IsAuthenticated == true,
+                claims = (User?.Claims ?? Enumerable.Empty<System.Security.Claims.Claim>())
+                            .Select(c => new { type = c.Type, value = c.Value })
+                            .ToArray(),
+                requestUrl = HttpContext?.Request?.Path.Value + HttpContext?.Request?.QueryString.Value,
+                referer = Request.Headers["Referer"].ToString(),
+                returnUrl = returnUrl ?? ""
+            };
+
+            // If caller asked for JSON, return JSON (great for quick debugging in the browser/network tab)
+            if (string.Equals(format, "json", StringComparison.OrdinalIgnoreCase) ||
+                Request.Headers["Accept"].ToString().Contains("application/json", StringComparison.OrdinalIgnoreCase))
+            {
+                return Json(model);
+            }
+
+            // Otherwise keep your current view behavior
+            ViewBag.Reason = model.reason;
+            ViewBag.Who = model.who;
+            ViewBag.ReturnUrl = model.returnUrl;
             return View();
         }
+
     }
 }
