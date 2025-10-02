@@ -86,6 +86,19 @@ app.UseRouting();
 app.UseAuthentication();
 
 app.UseAuthorization();
+app.Use(async (ctx, next) =>
+{
+    await next();
+    if (ctx.Response.StatusCode == Microsoft.AspNetCore.Http.StatusCodes.Status403Forbidden)
+    {
+        var lf = ctx.RequestServices.GetRequiredService<ILoggerFactory>();
+        var log = lf.CreateLogger("AuthDebug");
+        var user = ctx.User?.Identity?.Name ?? "(anonymous)";
+        var claims = string.Join(", ", ctx.User?.Claims?.Select(c => $"{c.Type}={c.Value}") ?? Array.Empty<string>());
+        log.LogWarning("403 for {Path} user={User} claims=[{Claims}]", ctx.Request.Path, user, claims);
+    }
+});
+
 PeriodEditPolicy.Configure(app.Services.GetRequiredService<IAdminAuthorizer>());
 
 app.MapControllerRoute(

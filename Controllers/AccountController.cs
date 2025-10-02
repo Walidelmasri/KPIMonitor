@@ -120,10 +120,25 @@ namespace KPIMonitor.Controllers
         }
 
         [AllowAnonymous]
-        public IActionResult AccessDenied()
+        public IActionResult AccessDenied(string? reason = null, string? user = null)
         {
-            Response.StatusCode = StatusCodes.Status403Forbidden; // real 403
+            Response.StatusCode = StatusCodes.Status403Forbidden;
+
+            var who = User?.Identity?.IsAuthenticated == true
+                ? (User.Identity!.Name ?? "(unknown)")
+                : (user ?? "(unauthenticated)");
+
+            var claims = string.Join(", ",
+                User?.Claims?.Select(c => $"{c.Type}={c.Value}") ?? Enumerable.Empty<string>());
+
+            _log.LogWarning("AccessDenied: reason={Reason} user={User} claims=[{Claims}] path={Path}",
+                reason, who, claims, HttpContext?.Request?.Path.Value);
+
+            ViewBag.Reason = reason ?? "";
+            ViewBag.Who = who;
+            ViewBag.Claims = claims;
             return View();
         }
+
     }
 }
