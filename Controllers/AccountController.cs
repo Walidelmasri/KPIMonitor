@@ -6,6 +6,8 @@ using System.Security.Claims;
 using KPIMonitor.Models;
 using KPIMonitor.Services.Auth;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -67,43 +69,45 @@ namespace KPIMonitor.Controllers
 
                 _log.LogInformation("Login VALIDATED. normalizedUser={NormalizedUser}", normalizedUser);
 
-                // 2) ISSUE COOKIE FIRST (like before)
-                var claims = new List<Claim>
+                // 2) ISSUE COOKIE FIRST (as before)
+                var baseClaims = new List<Claim>
                 {
                     new Claim(ClaimTypes.Name, normalizedUser), // EXACT old format (BADEA\sam)
                     new Claim("ad_user", inputUser)
                 };
+                var baseIdentity = new ClaimsIdentity(baseClaims, CookieAuthenticationDefaults.AuthenticationScheme);
+                var basePrincipal = new ClaimsPrincipal(baseIdentity);
+                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, basePrincipal);
 
-                var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                await HttpContext.SignInAsync(
-                    CookieAuthenticationDefaults.AuthenticationScheme,
-                    new ClaimsPrincipal(identity));
-
-                // 3) AFTER sign-in: check Steervision membership using the SAME identity
-                // Extract sam from "DOMAIN\sam"
-                var idx = normalizedUser.IndexOf('\\');
-                var sam = idx >= 0 ? normalizedUser[(idx + 1)..] : normalizedUser;
-
-                _log.LogInformation("Post-login GROUP CHECK for sam={Sam}", sam);
+                // 3) AFTER sign-in: check Steervision membership
+                _log.LogInformation("Post-login GROUP CHECK for user={User}", normalizedUser);
 
                 var inGroup = await _ad.IsMemberOfAllowedGroupAsync(normalizedUser, pwd);
                 if (!inGroup)
                 {
-                    _log.LogWarning("User '{User}' NOT in allowed AD group. Signing out.", normalizedUser);
+                    _log.LogWarning("User '{User}' NOT in allowed AD group. Keeping cookie for debugging.", normalizedUser);
 
-                    // Remove cookie we just set
-                    await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                    // Keep the cookie but add a claim marking the failure so AccessDenied shows you as authenticated
+                    var debugClaims = new List<Claim> { new Claim("ad:inSteervision", "false") };
+                    var debugIdentity = new ClaimsIdentity(debugClaims, CookieAuthenticationDefaults.AuthenticationScheme);
 
-                    // Send them to AccessDenied with a reason and who
+                    var debugPrincipal = new ClaimsPrincipal(new[]
+                    {
+                        baseIdentity,    // what we already issued
+                        debugIdentity    // plus the "inSteervision=false" flag
+                    });
+
+                    await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, debugPrincipal);
+
                     var reason = "Not in Steervision AD group.";
                     return RedirectToAction(nameof(AccessDenied), new { reason, who = normalizedUser, returnUrl });
                 }
 
-                // 4) If in group, optionally stamp a claim for later use
-                var addlClaims = new List<Claim> { new Claim("ad:inSteervision", "true") };
-                var addlIdentity = new ClaimsIdentity(addlClaims, CookieAuthenticationDefaults.AuthenticationScheme);
-                var principal = new ClaimsPrincipal(new[] { identity, addlIdentity });
-                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+                // 4) In group → reissue cookie with the positive claim
+                var groupClaims = new List<Claim> { new Claim("ad:inSteervision", "true") };
+                var groupIdentity = new ClaimsIdentity(groupClaims, CookieAuthenticationDefaults.AuthenticationScheme);
+                var finalPrincipal = new ClaimsPrincipal(new[] { baseIdentity, groupIdentity });
+                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, finalPrincipal);
 
                 // 5) Normal redirect
                 if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
