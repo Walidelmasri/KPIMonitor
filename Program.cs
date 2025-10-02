@@ -1,4 +1,4 @@
-using Oracle.ManagedDataAccess.Client; // existing
+using Oracle.ManagedDataAccess.Client;
 using KPIMonitor.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -6,25 +6,24 @@ using Microsoft.AspNetCore.Authorization;
 using KPIMonitor.Services.Auth;
 using KPIMonitor.Services;
 using KPIMonitor.Services.Abstractions;
+
+// alias to avoid clash with KPIMonitor.Services.StatusCodes
 using HttpStatusCodes = Microsoft.AspNetCore.Http.StatusCodes;
-using Microsoft.Extensions.Logging.EventLog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Read connection string from appsettings.json
+// DB
 string oracleConnStr = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<AppDbContext>(options => options.UseOracle(oracleConnStr));
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseOracle(oracleConnStr));
-
-builder.Services.AddHttpContextAccessor(); // added
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddControllersWithViews(o =>
 {
-    // DRY: auto-protect creator actions (Create/Add/Import/Clone/Bulk…)
     o.Conventions.Add(new ProtectCreateActionsConvention());
 });
 
+// DI
 builder.Services.AddScoped<IEmployeeDirectory, OracleEmployeeDirectory>();
 builder.Services.AddScoped<IKpiYearPlanOwnerEditorService, KpiYearPlanOwnerEditorService>();
 builder.Services.AddScoped<IKpiAccessService, KpiAccessService>();
@@ -36,6 +35,8 @@ builder.Services.AddScoped<IAdminAuthorizer, ConfigAdminAuthorizer>();
 builder.Services.AddScoped<IKpiFactChangeBatchService, KpiFactChangeBatchService>();
 builder.Services.AddScoped<IKpiStatusService, KpiStatusService>();
 
+builder.Services.AddScoped<IAdAuthenticator, LdapAdAuthenticator>();
+
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>
     {
@@ -44,16 +45,18 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         o.Cookie.SameSite = SameSiteMode.Lax;
         o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 
+        // IMPORTANT for IIS virtual dir "/kpimonitor"
+        o.Cookie.Path = "/kpimonitor";
+
         o.LoginPath = "/Account/Login";
         o.LogoutPath = "/Account/Logout";
-        o.AccessDeniedPath = "/Account/AccessDenied"; // changed
+        o.AccessDeniedPath = "/Account/AccessDenied";
 
-        // HARD 30-min expiry; user must reauthenticate after this
         o.ExpireTimeSpan = TimeSpan.FromMinutes(30);
         o.SlidingExpiration = false;
     });
 
-// Require authentication for everything by default
+// Global requirement: must be authenticated + in Steervision
 builder.Services.AddAuthorization(options =>
 {
     options.FallbackPolicy = new AuthorizationPolicyBuilder()
@@ -61,24 +64,10 @@ builder.Services.AddAuthorization(options =>
         .RequireClaim("ad:inSteervision", "true")
         .Build();
 
-    // Admin-only policy (uses IAdminAuthorizer via AdminOnlyHandler)
     options.AddPolicy("AdminOnly", policy =>
         policy.Requirements.Add(new AdminOnlyRequirement()));
 });
-
-// Policy handler
 builder.Services.AddScoped<IAuthorizationHandler, AdminOnlyHandler>();
-
-builder.Services.AddScoped<IAdAuthenticator, LdapAdAuthenticator>();
-// Write logs to Windows Event Viewer -> Windows Logs -> Application
-builder.Logging.ClearProviders();                    // optional: start clean
-builder.Logging.AddConsole();                        // still useful if you ever self-host
-builder.Logging.AddEventLog(new EventLogSettings
-{
-    SourceName = "KpiMonitor",                       // shows as 'Source' in Event Viewer
-    LogName = "Application",                         // default; you can change to a custom log if you want
-    MachineName = ".",                               // local machine
-});
 
 var app = builder.Build();
 
@@ -89,14 +78,13 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseStaticFiles();
-
 app.UseRouting();
 
 app.UseAuthentication();
-
 app.UseAuthorization();
+
+// 403 DEBUG logger (does not interfere with pipeline)
 app.Use(async (ctx, next) =>
 {
     await next();
@@ -106,20 +94,17 @@ app.Use(async (ctx, next) =>
         var log = lf.CreateLogger("AuthDebug");
         var user = ctx.User?.Identity?.Name ?? "(anonymous)";
         var claims = string.Join(", ", ctx.User?.Claims?.Select(c => $"{c.Type}={c.Value}") ?? Array.Empty<string>());
-        var r = ctx.Request;
-        var url = $"{r.Scheme}://{r.Host}{r.Path}{r.QueryString}";
-        log.LogWarning("403 FORBIDDEN path={Path} fullUrl={Url} user={User} claims=[{Claims}]",
-            ctx.Request.Path, url, user, claims);
+        log.LogWarning("403 for {Path} user={User} claims=[{Claims}] returnUrl={ReturnUrl}",
+            ctx.Request.Path, user, claims, ctx.Request.Query["ReturnUrl"].ToString());
     }
 });
 
-
+// For edit windows (existing)
 PeriodEditPolicy.Configure(app.Services.GetRequiredService<IAdminAuthorizer>());
 
+// Default route to login (IIS virtual dir handled by PathBase automatically)
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Account}/{action=Login}/{id?}")
-    // .WithStaticAssets() 
-    ;
+    pattern: "{controller=Account}/{action=Login}/{id?}");
 
 app.Run();

@@ -24,7 +24,6 @@ namespace KPIMonitor.Controllers
         [AllowAnonymous]
         public IActionResult Login(string? returnUrl = null)
         {
-            // If already authenticated, skip the login view
             if (User?.Identity?.IsAuthenticated == true)
             {
                 if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
@@ -42,7 +41,7 @@ namespace KPIMonitor.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel vm, string? returnUrl = null)
         {
-            _log.LogInformation("Login POST received for user '{User}'", vm?.Username);
+            _log.LogInformation("Login POST for user '{User}'", vm?.Username);
 
             if (!ModelState.IsValid)
             {
@@ -52,11 +51,8 @@ namespace KPIMonitor.Controllers
 
             try
             {
-                var inputUser = vm!.Username?.Trim() ?? string.Empty;
-                var inputPass = vm.Password ?? string.Empty;
-
-                // 1) Credentials check (bind to AD)
-                var normalizedUser = await _ad.ValidateAsync(inputUser, inputPass);
+                // 1) Validate credentials -> returns NETBIOS\sam (e.g., "BADEA\\jdoe")
+                var normalizedUser = await _ad.ValidateAsync(vm!.Username?.Trim() ?? "", vm.Password ?? "");
                 if (normalizedUser is null)
                 {
                     _log.LogWarning("AD validation failed for '{User}'.", vm.Username);
@@ -64,23 +60,23 @@ namespace KPIMonitor.Controllers
                     return View(vm);
                 }
 
-                // 2) Group gate (must be in allowed AD group, e.g., Steervision)
-                var inGroup = await _ad.IsMemberOfAllowedGroupAsync(inputUser, inputPass);
+                // 2) Enforce Steervision group membership BEFORE issuing cookie
+                var inGroup = await _ad.IsMemberOfAllowedGroupAsync(vm.Username!.Trim(), vm.Password!);
                 if (!inGroup)
                 {
-                    _log.LogWarning("User '{User}' authenticated but not in allowed group.", inputUser);
-                    // AuthZ pipeline will route to /Account/AccessDenied (configured in Program.cs)
+                    _log.LogWarning("User '{User}' authenticated but not in allowed AD group.", normalizedUser);
+                    // No cookie issued; return 403 -> AccessDenied
                     return Forbid(CookieAuthenticationDefaults.AuthenticationScheme);
                 }
 
-                _log.LogInformation("AD validation + group check success for '{User}'. Issuing cookie.", normalizedUser);
+                _log.LogInformation("Login success + group OK for '{User}'. Issuing cookie.", normalizedUser);
 
-                // 3) Issue auth cookie
+                // 3) Issue auth cookie with required claim
                 var claims = new List<Claim>
                 {
-                    new Claim(ClaimTypes.Name, normalizedUser),     // SAM (lowercase) per authenticator
-                    new Claim("ad_user", vm.Username ?? string.Empty),
-                    new Claim("ad:inSteervision", "true")           // mark membership for downstream checks
+                    new Claim(ClaimTypes.Name, normalizedUser),       // EXACT old format (BADEA\sam)
+                    new Claim("ad_user", vm.Username ?? ""),
+                    new Claim("ad:inSteervision", "true")
                 };
 
                 var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -88,7 +84,6 @@ namespace KPIMonitor.Controllers
                     CookieAuthenticationDefaults.AuthenticationScheme,
                     new ClaimsPrincipal(identity));
 
-                // 4) Post-login redirect
                 if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
                     return Redirect(returnUrl);
 
@@ -96,7 +91,7 @@ namespace KPIMonitor.Controllers
             }
             catch (Exception ex)
             {
-                _log.LogError(ex, "Unhandled exception during login.");
+                _log.LogError(ex, "Unhandled exception during login for user '{User}'.", vm?.Username);
                 ModelState.AddModelError("", $"Login error: {ex.Message}");
                 return View(vm);
             }
@@ -120,66 +115,10 @@ namespace KPIMonitor.Controllers
         }
 
         [AllowAnonymous]
-        public IActionResult AccessDenied(string? returnUrl = null)
+        public IActionResult AccessDenied()
         {
-            Response.StatusCode = Microsoft.AspNetCore.Http.StatusCodes.Status403Forbidden;
-
-            var r = HttpContext.Request;
-
-            // Build a Request URL
-            var fullUrl = $"{r.Scheme}://{r.Host}{r.Path}{r.QueryString}";
-
-            // Pull a few useful headers
-            var headers = new[] { "Referer", "User-Agent", "X-Forwarded-For", "X-Original-URL" }
-                .Where(h => r.Headers.ContainsKey(h))
-                .ToDictionary(h => h, h => r.Headers[h].ToString());
-
-            // Cookie names only (avoid leaking values)
-            var cookies = r.Cookies?.Keys?.ToList() ?? new List<string>();
-
-            // Claims
-            var claims = User?.Claims?.Select(c => (c.Type, c.Value)).ToList() ?? new List<(string,string)>();
-            var steervisionClaim = claims.FirstOrDefault(c => c.Type == "ad:inSteervision").Value;
-
-            // Reason (best-effort explanation)
-            string reason;
-            if (!(User?.Identity?.IsAuthenticated ?? false))
-            {
-                reason = "Not authenticated (no auth cookie or expired).";
-            }
-            else if (string.IsNullOrEmpty(steervisionClaim))
-            {
-                reason = "Missing required claim 'ad:inSteervision' (fallback policy).";
-            }
-            else
-            {
-                reason = "Authenticated but blocked by another policy/authorization rule.";
-            }
-
-            var vm = new AuthDebugVm
-            {
-                StatusCode = Microsoft.AspNetCore.Http.StatusCodes.Status403Forbidden,
-                UserName = User?.Identity?.Name ?? "(anonymous)",
-                IsAuthenticated = User?.Identity?.IsAuthenticated ?? false,
-                ReturnUrl = returnUrl ?? r.Query["ReturnUrl"].ToString(),
-                RequestUrl = fullUrl,
-                Method = r.Method,
-                RemoteIp = HttpContext.Connection.RemoteIpAddress?.ToString(),
-                Claims = claims,
-                HasSteervisionClaim = !string.IsNullOrEmpty(steervisionClaim),
-                SteervisionClaimValue = steervisionClaim,
-                Reason = reason,
-                Headers = headers,
-                Cookies = cookies
-            };
-
-            // Also log to server logs (Event Viewer if configured)
-            _log.LogWarning("AccessDenied user={User} reason={Reason} url={Url} returnUrl={ReturnUrl} claims=[{Claims}]",
-                vm.UserName, vm.Reason, vm.RequestUrl, vm.ReturnUrl,
-                string.Join("; ", vm.Claims.Select(c => $"{c.Type}={c.Value}")));
-
-            return View(vm);
+            Response.StatusCode = 403; // render as a real 403
+            return View();
         }
-
     }
 }
