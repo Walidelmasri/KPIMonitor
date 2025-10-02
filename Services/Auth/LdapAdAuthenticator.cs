@@ -20,11 +20,7 @@ namespace KPIMonitor.Services.Auth
             _log = log;
         }
 
-        /// <summary>
-        /// Validate credentials against AD and return normalized login
-        /// EXACTLY in your original format: NETBIOS\sam (e.g., "BADEA\jdoe").
-        /// Binds with the user's own DOMAIN\sam + password.
-        /// </summary>
+        // ---------------- LOGIN (unchanged behavior) ----------------
         public Task<string?> ValidateAsync(string username, string password)
         {
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password))
@@ -33,22 +29,17 @@ namespace KPIMonitor.Services.Auth
                 return Task.FromResult<string?>(null);
             }
 
-            var ad       = _cfg.GetSection("Ad");
-            var server   = ad.GetValue<string>("Server") ?? "badea.local";
-            var port     = ad.GetValue<int?>("Port") ?? 389;
-            var useSsl   = ad.GetValue<bool?>("UseSsl") ?? false;
-            var netbios  = ad.GetValue<string>("DomainNetbios") ?? "BADEA"; // used when no domain is provided
+            var ad      = _cfg.GetSection("Ad");
+            var server  = ad.GetValue<string>("Server") ?? "badea.local";
+            var port    = ad.GetValue<int?>("Port") ?? 389;
+            var useSsl  = ad.GetValue<bool?>("UseSsl") ?? false;
+            var netbios = ad.GetValue<string>("DomainNetbios") ?? "BADEA";
 
-            // Normalize input to DOMAIN\sam (NETBIOS\sam)
             var (domain, sam) = SplitDomainSam(username, netbios);
             var bindLogin = $"{domain}\\{sam}";
 
-            // On IIS/Windows we can use Negotiate (SSPI). Keep it simple and Windows-friendly.
-            var authType = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                ? AuthType.Negotiate
-                : AuthType.Ntlm; // safe fallback if not Windows (though you said IIS)
-
-            _log.LogInformation("LDAP LOGIN bind to {Server}:{Port} as {User} (SSL={Ssl}, AuthType={Auth})",
+            var authType = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? AuthType.Negotiate : AuthType.Ntlm;
+            _log.LogInformation("LOGIN bind {Server}:{Port} as {User} (SSL={Ssl}, AuthType={Auth})",
                 server, port, bindLogin, useSsl, authType);
 
             try
@@ -57,129 +48,129 @@ namespace KPIMonitor.Services.Auth
                 using var conn = new LdapConnection(id) { AuthType = authType };
                 conn.SessionOptions.SecureSocketLayer = useSsl;
 
-                // For domain\user, pass domain separately
-                var cred = new NetworkCredential(sam, password, domain);
-                conn.Bind(cred); // throws on invalid credentials
+                conn.Bind(new NetworkCredential(sam, password, domain));
 
                 var normalized = $"{domain}\\{sam}";
-                _log.LogInformation("LDAP LOGIN OK -> {User}", normalized);
+                _log.LogInformation("LOGIN OK. Normalized user = {User}", normalized);
                 return Task.FromResult<string?>(normalized);
             }
             catch (LdapException lex)
             {
-                _log.LogWarning(lex, "LDAP LOGIN failed. ErrorCode={Code}, ServerError={ServerError}", lex.ErrorCode, lex.ServerErrorMessage);
+                _log.LogWarning(lex, "LOGIN failed. ErrorCode={Code}, ServerError={ServerError}", lex.ErrorCode, lex.ServerErrorMessage);
                 return Task.FromResult<string?>(null);
             }
             catch (Exception ex)
             {
-                _log.LogError(ex, "Unexpected error during LDAP LOGIN.");
+                _log.LogError(ex, "LOGIN unexpected error.");
                 return Task.FromResult<string?>(null);
             }
         }
 
-        /// <summary>
-        /// AFTER a successful login, check if that same user is a member of the allowed AD group.
-        /// Uses the user's own DOMAIN\sam + password to bind (no service account).
-        /// Configure either:
-        ///   - Ad:AllowedGroupDn (preferred; exact DN), or
-        ///   - Ad:AllowedGroupSam (e.g., "Steervision")
-        /// Nested membership is supported.
-        /// </summary>
-        public async Task<bool> IsMemberOfAllowedGroupAsync(string usernameOrSamOrDomainSam, string password, CancellationToken ct = default)
+        // ------------- GROUP CHECK (service bind if available) --------------
+        public async Task<bool> IsMemberOfAllowedGroupAsync(string usernameOrDomainSam, string? userPassword, CancellationToken ct = default)
         {
-            var ad       = _cfg.GetSection("Ad");
-            var server   = ad.GetValue<string>("Server") ?? "badea.local";
-            var port     = ad.GetValue<int?>("Port") ?? 389;
-            var useSsl   = ad.GetValue<bool?>("UseSsl") ?? false;
-            var netbios  = ad.GetValue<string>("DomainNetbios") ?? "BADEA";
+            var ad      = _cfg.GetSection("Ad");
+            var server  = ad.GetValue<string>("Server") ?? "badea.local";
+            var port    = ad.GetValue<int?>("Port") ?? 389;
+            var useSsl  = ad.GetValue<bool?>("UseSsl") ?? false;
+            var netbios = ad.GetValue<string>("DomainNetbios") ?? "BADEA";
+            var baseDn  = ad.GetValue<string>("BaseDn") ?? "DC=badea,DC=local";
+            var grpSam  = ad.GetValue<string>("AllowedGroupSam");
+            var grpDn   = ad.GetValue<string>("AllowedGroupDn");
 
-            var baseDn   = ad.GetValue<string>("BaseDn") ?? "DC=badea,DC=local";
-            var grpSam   = ad.GetValue<string>("AllowedGroupSam"); // e.g. "Steervision"
-            var grpDn    = ad.GetValue<string>("AllowedGroupDn");  // e.g. "CN=Steervision,OU=Security Groups,DC=badea,DC=local"
+            var svcSam  = ad.GetValue<string>("BindUserSam");         // optional
+            var svcPwd  = ad.GetValue<string>("BindUserPassword");    // optional
 
-            if (string.IsNullOrWhiteSpace(grpDn) && string.IsNullOrWhiteSpace(grpSam))
+            if (string.IsNullOrWhiteSpace(grpSam) && string.IsNullOrWhiteSpace(grpDn))
             {
-                _log.LogError("GROUP-CHECK misconfigured: set Ad:AllowedGroupDn or Ad:AllowedGroupSam.");
+                _log.LogError("Group not configured. Set Ad:AllowedGroupSam or Ad:AllowedGroupDn.");
                 return false;
             }
 
-            // Normalize to DOMAIN\sam for binding and for equality
-            var (domain, sam) = SplitDomainSam(usernameOrSamOrDomainSam, netbios);
-            var bindLogin = $"{domain}\\{sam}";
-
-            var authType = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                ? AuthType.Negotiate
-                : AuthType.Ntlm;
-
-            _log.LogInformation("GROUP-CHECK start: bindLogin={BindLogin}, baseDn={BaseDn}, grpSam={GrpSam}, grpDn={GrpDn}",
-                bindLogin, baseDn, grpSam, grpDn);
+            // Who are we checking?
+            var (_, samToCheck) = SplitDomainSam(usernameOrDomainSam, netbios);
 
             try
             {
                 var id = new LdapDirectoryIdentifier(server, port, false, false);
-                using var conn = new LdapConnection(id) { AuthType = authType };
-                conn.SessionOptions.SecureSocketLayer = useSsl;
 
-                var cred = new NetworkCredential(sam, password, domain);
-                conn.Bind(cred); // bind as THIS user (no service account)
+                using var conn = new LdapConnection(id);
+                var authType = AuthType.Negotiate;
 
-                // 1) Resolve the user DN via sAMAccountName
-                var userDn = await FindUserDnBySamAsync(conn, baseDn, sam, ct);
-                _log.LogInformation("GROUP-CHECK userDn: {UserDn}", userDn ?? "(null)");
-                if (userDn is null) return false;
+                // Choose bind identity (prefer service account)
+                if (!string.IsNullOrWhiteSpace(svcSam) && !string.IsNullOrWhiteSpace(svcPwd))
+                {
+                    _log.LogInformation("GROUP bind using service account '{SvcSam}'", svcSam);
+                    conn.AuthType = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? AuthType.Negotiate : AuthType.Ntlm;
+                    conn.SessionOptions.SecureSocketLayer = useSsl;
+                    conn.Bind(new NetworkCredential(svcSam, svcPwd, netbios));
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    _log.LogInformation("GROUP bind using Negotiate with process identity (IIS app-pool).");
+                    conn.AuthType = AuthType.Negotiate;
+                    conn.SessionOptions.SecureSocketLayer = useSsl;
+                    conn.Bind(); // use current process token
+                }
+                else
+                {
+                    // Last resort: user’s own password if provided
+                    if (string.IsNullOrEmpty(userPassword))
+                    {
+                        _log.LogWarning("GROUP bind has no service account and no user password. Cannot query AD.");
+                        return false;
+                    }
+                    _log.LogInformation("GROUP bind using user '{Sam}' (fallback).", samToCheck);
+                    conn.AuthType = AuthType.Ntlm;
+                    conn.SessionOptions.SecureSocketLayer = useSsl;
+                    conn.Bind(new NetworkCredential(samToCheck, userPassword, netbios));
+                }
 
-                // 2) Resolve the group DN
+                // Resolve user DN
+                var userDn = await FindUserDnBySamAsync(conn, baseDn, samToCheck, ct);
+                if (userDn is null)
+                {
+                    _log.LogWarning("GROUP: user DN not found for sam={Sam}.", samToCheck);
+                    return false;
+                }
+
+                // Resolve group DN (by DN or by SAM)
                 string? groupDn = !string.IsNullOrWhiteSpace(grpDn)
                     ? grpDn
                     : await FindGroupDnBySamAsync(conn, baseDn, grpSam!, ct);
-                _log.LogInformation("GROUP-CHECK groupDn: {GroupDn}", groupDn ?? "(null)");
-                if (string.IsNullOrWhiteSpace(groupDn)) return false;
 
-                // 3) Nested membership via LDAP_MATCHING_RULE_IN_CHAIN (1.2.840.113556.1.4.1941)
+                if (string.IsNullOrWhiteSpace(groupDn))
+                {
+                    _log.LogWarning("GROUP: group not found. grpSam={GrpSam}, grpDn={GrpDn}", grpSam, grpDn);
+                    return false;
+                }
+
+                // Nested membership check
                 string filter = $"(&(distinguishedName={Escape(groupDn)})(member:1.2.840.113556.1.4.1941:={Escape(userDn)}))";
                 var req = new SearchRequest(baseDn, filter, SearchScope.Subtree, new[] { "distinguishedName" });
                 var res = (SearchResponse)await Task.Factory.FromAsync(
                     conn.BeginSendRequest, conn.EndSendRequest, req, PartialResultProcessing.NoPartialResultSupport, null);
 
                 bool ok = res.Entries.Count > 0;
-                _log.LogInformation("GROUP-CHECK final: userDn={UserDn} inGroup={InGroup}", userDn, ok);
+                _log.LogInformation("GROUP result sam={Sam} inGroup={InGroup}", samToCheck, ok);
                 return ok;
             }
             catch (Exception ex)
             {
-                _log.LogError(ex, "GROUP-CHECK failed for {User}", bindLogin);
+                _log.LogError(ex, "GROUP membership check failed for {User}", usernameOrDomainSam);
                 return false;
             }
         }
 
-        // ---------- helpers ----------
-
-        /// <summary>
-        /// Accepts: "DOMAIN\sam", "sam@anything", or "sam" and returns (DOMAIN, sam).
-        /// If no domain is present, falls back to configured NETBIOS domain.
-        /// </summary>
+        // ---------------- helpers ----------------
         private static (string domain, string sam) SplitDomainSam(string input, string defaultDomain)
         {
-            if (string.IsNullOrWhiteSpace(input))
-                return (defaultDomain, "");
-
-            var trimmed = input.Trim();
-
-            // DOMAIN\sam
-            var slash = trimmed.IndexOf('\\');
-            if (slash > 0 && slash < trimmed.Length - 1)
-                return (trimmed[..slash], trimmed[(slash + 1)..]);
-
-            // sam@domain -> return NETBIOS/default domain + sam
-            var at = trimmed.IndexOf('@');
-            if (at > 0)
-            {
-                var sam = trimmed[..at];
-                return (defaultDomain, sam);
-            }
-
-            // bare sam
-            return (defaultDomain, trimmed);
+            var s = (input ?? "").Trim();
+            var i = s.IndexOf('\\');
+            if (i > 0 && i < s.Length - 1) return (s[..i], s[(i + 1)..]);
+            var at = s.IndexOf('@');
+            if (at > 0) return (defaultDomain, s[..at]);
+            return (defaultDomain, s);
         }
 
         private static async Task<string?> FindUserDnBySamAsync(LdapConnection conn, string baseDn, string sam, CancellationToken ct)
@@ -189,9 +180,7 @@ namespace KPIMonitor.Services.Auth
             var res = (SearchResponse)await Task.Factory.FromAsync(
                 conn.BeginSendRequest, conn.EndSendRequest, req, PartialResultProcessing.NoPartialResultSupport, null);
 
-            foreach (SearchResultEntry entry in res.Entries)
-                return entry.DistinguishedName;
-
+            foreach (SearchResultEntry e in res.Entries) return e.DistinguishedName;
             return null;
         }
 
@@ -199,17 +188,13 @@ namespace KPIMonitor.Services.Auth
         {
             string filter = $"(&(objectClass=group)(sAMAccountName={Escape(groupSam)}))";
             var req = new SearchRequest(baseDn, filter, SearchScope.Subtree, new[] { "distinguishedName" });
-
             var res = (SearchResponse)await Task.Factory.FromAsync(
                 conn.BeginSendRequest, conn.EndSendRequest, req, PartialResultProcessing.NoPartialResultSupport, null);
 
-            foreach (SearchResultEntry entry in res.Entries)
-                return entry.DistinguishedName;
-
+            foreach (SearchResultEntry e in res.Entries) return e.DistinguishedName;
             return null;
         }
 
-        // Minimal DN filter escaping
         private static string Escape(string value)
         {
             var sb = new StringBuilder();
@@ -222,7 +207,7 @@ namespace KPIMonitor.Services.Auth
                     case '(':  sb.Append("\\28"); break;
                     case ')':  sb.Append("\\29"); break;
                     case '\0': sb.Append("\\00"); break;
-                    default:   sb.Append(c);      break;
+                    default:   sb.Append(c); break;
                 }
             }
             return sb.ToString();

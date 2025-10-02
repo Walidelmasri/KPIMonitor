@@ -82,7 +82,7 @@ namespace KPIMonitor.Controllers
                 // 3) AFTER sign-in: check Steervision membership
                 _log.LogInformation("Post-login GROUP CHECK for user={User}", normalizedUser);
 
-                var inGroup = await _ad.IsMemberOfAllowedGroupAsync(normalizedUser, pwd);
+                var inGroup = await _ad.IsMemberOfAllowedGroupAsync(normalizedUser, password: null);
                 if (!inGroup)
                 {
                     _log.LogWarning("User '{User}' NOT in allowed AD group. Keeping cookie for debugging.", normalizedUser);
