@@ -1,25 +1,100 @@
+@model KPIMonitor.Models.AuthDebugVm
 @{
-    ViewData["Title"] = "403 Access Denied";
+    ViewData["Title"] = "Access Denied";
 }
-
 <div class="container py-5">
-    @section PageHeader {
-        <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
-            <div class="page-hero-content">
-                <h1 class="page-title">403 Access Denied</h1>
-            </div>
-        </div>
-    }
+  <div class="card shadow-sm rounded-4">
+    <div class="card-body">
+      <h3 class="mb-2">403 — Access Denied</h3>
+      <p class="text-muted mb-3">
+        You’re not authorized to access this resource.
+      </p>
 
-    <div class="with-rails">
-        <div class="bg-white border rounded-4 shadow-sm p-4">
-            <p class="lead mb-2">You need admin privileges to view this page.</p>
-            <p class="text-muted">If you believe this is an error, please contact your administrator.</p>
+      <div class="alert alert-warning rounded-3">
+        <strong>Reason:</strong> @Model.Reason
+      </div>
 
-            <div class="mt-4 d-flex gap-2">
-                <a href="@Url.Action("Index","Home")" class="btn btn-primary rounded-4">Go to dashboard</a>
-                <a href="javascript:history.back()" class="btn btn-outline-secondary rounded-4">Go back</a>
-            </div>
+      <dl class="row small">
+        <dt class="col-sm-3">User</dt>
+        <dd class="col-sm-9">@Model.UserName (@(Model.IsAuthenticated ? "authenticated" : "anonymous"))</dd>
+
+        <dt class="col-sm-3">Request URL</dt>
+        <dd class="col-sm-9"><code>@Model.RequestUrl</code></dd>
+
+        <dt class="col-sm-3">ReturnUrl</dt>
+        <dd class="col-sm-9"><code>@Model.ReturnUrl</code></dd>
+
+        <dt class="col-sm-3">Method</dt>
+        <dd class="col-sm-9">@Model.Method</dd>
+
+        <dt class="col-sm-3">Remote IP</dt>
+        <dd class="col-sm-9">@Model.RemoteIp</dd>
+
+        <dt class="col-sm-3">Required claim</dt>
+        <dd class="col-sm-9">
+          ad:inSteervision = @(Model.HasSteervisionClaim ? Model.SteervisionClaimValue : "<none>")
+        </dd>
+      </dl>
+
+      <details class="mb-3">
+        <summary><strong>Claims (@Model.Claims.Count)</strong></summary>
+        <div class="mt-2">
+          @if (Model.Claims.Any())
+          {
+              <table class="table table-sm table-bordered">
+                <thead class="table-light">
+                  <tr><th>Type</th><th>Value</th></tr>
+                </thead>
+                <tbody>
+                  @foreach (var c in Model.Claims)
+                  {
+                      <tr><td><code>@c.Type</code></td><td><code>@c.Value</code></td></tr>
+                  }
+                </tbody>
+              </table>
+          }
+          else { <div class="text-muted">No claims.</div> }
         </div>
+      </details>
+
+      <details class="mb-3">
+        <summary><strong>Selected Headers (@Model.Headers.Count)</strong></summary>
+        <div class="mt-2">
+          @if (Model.Headers.Any())
+          {
+            <table class="table table-sm table-bordered">
+              <thead class="table-light">
+                <tr><th>Name</th><th>Value</th></tr>
+              </thead>
+              <tbody>
+                @foreach (var h in Model.Headers)
+                {
+                  <tr><td>@h.Key</td><td><code>@h.Value</code></td></tr>
+                }
+              </tbody>
+            </table>
+          }
+          else { <div class="text-muted">No relevant headers found.</div> }
+        </div>
+      </details>
+
+      <details class="mb-3">
+        <summary><strong>Cookies (@Model.Cookies.Count)</strong></summary>
+        <div class="mt-2">
+          @if (Model.Cookies.Any())
+          {
+            <ul class="small">
+              @foreach (var n in Model.Cookies) { <li><code>@n</code></li> }
+            </ul>
+          }
+          else { <div class="text-muted">No cookies.</div> }
+        </div>
+      </details>
+
+      <div class="d-flex gap-2">
+        <a class="btn btn-primary" href="@Url.Action("Login","Account", new { returnUrl = Model.ReturnUrl ?? "/" })">Back to Login</a>
+        <a class="btn btn-outline-secondary" href="/" >Home</a>
+      </div>
     </div>
+  </div>
 </div>

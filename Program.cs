@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Authorization;
 using KPIMonitor.Services.Auth;
 using KPIMonitor.Services;
 using KPIMonitor.Services.Abstractions;
+using HttpStatusCodes = Microsoft.AspNetCore.Http.StatusCodes;
+using Microsoft.Extensions.Logging.EventLog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -68,6 +70,15 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddScoped<IAuthorizationHandler, AdminOnlyHandler>();
 
 builder.Services.AddScoped<IAdAuthenticator, LdapAdAuthenticator>();
+// Write logs to Windows Event Viewer -> Windows Logs -> Application
+builder.Logging.ClearProviders();                    // optional: start clean
+builder.Logging.AddConsole();                        // still useful if you ever self-host
+builder.Logging.AddEventLog(new EventLogSettings
+{
+    SourceName = "KpiMonitor",                       // shows as 'Source' in Event Viewer
+    LogName = "Application",                         // default; you can change to a custom log if you want
+    MachineName = ".",                               // local machine
+});
 
 var app = builder.Build();
 
@@ -89,15 +100,19 @@ app.UseAuthorization();
 app.Use(async (ctx, next) =>
 {
     await next();
-    if (ctx.Response.StatusCode == Microsoft.AspNetCore.Http.StatusCodes.Status403Forbidden)
+    if (ctx.Response.StatusCode == HttpStatusCodes.Status403Forbidden)
     {
         var lf = ctx.RequestServices.GetRequiredService<ILoggerFactory>();
         var log = lf.CreateLogger("AuthDebug");
         var user = ctx.User?.Identity?.Name ?? "(anonymous)";
         var claims = string.Join(", ", ctx.User?.Claims?.Select(c => $"{c.Type}={c.Value}") ?? Array.Empty<string>());
-        log.LogWarning("403 for {Path} user={User} claims=[{Claims}]", ctx.Request.Path, user, claims);
+        var r = ctx.Request;
+        var url = $"{r.Scheme}://{r.Host}{r.Path}{r.QueryString}";
+        log.LogWarning("403 FORBIDDEN path={Path} fullUrl={Url} user={User} claims=[{Claims}]",
+            ctx.Request.Path, url, user, claims);
     }
 });
+
 
 PeriodEditPolicy.Configure(app.Services.GetRequiredService<IAdminAuthorizer>());
 

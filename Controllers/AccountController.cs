@@ -120,24 +120,65 @@ namespace KPIMonitor.Controllers
         }
 
         [AllowAnonymous]
-        public IActionResult AccessDenied(string? reason = null, string? user = null)
+        public IActionResult AccessDenied(string? returnUrl = null)
         {
-            Response.StatusCode = StatusCodes.Status403Forbidden;
+            Response.StatusCode = Microsoft.AspNetCore.Http.StatusCodes.Status403Forbidden;
 
-            var who = User?.Identity?.IsAuthenticated == true
-                ? (User.Identity!.Name ?? "(unknown)")
-                : (user ?? "(unauthenticated)");
+            var r = HttpContext.Request;
 
-            var claims = string.Join(", ",
-                User?.Claims?.Select(c => $"{c.Type}={c.Value}") ?? Enumerable.Empty<string>());
+            // Build a Request URL
+            var fullUrl = $"{r.Scheme}://{r.Host}{r.Path}{r.QueryString}";
 
-            _log.LogWarning("AccessDenied: reason={Reason} user={User} claims=[{Claims}] path={Path}",
-                reason, who, claims, HttpContext?.Request?.Path.Value);
+            // Pull a few useful headers
+            var headers = new[] { "Referer", "User-Agent", "X-Forwarded-For", "X-Original-URL" }
+                .Where(h => r.Headers.ContainsKey(h))
+                .ToDictionary(h => h, h => r.Headers[h].ToString());
 
-            ViewBag.Reason = reason ?? "";
-            ViewBag.Who = who;
-            ViewBag.Claims = claims;
-            return View();
+            // Cookie names only (avoid leaking values)
+            var cookies = r.Cookies?.Keys?.ToList() ?? new List<string>();
+
+            // Claims
+            var claims = User?.Claims?.Select(c => (c.Type, c.Value)).ToList() ?? new List<(string,string)>();
+            var steervisionClaim = claims.FirstOrDefault(c => c.Type == "ad:inSteervision").Value;
+
+            // Reason (best-effort explanation)
+            string reason;
+            if (!(User?.Identity?.IsAuthenticated ?? false))
+            {
+                reason = "Not authenticated (no auth cookie or expired).";
+            }
+            else if (string.IsNullOrEmpty(steervisionClaim))
+            {
+                reason = "Missing required claim 'ad:inSteervision' (fallback policy).";
+            }
+            else
+            {
+                reason = "Authenticated but blocked by another policy/authorization rule.";
+            }
+
+            var vm = new AuthDebugVm
+            {
+                StatusCode = Microsoft.AspNetCore.Http.StatusCodes.Status403Forbidden,
+                UserName = User?.Identity?.Name ?? "(anonymous)",
+                IsAuthenticated = User?.Identity?.IsAuthenticated ?? false,
+                ReturnUrl = returnUrl ?? r.Query["ReturnUrl"].ToString(),
+                RequestUrl = fullUrl,
+                Method = r.Method,
+                RemoteIp = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                Claims = claims,
+                HasSteervisionClaim = !string.IsNullOrEmpty(steervisionClaim),
+                SteervisionClaimValue = steervisionClaim,
+                Reason = reason,
+                Headers = headers,
+                Cookies = cookies
+            };
+
+            // Also log to server logs (Event Viewer if configured)
+            _log.LogWarning("AccessDenied user={User} reason={Reason} url={Url} returnUrl={ReturnUrl} claims=[{Claims}]",
+                vm.UserName, vm.Reason, vm.RequestUrl, vm.ReturnUrl,
+                string.Join("; ", vm.Claims.Select(c => $"{c.Type}={c.Value}")));
+
+            return View(vm);
         }
 
     }
