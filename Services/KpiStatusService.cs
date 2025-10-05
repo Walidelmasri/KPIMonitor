@@ -31,7 +31,7 @@ namespace KPIMonitor.Services
                 .Select(p => (int?)p.TargetDirection)
                 .FirstOrDefaultAsync(ct);
 
-            if (dir is 1)  return TrendDirection.Ascending;
+            if (dir is 1) return TrendDirection.Ascending;
             if (dir is -1) return TrendDirection.Descending;
             throw new InvalidOperationException("Year plan TargetDirection must be 1 or -1.");
         }
@@ -154,26 +154,45 @@ namespace KPIMonitor.Services
             DimPeriod currentPeriod,
             CancellationToken ct)
         {
+            // Base: same plan, same year, period present
             var q = _db.KpiFacts.AsNoTracking()
                 .Include(f => f.Period)
                 .Where(f => f.KpiYearPlanId == kpiYearPlanId
-                         && f.IsActive == 1
                          && f.Period != null
                          && f.Period.Year == year);
 
             if (currentPeriod.MonthNum.HasValue)
-                q = q.Where(f => f.Period!.MonthNum.HasValue && f.Period.StartDate > currentPeriod.StartDate);
+            {
+                // Same granularity (monthly) and strictly next month within the same year
+                int currM = currentPeriod.MonthNum.Value;
+                q = q.Where(f => f.Period!.MonthNum.HasValue
+                              && f.Period.Year == year
+                              && f.Period.MonthNum!.Value > currM)
+                     .OrderBy(f => f.Period!.MonthNum);
+            }
             else if (currentPeriod.QuarterNum.HasValue)
-                q = q.Where(f => f.Period!.QuarterNum.HasValue && f.Period.StartDate > currentPeriod.StartDate);
+            {
+                // Same granularity (quarterly) and strictly next quarter within the same year
+                int currQ = currentPeriod.QuarterNum.Value;
+                q = q.Where(f => f.Period!.QuarterNum.HasValue
+                              && f.Period.Year == year
+                              && f.Period.QuarterNum!.Value > currQ)
+                     .OrderBy(f => f.Period!.QuarterNum);
+            }
             else
-                q = q.Where(f => f.Period!.StartDate > currentPeriod.StartDate);
+            {
+                // Annual: next annual period within the same year (usually none), keep deterministic order
+                q = q.Where(f => !f.Period!.MonthNum.HasValue && !f.Period.QuarterNum.HasValue)
+                     .OrderBy(f => f.Period!.PeriodId);
+            }
 
-            var next = await q.OrderBy(f => f.Period!.StartDate)
-                              .Select(f => new { f.TargetValue, f.ForecastValue })
-                              .FirstOrDefaultAsync(ct);
+            var next = await q
+                .Select(f => new { f.TargetValue, f.ForecastValue })
+                .FirstOrDefaultAsync(ct);
 
             return next == null ? null : (next.TargetValue, next.ForecastValue);
         }
+
 
         private static bool Meets(decimal lhs, decimal rhs, TrendDirection d, decimal tol = 0.0001m)
             => d == TrendDirection.Ascending
