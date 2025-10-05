@@ -10,19 +10,16 @@ using Microsoft.EntityFrameworkCore;
 namespace KPIMonitor.Services
 {
     /// <summary>
-    /// Status engine: uses plan TargetDirection (no guessing),
-    /// evaluates status per period, and writes it to KPIFacts.StatusCode.
-    /// Implements your "look-ahead (k+1)" rule.
+    /// Status engine:
+    /// - Uses explicit plan TargetDirection (1 asc, -1 desc).
+    /// - Same-period: Actual vs Target only (NO Actual vs Forecast).
+    /// - Look-ahead (k+1): ONLY Forecast(k+1) vs Target(k+1).
     /// </summary>
     public sealed class KpiStatusService : IKpiStatusService
     {
         private readonly AppDbContext _db;
-
         public KpiStatusService(AppDbContext db) => _db = db;
 
-        /// <summary>
-        /// Return the plan's explicit direction (1 = Ascending, -1 = Descending).
-        /// </summary>
         public async Task<TrendDirection> InferDirectionAsync(
             decimal kpiId,
             decimal kpiYearPlanId,
@@ -36,8 +33,6 @@ namespace KPIMonitor.Services
 
             if (dir is 1)  return TrendDirection.Ascending;
             if (dir is -1) return TrendDirection.Descending;
-
-            // You said it will always be set; fail loudly if not.
             throw new InvalidOperationException("Year plan TargetDirection must be 1 or -1.");
         }
 
@@ -45,66 +40,49 @@ namespace KPIMonitor.Services
         {
             if (period == null) return false;
 
-            // Determine the period end (prefer DB EndDate; otherwise compute)
             DateTime periodEndUtc;
             if (period.EndDate.HasValue)
             {
-                // Treat EndDate as UTC timestamp
                 periodEndUtc = DateTime.SpecifyKind(period.EndDate.Value, DateTimeKind.Utc);
             }
             else if (period.MonthNum.HasValue)
             {
-                int y = period.Year, m = period.MonthNum.Value;
-                int d = DateTime.DaysInMonth(y, m);
-                periodEndUtc = new DateTime(y, m, d, 23, 59, 59, DateTimeKind.Utc);
+                int d = DateTime.DaysInMonth(period.Year, period.MonthNum.Value);
+                periodEndUtc = new DateTime(period.Year, period.MonthNum.Value, d, 23, 59, 59, DateTimeKind.Utc);
             }
             else if (period.QuarterNum.HasValue)
             {
-                int y = period.Year, q = period.QuarterNum.Value;
-                int m = q * 3;
-                int d = DateTime.DaysInMonth(y, m);
-                periodEndUtc = new DateTime(y, m, d, 23, 59, 59, DateTimeKind.Utc);
+                int m = period.QuarterNum.Value * 3;
+                int d = DateTime.DaysInMonth(period.Year, m);
+                periodEndUtc = new DateTime(period.Year, m, d, 23, 59, 59, DateTimeKind.Utc);
             }
             else
             {
-                int y = period.Year;
-                periodEndUtc = new DateTime(y, 12, 31, 23, 59, 59, DateTimeKind.Utc);
+                periodEndUtc = new DateTime(period.Year, 12, 31, 23, 59, 59, DateTimeKind.Utc);
             }
 
-            // “Due” ONE MONTH after the period end
-            var dueAt = periodEndUtc.AddMonths(1);
-            return nowUtc >= dueAt;
+            return nowUtc >= periodEndUtc.AddMonths(1);
         }
 
         /// <summary>
-        /// SAME-PERIOD logic only.
-        /// Order: Actual vs Target → Actual vs Forecast → DataMissing (if due & no actual) → NeedsAttention (if actual present) → null (not due & no actual).
+        /// Same-period only:
+        ///   - No Actual → null if not due; DataMissing if due.
+        ///   - Actual present → Ok if meets Target; else NeedsAttention.
         /// </summary>
         public string? Evaluate(
             decimal? actual,
             decimal? target,
-            decimal? forecast,
+            decimal? forecast,   // intentionally unused for same-period decision
             bool isDue,
             TrendDirection direction,
             decimal tolerance = 0.0001m)
         {
-            static bool Meets(decimal lhs, decimal rhs, TrendDirection d, decimal tol)
-                => d == TrendDirection.Ascending ? lhs + tol >= rhs
-                                                 : lhs - tol <= rhs;
-
-            // no actual recorded
             if (!actual.HasValue)
-                return isDue ? StatusCodes.DataMissing : null;
+                return isDue ? StatusCodes.DataMissing : (string?)null;
 
-            // A vs T
             if (target.HasValue && Meets(actual.Value, target.Value, direction, tolerance))
                 return StatusCodes.Ok;
 
-            // A vs F
-            if (forecast.HasValue && Meets(actual.Value, forecast.Value, direction, tolerance))
-                return StatusCodes.CatchingUp;
-
-            // actual is present but misses both
             return StatusCodes.NeedsAttention;
         }
 
@@ -118,35 +96,41 @@ namespace KPIMonitor.Services
                 throw new InvalidOperationException("KPI fact not found or missing period.");
 
             var period = fact.Period;
-            var now    = DateTime.UtcNow;
-            var isDue  = IsDue(period, now);
-
-            // Direction from plan field (required to be 1 or -1)
             var dir = await InferDirectionAsync(fact.KpiId, fact.KpiYearPlanId, period.Year, ct);
+            var isDue = IsDue(period, DateTime.UtcNow);
 
-            // 1) Same-period evaluation
+            // 1) Same-period decision (no A vs F here)
             var same = Evaluate(fact.ActualValue, fact.TargetValue, fact.ForecastValue, isDue, dir);
             string? decided = same;
 
-            // 2) Look-ahead (k+1) rule only if Actual exists and same is null/red
-            if (fact.ActualValue.HasValue && (same == null || same == StatusCodes.NeedsAttention))
+            // 2) Look-ahead ONLY if Actual exists and not already Ok
+            if (fact.ActualValue.HasValue && same != StatusCodes.Ok)
             {
                 var next = await GetNextSameGranularityAsync(fact.KpiYearPlanId, period.Year, period, ct);
-
-                if (next == null)
+                if (next is null)
                 {
-                    decided = StatusCodes.NeedsAttention; // no k+1 to catch up
+                    // No next period → keep same decision; if same was null (shouldn't happen with Actual present), force red
+                    decided ??= StatusCodes.NeedsAttention;
                 }
                 else
                 {
                     var (tNext, fNext) = next.Value;
 
                     if (!tNext.HasValue)
-                        decided = StatusCodes.DataMissing;   // rule: missing T(k+1) => blue
+                    {
+                        // Missing T(k+1) → DataMissing (blue)
+                        decided = StatusCodes.DataMissing;
+                    }
                     else if (fNext.HasValue && Meets(fNext.Value, tNext.Value, dir))
-                        decided = StatusCodes.CatchingUp;    // rule: F(k+1) meets T(k+1) => orange
+                    {
+                        // ONLY when Forecast(k+1) meets/exceeds (or <= for descending) Target(k+1)
+                        decided = StatusCodes.CatchingUp;
+                    }
                     else
-                        decided = StatusCodes.NeedsAttention; // otherwise red
+                    {
+                        // Has next, but either no Forecast(k+1) or it doesn't meet Target(k+1)
+                        decided = StatusCodes.NeedsAttention;
+                    }
                 }
             }
 
@@ -159,16 +143,10 @@ namespace KPIMonitor.Services
             }
 
             return effective;
-
-            // local helper (direction-aware)
-            static bool Meets(decimal lhs, decimal rhs, TrendDirection d, decimal tol = 0.0001m)
-                => d == TrendDirection.Ascending ? lhs + tol >= rhs : lhs - tol <= rhs;
         }
 
         /// <summary>
-        /// Returns (Target, Forecast) of the next period (k+1) in the same plan+year and
-        /// with the same granularity as <paramref name="currentPeriod"/>; null if none exists.
-        /// Uses only approved data (KPIFACTS), never pending.
+        /// Get (Target, Forecast) for the next period of the same granularity within the same year/plan.
         /// </summary>
         private async Task<(decimal? Target, decimal? Forecast)?> GetNextSameGranularityAsync(
             decimal kpiYearPlanId,
@@ -176,7 +154,7 @@ namespace KPIMonitor.Services
             DimPeriod currentPeriod,
             CancellationToken ct)
         {
-            var query = _db.KpiFacts.AsNoTracking()
+            var q = _db.KpiFacts.AsNoTracking()
                 .Include(f => f.Period)
                 .Where(f => f.KpiYearPlanId == kpiYearPlanId
                          && f.IsActive == 1
@@ -184,26 +162,22 @@ namespace KPIMonitor.Services
                          && f.Period.Year == year);
 
             if (currentPeriod.MonthNum.HasValue)
-            {
-                query = query.Where(f => f.Period!.MonthNum.HasValue &&
-                                         f.Period.StartDate > currentPeriod.StartDate);
-            }
+                q = q.Where(f => f.Period!.MonthNum.HasValue && f.Period.StartDate > currentPeriod.StartDate);
             else if (currentPeriod.QuarterNum.HasValue)
-            {
-                query = query.Where(f => f.Period!.QuarterNum.HasValue &&
-                                         f.Period.StartDate > currentPeriod.StartDate);
-            }
+                q = q.Where(f => f.Period!.QuarterNum.HasValue && f.Period.StartDate > currentPeriod.StartDate);
             else
-            {
-                query = query.Where(f => f.Period!.StartDate > currentPeriod.StartDate);
-            }
+                q = q.Where(f => f.Period!.StartDate > currentPeriod.StartDate);
 
-            var next = await query
-                .OrderBy(f => f.Period!.StartDate)
-                .Select(f => new { f.TargetValue, f.ForecastValue })
-                .FirstOrDefaultAsync(ct);
+            var next = await q.OrderBy(f => f.Period!.StartDate)
+                              .Select(f => new { f.TargetValue, f.ForecastValue })
+                              .FirstOrDefaultAsync(ct);
 
             return next == null ? null : (next.TargetValue, next.ForecastValue);
         }
+
+        private static bool Meets(decimal lhs, decimal rhs, TrendDirection d, decimal tol = 0.0001m)
+            => d == TrendDirection.Ascending
+                ? lhs + tol >= rhs
+                : lhs - tol <= rhs;
     }
 }
