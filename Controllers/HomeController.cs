@@ -5,6 +5,7 @@ using KPIMonitor.Data;
 using KPIMonitor.Models;
 using KPIMonitor.Services;
 using KPIMonitor.ViewModels; // for KpiEditModalVm
+using KPIMonitor.Services.Abstractions;   // <-- this one is required                                                                                                                                                                                                                            
 
 namespace KPIMonitor.Controllers
 {
@@ -314,10 +315,18 @@ namespace KPIMonitor.Controllers
                 : input.LastChangedBy;
             await _db.SaveChangesAsync();
 
+            // Recompute plan-year so status reflects the freshly-saved values
+            var statusSvc = HttpContext.RequestServices.GetRequiredService<IKpiStatusService>();
+            var yr = await _db.DimPeriods.Where(p => p.PeriodId == fact.PeriodId)
+                                         .Select(p => p.Year)
+                                         .FirstAsync();
+            await statusSvc.RecomputePlanYearAsync(fact.KpiYearPlanId, yr);
+
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 return Ok(new { ok = true });
 
             return RedirectToAction("Index", "Home", new { pillarId, objectiveId, kpiId });
+
         }
 
         // GET: modal with Actual + Forecast (+ Target for superadmin) grid for the active plan
@@ -347,10 +356,10 @@ namespace KPIMonitor.Controllers
                     .AsNoTracking()
                     .FirstOrDefaultAsync(k => k.KpiId == kpiId);
 
-                string pillarCode    = kpi?.Objective?.Pillar?.PillarCode ?? "";
+                string pillarCode = kpi?.Objective?.Pillar?.PillarCode ?? "";
                 string objectiveCode = kpi?.Objective?.ObjectiveCode ?? "";
-                string kpiCode       = kpi?.KpiCode ?? "";
-                string left  = string.Join('.', new[] { pillarCode, objectiveCode }.Where(s => !string.IsNullOrWhiteSpace(s)));
+                string kpiCode = kpi?.KpiCode ?? "";
+                string left = string.Join('.', new[] { pillarCode, objectiveCode }.Where(s => !string.IsNullOrWhiteSpace(s)));
                 string prefix = string.Join(' ', new[] { left, kpiCode }.Where(s => !string.IsNullOrWhiteSpace(s)));
                 string displayTitle = string.IsNullOrWhiteSpace(prefix) ? (kpi?.KpiName ?? "—") : $"{prefix} — {kpi?.KpiName ?? "—"}";
 
@@ -369,31 +378,31 @@ namespace KPIMonitor.Controllers
 
                 var vm = new KpiEditModalVm
                 {
-                    KpiId     = kpiId,
-                    Year      = year,
+                    KpiId = kpiId,
+                    Year = year,
                     IsMonthly = isMonthly,
-                    KpiName   = displayTitle,
-                    Unit      = string.IsNullOrWhiteSpace(plan.Unit) ? "—" : plan.Unit,
+                    KpiName = displayTitle,
+                    Unit = string.IsNullOrWhiteSpace(plan.Unit) ? "—" : plan.Unit,
                     IsSuperAdmin = _admin.IsSuperAdmin(User)
                 };
-                vm.Actuals               ??= new Dictionary<int, decimal?>();
-                vm.Forecasts             ??= new Dictionary<int, decimal?>();
-                vm.EditableActualKeys    ??= new HashSet<int>();
-                vm.EditableForecastKeys  ??= new HashSet<int>();
-                vm.Targets               ??= new Dictionary<int, decimal?>();
+                vm.Actuals ??= new Dictionary<int, decimal?>();
+                vm.Forecasts ??= new Dictionary<int, decimal?>();
+                vm.EditableActualKeys ??= new HashSet<int>();
+                vm.EditableForecastKeys ??= new HashSet<int>();
+                vm.Targets ??= new Dictionary<int, decimal?>();
 
                 if (isMonthly)
                 {
                     for (int m = 1; m <= 12; m++)
                     {
                         var f = facts.FirstOrDefault(x => x.Period!.MonthNum == m);
-                        vm.Actuals[m]   = f?.ActualValue;
+                        vm.Actuals[m] = f?.ActualValue;
                         vm.Forecasts[m] = f?.ForecastValue;
-                        vm.Targets[m]   = f?.TargetValue;
+                        vm.Targets[m] = f?.TargetValue;
                     }
 
                     var w = PeriodEditPolicy.ComputeMonthlyWindow(year, DateTime.UtcNow, User);
-                    vm.EditableActualKeys   = new HashSet<int>(w.ActualMonths ?? Enumerable.Empty<int>());
+                    vm.EditableActualKeys = new HashSet<int>(w.ActualMonths ?? Enumerable.Empty<int>());
                     vm.EditableForecastKeys = new HashSet<int>(w.ForecastMonths ?? Enumerable.Empty<int>());
                 }
                 else
@@ -401,13 +410,13 @@ namespace KPIMonitor.Controllers
                     for (int q = 1; q <= 4; q++)
                     {
                         var f = facts.FirstOrDefault(x => x.Period!.QuarterNum == q);
-                        vm.Actuals[q]   = f?.ActualValue;
+                        vm.Actuals[q] = f?.ActualValue;
                         vm.Forecasts[q] = f?.ForecastValue;
-                        vm.Targets[q]   = f?.TargetValue;
+                        vm.Targets[q] = f?.TargetValue;
                     }
 
                     var w = PeriodEditPolicy.ComputeQuarterlyWindow(year, DateTime.UtcNow, User);
-                    vm.EditableActualKeys   = new HashSet<int>(w.ActualQuarters ?? Enumerable.Empty<int>());
+                    vm.EditableActualKeys = new HashSet<int>(w.ActualQuarters ?? Enumerable.Empty<int>());
                     vm.EditableForecastKeys = new HashSet<int>(w.ForecastQuarters ?? Enumerable.Empty<int>());
                 }
 

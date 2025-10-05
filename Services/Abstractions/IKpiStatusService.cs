@@ -50,5 +50,11 @@ namespace KPIMonitor.Services.Abstractions
         /// Respects the 'due' window and plan direction. Returns the effective status after the call.
         /// </summary>
         Task<string> ComputeAndSetAsync(decimal kpiFactId, CancellationToken ct = default);
+        /// <summary>
+        /// Recomputes and persists StatusCode for all facts in a given plan + year,
+        /// in chronological order so k+1 logic sees consistent values.
+        /// </summary>
+        Task RecomputePlanYearAsync(decimal kpiYearPlanId, int year, CancellationToken ct = default);
+    
     }
 }

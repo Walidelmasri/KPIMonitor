@@ -78,8 +78,8 @@ namespace KPIMonitor.Services
                 // Apply proposed values immediately (same as manual approval)
                 var fact = await _db.KpiFacts.FirstAsync(x => x.KpiFactId == kpiFactId);
 
-                if (change.ProposedActualValue.HasValue)   fact.ActualValue   = change.ProposedActualValue.Value;
-                if (change.ProposedTargetValue.HasValue)   fact.TargetValue   = change.ProposedTargetValue.Value;
+                if (change.ProposedActualValue.HasValue) fact.ActualValue = change.ProposedActualValue.Value;
+                if (change.ProposedTargetValue.HasValue) fact.TargetValue = change.ProposedTargetValue.Value;
                 if (change.ProposedForecastValue.HasValue) fact.ForecastValue = change.ProposedForecastValue.Value;
                 if (!string.IsNullOrWhiteSpace(change.ProposedStatusCode)) fact.StatusCode = change.ProposedStatusCode;
 
@@ -92,6 +92,13 @@ namespace KPIMonitor.Services
 
                 // Then recompute & persist the status (uses the just-saved values)
                 await _status.ComputeAndSetAsync(kpiFactId);
+                // Also recompute the whole plan-year so k+1 logic sees the latest values
+                var factPeriodYear = await _db.DimPeriods
+                    .Where(p => p.PeriodId == fact.PeriodId)
+                    .Select(p => p.Year)
+                    .FirstAsync();
+                await _status.RecomputePlanYearAsync(fact.KpiYearPlanId, factPeriodYear);
+
             }
 
             return change;
@@ -111,8 +118,8 @@ namespace KPIMonitor.Services
             if (fact == null) throw new InvalidOperationException("Target KPI fact not found.");
 
             // apply only the provided values
-            if (ch.ProposedActualValue.HasValue)   fact.ActualValue   = ch.ProposedActualValue.Value;
-            if (ch.ProposedTargetValue.HasValue)   fact.TargetValue   = ch.ProposedTargetValue.Value;
+            if (ch.ProposedActualValue.HasValue) fact.ActualValue = ch.ProposedActualValue.Value;
+            if (ch.ProposedTargetValue.HasValue) fact.TargetValue = ch.ProposedTargetValue.Value;
             if (ch.ProposedForecastValue.HasValue) fact.ForecastValue = ch.ProposedForecastValue.Value;
             if (!string.IsNullOrWhiteSpace(ch.ProposedStatusCode)) fact.StatusCode = ch.ProposedStatusCode;
 
@@ -125,6 +132,20 @@ namespace KPIMonitor.Services
 
             // Then recompute & persist the status (uses the just-saved values)
             await _status.ComputeAndSetAsync(ch.KpiFactId);
+            // And recompute the entire plan-year after the approval
+            var approvedFact = await _db.KpiFacts
+                .AsNoTracking()
+                .Where(f => f.KpiFactId == ch.KpiFactId)
+                .Select(f => new { f.KpiYearPlanId, f.PeriodId })
+                .FirstAsync();
+
+            var approvedYear = await _db.DimPeriods
+                .Where(p => p.PeriodId == approvedFact.PeriodId)
+                .Select(p => p.Year)
+                .FirstAsync();
+
+            await _status.RecomputePlanYearAsync(approvedFact.KpiYearPlanId, approvedYear);
+
         }
 
         public async Task RejectAsync(decimal changeId, string reviewer, string reason)
