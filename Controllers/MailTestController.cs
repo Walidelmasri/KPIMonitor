@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 
 namespace KPIMonitor.Controllers
 {
-    [Route("[controller]/[action]")]
     public class MailTestController : Controller
     {
         private readonly IEmailSender _email;
@@ -15,13 +14,22 @@ namespace KPIMonitor.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> SendTest(string to = "walid.salem@badea.org")
+        public IActionResult Send()
         {
-            var subject = "KPI Monitor SMTP Test";
-            var body = $"✅ Test message from KPI Monitor at {System.DateTime.Now:yyyy-MM-dd HH:mm:ss}.";
+            ViewBag.Result = TempData["Result"] as string;
+            ViewBag.Error = TempData["Error"] as string;
+            ViewBag.DefaultTo = "walid.salem@badea.org";
+            return View();
+        }
 
-            await _email.SendEmailAsync(to, subject, body);
-            return Content($"Email sent successfully to {to}");
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Send(string to, string subject, string body)
+        {
+            var (ok, message) = await _email.SendEmailAsync(to, subject, body);
+            if (ok) TempData["Result"] = message;
+            else    TempData["Error"]  = message;
+            return RedirectToAction(nameof(Send));
         }
     }
 }

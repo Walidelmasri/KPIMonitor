@@ -1,0 +1,33 @@
+@{
+    ViewData["Title"] = "SMTP Test";
+}
+<div class="container py-4" style="max-width:720px">
+  <h3 class="mb-3">SMTP Test</h3>
+
+  @if (!string.IsNullOrWhiteSpace(ViewBag.Result as string))
+  {
+    <div class="alert alert-success">@ViewBag.Result</div>
+  }
+  @if (!string.IsNullOrWhiteSpace(ViewBag.Error as string))
+  {
+    <div class="alert alert-danger">@ViewBag.Error</div>
+  }
+
+  <form method="post" asp-action="Send" asp-controller="MailTest">
+    @Html.AntiForgeryToken()
+    <div class="mb-3">
+      <label class="form-label">To</label>
+      <input class="form-control" type="email" name="to" value="@(ViewBag.DefaultTo ?? "")" required />
+      <div class="form-text">Use sam@badea.org (e.g. walid.salem@badea.org)</div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Subject</label>
+      <input class="form-control" type="text" name="subject" value="KPI Monitor SMTP Test" required />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Body</label>
+      <textarea class="form-control" name="body" rows="5">✅ Test email from KPI Monitor.</textarea>
+    </div>
+    <button class="btn btn-primary" type="submit">Send test email</button>
+  </form>
+</div>
