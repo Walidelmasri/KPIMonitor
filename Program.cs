@@ -44,14 +44,10 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         o.Cookie.HttpOnly = true;
         o.Cookie.SameSite = SameSiteMode.Lax;
         o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-
         // IMPORTANT for IIS virtual dir "/kpimonitor"
-        o.Cookie.Path = "/kpimonitor";
-
         o.LoginPath = "/Account/Login";
         o.LogoutPath = "/Account/Logout";
         o.AccessDeniedPath = "/Account/AccessDenied";
-
         o.ExpireTimeSpan = TimeSpan.FromMinutes(30);
         o.SlidingExpiration = false;
     });
