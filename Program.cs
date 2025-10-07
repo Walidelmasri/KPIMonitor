@@ -34,17 +34,17 @@ builder.Services.Configure<AdminOptions>(builder.Configuration.GetSection("App")
 builder.Services.AddScoped<IAdminAuthorizer, ConfigAdminAuthorizer>();
 builder.Services.AddScoped<IKpiFactChangeBatchService, KpiFactChangeBatchService>();
 builder.Services.AddScoped<IKpiStatusService, KpiStatusService>();
-
+builder.Services.AddScoped<IEmailSender, EmailSenderService>();
 builder.Services.AddScoped<IAdAuthenticator, LdapAdAuthenticator>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>
     {
-        o.Cookie.Name = "KpiMonitorAuth";
+        //Remove dev for prod server
+        o.Cookie.Name = "KpiMonitorAuthDev";
         o.Cookie.HttpOnly = true;
         o.Cookie.SameSite = SameSiteMode.Lax;
         o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-        // IMPORTANT for IIS virtual dir "/kpimonitor"
         o.LoginPath = "/Account/Login";
         o.LogoutPath = "/Account/Logout";
         o.AccessDeniedPath = "/Account/AccessDenied";
