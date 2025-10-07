@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using KPIMonitor.Services.Abstractions;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 
 namespace KPIMonitor.Controllers
 {
+    [AllowAnonymous]
     public class MailTestController : Controller
     {
         private readonly IEmailSender _email;
@@ -28,7 +30,7 @@ namespace KPIMonitor.Controllers
         {
             var (ok, message) = await _email.SendEmailAsync(to, subject, body);
             if (ok) TempData["Result"] = message;
-            else    TempData["Error"]  = message;
+            else TempData["Error"] = message;
             return RedirectToAction(nameof(Send));
         }
     }
