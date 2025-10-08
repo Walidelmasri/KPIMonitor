@@ -3,12 +3,14 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Net; // WebUtility.HtmlEncode
+using System.Net;                      // WebUtility.HtmlEncode
 using System.Collections.Generic;
+using System.Data;                     // IDbCommand, etc.
+using System.Data.Common;
 using KPIMonitor.Data;
 using KPIMonitor.Models;
-using KPIMonitor.Services;                  // IKpiAccessService, IEmployeeDirectory
-using KPIMonitor.Services.Abstractions;     // IKpiFactChangeService, IKpiFactChangeBatchService
+using KPIMonitor.Services;             // IKpiAccessService, IEmployeeDirectory
+using KPIMonitor.Services.Abstractions; // IKpiFactChangeService, IKpiFactChangeBatchService, IEmailSender
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,6 +26,8 @@ namespace KPIMonitor.Controllers
         private readonly global::IAdminAuthorizer _admin;
         private readonly IKpiFactChangeBatchService _batches;
         private readonly ILogger<KpiFactChangesController> _log;
+        private readonly IEmailSender _email;
+        private readonly IEmployeeDirectory _dir;
 
         public KpiFactChangesController(
             IKpiFactChangeService svc,
@@ -31,7 +35,9 @@ namespace KPIMonitor.Controllers
             AppDbContext db,
             global::IAdminAuthorizer admin,
             IKpiFactChangeBatchService batches,
-            ILogger<KpiFactChangesController> log)
+            ILogger<KpiFactChangesController> log,
+            IEmailSender email,
+            IEmployeeDirectory dir)
         {
             _svc = svc;
             _acl = acl;
@@ -39,6 +45,8 @@ namespace KPIMonitor.Controllers
             _admin = admin;
             _batches = batches;
             _log = log;
+            _email = email;
+            _dir = dir;
         }
 
         // ------------------------
@@ -59,8 +67,7 @@ namespace KPIMonitor.Controllers
         {
             var sam = Sam();
             if (string.IsNullOrWhiteSpace(sam)) return null;
-            var dir = HttpContext.RequestServices.GetRequiredService<IEmployeeDirectory>();
-            var rec = await dir.TryGetByUserIdAsync(sam, ct);
+            var rec = await _dir.TryGetByUserIdAsync(sam, ct);
             return rec?.EmpId; // BADEA_ADDONS.EMPLOYEES.EMP_ID
         }
 
@@ -70,6 +77,352 @@ namespace KPIMonitor.Controllers
             if (p.MonthNum.HasValue) return $"{p.Year} — {new DateTime(p.Year, p.MonthNum.Value, 1):MMM}";
             if (p.QuarterNum.HasValue) return $"{p.Year} — Q{p.QuarterNum.Value}";
             return p.Year.ToString();
+        }
+
+        private static string NormalizeLogin(string? raw)
+        {
+            var s = raw ?? "";
+            var bs = s.LastIndexOf('\\');                  // DOMAIN\user
+            if (bs >= 0 && bs < s.Length - 1) s = s[(bs + 1)..];
+            var at = s.IndexOf('@');                       // user@domain
+            if (at > 0) s = s[..at];
+            return s.Trim();
+        }
+
+        private static string BuildEmailFromSam(string? sam)
+        {
+            var s = NormalizeLogin(sam);
+            return string.IsNullOrWhiteSpace(s) ? "" : $"{s}@badea.org";
+        }
+
+        private async Task<string?> LookupUserIdByEmpIdAsync(string empId, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(empId)) return null;
+
+            var conn = _db.Database.GetDbConnection();
+            if (conn.State != ConnectionState.Open) await conn.OpenAsync(ct);
+
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"SELECT USERID FROM BADEA_ADDONS.EMPLOYEES WHERE EMP_ID = :p_emp";
+            var p = cmd.CreateParameter();
+            p.ParameterName = "p_emp";
+            p.Value = empId;
+            cmd.Parameters.Add(p);
+
+            var result = await cmd.ExecuteScalarAsync(ct);
+            var userId = result as string;
+            userId = NormalizeLogin(userId);
+            return string.IsNullOrWhiteSpace(userId) ? null : userId;
+        }
+
+        private async Task<(string? ownerSam, string? ownerEmail)> ResolveOwnerAsync(decimal kpiFactId, CancellationToken ct = default)
+        {
+            var info = await (
+                from f in _db.KpiFacts.AsNoTracking()
+                join yp in _db.KpiYearPlans.AsNoTracking() on f.KpiYearPlanId equals yp.KpiYearPlanId
+                where f.KpiFactId == kpiFactId
+                select new { yp.OwnerLogin, yp.OwnerEmpId }
+            ).FirstOrDefaultAsync(ct);
+
+            string? sam = null;
+            if (!string.IsNullOrWhiteSpace(info?.OwnerLogin))
+                sam = NormalizeLogin(info!.OwnerLogin);
+            else if (!string.IsNullOrWhiteSpace(info?.OwnerEmpId))
+                sam = await LookupUserIdByEmpIdAsync(info!.OwnerEmpId!, ct);
+
+            var email = BuildEmailFromSam(sam);
+            if (string.IsNullOrWhiteSpace(email)) return (null, null);
+            return (sam, email);
+        }
+
+        private async Task<(string? editorSam, string? editorEmail)> ResolveEditorForChangeAsync(decimal changeId, CancellationToken ct = default)
+        {
+            var info = await (
+                from c in _db.KpiFactChanges.AsNoTracking()
+                join f in _db.KpiFacts.AsNoTracking() on c.KpiFactId equals f.KpiFactId
+                join yp in _db.KpiYearPlans.AsNoTracking() on f.KpiYearPlanId equals yp.KpiYearPlanId
+                where c.KpiFactChangeId == changeId
+                select new { yp.EditorLogin, yp.EditorEmpId, c.SubmittedBy }
+            ).FirstOrDefaultAsync(ct);
+
+            string? sam = null;
+
+            if (!string.IsNullOrWhiteSpace(info?.EditorLogin))
+                sam = NormalizeLogin(info!.EditorLogin);
+            else if (!string.IsNullOrWhiteSpace(info?.EditorEmpId))
+                sam = await LookupUserIdByEmpIdAsync(info!.EditorEmpId!, ct);
+            else if (!string.IsNullOrWhiteSpace(info?.SubmittedBy))
+                sam = NormalizeLogin(info!.SubmittedBy);
+
+            var email = BuildEmailFromSam(sam);
+            if (string.IsNullOrWhiteSpace(email)) return (null, null);
+            return (sam, email);
+        }
+
+        private async Task<(string? ownerSam, string? ownerEmail)> ResolveOwnerForPlanAsync(decimal planId, CancellationToken ct = default)
+        {
+            var info = await _db.KpiYearPlans.AsNoTracking()
+                .Where(p => p.KpiYearPlanId == planId)
+                .Select(p => new { p.OwnerLogin, p.OwnerEmpId })
+                .FirstOrDefaultAsync(ct);
+
+            string? sam = null;
+            if (!string.IsNullOrWhiteSpace(info?.OwnerLogin))
+                sam = NormalizeLogin(info!.OwnerLogin);
+            else if (!string.IsNullOrWhiteSpace(info?.OwnerEmpId))
+                sam = await LookupUserIdByEmpIdAsync(info!.OwnerEmpId!, ct);
+
+            var email = BuildEmailFromSam(sam);
+            if (string.IsNullOrWhiteSpace(email)) return (null, null);
+            return (sam, email);
+        }
+
+        private async Task<(string code, string name)> GetKpiHeadAsync(decimal kpiFactId, CancellationToken ct = default)
+        {
+            var info = await (
+                from f in _db.KpiFacts.AsNoTracking()
+                join k in _db.DimKpis.AsNoTracking() on f.KpiId equals k.KpiId
+                where f.KpiFactId == kpiFactId
+                select new { k.KpiCode, k.KpiName }
+            ).FirstOrDefaultAsync(ct);
+            return (info?.KpiCode ?? $"KPI-{kpiFactId}", info?.KpiName ?? "KPI");
+        }
+
+        private async Task<(string code, string name)> GetKpiHeadByPlanAsync(decimal planId, CancellationToken ct = default)
+        {
+            var info = await (
+                from p in _db.KpiYearPlans.AsNoTracking()
+                join k in _db.DimKpis.AsNoTracking() on p.KpiId equals k.KpiId
+                where p.KpiYearPlanId == planId
+                select new { k.KpiCode, k.KpiName }
+            ).FirstOrDefaultAsync(ct);
+            return (info?.KpiCode ?? $"KPI", info?.KpiName ?? "KPI");
+        }
+
+        private async Task<string> GetPeriodTextAsync(decimal kpiFactId, CancellationToken ct = default)
+        {
+            var per = await (
+                from f in _db.KpiFacts.AsNoTracking()
+                join p in _db.DimPeriods.AsNoTracking() on f.PeriodId equals p.PeriodId
+                where f.KpiFactId == kpiFactId
+                select p
+            ).FirstOrDefaultAsync(ct);
+            return PeriodLabel(per);
+        }
+
+        // Email body builders (plain text — professional, no bold/HTML)
+        private static string BuildOwnerSubmitSubject(string kpiCode) =>
+            $"KPI Monitor — Approval required for {kpiCode}";
+
+        private static string BuildOwnerSubmitBody(string kpiCode, string kpiName, string submittedBy, string periodText)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"A change has been submitted for KPI {kpiCode} — {kpiName}.");
+            sb.AppendLine($"Submitted by: {submittedBy}");
+            if (!string.IsNullOrWhiteSpace(periodText))
+                sb.AppendLine($"Period: {periodText}");
+            sb.AppendLine();
+            sb.AppendLine("Please review and either approve or reject the request in KPI Monitor.");
+            return sb.ToString();
+        }
+
+        private static string BuildOwnerSubmitBatchSubject(string kpiCode) =>
+            $"KPI Monitor — Approval required for multiple edits to {kpiCode}";
+
+        private static string BuildOwnerSubmitBatchBody(string kpiCode, string kpiName, string submittedBy, int year, bool monthly, int? min, int? max, int createdCount)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Several edits have been submitted for KPI {kpiCode} — {kpiName}.");
+            sb.AppendLine($"Submitted by: {submittedBy}");
+            sb.AppendLine($"Year: {year}");
+            sb.AppendLine($"Frequency: {(monthly ? "Monthly" : "Quarterly")}");
+            if (min.HasValue || max.HasValue)
+                sb.AppendLine($"Range: {(min?.ToString() ?? "—")} to {(max?.ToString() ?? "—")}");
+            sb.AppendLine($"Items awaiting review: {createdCount}");
+            sb.AppendLine();
+            sb.AppendLine("Please review and either approve or reject the request in KPI Monitor.");
+            return sb.ToString();
+        }
+
+        private static string BuildEditorDecisionSubject(string kpiCode, bool approved) =>
+            approved
+                ? $"KPI Monitor — Your change for {kpiCode} was approved"
+                : $"KPI Monitor — Your change for {kpiCode} was rejected";
+
+        private static string BuildEditorDecisionBody(string kpiCode, string kpiName, bool approved, string? reason, string reviewer, string periodText)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Your change for KPI {kpiCode} — {kpiName} has been {(approved ? "approved" : "rejected")}.");
+            if (!string.IsNullOrWhiteSpace(periodText))
+                sb.AppendLine($"Period: {periodText}");
+            sb.AppendLine($"Reviewed by: {reviewer}");
+            if (!approved && !string.IsNullOrWhiteSpace(reason))
+            {
+                sb.AppendLine();
+                sb.AppendLine("Reason:");
+                sb.AppendLine(reason);
+            }
+            return sb.ToString();
+        }
+
+        private static string BuildEditorDecisionBatchSubject(string kpiCode, bool approved) =>
+            approved
+                ? $"KPI Monitor — Your submitted batch for {kpiCode} was approved"
+                : $"KPI Monitor — Your submitted batch for {kpiCode} was rejected";
+
+        private static string BuildEditorDecisionBatchBody(string kpiCode, string kpiName, bool approved, string reviewer, string? reason, int year, bool monthly, int? min, int? max)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Your submitted batch for KPI {kpiCode} — {kpiName} has been {(approved ? "approved" : "rejected")}.");
+            sb.AppendLine($"Year: {year}");
+            sb.AppendLine($"Frequency: {(monthly ? "Monthly" : "Quarterly")}");
+            if (min.HasValue || max.HasValue)
+                sb.AppendLine($"Range: {(min?.ToString() ?? "—")} to {(max?.ToString() ?? "—")}");
+            sb.AppendLine($"Reviewed by: {reviewer}");
+            if (!approved && !string.IsNullOrWhiteSpace(reason))
+            {
+                sb.AppendLine();
+                sb.AppendLine("Reason:");
+                sb.AppendLine(reason);
+            }
+            return sb.ToString();
+        }
+
+        private async Task SendOwnerSubmitEmailAsync(decimal kpiFactId, string submittedBy, CancellationToken ct = default)
+        {
+            try
+            {
+                var (ownerSam, ownerEmail) = await ResolveOwnerAsync(kpiFactId, ct);
+                if (string.IsNullOrWhiteSpace(ownerEmail))
+                {
+                    _log.LogWarning("Owner email resolve failed for factId={FactId}. Skipping owner mail.", kpiFactId);
+                    return;
+                }
+
+                var (code, name) = await GetKpiHeadAsync(kpiFactId, ct);
+                var per = await GetPeriodTextAsync(kpiFactId, ct);
+
+                var subject = BuildOwnerSubmitSubject(code);
+                var body = BuildOwnerSubmitBody(code, name, submittedBy, per);
+
+                await _email.SendEmailAsync(ownerEmail, subject, WebUtility.HtmlEncode(body));
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, "Failed sending owner submit email for factId={FactId}", kpiFactId);
+            }
+        }
+
+        private async Task SendOwnerSubmitBatchEmailAsync(decimal planId, int year, bool monthly, int? min, int? max, int createdCount, string submittedBy, CancellationToken ct = default)
+        {
+            try
+            {
+                var (ownerSam, ownerEmail) = await ResolveOwnerForPlanAsync(planId, ct);
+                if (string.IsNullOrWhiteSpace(ownerEmail))
+                {
+                    _log.LogWarning("Owner email resolve failed for planId={PlanId}. Skipping owner batch mail.", planId);
+                    return;
+                }
+
+                var (code, name) = await GetKpiHeadByPlanAsync(planId, ct);
+
+                var subject = BuildOwnerSubmitBatchSubject(code);
+                var body = BuildOwnerSubmitBatchBody(code, name, submittedBy, year, monthly, min, max, createdCount);
+
+                await _email.SendEmailAsync(ownerEmail, subject, WebUtility.HtmlEncode(body));
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, "Failed sending owner batch submit email for planId={PlanId}", planId);
+            }
+        }
+
+        private async Task SendEditorDecisionEmailAsync(decimal changeId, bool approved, string reviewer, string? reason, CancellationToken ct = default)
+        {
+            try
+            {
+                var (editorSam, editorEmail) = await ResolveEditorForChangeAsync(changeId, ct);
+                if (string.IsNullOrWhiteSpace(editorEmail))
+                {
+                    _log.LogWarning("Editor email resolve failed for changeId={ChangeId}. Skipping editor mail.", changeId);
+                    return;
+                }
+
+                var ctx = await (
+                    from c in _db.KpiFactChanges.AsNoTracking()
+                    join f in _db.KpiFacts.AsNoTracking() on c.KpiFactId equals f.KpiFactId
+                    join k in _db.DimKpis.AsNoTracking() on f.KpiId equals k.KpiId
+                    join p in _db.DimPeriods.AsNoTracking() on f.PeriodId equals p.PeriodId
+                    where c.KpiFactChangeId == changeId
+                    select new { k.KpiCode, k.KpiName, Period = p }
+                ).FirstOrDefaultAsync(ct);
+
+                var code = ctx?.KpiCode ?? $"KPI";
+                var name = ctx?.KpiName ?? "KPI";
+                var perText = PeriodLabel(ctx?.Period);
+
+                var subject = BuildEditorDecisionSubject(code, approved);
+                var body = BuildEditorDecisionBody(code, name, approved, reason, reviewer, perText);
+
+                await _email.SendEmailAsync(editorEmail, subject, WebUtility.HtmlEncode(body));
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, "Failed sending editor decision email for changeId={ChangeId}", changeId);
+            }
+        }
+
+        private async Task SendBatchResultEmailAsync(decimal batchId, bool approved, string reviewer, string? reason, CancellationToken ct = default)
+        {
+            try
+            {
+                var b = await _db.KpiFactChangeBatches.AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.BatchId == batchId, ct);
+                if (b == null) return;
+
+                // Editor = batch submitted by SAM (preferred), else plan editor
+                var editorSam = NormalizeLogin(b.SubmittedBy);
+                string? editorEmail = BuildEmailFromSam(editorSam);
+
+                if (string.IsNullOrWhiteSpace(editorEmail))
+                {
+                    var plan = await _db.KpiYearPlans.AsNoTracking()
+                        .Where(p => p.KpiYearPlanId == b.KpiYearPlanId)
+                        .Select(p => new { p.EditorLogin, p.EditorEmpId })
+                        .FirstOrDefaultAsync(ct);
+
+                    if (!string.IsNullOrWhiteSpace(plan?.EditorLogin))
+                        editorEmail = BuildEmailFromSam(plan!.EditorLogin);
+                    else if (!string.IsNullOrWhiteSpace(plan?.EditorEmpId))
+                    {
+                        var uid = await LookupUserIdByEmpIdAsync(plan!.EditorEmpId!, ct);
+                        editorEmail = BuildEmailFromSam(uid);
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(editorEmail))
+                {
+                    _log.LogWarning("Editor email resolve failed for batchId={BatchId}. Skipping editor batch mail.", batchId);
+                    return;
+                }
+
+                var k = await _db.DimKpis.AsNoTracking()
+                    .Where(x => x.KpiId == b.KpiId)
+                    .Select(x => new { x.KpiCode, x.KpiName })
+                    .FirstOrDefaultAsync(ct);
+
+                var code = k?.KpiCode ?? "KPI";
+                var name = k?.KpiName ?? "KPI";
+
+                var subject = BuildEditorDecisionBatchSubject(code, approved);
+                var body = BuildEditorDecisionBatchBody(code, name, approved, reviewer, reason, b.Year, b.Frequency?.ToLowerInvariant().Contains("month") == true || b.Frequency?.ToLowerInvariant() == "monthly", b.PeriodMin, b.PeriodMax);
+
+                await _email.SendEmailAsync(editorEmail, subject, WebUtility.HtmlEncode(body));
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, "Failed sending editor batch decision email for batchId={BatchId}", batchId);
+            }
         }
 
         // ------------------------
@@ -131,7 +484,7 @@ namespace KPIMonitor.Controllers
                     ProposedStatusCode,
                     submittedBy);
 
-                // Auto-approve if SuperAdmin
+                // Auto-approve if SuperAdmin (still no emails in this path to keep it simple)
                 if (_admin.IsSuperAdmin(User))
                 {
                     await _svc.ApproveAsync(change.KpiFactChangeId, submittedBy);
@@ -141,6 +494,12 @@ namespace KPIMonitor.Controllers
                 var msg = string.Equals(change.ApprovalStatus, "approved", StringComparison.OrdinalIgnoreCase)
                           ? "Saved & auto-approved."
                           : "Submitted for approval.";
+
+                // Email owner ONLY if it’s pending (no email for auto-approved)
+                if (!string.Equals(change.ApprovalStatus, "approved", StringComparison.OrdinalIgnoreCase))
+                {
+                    await SendOwnerSubmitEmailAsync(kpiFactId, submittedBy);
+                }
 
                 return Json(new
                 {
@@ -176,6 +535,10 @@ namespace KPIMonitor.Controllers
                 if (string.IsNullOrWhiteSpace(reviewer)) reviewer = "owner";
 
                 await _svc.ApproveAsync(changeId, reviewer);
+
+                // Notify editor (approved)
+                await SendEditorDecisionEmailAsync(changeId, approved: true, reviewer: reviewer, reason: null);
+
                 return Json(new { ok = true });
             }
             catch (Exception ex)
@@ -207,6 +570,10 @@ namespace KPIMonitor.Controllers
                 if (string.IsNullOrWhiteSpace(reviewer)) reviewer = "owner";
 
                 await _svc.RejectAsync(changeId, reviewer, reason);
+
+                // Notify editor (rejected)
+                await SendEditorDecisionEmailAsync(changeId, approved: false, reviewer: reviewer, reason: reason);
+
                 return Json(new { ok = true });
             }
             catch (Exception ex)
@@ -556,7 +923,7 @@ namespace KPIMonitor.Controllers
                             null,                    // Status
                             submittedBy);
 
-                        // Auto-approve immediately for SuperAdmin
+                        // Auto-approve immediately for SuperAdmin (no emails here)
                         if (isSuperAdmin)
                         {
                             await _svc.ApproveAsync(change.KpiFactChangeId, submittedBy);
@@ -608,6 +975,12 @@ namespace KPIMonitor.Controllers
                     {
                         _log.LogInformation("SUPERADMIN_BYPASS SubmitBatch user={User} kpiId={KpiId} planId={PlanId} year={Year} monthly={Monthly} created={Created} skipped={Skipped} batchId={BatchId} traceId={TraceId}",
                             Sam(), kpiId, plan.KpiYearPlanId, year, monthly, created, skipped, batchId, traceId);
+                    }
+
+                    // Owner email (one email per batch)
+                    if (!isSuperAdmin)
+                    {
+                        await SendOwnerSubmitBatchEmailAsync(plan.KpiYearPlanId, year, monthly, periodMin, periodMax, created, submittedBy);
                     }
                 }
 
@@ -668,6 +1041,10 @@ namespace KPIMonitor.Controllers
                 if (string.IsNullOrWhiteSpace(reviewer)) reviewer = "owner";
 
                 await _batches.ApproveBatchAsync(batchId, reviewer, ct);
+
+                // Notify editor of batch decision (approved)
+                await SendBatchResultEmailAsync(batchId, approved: true, reviewer: reviewer, reason: null, ct);
+
                 return Json(new { ok = true });
             }
             catch (Exception ex)
@@ -692,6 +1069,10 @@ namespace KPIMonitor.Controllers
                 if (string.IsNullOrWhiteSpace(reviewer)) reviewer = "owner";
 
                 await _batches.RejectBatchAsync(batchId, reviewer, reason.Trim(), ct);
+
+                // Notify editor of batch decision (rejected)
+                await SendBatchResultEmailAsync(batchId, approved: false, reviewer: reviewer, reason: reason, ct);
+
                 return Json(new { ok = true });
             }
             catch (Exception ex)

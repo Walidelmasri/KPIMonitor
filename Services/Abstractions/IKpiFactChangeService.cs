@@ -7,20 +7,15 @@ namespace KPIMonitor.Services.Abstractions
     {
         Task<bool> HasPendingAsync(decimal kpiFactId);
 
-        /// <summary>Creates a pending change; throws if one already pending.</summary>
         Task<KpiFactChange> SubmitAsync(
             decimal kpiFactId,
             decimal? actual, decimal? target, decimal? forecast,
             string? statusCode,
             string submittedBy,
-                        decimal? batchId = null  // <-- NEW optional param
+            decimal? batchId = null);
 
-            );
-
-        /// <summary>Applies the change into KpiFacts and marks it approved.</summary>
-        Task ApproveAsync(decimal changeId, string reviewer);
-
-        /// <summary>Marks the change rejected (reason required).</summary>
-        Task RejectAsync(decimal changeId, string reviewer, string reason);
+        // leave logic identical; just allow caller to suppress emails during batch loops
+        Task ApproveAsync(decimal changeId, string reviewer, bool suppressEmail = false);
+        Task RejectAsync(decimal changeId, string reviewer, string reason, bool suppressEmail = false);
     }
 }

@@ -1,4 +1,3 @@
-
 using System.Data;
 using Oracle.ManagedDataAccess.Client;
 using KPIMonitor.ViewModels;
@@ -70,16 +69,16 @@ namespace KPIMonitor.Services
             }
             return null;
         }
+
         public async Task<(string EmpId, string NameEng)?> TryGetByUserIdAsync(string userId, CancellationToken ct = default)
         {
-            // BADEA_ADDONS.EMPLOYEES.USERID holds domainless username like "walid.salem"
             const string sql = @"
-        SELECT EMP_ID, NAME_ENG
-        FROM BADEA_ADDONS.EMPLOYEES
-        WHERE UPPER(USERID) = UPPER(:p_userid)";
+                SELECT EMP_ID, NAME_ENG
+                FROM BADEA_ADDONS.EMPLOYEES
+                WHERE UPPER(USERID) = UPPER(:p_userid)";
 
             var conn = _db.Database.GetDbConnection();
-            if (conn.State != System.Data.ConnectionState.Open)
+            if (conn.State != ConnectionState.Open)
                 await conn.OpenAsync(ct);
 
             await using var cmd = conn.CreateCommand();
@@ -93,7 +92,6 @@ namespace KPIMonitor.Services
             await using var reader = await cmd.ExecuteReaderAsync(ct);
             if (await reader.ReadAsync(ct))
             {
-                // EMP_ID is VARCHAR2(5), NAME_ENG is VARCHAR2(255)
                 var empId = reader.GetString(0);
                 var name = reader.GetString(1);
                 return (empId, name);
@@ -102,5 +100,26 @@ namespace KPIMonitor.Services
             return null;
         }
 
+        public async Task<string?> TryGetLoginByEmpIdAsync(string empId, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(empId)) return null;
+
+            var conn = _db.Database.GetDbConnection();
+            if (conn.State != ConnectionState.Open)
+                await conn.OpenAsync(ct);
+
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT USERID
+                FROM   BADEA_ADDONS.EMPLOYEES
+                WHERE  EMP_ID = :p_emp";
+            var p = cmd.CreateParameter();
+            p.ParameterName = "p_emp";
+            p.Value = empId;
+            cmd.Parameters.Add(p);
+
+            var val = await cmd.ExecuteScalarAsync(ct);
+            return val == null || val is DBNull ? null : Convert.ToString(val);
+        }
     }
 }
