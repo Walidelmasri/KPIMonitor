@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using System.Net;                      // WebUtility.HtmlEncode
 using System.Collections.Generic;
 using System.Data;                     // IDbCommand, etc.
-using System.Data.Common;
 using KPIMonitor.Data;
 using KPIMonitor.Models;
 using KPIMonitor.Services;             // IKpiAccessService, IEmployeeDirectory
@@ -28,6 +27,14 @@ namespace KPIMonitor.Controllers
         private readonly ILogger<KpiFactChangesController> _log;
         private readonly IEmailSender _email;
         private readonly IEmployeeDirectory _dir;
+
+        // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        // Tweak this if you want an absolute URL. For now it’s the inbox route.
+        // Examples:
+        //   const string InboxUrl = "/KpiFactChanges/Inbox";
+        //   const string InboxUrl = "https://kpi.yourdomain.tld/KpiFactChanges/Inbox";
+        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        private const string InboxUrl = "/KpiFactChanges/Inbox";
 
         public KpiFactChangesController(
             IKpiFactChangeService svc,
@@ -135,30 +142,6 @@ namespace KPIMonitor.Controllers
             return (sam, email);
         }
 
-        private async Task<(string? editorSam, string? editorEmail)> ResolveEditorForChangeAsync(decimal changeId, CancellationToken ct = default)
-        {
-            var info = await (
-                from c in _db.KpiFactChanges.AsNoTracking()
-                join f in _db.KpiFacts.AsNoTracking() on c.KpiFactId equals f.KpiFactId
-                join yp in _db.KpiYearPlans.AsNoTracking() on f.KpiYearPlanId equals yp.KpiYearPlanId
-                where c.KpiFactChangeId == changeId
-                select new { yp.EditorLogin, yp.EditorEmpId, c.SubmittedBy }
-            ).FirstOrDefaultAsync(ct);
-
-            string? sam = null;
-
-            if (!string.IsNullOrWhiteSpace(info?.EditorLogin))
-                sam = NormalizeLogin(info!.EditorLogin);
-            else if (!string.IsNullOrWhiteSpace(info?.EditorEmpId))
-                sam = await LookupUserIdByEmpIdAsync(info!.EditorEmpId!, ct);
-            else if (!string.IsNullOrWhiteSpace(info?.SubmittedBy))
-                sam = NormalizeLogin(info!.SubmittedBy);
-
-            var email = BuildEmailFromSam(sam);
-            if (string.IsNullOrWhiteSpace(email)) return (null, null);
-            return (sam, email);
-        }
-
         private async Task<(string? ownerSam, string? ownerEmail)> ResolveOwnerForPlanAsync(decimal planId, CancellationToken ct = default)
         {
             var info = await _db.KpiYearPlans.AsNoTracking()
@@ -210,85 +193,26 @@ namespace KPIMonitor.Controllers
             return PeriodLabel(per);
         }
 
-        // Email body builders (plain text — professional, no bold/HTML)
-        private static string BuildOwnerSubmitSubject(string kpiCode) =>
-            $"KPI Monitor — Approval required for {kpiCode}";
+        // ------------------------
+        // Email (exactly one email per change/batch; owner only)
+        // ------------------------
+        // Where to tweak wording: change subject/body builders below.
+        private static string BuildOwnerApprovalSubject(string kpiCode, string kpiName) =>
+            $"KPI Monitor — You have a new approval request for {kpiCode} — {kpiName}";
 
-        private static string BuildOwnerSubmitBody(string kpiCode, string kpiName, string submittedBy, string periodText)
+        private static string BuildOwnerApprovalBody(string kpiCode, string kpiName, string periodText, string inboxUrl)
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"A change has been submitted for KPI {kpiCode} — {kpiName}.");
-            sb.AppendLine($"Submitted by: {submittedBy}");
+            sb.AppendLine("You have a new approval request.");
+            sb.AppendLine($"KPI: {kpiCode} — {kpiName}");
             if (!string.IsNullOrWhiteSpace(periodText))
                 sb.AppendLine($"Period: {periodText}");
             sb.AppendLine();
-            sb.AppendLine("Please review and either approve or reject the request in KPI Monitor.");
+            sb.AppendLine($"Open approvals: {inboxUrl}");
             return sb.ToString();
         }
 
-        private static string BuildOwnerSubmitBatchSubject(string kpiCode) =>
-            $"KPI Monitor — Approval required for multiple edits to {kpiCode}";
-
-        private static string BuildOwnerSubmitBatchBody(string kpiCode, string kpiName, string submittedBy, int year, bool monthly, int? min, int? max, int createdCount)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine($"Several edits have been submitted for KPI {kpiCode} — {kpiName}.");
-            sb.AppendLine($"Submitted by: {submittedBy}");
-            sb.AppendLine($"Year: {year}");
-            sb.AppendLine($"Frequency: {(monthly ? "Monthly" : "Quarterly")}");
-            if (min.HasValue || max.HasValue)
-                sb.AppendLine($"Range: {(min?.ToString() ?? "—")} to {(max?.ToString() ?? "—")}");
-            sb.AppendLine($"Items awaiting review: {createdCount}");
-            sb.AppendLine();
-            sb.AppendLine("Please review and either approve or reject the request in KPI Monitor.");
-            return sb.ToString();
-        }
-
-        private static string BuildEditorDecisionSubject(string kpiCode, bool approved) =>
-            approved
-                ? $"KPI Monitor — Your change for {kpiCode} was approved"
-                : $"KPI Monitor — Your change for {kpiCode} was rejected";
-
-        private static string BuildEditorDecisionBody(string kpiCode, string kpiName, bool approved, string? reason, string reviewer, string periodText)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine($"Your change for KPI {kpiCode} — {kpiName} has been {(approved ? "approved" : "rejected")}.");
-            if (!string.IsNullOrWhiteSpace(periodText))
-                sb.AppendLine($"Period: {periodText}");
-            sb.AppendLine($"Reviewed by: {reviewer}");
-            if (!approved && !string.IsNullOrWhiteSpace(reason))
-            {
-                sb.AppendLine();
-                sb.AppendLine("Reason:");
-                sb.AppendLine(reason);
-            }
-            return sb.ToString();
-        }
-
-        private static string BuildEditorDecisionBatchSubject(string kpiCode, bool approved) =>
-            approved
-                ? $"KPI Monitor — Your submitted batch for {kpiCode} was approved"
-                : $"KPI Monitor — Your submitted batch for {kpiCode} was rejected";
-
-        private static string BuildEditorDecisionBatchBody(string kpiCode, string kpiName, bool approved, string reviewer, string? reason, int year, bool monthly, int? min, int? max)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine($"Your submitted batch for KPI {kpiCode} — {kpiName} has been {(approved ? "approved" : "rejected")}.");
-            sb.AppendLine($"Year: {year}");
-            sb.AppendLine($"Frequency: {(monthly ? "Monthly" : "Quarterly")}");
-            if (min.HasValue || max.HasValue)
-                sb.AppendLine($"Range: {(min?.ToString() ?? "—")} to {(max?.ToString() ?? "—")}");
-            sb.AppendLine($"Reviewed by: {reviewer}");
-            if (!approved && !string.IsNullOrWhiteSpace(reason))
-            {
-                sb.AppendLine();
-                sb.AppendLine("Reason:");
-                sb.AppendLine(reason);
-            }
-            return sb.ToString();
-        }
-
-        private async Task SendOwnerSubmitEmailAsync(decimal kpiFactId, string submittedBy, CancellationToken ct = default)
+        private async Task SendOwnerApprovalEmailForSingleAsync(decimal kpiFactId, CancellationToken ct = default)
         {
             try
             {
@@ -302,18 +226,18 @@ namespace KPIMonitor.Controllers
                 var (code, name) = await GetKpiHeadAsync(kpiFactId, ct);
                 var per = await GetPeriodTextAsync(kpiFactId, ct);
 
-                var subject = BuildOwnerSubmitSubject(code);
-                var body = BuildOwnerSubmitBody(code, name, submittedBy, per);
+                var subject = BuildOwnerApprovalSubject(code, name);
+                var body = BuildOwnerApprovalBody(code, name, per, InboxUrl);
 
                 await _email.SendEmailAsync(ownerEmail, subject, WebUtility.HtmlEncode(body));
             }
             catch (Exception ex)
             {
-                _log.LogError(ex, "Failed sending owner submit email for factId={FactId}", kpiFactId);
+                _log.LogError(ex, "Failed sending owner approval email for factId={FactId}", kpiFactId);
             }
         }
 
-        private async Task SendOwnerSubmitBatchEmailAsync(decimal planId, int year, bool monthly, int? min, int? max, int createdCount, string submittedBy, CancellationToken ct = default)
+        private async Task SendOwnerApprovalEmailForBatchAsync(decimal planId, int year, bool monthly, int? min, int? max, int createdCount, CancellationToken ct = default)
         {
             try
             {
@@ -326,102 +250,18 @@ namespace KPIMonitor.Controllers
 
                 var (code, name) = await GetKpiHeadByPlanAsync(planId, ct);
 
-                var subject = BuildOwnerSubmitBatchSubject(code);
-                var body = BuildOwnerSubmitBatchBody(code, name, submittedBy, year, monthly, min, max, createdCount);
+                // Keep batch email generic; do not describe the changes.
+                var perText = $"Year {year}, {(monthly ? "Monthly" : "Quarterly")}" +
+                              ((min.HasValue || max.HasValue) ? $", Range {min?.ToString() ?? "—"} to {max?.ToString() ?? "—"}" : "");
+
+                var subject = BuildOwnerApprovalSubject(code, name);
+                var body = BuildOwnerApprovalBody(code, name, perText, InboxUrl);
 
                 await _email.SendEmailAsync(ownerEmail, subject, WebUtility.HtmlEncode(body));
             }
             catch (Exception ex)
             {
-                _log.LogError(ex, "Failed sending owner batch submit email for planId={PlanId}", planId);
-            }
-        }
-
-        private async Task SendEditorDecisionEmailAsync(decimal changeId, bool approved, string reviewer, string? reason, CancellationToken ct = default)
-        {
-            try
-            {
-                var (editorSam, editorEmail) = await ResolveEditorForChangeAsync(changeId, ct);
-                if (string.IsNullOrWhiteSpace(editorEmail))
-                {
-                    _log.LogWarning("Editor email resolve failed for changeId={ChangeId}. Skipping editor mail.", changeId);
-                    return;
-                }
-
-                var ctx = await (
-                    from c in _db.KpiFactChanges.AsNoTracking()
-                    join f in _db.KpiFacts.AsNoTracking() on c.KpiFactId equals f.KpiFactId
-                    join k in _db.DimKpis.AsNoTracking() on f.KpiId equals k.KpiId
-                    join p in _db.DimPeriods.AsNoTracking() on f.PeriodId equals p.PeriodId
-                    where c.KpiFactChangeId == changeId
-                    select new { k.KpiCode, k.KpiName, Period = p }
-                ).FirstOrDefaultAsync(ct);
-
-                var code = ctx?.KpiCode ?? $"KPI";
-                var name = ctx?.KpiName ?? "KPI";
-                var perText = PeriodLabel(ctx?.Period);
-
-                var subject = BuildEditorDecisionSubject(code, approved);
-                var body = BuildEditorDecisionBody(code, name, approved, reason, reviewer, perText);
-
-                await _email.SendEmailAsync(editorEmail, subject, WebUtility.HtmlEncode(body));
-            }
-            catch (Exception ex)
-            {
-                _log.LogError(ex, "Failed sending editor decision email for changeId={ChangeId}", changeId);
-            }
-        }
-
-        private async Task SendBatchResultEmailAsync(decimal batchId, bool approved, string reviewer, string? reason, CancellationToken ct = default)
-        {
-            try
-            {
-                var b = await _db.KpiFactChangeBatches.AsNoTracking()
-                    .FirstOrDefaultAsync(x => x.BatchId == batchId, ct);
-                if (b == null) return;
-
-                // Editor = batch submitted by SAM (preferred), else plan editor
-                var editorSam = NormalizeLogin(b.SubmittedBy);
-                string? editorEmail = BuildEmailFromSam(editorSam);
-
-                if (string.IsNullOrWhiteSpace(editorEmail))
-                {
-                    var plan = await _db.KpiYearPlans.AsNoTracking()
-                        .Where(p => p.KpiYearPlanId == b.KpiYearPlanId)
-                        .Select(p => new { p.EditorLogin, p.EditorEmpId })
-                        .FirstOrDefaultAsync(ct);
-
-                    if (!string.IsNullOrWhiteSpace(plan?.EditorLogin))
-                        editorEmail = BuildEmailFromSam(plan!.EditorLogin);
-                    else if (!string.IsNullOrWhiteSpace(plan?.EditorEmpId))
-                    {
-                        var uid = await LookupUserIdByEmpIdAsync(plan!.EditorEmpId!, ct);
-                        editorEmail = BuildEmailFromSam(uid);
-                    }
-                }
-
-                if (string.IsNullOrWhiteSpace(editorEmail))
-                {
-                    _log.LogWarning("Editor email resolve failed for batchId={BatchId}. Skipping editor batch mail.", batchId);
-                    return;
-                }
-
-                var k = await _db.DimKpis.AsNoTracking()
-                    .Where(x => x.KpiId == b.KpiId)
-                    .Select(x => new { x.KpiCode, x.KpiName })
-                    .FirstOrDefaultAsync(ct);
-
-                var code = k?.KpiCode ?? "KPI";
-                var name = k?.KpiName ?? "KPI";
-
-                var subject = BuildEditorDecisionBatchSubject(code, approved);
-                var body = BuildEditorDecisionBatchBody(code, name, approved, reviewer, reason, b.Year, b.Frequency?.ToLowerInvariant().Contains("month") == true || b.Frequency?.ToLowerInvariant() == "monthly", b.PeriodMin, b.PeriodMax);
-
-                await _email.SendEmailAsync(editorEmail, subject, WebUtility.HtmlEncode(body));
-            }
-            catch (Exception ex)
-            {
-                _log.LogError(ex, "Failed sending editor batch decision email for batchId={BatchId}", batchId);
+                _log.LogError(ex, "Failed sending owner batch approval email for planId={PlanId}", planId);
             }
         }
 
@@ -461,6 +301,49 @@ namespace KPIMonitor.Controllers
             return Json(new { count });
         }
 
+        // New: combined indicators for navbar “red dot”
+        // pendingForOwner: pending approvals you need to review (owner)
+        // decisionsForEditor: items you submitted that were approved/rejected in the last 7 days
+        [HttpGet]
+        public async Task<IActionResult> Indicators(CancellationToken ct = default)
+        {
+            var myEmp = await MyEmpIdAsync(ct);
+            var mySam = Sam();
+            var mySamUp = (mySam ?? "").ToUpperInvariant();
+
+            // Owner pending
+            int pendingForOwner = 0;
+            if (_admin.IsAdmin(User) || _admin.IsSuperAdmin(User))
+            {
+                pendingForOwner = await _db.KpiFactChanges.AsNoTracking()
+                    .CountAsync(c => c.ApprovalStatus == "pending", ct);
+            }
+            else if (!string.IsNullOrWhiteSpace(myEmp))
+            {
+                pendingForOwner = await (
+                    from c in _db.KpiFactChanges.AsNoTracking()
+                    join f in _db.KpiFacts.AsNoTracking() on c.KpiFactId equals f.KpiFactId
+                    join yp in _db.KpiYearPlans.AsNoTracking() on f.KpiYearPlanId equals yp.KpiYearPlanId
+                    where c.ApprovalStatus == "pending"
+                          && yp.OwnerEmpId == myEmp
+                    select c.KpiFactChangeId
+                ).CountAsync(ct);
+            }
+
+            // Editor decisions (recent)
+            var since = DateTime.UtcNow.AddDays(-7); // tweak window if you want
+            int decisionsForEditor = await _db.KpiFactChanges.AsNoTracking()
+                .Where(c =>
+                    c.SubmittedBy != null &&
+                    c.SubmittedBy.ToUpper() == mySamUp &&
+                    (c.ApprovalStatus == "approved" || c.ApprovalStatus == "rejected") &&
+                    c.ReviewedAt != null &&
+                    c.ReviewedAt >= since)
+                .CountAsync(ct);
+
+            return Json(new { pendingForOwner, decisionsForEditor });
+        }
+
         // ------------------------
         // Submit / Approve / Reject (single change)
         // ------------------------
@@ -484,7 +367,7 @@ namespace KPIMonitor.Controllers
                     ProposedStatusCode,
                     submittedBy);
 
-                // Auto-approve if SuperAdmin (still no emails in this path to keep it simple)
+                // Auto-approve if SuperAdmin
                 if (_admin.IsSuperAdmin(User))
                 {
                     await _svc.ApproveAsync(change.KpiFactChangeId, submittedBy);
@@ -495,10 +378,10 @@ namespace KPIMonitor.Controllers
                           ? "Saved & auto-approved."
                           : "Submitted for approval.";
 
-                // Email owner ONLY if it’s pending (no email for auto-approved)
+                // Exactly one email per change/batch: Owner only, and only when pending
                 if (!string.Equals(change.ApprovalStatus, "approved", StringComparison.OrdinalIgnoreCase))
                 {
-                    await SendOwnerSubmitEmailAsync(kpiFactId, submittedBy);
+                    await SendOwnerApprovalEmailForSingleAsync(kpiFactId);
                 }
 
                 return Json(new
@@ -536,9 +419,7 @@ namespace KPIMonitor.Controllers
 
                 await _svc.ApproveAsync(changeId, reviewer);
 
-                // Notify editor (approved)
-                await SendEditorDecisionEmailAsync(changeId, approved: true, reviewer: reviewer, reason: null);
-
+                // No email here (owner-only email already sent on submit)
                 return Json(new { ok = true });
             }
             catch (Exception ex)
@@ -571,9 +452,7 @@ namespace KPIMonitor.Controllers
 
                 await _svc.RejectAsync(changeId, reviewer, reason);
 
-                // Notify editor (rejected)
-                await SendEditorDecisionEmailAsync(changeId, approved: false, reviewer: reviewer, reason: reason);
-
+                // No email here (owner-only email already sent on submit)
                 return Json(new { ok = true });
             }
             catch (Exception ex)
@@ -923,7 +802,7 @@ namespace KPIMonitor.Controllers
                             null,                    // Status
                             submittedBy);
 
-                        // Auto-approve immediately for SuperAdmin (no emails here)
+                        // Auto-approve immediately for SuperAdmin
                         if (isSuperAdmin)
                         {
                             await _svc.ApproveAsync(change.KpiFactChangeId, submittedBy);
@@ -977,10 +856,10 @@ namespace KPIMonitor.Controllers
                             Sam(), kpiId, plan.KpiYearPlanId, year, monthly, created, skipped, batchId, traceId);
                     }
 
-                    // Owner email (one email per batch)
+                    // Exactly one email per batch: Owner only, generic wording + link
                     if (!isSuperAdmin)
                     {
-                        await SendOwnerSubmitBatchEmailAsync(plan.KpiYearPlanId, year, monthly, periodMin, periodMax, created, submittedBy);
+                        await SendOwnerApprovalEmailForBatchAsync(plan.KpiYearPlanId, year, monthly, periodMin, periodMax, created);
                     }
                 }
 
@@ -1042,9 +921,7 @@ namespace KPIMonitor.Controllers
 
                 await _batches.ApproveBatchAsync(batchId, reviewer, ct);
 
-                // Notify editor of batch decision (approved)
-                await SendBatchResultEmailAsync(batchId, approved: true, reviewer: reviewer, reason: null, ct);
-
+                // No email here (owner-only email already sent on submit)
                 return Json(new { ok = true });
             }
             catch (Exception ex)
@@ -1070,9 +947,7 @@ namespace KPIMonitor.Controllers
 
                 await _batches.RejectBatchAsync(batchId, reviewer, reason.Trim(), ct);
 
-                // Notify editor of batch decision (rejected)
-                await SendBatchResultEmailAsync(batchId, approved: false, reviewer: reviewer, reason: reason, ct);
-
+                // No email here (owner-only email already sent on submit)
                 return Json(new { ok = true });
             }
             catch (Exception ex)
