@@ -38,23 +38,34 @@ namespace KPIMonitor.Services
             int skippedCount,
             CancellationToken ct = default)
         {
+            // NEVER nulls for NOT NULL schemas; conservative Frequency text
             var b = new KpiFactChangeBatch
             {
                 KpiId = kpiId,
                 KpiYearPlanId = kpiYearPlanId,
                 Year = year,
-                Frequency = monthly ? "M" : "Q",
-                PeriodMin = periodMin,
-                PeriodMax = periodMax,
+                Frequency = monthly ? "monthly" : "quarterly",
+                PeriodMin = periodMin ?? 0,
+                PeriodMax = periodMax ?? 0,
                 RowCount = rowCount,
                 SkippedCount = skippedCount,
-                SubmittedBy = submittedBy,
+                SubmittedBy = (submittedBy ?? "").Trim(),
                 SubmittedAt = DateTime.UtcNow,
                 ApprovalStatus = "pending"
             };
-            _db.KpiFactChangeBatches.Add(b);
-            await _db.SaveChangesAsync(ct);
-            return b.BatchId;
+
+            try
+            {
+                _db.KpiFactChangeBatches.Add(b);
+                await _db.SaveChangesAsync(ct);
+                return b.BatchId;
+            }
+            catch (Exception ex)
+            {
+                var root = ex.GetBaseException()?.Message ?? ex.Message;
+                _log.LogError(ex, "CreateBatchAsync failed: {Root}", root);
+                throw;
+            }
         }
 
         public async Task ApproveBatchAsync(decimal batchId, string reviewer, CancellationToken ct = default)
@@ -69,9 +80,9 @@ namespace KPIMonitor.Services
                 .Select(c => c.KpiFactChangeId)
                 .ToListAsync(ct);
 
+            // Approve each child with email suppression (controller sends ONE summary)
             foreach (var id in children)
             {
-                // suppress per-row editor emails → controller sends ONE summary email
                 await _changeSvc.ApproveAsync(id, reviewer, suppressEmail: true);
             }
 
@@ -95,14 +106,13 @@ namespace KPIMonitor.Services
 
             foreach (var id in children)
             {
-                // suppress per-row editor emails → controller sends ONE summary email
                 await _changeSvc.RejectAsync(id, reviewer, reason, suppressEmail: true);
             }
 
             b.ApprovalStatus = "rejected";
             b.ReviewedBy = reviewer;
             b.ReviewedAt = DateTime.UtcNow;
-            b.RejectReason = reason.Trim();
+            b.RejectReason = reason?.Trim();
             await _db.SaveChangesAsync(ct);
         }
     }

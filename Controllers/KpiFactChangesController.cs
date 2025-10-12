@@ -29,7 +29,7 @@ namespace KPIMonitor.Controllers
         private readonly IEmployeeDirectory _dir;
 
         private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFactChanges/Inbox";
-        private const string LogoUrl  = "http://kpimonitor.badea.local/kpimonitor/images/logo-en.png"; // use http for intranet
+        private const string LogoUrl  = "http://kpimonitor.badea.local/kpimonitor/images/logo-en.png"; // http for intranet
 
         public KpiFactChangesController(
             IKpiFactChangeService svc,
@@ -214,7 +214,9 @@ namespace KPIMonitor.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { ok = false, error = ex.Message });
+                var root = ex.GetBaseException()?.Message ?? ex.Message;
+                _log.LogError(ex, "Submit failed traceId={TraceId}", HttpContext.TraceIdentifier);
+                return BadRequest(new { ok = false, error = root, traceId = HttpContext.TraceIdentifier });
             }
         }
 
@@ -237,13 +239,14 @@ namespace KPIMonitor.Controllers
                 var reviewer = Sam();
                 if (string.IsNullOrWhiteSpace(reviewer)) reviewer = "owner";
 
-                // ONE email handled in service for single approval
                 await _svc.ApproveAsync(changeId, reviewer);
                 return Json(new { ok = true });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { ok = false, error = ex.Message });
+                var root = ex.GetBaseException()?.Message ?? ex.Message;
+                _log.LogError(ex, "Approve failed traceId={TraceId}", HttpContext.TraceIdentifier);
+                return BadRequest(new { ok = false, error = root, traceId = HttpContext.TraceIdentifier });
             }
         }
 
@@ -269,13 +272,14 @@ namespace KPIMonitor.Controllers
                 var reviewer = Sam();
                 if (string.IsNullOrWhiteSpace(reviewer)) reviewer = "owner";
 
-                // ONE email handled in service for single reject
                 await _svc.RejectAsync(changeId, reviewer, reason);
                 return Json(new { ok = true });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { ok = false, error = ex.Message });
+                var root = ex.GetBaseException()?.Message ?? ex.Message;
+                _log.LogError(ex, "Reject failed traceId={TraceId}", HttpContext.TraceIdentifier);
+                return BadRequest(new { ok = false, error = root, traceId = HttpContext.TraceIdentifier });
             }
         }
 
@@ -507,7 +511,7 @@ namespace KPIMonitor.Controllers
         }
 
         // ------------------------
-        // Submit a batch (creates batch + links children) — SINGLE email only
+        // Submit a batch (creates batch + links children) — ONE email only
         // ------------------------
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -580,7 +584,7 @@ namespace KPIMonitor.Controllers
                 var submittedBy = Sam();
                 if (string.IsNullOrWhiteSpace(submittedBy)) submittedBy = "editor";
 
-                // ---------- PLAN: figure candidates first to avoid per-row emails ----------
+                // ---------- gather candidates ----------
                 var candidates = new List<(KpiFact fact, int key, decimal? newA, decimal? newF, decimal? newT, bool changeA, bool changeF, bool changeT)>();
                 int skipped = 0, minKey = int.MaxValue, maxKey = int.MinValue;
 
@@ -623,24 +627,22 @@ namespace KPIMonitor.Controllers
 
                 if (created > 0)
                 {
-                    int? periodMin = (minKey == int.MaxValue) ? (int?)null : minKey;
-                    int? periodMax = (maxKey == int.MinValue) ? (int?)null : maxKey;
+                    // SAFE (never null) values for DB constraints
+                    int safeMin = (minKey == int.MaxValue) ? 0 : minKey;
+                    int safeMax = (maxKey == int.MinValue) ? 0 : maxKey;
 
-                    // Create batch FIRST so we can pass batchId to SubmitAsync and suppress per-row emails
                     var newBatchId = await _batches.CreateBatchAsync(
                         kpiId,
                         plan.KpiYearPlanId,
                         year,
                         monthly,
-                        periodMin,
-                        periodMax,
+                        safeMin,
+                        safeMax,
                         submittedBy,
                         created,
                         skipped);
 
                     batchId = newBatchId;
-
-                    var createdIds = new List<decimal>();
 
                     foreach (var c in candidates)
                     {
@@ -653,14 +655,11 @@ namespace KPIMonitor.Controllers
                                 c.changeF ? c.newF : null,   // Forecast
                                 null,                        // Status
                                 submittedBy,
-                                batchId: newBatchId          // <- suppress per-row Owner emails
+                                batchId: newBatchId          // suppress per-row pending emails
                             );
 
-                            // If superadmin, auto-approve each child but suppress child emails.
                             if (isSuperAdmin)
                                 await _svc.ApproveAsync(change.KpiFactChangeId, submittedBy, suppressEmail: true);
-
-                            createdIds.Add(change.KpiFactChangeId);
                         }
                         catch (Exception ex)
                         {
@@ -669,7 +668,7 @@ namespace KPIMonitor.Controllers
                         }
                     }
 
-                    // ONE pending email to OWNER for the batch (skip if superadmin auto-approved)
+                    // ONE PENDING email to OWNER (skip if superadmin auto-approved everything)
                     if (!isSuperAdmin)
                     {
                         try
@@ -735,7 +734,9 @@ namespace KPIMonitor.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { ok = false, error = ex.Message, traceId = HttpContext.TraceIdentifier });
+                var root = ex.GetBaseException()?.Message ?? ex.Message;
+                _log.LogError(ex, "SubmitBatch failed traceId={TraceId}", HttpContext.TraceIdentifier);
+                return BadRequest(new { ok = false, error = root, traceId = HttpContext.TraceIdentifier });
             }
         }
 
@@ -761,7 +762,7 @@ namespace KPIMonitor.Controllers
         }
 
         // ------------------------
-        // Approve/Reject entire batch — SINGLE email only (controller), children suppressed in service
+        // Approve/Reject entire batch — SINGLE email only (children suppressed)
         // ------------------------
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -775,7 +776,7 @@ namespace KPIMonitor.Controllers
                 var reviewer = Sam();
                 if (string.IsNullOrWhiteSpace(reviewer)) reviewer = "owner";
 
-                await _batches.ApproveBatchAsync(batchId, reviewer, ct); // child emails suppressed inside batch service
+                await _batches.ApproveBatchAsync(batchId, reviewer, ct);
 
                 // ONE HTML email to Editor (summary)
                 try
@@ -811,7 +812,9 @@ namespace KPIMonitor.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { ok = false, error = ex.Message });
+                var root = ex.GetBaseException()?.Message ?? ex.Message;
+                _log.LogError(ex, "ApproveBatch failed traceId={TraceId}", HttpContext.TraceIdentifier);
+                return BadRequest(new { ok = false, error = root, traceId = HttpContext.TraceIdentifier });
             }
         }
 
@@ -830,7 +833,7 @@ namespace KPIMonitor.Controllers
                 var reviewer = Sam();
                 if (string.IsNullOrWhiteSpace(reviewer)) reviewer = "owner";
 
-                await _batches.RejectBatchAsync(batchId, reviewer, reason.Trim(), ct); // child emails suppressed
+                await _batches.RejectBatchAsync(batchId, reviewer, reason.Trim(), ct);
 
                 // ONE HTML email to Editor (summary)
                 try
@@ -866,7 +869,9 @@ namespace KPIMonitor.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { ok = false, error = ex.Message });
+                var root = ex.GetBaseException()?.Message ?? ex.Message;
+                _log.LogError(ex, "RejectBatch failed traceId={TraceId}", HttpContext.TraceIdentifier);
+                return BadRequest(new { ok = false, error = root, traceId = HttpContext.TraceIdentifier });
             }
         }
 
@@ -877,6 +882,12 @@ namespace KPIMonitor.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ListBatchesHtml(string? status = "pending", string? modeOverride = null, CancellationToken ct = default)
         {
+            // unchanged from previous version you pasted (omitted for brevity)
+            // NOTE: keep your current implementation here; nothing in this method affects the 400 you’re seeing.
+            // (If you need me to paste this again fully, say the word.)
+            // ---------------------
+            // For space, I’m leaving this part identical to the last version I sent you.
+            // ---------------------
             var s = (status ?? "pending").Trim().ToLowerInvariant();
             if (s != "pending" && s != "approved" && s != "rejected") s = "pending";
 
@@ -1127,7 +1138,7 @@ namespace KPIMonitor.Controllers
         }
 
         // ------------------------
-        // Single-row Details JSON
+        // Single-row/Batch JSON (unchanged)
         // ------------------------
         [HttpGet]
         public async Task<IActionResult> ChangeOverlayInfo(decimal changeId, CancellationToken ct = default)
@@ -1192,9 +1203,6 @@ namespace KPIMonitor.Controllers
             });
         }
 
-        // ------------------------
-        // Batch Details JSON
-        // ------------------------
         [HttpGet]
         public async Task<IActionResult> ChangeOverlayInfoBatch(decimal batchId, CancellationToken ct = default)
         {
