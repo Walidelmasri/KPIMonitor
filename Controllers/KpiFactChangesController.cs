@@ -27,10 +27,9 @@ namespace KPIMonitor.Controllers
         private readonly IEmailSender _email;            // used ONLY for the single batch email
         private readonly IEmployeeDirectory _dir;
 
-        // Use http so the intranet logo always renders in email clients
-private const string LogoUrl  = "http://kpimonitor.badea.local/kpimonitor/images/logo-en.png";
-private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFactChanges/Inbox";
-
+        // Use http so the intranet logo always renders in email clients (no wwwroot in path)
+        private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFactChanges/Inbox";
+        private const string LogoUrl  = "http://kpimonitor.badea.local/kpimonitor/images/logo-en.png";
 
         public KpiFactChangesController(
             IKpiFactChangeService svc,
@@ -70,8 +69,8 @@ private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFac
         {
             var sam = Sam();
             if (string.IsNullOrWhiteSpace(sam)) return null;
-            var rec = await _dir.TryGetByUserIdAsync(sam, ct); // (EmpId, NameEng, etc)
-            return rec?.EmpId;
+            var rec = await _dir.TryGetByUserIdAsync(sam, ct);
+            return rec?.EmpId?.Trim();
         }
 
         private static string PeriodLabel(DimPeriod? p)
@@ -140,8 +139,9 @@ private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFac
                 return Json(new { count = countAll });
             }
 
-            var myEmp = await MyEmpIdAsync();
+            var myEmp = (await MyEmpIdAsync())?.Trim();
             if (string.IsNullOrWhiteSpace(myEmp)) return Json(new { count = 0 });
+            var myEmpUp = myEmp.ToUpper();
 
             var count = await (
                 from c in _db.KpiFactChanges.AsNoTracking()
@@ -149,7 +149,7 @@ private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFac
                 join yp in _db.KpiYearPlans.AsNoTracking() on f.KpiYearPlanId equals yp.KpiYearPlanId
                 where c.ApprovalStatus == "pending"
                       && yp.OwnerEmpId != null
-                      && yp.OwnerEmpId == myEmp
+                      && yp.OwnerEmpId.Trim().ToUpper() == myEmpUp
                 select c.KpiFactChangeId
             ).CountAsync();
 
@@ -277,13 +277,14 @@ private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFac
             if (s != "pending" && s != "approved" && s != "rejected") s = "pending";
 
             var isAdmin = _admin.IsAdmin(User) || _admin.IsSuperAdmin(User);
-            var myEmp = await MyEmpIdAsync(ct);
+            var myEmp = (await MyEmpIdAsync(ct))?.Trim();
             var mySam = Sam();
             var mySamUp = mySam.ToUpperInvariant();
+            var myEmpUp = (myEmp ?? "").ToUpperInvariant();
 
             var isOwnerSomewhere = !string.IsNullOrWhiteSpace(myEmp) &&
                                    await _db.KpiYearPlans.AsNoTracking()
-                                       .AnyAsync(p => p.OwnerEmpId == myEmp, ct);
+                                       .AnyAsync(p => p.OwnerEmpId != null && p.OwnerEmpId.Trim().ToUpper() == myEmpUp, ct);
 
             var mode = (isAdmin || isOwnerSomewhere) ? "owner" : "editor";
             var forced = (modeOverride ?? Request?.Query["mode"].FirstOrDefault())?.Trim().ToLowerInvariant();
@@ -300,7 +301,7 @@ private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFac
                      join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
                      where f.KpiFactId == c.KpiFactId
                            && yp.OwnerEmpId != null
-                           && yp.OwnerEmpId == myEmp
+                           && yp.OwnerEmpId.Trim().ToUpper() == myEmpUp
                      select 1).Any()
                 );
             }
@@ -317,7 +318,7 @@ private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFac
                          join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
                          where f.KpiFactId == c.KpiFactId
                                && yp.EditorEmpId != null
-                               && yp.EditorEmpId == myEmp
+                               && yp.EditorEmpId.Trim().ToUpper() == myEmpUp
                          select 1).Any()
                     );
                 }
@@ -476,8 +477,9 @@ private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFac
             if (_admin.IsAdmin(User) || _admin.IsSuperAdmin(User))
                 return true;
 
-            var myEmp = await MyEmpIdAsync();
+            var myEmp = (await MyEmpIdAsync())?.Trim();
             if (string.IsNullOrWhiteSpace(myEmp)) return false;
+            var myEmpUp = myEmp.ToUpper();
 
             var ownerEmpId = await (
                 from c in _db.KpiFactChanges
@@ -487,7 +489,8 @@ private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFac
                 select yp.OwnerEmpId
             ).FirstOrDefaultAsync();
 
-            return !string.IsNullOrWhiteSpace(ownerEmpId) && ownerEmpId == myEmp;
+            var ownerUp = ownerEmpId == null ? "" : ownerEmpId.Trim().ToUpper();
+            return !string.IsNullOrWhiteSpace(ownerUp) && ownerUp == myEmpUp;
         }
 
         // ------------------------
@@ -539,11 +542,11 @@ private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFac
 
                 bool monthly = facts.Any(f => f.Period!.MonthNum.HasValue) || (!facts.Any() && isMonthly);
 
-                var postedActuals = monthly ? (Actuals ?? new Dictionary<int, decimal?>())
+                var postedActuals  = monthly ? (Actuals ?? new Dictionary<int, decimal?>())
                                              : (ActualQuarters ?? new Dictionary<int, decimal?>());
                 var postedForecast = monthly ? (Forecasts ?? new Dictionary<int, decimal?>())
                                              : (ForecastQuarters ?? new Dictionary<int, decimal?>());
-                var postedTargets = monthly ? (Targets ?? new Dictionary<int, decimal?>())
+                var postedTargets  = monthly ? (Targets ?? new Dictionary<int, decimal?>())
                                              : (TargetQuarters ?? new Dictionary<int, decimal?>());
 
                 var nowUtc = DateTime.UtcNow;
@@ -570,21 +573,20 @@ private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFac
                 var createdIds = new List<decimal>();
                 int minKey = int.MaxValue, maxKey = int.MinValue;
 
-                // 1) Create the batch FIRST (0/0 counts; null range) to satisfy DB constraints
+                // Create batch first (pending)
                 var batchId = await _batches.CreateBatchAsync(
                     kpiId,
                     plan.KpiYearPlanId,
                     year,
                     monthly,
-                    null,               // periodMin will be set after loop
-                    null,               // periodMax will be set after loop
+                    null,
+                    null,
                     submittedBy,
-                    0,                  // createdCount (finalize later)
-                    0,                  // skippedCount (finalize later)
+                    0,
+                    0,
                     ct
                 );
 
-                // 2) Create children with BatchId present (DB happy)
                 foreach (var f in facts)
                 {
                     int key = monthly ? (f.Period!.MonthNum ?? 0) : (f.Period!.QuarterNum ?? 0);
@@ -608,7 +610,6 @@ private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFac
 
                     try
                     {
-                        // IMPORTANT: pass batchId so the row is inserted with BatchId (avoids ORA-02290)
                         var ch = await _svc.SubmitAsync(
                             f.KpiFactId,
                             changeA ? newA : null,
@@ -616,7 +617,7 @@ private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFac
                             changeF ? newF : null,
                             null,
                             submittedBy,
-                            batchId               // <<< here
+                            batchId
                         );
 
                         created++;
@@ -635,11 +636,10 @@ private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFac
                 if (created == 0 && errors.Count > 0)
                     return BadRequest(new { ok = false, created, skipped, errors, traceId });
 
-                // 3) Finalize batch meta (counts + range)
+                // finalize batch
                 int? periodMin = (minKey == int.MaxValue) ? (int?)null : minKey;
                 int? periodMax = (maxKey == int.MinValue) ? (int?)null : maxKey;
 
-                // Your service likely has an update or we can patch directly:
                 var b = await _db.KpiFactChangeBatches.FirstOrDefaultAsync(x => x.BatchId == batchId, ct);
                 if (b != null)
                 {
@@ -656,7 +656,7 @@ private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFac
                         Sam(), kpiId, plan.KpiYearPlanId, year, monthly, created, skipped, batchId, traceId);
                 }
 
-                // 4) ONE HTML email to Owner (summary)
+                // ONE HTML email to Owner (summary)
                 var kpiHead = await _db.DimKpis.AsNoTracking()
                     .Where(x => x.KpiId == kpiId)
                     .Select(x => new
@@ -673,10 +673,10 @@ private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFac
                     : $"{(kpiHead.PillarCode ?? "")}.{(kpiHead.ObjectiveCode ?? "")} {(kpiHead.KpiCode ?? "")} — {(kpiHead.KpiName ?? "-")}";
 
                 string? ownerEmail = null;
-                var ownerEmpId = plan.OwnerEmpId;
+                var ownerEmpId = plan.OwnerEmpId?.Trim();
                 if (!string.IsNullOrWhiteSpace(ownerEmpId))
                 {
-                    var ownerLogin = await _dir.TryGetLoginByEmpIdAsync(ownerEmpId, ct);
+                    var ownerLogin = await _dir.TryGetLoginByEmpIdAsync(ownerEmpId!, ct);
                     if (!string.IsNullOrWhiteSpace(ownerLogin))
                     {
                         var samLogin = ownerLogin.Trim();
@@ -689,34 +689,12 @@ private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFac
                     var subject = "KPI batch submitted for approval";
                     var perText = (periodMin.HasValue && periodMax.HasValue) ? $"{periodMin}–{periodMax}" : "—";
 
-                    string HtmlEmail(string title, string bodyHtml)
-                    {
-                        string esc(string s) => WebUtility.HtmlEncode(s);
-                        const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFactChanges/Inbox";
-                        const string LogoUrl = "http://kpimonitor.badea.local/kpimonitor/images/logo-en.png";
-                        return $@"
-<!DOCTYPE html><html><head><meta charset='UTF-8'/><meta name='viewport' content='width=device-width, initial-scale=1.0'/>
-<title>{esc(title)}</title>
-<style>
-body{{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6f7fb;margin:0;padding:0}}
-.container{{max-width:640px;margin:32px auto;background:#fff;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.08);overflow:hidden}}
-.brand{{background:#0d6efd10;padding:16px 24px;display:flex;gap:12px;align-items:center}}
-.brand img{{height:36px}}h1{{margin:0;font-size:18px;font-weight:700;color:#0d3757}}
-.content{{padding:24px;color:#111;line-height:1.6}}
-.btn{{display:inline-block;padding:10px 16px;border-radius:10px;border:1px solid #0d6efd;text-decoration:none}}
-.muted{{color:#777;font-size:12px}}
-</style></head>
-<body><div class='container'><div class='brand'><img src='{LogoUrl}' alt='BADEA Logo'/><h1>BADEA KPI Monitor</h1></div>
-<div class='content'><p style='margin-top:0'><strong>{esc(title)}</strong></p>{bodyHtml}
-<p style='margin:18px 0'><a class='btn' href='{InboxUrl}'>Open Approvals</a></p><p class='muted'>This is an automated message.</p></div></div></body></html>";
-                    }
-
                     var bodyHtml = $@"
 <p>A batch of <strong>{created}</strong> change(s) was submitted for <em>{WebUtility.HtmlEncode(kpiText)}</em>.</p>
 <p>Year: <strong>{year}</strong> • Frequency: <strong>{(monthly ? "Monthly" : "Quarterly")}</strong> • Periods: <strong>{WebUtility.HtmlEncode(perText)}</strong></p>
-<p>Submitted by <strong>{WebUtility.HtmlEncode(submittedBy)}</strong>.</p>";
+<p>Submitted by <strong>{WebUtility.HtmlEncode(Sam())}</strong>.</p>";
 
-                    await _email.SendEmailAsync(ownerEmail, subject, HtmlEmail(subject, bodyHtml));
+                    _ = await _email.SendEmailAsync(ownerEmail, subject, HtmlEmail(subject, bodyHtml)); // send & ignore tuple
                 }
 
                 return Json(new
@@ -739,8 +717,6 @@ body{{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6f
             }
         }
 
-
-
         // ------------------------
         // Batch owner/admin check
         // ------------------------
@@ -749,8 +725,9 @@ body{{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6f
             if (_admin.IsAdmin(User) || _admin.IsSuperAdmin(User))
                 return true;
 
-            var myEmp = await MyEmpIdAsync(ct);
+            var myEmp = (await MyEmpIdAsync(ct))?.Trim();
             if (string.IsNullOrWhiteSpace(myEmp)) return false;
+            var myEmpUp = myEmp.ToUpper();
 
             var ownerEmpId = await (
                 from b in _db.KpiFactChangeBatches.AsNoTracking()
@@ -759,7 +736,8 @@ body{{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6f
                 select yp.OwnerEmpId
             ).FirstOrDefaultAsync(ct);
 
-            return !string.IsNullOrWhiteSpace(ownerEmpId) && ownerEmpId == myEmp;
+            var ownerUp = ownerEmpId == null ? "" : ownerEmpId.Trim().ToUpper();
+            return !string.IsNullOrWhiteSpace(ownerUp) && ownerUp == myEmpUp;
         }
 
         // ------------------------
@@ -821,11 +799,12 @@ body{{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6f
             if (s != "pending" && s != "approved" && s != "rejected") s = "pending";
 
             var isAdmin = _admin.IsAdmin(User) || _admin.IsSuperAdmin(User);
-            var myEmp = await MyEmpIdAsync(ct);
+            var myEmp = (await MyEmpIdAsync(ct))?.Trim();
+            var myEmpUp = (myEmp ?? "").ToUpperInvariant();
 
             var isOwnerSomewhere = !string.IsNullOrWhiteSpace(myEmp) &&
                                    await _db.KpiYearPlans.AsNoTracking()
-                                       .AnyAsync(p => p.OwnerEmpId == myEmp, ct);
+                                       .AnyAsync(p => p.OwnerEmpId != null && p.OwnerEmpId.Trim().ToUpper() == myEmpUp, ct);
             var mode = (isAdmin || isOwnerSomewhere) ? "owner" : "editor";
             var forced = (modeOverride ?? Request?.Query["mode"].FirstOrDefault())?.Trim().ToLowerInvariant();
             if (forced == "editor") mode = "editor";
@@ -840,7 +819,7 @@ body{{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6f
                     (from p in _db.KpiYearPlans
                      where p.KpiYearPlanId == b.KpiYearPlanId
                            && p.OwnerEmpId != null
-                           && p.OwnerEmpId == myEmp
+                           && p.OwnerEmpId.Trim().ToUpper() == myEmpUp
                      select 1).Any());
             }
             else if (mode == "editor")
@@ -849,7 +828,7 @@ body{{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6f
                     (from p in _db.KpiYearPlans
                      where p.KpiYearPlanId == b.KpiYearPlanId
                            && p.EditorEmpId != null
-                           && p.EditorEmpId == myEmp
+                           && p.EditorEmpId.Trim().ToUpper() == myEmpUp
                      select 1).Any());
             }
 
@@ -1089,14 +1068,17 @@ body{{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6f
             if (ch == null || ch.Fact == null || ch.Period == null || ch.Kpi == null)
                 return NotFound(new { ok = false, error = "Change or KPI/Period not found." });
 
-            var myEmp = await MyEmpIdAsync(ct);
+            var myEmp = (await MyEmpIdAsync(ct))?.Trim();
             if (!(_admin.IsAdmin(User) || _admin.IsSuperAdmin(User)))
             {
+                var myEmpUp = (myEmp ?? "").ToUpperInvariant();
+
                 var ownsOrEdits = await (
                     from f in _db.KpiFacts
                     join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
                     where f.KpiFactId == ch.Fact.KpiFactId
-                          && (yp.OwnerEmpId == myEmp || yp.EditorEmpId == myEmp)
+                          && ((yp.OwnerEmpId != null && yp.OwnerEmpId.Trim().ToUpper() == myEmpUp)
+                              || (yp.EditorEmpId != null && yp.EditorEmpId.Trim().ToUpper() == myEmpUp))
                     select 1
                 ).AnyAsync(ct);
 
@@ -1144,13 +1126,16 @@ body{{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6f
 
             if (!(_admin.IsAdmin(User) || _admin.IsSuperAdmin(User)))
             {
-                var myEmp = await MyEmpIdAsync(ct);
+                var myEmp = (await MyEmpIdAsync(ct))?.Trim();
                 if (string.IsNullOrWhiteSpace(myEmp))
                     return StatusCode(403, new { ok = false, error = "Not allowed." });
+                var myEmpUp = myEmp.ToUpperInvariant();
 
                 var allowed = await _db.KpiYearPlans.AsNoTracking()
                                 .AnyAsync(p => p.KpiYearPlanId == b.KpiYearPlanId &&
-                                               (p.OwnerEmpId == myEmp || p.EditorEmpId == myEmp), ct);
+                                               ((p.OwnerEmpId != null && p.OwnerEmpId.Trim().ToUpper() == myEmpUp)
+                                                 || (p.EditorEmpId != null && p.EditorEmpId.Trim().ToUpper() == myEmpUp)),
+                                               ct);
                 if (!allowed) return StatusCode(403, new { ok = false, error = "Not allowed." });
             }
 

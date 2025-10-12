@@ -34,48 +34,45 @@ namespace KPIMonitor.Services
                 var username = emailSection.GetValue<string>("Username");
                 var password = emailSection.GetValue<string>("Password");
 
-                // Clean + validate FromAddress (must be just the email; strip any "Name <addr>")
+                // Extract address if config used "Name <addr>" format
                 fromAddr = ExtractEmailAddress(fromAddr);
                 if (string.IsNullOrWhiteSpace(fromAddr) || !fromAddr.Contains("@"))
                     return (false, "Invalid FromAddress in configuration.");
 
-                // From display name must not contain '@' or control chars
+                // Ensure display name has no '@' or control chars
                 fromName = SanitizeDisplayName(fromName);
 
-                // Subjects must not contain CR/LF/control chars (header injection)
-                subject  = SanitizeHeader(subject);
+                // No CR/LF or control chars in subject (header injection guard)
+                subject = SanitizeHeader(subject);
 
-                // Build message
                 using var msg = new MailMessage
                 {
-                    From             = new MailAddress(fromAddr, fromName, Encoding.UTF8),
-                    Subject          = subject,
-                    SubjectEncoding  = Encoding.UTF8,
-                    Body             = htmlBody ?? string.Empty,
-                    BodyEncoding     = Encoding.UTF8,
-                    IsBodyHtml       = true,
-                    HeadersEncoding  = Encoding.UTF8
+                    From            = new MailAddress(fromAddr, fromName, Encoding.UTF8),
+                    Subject         = subject,
+                    SubjectEncoding = Encoding.UTF8,
+                    Body            = htmlBody ?? string.Empty,
+                    BodyEncoding    = Encoding.UTF8,
+                    IsBodyHtml      = true,
+                    HeadersEncoding = Encoding.UTF8
                 };
 
-                // Add recipients (support "a@b.com", "Name <a@b.com>", semicolons/commas)
+                // Support comma/semicolon separated recipients; accept "Name <a@b.com>" or "a@b.com"
                 var recipients = SplitRecipients(to);
-                if (recipients.Length == 0)
-                    return (false, "No valid recipient.");
                 foreach (var r in recipients)
                 {
                     var addr = ExtractEmailAddress(r);
-                    if (string.IsNullOrWhiteSpace(addr) || !addr.Contains("@")) continue;
-                    // no display name to avoid any '@' in display headers
-                    msg.To.Add(new MailAddress(addr));
+                    if (!string.IsNullOrWhiteSpace(addr) && addr.Contains("@"))
+                        msg.To.Add(new MailAddress(addr)); // no display name here
                 }
                 if (msg.To.Count == 0)
-                    return (false, "No valid recipient after parsing.");
+                    return (false, "No valid recipient.");
 
                 using var client = new SmtpClient(host, port)
                 {
-                    EnableSsl       = useSsl,
-                    DeliveryMethod  = SmtpDeliveryMethod.Network
+                    EnableSsl      = useSsl,
+                    DeliveryMethod = SmtpDeliveryMethod.Network
                 };
+
                 if (!string.IsNullOrWhiteSpace(username))
                 {
                     client.UseDefaultCredentials = false;
@@ -97,14 +94,14 @@ namespace KPIMonitor.Services
             }
             catch (Exception ex)
             {
-                _log.LogError(ex, "Error sending email.");
+                _log.LogError(ex, "Unhandled error sending email.");
                 return (false, $"Send failed: {ex.Message}");
             }
         }
 
         private static string[] SplitRecipients(string to) =>
             (to ?? "")
-                .Replace("\r", "").Replace("\n", "") // strip header breaks
+                .Replace("\r", "").Replace("\n", "")
                 .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(x => x.Trim())
                 .Where(x => x.Length > 0)
@@ -121,7 +118,6 @@ namespace KPIMonitor.Services
         {
             if (string.IsNullOrWhiteSpace(s)) return "BADEA KPI Monitor";
             var cleaned = new string(s.Where(ch => !char.IsControl(ch)).ToArray()).Trim();
-            // If someone put an email in the FromName config, force a safe name
             return cleaned.Contains('@') ? "BADEA KPI Monitor" : cleaned;
         }
 
@@ -132,9 +128,8 @@ namespace KPIMonitor.Services
             var s = input.Replace("\r", "").Replace("\n", "").Trim();
             var lt = s.IndexOf('<');
             var gt = s.IndexOf('>');
-            if (lt >= 0 && gt > lt)
-                s = s.Substring(lt + 1, gt - lt - 1).Trim();
-            return s.Trim('"', ' ', '\t');
+            if (lt >= 0 && gt > lt) s = s.Substring(lt + 1, gt - lt - 1);
+            return s.Trim(' ', '\t', '"', '\'');
         }
     }
 }
