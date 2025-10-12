@@ -569,7 +569,21 @@ namespace KPIMonitor.Controllers
                 var createdIds = new List<decimal>();
                 int minKey = int.MaxValue, maxKey = int.MinValue;
 
-                // FIRST: create children (no batch yet)
+                // 1) Create the batch FIRST (0/0 counts; null range) to satisfy DB constraints
+                var batchId = await _batches.CreateBatchAsync(
+                    kpiId,
+                    plan.KpiYearPlanId,
+                    year,
+                    monthly,
+                    null,               // periodMin will be set after loop
+                    null,               // periodMax will be set after loop
+                    submittedBy,
+                    0,                  // createdCount (finalize later)
+                    0,                  // skippedCount (finalize later)
+                    ct
+                );
+
+                // 2) Create children with BatchId present (DB happy)
                 foreach (var f in facts)
                 {
                     int key = monthly ? (f.Period!.MonthNum ?? 0) : (f.Period!.QuarterNum ?? 0);
@@ -588,26 +602,24 @@ namespace KPIMonitor.Controllers
                     bool changeT = isSuperAdmin && tProvided && (f.TargetValue != newT);
 
                     if (!changeA && !changeF && !changeT) { skipped++; continue; }
-
-                    if ((changeA && !editableA.Contains(key)) || (changeF && !editableF.Contains(key)))
-                    { skipped++; continue; }
-
-                    if (await _svc.HasPendingAsync(f.KpiFactId))
-                    { skipped++; continue; }
+                    if ((changeA && !editableA.Contains(key)) || (changeF && !editableF.Contains(key))) { skipped++; continue; }
+                    if (await _svc.HasPendingAsync(f.KpiFactId)) { skipped++; continue; }
 
                     try
                     {
-                        var change = await _svc.SubmitAsync(
+                        // IMPORTANT: pass batchId so the row is inserted with BatchId (avoids ORA-02290)
+                        var ch = await _svc.SubmitAsync(
                             f.KpiFactId,
-                            changeA ? newA : null,   // Actual
-                            changeT ? newT : null,   // Target (super-admin only)
-                            changeF ? newF : null,   // Forecast
-                            null,                    // Status
-                            submittedBy              // (no batchId here; matches your original pattern)
+                            changeA ? newA : null,
+                            changeT ? newT : null,
+                            changeF ? newF : null,
+                            null,
+                            submittedBy,
+                            batchId               // <<< here
                         );
 
                         created++;
-                        createdIds.Add(change.KpiFactChangeId);
+                        createdIds.Add(ch.KpiFactChangeId);
 
                         minKey = Math.Min(minKey, key);
                         maxKey = Math.Max(maxKey, key);
@@ -622,83 +634,66 @@ namespace KPIMonitor.Controllers
                 if (created == 0 && errors.Count > 0)
                     return BadRequest(new { ok = false, created, skipped, errors, traceId });
 
-                // Compute range AFTER loop
+                // 3) Finalize batch meta (counts + range)
                 int? periodMin = (minKey == int.MaxValue) ? (int?)null : minKey;
                 int? periodMax = (maxKey == int.MinValue) ? (int?)null : maxKey;
 
-                // NOW: create the batch row using YOUR signature (requires createdCount/skippedCount + ct)
-                decimal? batchId = null;
-                if (created > 0)
+                // Your service likely has an update or we can patch directly:
+                var b = await _db.KpiFactChangeBatches.FirstOrDefaultAsync(x => x.BatchId == batchId, ct);
+                if (b != null)
                 {
-                    var newBatchId = await _batches.CreateBatchAsync(
-                        kpiId,
-                        plan.KpiYearPlanId,
-                        year,
-                        monthly,
-                        periodMin,
-                        periodMax,
-                        submittedBy,
-                        created,
-                        skipped,
-                        ct
-                    );
-                    batchId = newBatchId;
-
-                    // Attach children to the batch
-                    var children = await _db.KpiFactChanges
-                        .Where(c => createdIds.Contains(c.KpiFactChangeId))
-                        .ToListAsync(ct);
-
-                    foreach (var ch in children) ch.BatchId = newBatchId;
+                    b.RowCount = created;
+                    b.SkippedCount = skipped;
+                    b.PeriodMin = periodMin;
+                    b.PeriodMax = periodMax;
                     await _db.SaveChangesAsync(ct);
+                }
 
-                    if (isSuperAdmin)
+                if (isSuperAdmin)
+                {
+                    _log.LogInformation("SUPERADMIN_BYPASS SubmitBatch user={User} kpiId={KpiId} planId={PlanId} year={Year} monthly={Monthly} created={Created} skipped={Skipped} batchId={BatchId} traceId={TraceId}",
+                        Sam(), kpiId, plan.KpiYearPlanId, year, monthly, created, skipped, batchId, traceId);
+                }
+
+                // 4) ONE HTML email to Owner (summary)
+                var kpiHead = await _db.DimKpis.AsNoTracking()
+                    .Where(x => x.KpiId == kpiId)
+                    .Select(x => new
                     {
-                        _log.LogInformation("SUPERADMIN_BYPASS SubmitBatch user={User} kpiId={KpiId} planId={PlanId} year={Year} monthly={Monthly} created={Created} skipped={Skipped} batchId={BatchId} traceId={TraceId}",
-                            Sam(), kpiId, plan.KpiYearPlanId, year, monthly, created, skipped, batchId, traceId);
+                        x.KpiCode,
+                        x.KpiName,
+                        PillarCode = x.Pillar != null ? x.Pillar.PillarCode : null,
+                        ObjectiveCode = x.Objective != null ? x.Objective.ObjectiveCode : null
+                    })
+                    .FirstOrDefaultAsync(ct);
+
+                var kpiText = (kpiHead == null)
+                    ? $"KPI {kpiId}"
+                    : $"{(kpiHead.PillarCode ?? "")}.{(kpiHead.ObjectiveCode ?? "")} {(kpiHead.KpiCode ?? "")} — {(kpiHead.KpiName ?? "-")}";
+
+                string? ownerEmail = null;
+                var ownerEmpId = plan.OwnerEmpId;
+                if (!string.IsNullOrWhiteSpace(ownerEmpId))
+                {
+                    var ownerLogin = await _dir.TryGetLoginByEmpIdAsync(ownerEmpId, ct);
+                    if (!string.IsNullOrWhiteSpace(ownerLogin))
+                    {
+                        var samLogin = ownerLogin.Trim();
+                        ownerEmail = $"{samLogin}@badea.org";
                     }
+                }
 
-                    // ---- (OPTIONAL) ONE HTML EMAIL to Owner (batch summary) ----
-                    // If you prefer the service to send this instead, delete this block.
-                    var kpiHead = await _db.DimKpis.AsNoTracking()
-                        .Where(x => x.KpiId == kpiId)
-                        .Select(x => new
-                        {
-                            x.KpiCode,
-                            x.KpiName,
-                            PillarCode = x.Pillar != null ? x.Pillar.PillarCode : null,
-                            ObjectiveCode = x.Objective != null ? x.Objective.ObjectiveCode : null
-                        })
-                        .FirstOrDefaultAsync(ct);
+                if (!string.IsNullOrWhiteSpace(ownerEmail))
+                {
+                    var subject = "KPI batch submitted for approval";
+                    var perText = (periodMin.HasValue && periodMax.HasValue) ? $"{periodMin}–{periodMax}" : "—";
 
-                    var kpiText = (kpiHead == null)
-                        ? $"KPI {kpiId}"
-                        : $"{(kpiHead.PillarCode ?? "")}.{(kpiHead.ObjectiveCode ?? "")} {(kpiHead.KpiCode ?? "")} — {(kpiHead.KpiName ?? "-")}";
-
-                    // Resolve Owner email (EmpId -> login -> email) exactly like your existing pattern
-                    string? ownerEmail = null;
-                    var ownerEmpId = plan.OwnerEmpId;
-                    if (!string.IsNullOrWhiteSpace(ownerEmpId))
+                    string HtmlEmail(string title, string bodyHtml)
                     {
-                        var ownerLogin = await _dir.TryGetLoginByEmpIdAsync(ownerEmpId, ct);
-                        if (!string.IsNullOrWhiteSpace(ownerLogin))
-                        {
-                            var sam = ownerLogin.Trim();
-                            ownerEmail = $"{sam}@badea.org";
-                        }
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(ownerEmail))
-                    {
-                        var subject = "KPI batch submitted for approval";
-                        var perText = (periodMin.HasValue && periodMax.HasValue) ? $"{periodMin}–{periodMax}" : "—";
-
-                        string HtmlEmail(string title, string bodyHtml)
-                        {
-                            string esc(string s) => WebUtility.HtmlEncode(s);
-                            const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFactChanges/Inbox";
-                            const string LogoUrl = "http://kpimonitor.badea.local/kpimonitor/images/logo-en.png";
-                            return $@"
+                        string esc(string s) => WebUtility.HtmlEncode(s);
+                        const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFactChanges/Inbox";
+                        const string LogoUrl = "http://kpimonitor.badea.local/kpimonitor/images/logo-en.png";
+                        return $@"
 <!DOCTYPE html><html><head><meta charset='UTF-8'/><meta name='viewport' content='width=device-width, initial-scale=1.0'/>
 <title>{esc(title)}</title>
 <style>
@@ -713,15 +708,14 @@ body{{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6f
 <body><div class='container'><div class='brand'><img src='{LogoUrl}' alt='BADEA Logo'/><h1>BADEA KPI Monitor</h1></div>
 <div class='content'><p style='margin-top:0'><strong>{esc(title)}</strong></p>{bodyHtml}
 <p style='margin:18px 0'><a class='btn' href='{InboxUrl}'>Open Approvals</a></p><p class='muted'>This is an automated message.</p></div></div></body></html>";
-                        }
+                    }
 
-                        var bodyHtml = $@"
+                    var bodyHtml = $@"
 <p>A batch of <strong>{created}</strong> change(s) was submitted for <em>{WebUtility.HtmlEncode(kpiText)}</em>.</p>
 <p>Year: <strong>{year}</strong> • Frequency: <strong>{(monthly ? "Monthly" : "Quarterly")}</strong> • Periods: <strong>{WebUtility.HtmlEncode(perText)}</strong></p>
 <p>Submitted by <strong>{WebUtility.HtmlEncode(submittedBy)}</strong>.</p>";
 
-                        await _email.SendEmailAsync(ownerEmail, subject, HtmlEmail(subject, bodyHtml));
-                    }
+                    await _email.SendEmailAsync(ownerEmail, subject, HtmlEmail(subject, bodyHtml));
                 }
 
                 return Json(new
@@ -743,6 +737,7 @@ body{{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6f
                 return BadRequest(new { ok = false, error = ex.GetBaseException()?.Message ?? ex.Message, traceId = HttpContext.TraceIdentifier });
             }
         }
+
 
 
         // ------------------------
