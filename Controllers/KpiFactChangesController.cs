@@ -29,7 +29,7 @@ namespace KPIMonitor.Controllers
 
         // Use http so the intranet logo always renders in email clients
         private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFactChanges/Inbox";
-        private const string LogoUrl = "http://kpimonitor.badea.local/kpimonitor/images/logo-en.png";
+        private const string LogoUrl = "http://kpimonitor.badea.local/kpimonitor/wwwroot/images/logo-en.png";
 
         public KpiFactChangesController(
             IKpiFactChangeService svc,
