@@ -1,12 +1,13 @@
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
-using System.Net;
 using KPIMonitor.Data;
 using KPIMonitor.Models;
 using KPIMonitor.Services.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Net;
 
 namespace KPIMonitor.Services
 {
@@ -18,57 +19,9 @@ namespace KPIMonitor.Services
         private readonly IEmailSender _email;
         private readonly ILogger<KpiFactChangeService> _log;
 
-        private const string InboxUrl_Service = "http://kpimonitor.badea.local/kpimonitor/KpiFactChanges/Inbox";
-        private const string LogoUrl_Service  = "http://kpimonitor.badea.local/kpimonitor/images/logo-en.png";
-
-        private static string HtmlEmailService(string title, string bodyHtml)
-        {
-            return $@"
-<!DOCTYPE html>
-<html lang='en'>
-<head>
-  <meta charset='UTF-8'/>
-  <meta name='viewport' content='width=device-width, initial-scale=1.0'/>
-  <title>{WebUtility.HtmlEncode(title)}</title>
-  <style>
-    body {{ font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#f6f7fb; margin:0; padding:0; }}
-    .container {{ max-width:640px; margin:32px auto; background:#fff; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.08); overflow:hidden; }}
-    .brand {{ background:#0d6efd10; padding:16px 24px; display:flex; gap:12px; align-items:center; }}
-    .brand img {{ height:36px; }}
-    h1 {{ margin:0; font-size:18px; font-weight:700; color:#0d3757; }}
-    .content {{ padding:24px; color:#111; line-height:1.6; }}
-    .btn {{ display:inline-block; padding:10px 16px; border-radius:10px; border:1px solid #0d6efd; text-decoration:none; }}
-    .muted {{ color:#777; font-size:12px; }}
-  </style>
-</head>
-<body>
-  <div class='container'>
-    <div class='brand'>
-      <img src='{LogoUrl_Service}' alt='BADEA Logo'/>
-      <h1>BADEA KPI Monitor</h1>
-    </div>
-    <div class='content'>
-      <p style='margin-top:0'><strong>{WebUtility.HtmlEncode(title)}</strong></p>
-      {bodyHtml}
-      <p style='margin:18px 0'><a class='btn' href='{InboxUrl_Service}'>Open Approvals</a></p>
-      <p class='muted'>This is an automated message.</p>
-    </div>
-  </div>
-</body>
-</html>";
-        }
-
-        private static string OwnerPendingSingle_Subject() => "KPI change pending approval";
-        private static string OwnerPendingSingle_Body(string kpiCode, string kpiName, string editorSam) =>
-            $"A change was submitted for KPI {kpiCode} — {kpiName} by {editorSam}. Please review it in KPI Monitor.";
-
-        private static string EditorApproved_Subject() => "KPI change approved";
-        private static string EditorApproved_Body(string kpiCode, string kpiName) =>
-            $"Your submitted change for KPI {kpiCode} — {kpiName} was approved.";
-
-        private static string EditorRejected_Subject() => "KPI change rejected";
-        private static string EditorRejected_Body(string kpiCode, string kpiName, string reason) =>
-            $"Your submitted change for KPI {kpiCode} — {kpiName} was rejected. Reason: {reason}.";
+        // Use http for intranet email images
+        private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFactChanges/Inbox";
+        private const string LogoUrl  = "http://kpimonitor.badea.local/kpimonitor/images/logo-en.png";
 
         public KpiFactChangeService(
             AppDbContext db,
@@ -84,42 +37,11 @@ namespace KPIMonitor.Services
             _log = log;
         }
 
-        private static string NormalizeSam(string? raw)
-        {
-            var s = raw?.Trim() ?? "";
-            if (string.IsNullOrEmpty(s)) return "";
-            var bs = s.LastIndexOf('\\');
-            if (bs >= 0 && bs < s.Length - 1) s = s[(bs + 1)..];
-            var at = s.IndexOf('@');
-            if (at > 0) s = s[..at];
-            return s.Trim().ToLowerInvariant();
-        }
-
-        private string? BuildMailFromSam(string? rawSam)
-        {
-            var sam = NormalizeSam(rawSam);
-            return string.IsNullOrWhiteSpace(sam) ? null : $"{sam}@badea.org";
-        }
-
-        private async Task<string?> ResolveMailFromOwnerAsync(string? ownerLogin, string? ownerEmpId)
-        {
-            if (!string.IsNullOrWhiteSpace(ownerLogin))
-                return BuildMailFromSam(ownerLogin);
-
-            if (!string.IsNullOrWhiteSpace(ownerEmpId))
-            {
-                var sam = await _dir.TryGetLoginByEmpIdAsync(ownerEmpId);
-                if (!string.IsNullOrWhiteSpace(sam))
-                    return BuildMailFromSam(sam);
-            }
-
-            return null;
-        }
-
         public async Task<bool> HasPendingAsync(decimal kpiFactId)
         {
-            return await _db.KpiFactChanges.AsNoTracking()
-                .AnyAsync(c => c.KpiFactId == kpiFactId && c.ApprovalStatus == "pending");
+            return await _db.KpiFactChanges
+                .AsNoTracking()
+                .AnyAsync(x => x.KpiFactId == kpiFactId && x.ApprovalStatus == "pending");
         }
 
         public async Task<KpiFactChange> SubmitAsync(
@@ -132,164 +54,133 @@ namespace KPIMonitor.Services
             if (await HasPendingAsync(kpiFactId))
                 throw new InvalidOperationException("A change is already pending for this KPI fact.");
 
-            var factExists = await _db.KpiFacts
-                .AsNoTracking()
-                .AnyAsync(f => f.KpiFactId == kpiFactId && f.IsActive == 1);
-            if (!factExists)
-                throw new InvalidOperationException("KPI fact not found or inactive.");
+            var fact = await _db.KpiFacts
+                .Include(f => f.Period)
+                .Include(f => f.Kpi)
+                .ThenInclude(k => k.Objective)
+                .Include(f => f.Kpi)
+                .ThenInclude(k => k.Pillar)
+                .FirstOrDefaultAsync(f => f.KpiFactId == kpiFactId);
 
-            var change = new KpiFactChange
+            if (fact == null) throw new InvalidOperationException("KPI fact not found.");
+            if (fact.IsActive != 1) throw new InvalidOperationException("KPI fact is inactive.");
+
+            // Prepare change
+            var ch = new KpiFactChange
             {
                 KpiFactId = kpiFactId,
                 ProposedActualValue = actual,
                 ProposedTargetValue = target,
                 ProposedForecastValue = forecast,
                 ProposedStatusCode = string.IsNullOrWhiteSpace(statusCode) ? null : statusCode.Trim(),
-                SubmittedBy = NormalizeSam(submittedBy),
+                SubmittedBy = submittedBy,
                 SubmittedAt = DateTime.UtcNow,
                 ApprovalStatus = "pending",
                 BatchId = batchId
             };
 
-            _db.KpiFactChanges.Add(change);
+            _db.KpiFactChanges.Add(ch);
             await _db.SaveChangesAsync();
 
-            var who = await (
-                from f in _db.KpiFacts.AsNoTracking()
-                join p in _db.KpiYearPlans.AsNoTracking() on f.KpiYearPlanId equals p.KpiYearPlanId
-                where f.KpiFactId == kpiFactId
-                select new { p.OwnerEmpId, p.EditorEmpId, p.OwnerLogin, p.EditorLogin, p.KpiYearPlanId, PeriodId = f.PeriodId, KpiId = f.KpiId }
-            ).FirstOrDefaultAsync();
+            // Auto-approve if super-admin handled by controller; otherwise leave pending.
 
-            var ownerEmp = who?.OwnerEmpId?.Trim();
-            var editorEmp = who?.EditorEmpId?.Trim();
-
-            // Auto-approve when owner==editor
-            if (!string.IsNullOrWhiteSpace(ownerEmp) &&
-                !string.IsNullOrWhiteSpace(editorEmp) &&
-                string.Equals(ownerEmp, editorEmp, StringComparison.Ordinal))
-            {
-                var fact = await _db.KpiFacts.FirstAsync(x => x.KpiFactId == kpiFactId);
-
-                if (change.ProposedActualValue.HasValue) fact.ActualValue = change.ProposedActualValue.Value;
-                if (change.ProposedTargetValue.HasValue) fact.TargetValue = change.ProposedTargetValue.Value;
-                if (change.ProposedForecastValue.HasValue) fact.ForecastValue = change.ProposedForecastValue.Value;
-                if (!string.IsNullOrWhiteSpace(change.ProposedStatusCode)) fact.StatusCode = change.ProposedStatusCode;
-
-                change.ApprovalStatus = "approved";
-                change.ReviewedAt = DateTime.UtcNow;
-                change.ReviewedBy = ownerEmp;
-
-                await _db.SaveChangesAsync();
-
-                await _status.ComputeAndSetAsync(kpiFactId);
-
-                var factPeriodYear = await _db.DimPeriods
-                    .Where(p => p.PeriodId == fact.PeriodId)
-                    .Select(p => p.Year)
-                    .FirstAsync();
-                await _status.RecomputePlanYearAsync(fact.KpiYearPlanId, factPeriodYear);
-
-                return change;
-            }
-
-            // Only send OWNER "pending" email for single submits (batchId == null)
+            // Notify Owner ONLY for single submits (not batch)
             if (batchId == null)
             {
                 try
                 {
-                    var ownerMail = await ResolveMailFromOwnerAsync(who?.OwnerLogin, who?.OwnerEmpId);
-                    if (!string.IsNullOrWhiteSpace(ownerMail))
-                    {
-                        var planInfo = await _db.DimKpis
-                            .Where(k => k.KpiId == who!.KpiId)
-                            .Select(k => new { k.KpiCode, k.KpiName })
-                            .FirstOrDefaultAsync();
+                    var planInfo = await (
+                        from f in _db.KpiFacts
+                        join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
+                        join k in _db.DimKpis on f.KpiId equals k.KpiId
+                        where f.KpiFactId == kpiFactId
+                        select new
+                        {
+                            yp.KpiYearPlanId,
+                            yp.OwnerEmpId,
+                            KpiCode = k.KpiCode,
+                            KpiName = k.KpiName,
+                            PillarCode = k.Pillar != null ? k.Pillar.PillarCode : null,
+                            ObjectiveCode = k.Objective != null ? k.Objective.ObjectiveCode : null
+                        }).FirstOrDefaultAsync();
 
-                        var editorUser = NormalizeSam(submittedBy);
-                        var subject = OwnerPendingSingle_Subject();
-                        var raw = OwnerPendingSingle_Body(planInfo?.KpiCode ?? "KPI", planInfo?.KpiName ?? "-", editorUser);
-                        var html = HtmlEmailService(subject, $"<p>{WebUtility.HtmlEncode(raw)}</p>");
-                        await _email.SendEmailAsync(ownerMail!, subject, html);
-                    }
-                    else
+                    var ownerEmail = await ResolveOwnerEmailAsync(planInfo?.OwnerEmpId, CancellationToken.None);
+                    if (!string.IsNullOrWhiteSpace(ownerEmail))
                     {
-                        _log.LogWarning("Owner email could not be resolved (single submit). KpiFactId={Kfi}", kpiFactId);
+                        var kpiText = (planInfo == null)
+                            ? $"KPI {fact.KpiId}"
+                            : $"{(planInfo.PillarCode ?? "")}.{(planInfo.ObjectiveCode ?? "")} {(planInfo.KpiCode ?? "")} — {(planInfo.KpiName ?? "-")}";
+
+                        var subject = "KPI change pending approval";
+                        var bodyHtml = $@"
+<p>A KPI change was submitted for <em>{WebUtility.HtmlEncode(kpiText)}</em>.</p>
+<p>Submitted by <strong>{WebUtility.HtmlEncode(NormalizeSam(submittedBy))}</strong> at {DateTime.UtcNow:yyyy-MM-dd HH:mm} (UTC).</p>";
+
+                        await _email.SendEmailAsync(ownerEmail, subject, HtmlEmail(subject, bodyHtml));
                     }
                 }
                 catch (Exception ex)
                 {
-                    _log.LogError(ex, "Failed sending PENDING email (single).");
+                    _log.LogError(ex, "Failed sending OWNER pending email (single).");
                 }
             }
 
-            return change;
+            return ch;
         }
 
         public async Task ApproveAsync(decimal changeId, string reviewer, bool suppressEmail = false)
         {
             var ch = await _db.KpiFactChanges
-                .Include(x => x.KpiFact)
-                .FirstOrDefaultAsync(x => x.KpiFactChangeId == changeId);
+                .Include(c => c.KpiFact)
+                .FirstOrDefaultAsync(c => c.KpiFactChangeId == changeId);
 
             if (ch == null) throw new InvalidOperationException("Change request not found.");
-            if (ch.KpiFact == null) throw new InvalidOperationException("KPI fact missing.");
-
             if (!string.Equals(ch.ApprovalStatus, "pending", StringComparison.OrdinalIgnoreCase))
-                return;
+                throw new InvalidOperationException("Only pending changes can be approved.");
 
-            var fact = ch.KpiFact;
+            var f = ch.KpiFact ?? throw new InvalidOperationException("KPI fact missing.");
 
-            if (ch.ProposedActualValue.HasValue) fact.ActualValue = ch.ProposedActualValue.Value;
-            if (ch.ProposedTargetValue.HasValue) fact.TargetValue = ch.ProposedTargetValue.Value;
-            if (ch.ProposedForecastValue.HasValue) fact.ForecastValue = ch.ProposedForecastValue.Value;
-            if (!string.IsNullOrWhiteSpace(ch.ProposedStatusCode)) fact.StatusCode = ch.ProposedStatusCode;
+            // Apply
+            if (ch.ProposedActualValue.HasValue) f.ActualValue = ch.ProposedActualValue;
+            if (ch.ProposedTargetValue.HasValue) f.TargetValue = ch.ProposedTargetValue;
+            if (ch.ProposedForecastValue.HasValue) f.ForecastValue = ch.ProposedForecastValue;
+            if (!string.IsNullOrWhiteSpace(ch.ProposedStatusCode)) f.StatusCode = ch.ProposedStatusCode;
 
             ch.ApprovalStatus = "approved";
-            ch.ReviewedBy = NormalizeSam(reviewer);
+            ch.ReviewedBy = reviewer;
             ch.ReviewedAt = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();
-
-            await _status.ComputeAndSetAsync(fact.KpiFactId);
-
-            var approvedFact = await _db.KpiFacts.AsNoTracking()
-                .Where(f => f.KpiFactId == fact.KpiFactId)
-                .Select(f => new { f.KpiYearPlanId, f.PeriodId, f.KpiId })
-                .FirstAsync();
-
-            var approvedYear = await _db.DimPeriods
-                .Where(p => p.PeriodId == approvedFact.PeriodId)
-                .Select(p => p.Year)
-                .FirstAsync();
-
-            await _status.RecomputePlanYearAsync(approvedFact.KpiYearPlanId, approvedYear);
 
             if (!suppressEmail)
             {
                 try
                 {
-                    var plan = await _db.KpiYearPlans.AsNoTracking()
-                        .Where(p => p.KpiYearPlanId == approvedFact.KpiYearPlanId)
-                        .Select(p => new { p.EditorLogin })
-                        .FirstOrDefaultAsync();
-
-                    var editorSam = !string.IsNullOrWhiteSpace(plan?.EditorLogin)
-                        ? plan!.EditorLogin
-                        : ch.SubmittedBy;
-
-                    var to = BuildMailFromSam(editorSam);
-                    if (!string.IsNullOrWhiteSpace(to))
+                    // Notify editor (SubmittedBy)
+                    var editorEmail = await ResolveUserEmailFromSamAsync(ch.SubmittedBy);
+                    if (!string.IsNullOrWhiteSpace(editorEmail))
                     {
                         var k = await _db.DimKpis.AsNoTracking()
-                            .Where(x => x.KpiId == approvedFact.KpiId)
-                            .Select(x => new { x.KpiCode, x.KpiName })
+                            .Where(x => x.KpiId == f.KpiId)
+                            .Select(x => new
+                            {
+                                x.KpiCode,
+                                x.KpiName,
+                                PillarCode = x.Pillar != null ? x.Pillar.PillarCode : null,
+                                ObjectiveCode = x.Objective != null ? x.Objective.ObjectiveCode : null
+                            })
                             .FirstOrDefaultAsync();
 
-                        var subject = EditorApproved_Subject();
-                        var raw = EditorApproved_Body(k?.KpiCode ?? "KPI", k?.KpiName ?? "-");
-                        var html = HtmlEmailService(subject, $"<p>{WebUtility.HtmlEncode(raw)}</p>");
-                        await _email.SendEmailAsync(to!, subject, html);
+                        var kpiText = (k == null)
+                            ? $"KPI {f.KpiId}"
+                            : $"{(k.PillarCode ?? "")}.{(k.ObjectiveCode ?? "")} {(k.KpiCode ?? "")} — {(k.KpiName ?? "-")}";
+
+                        var subject = "Your KPI change was approved";
+                        var bodyHtml = $@"
+<p>Your submitted KPI change for <em>{WebUtility.HtmlEncode(kpiText)}</em> has been <strong>approved</strong>.</p>
+<p>Reviewed by <strong>{WebUtility.HtmlEncode(NormalizeSam(reviewer))}</strong> at {DateTime.UtcNow:yyyy-MM-dd HH:mm} (UTC).</p>";
+
+                        await _email.SendEmailAsync(editorEmail, subject, HtmlEmail(subject, bodyHtml));
                     }
                 }
                 catch (Exception ex)
@@ -305,19 +196,17 @@ namespace KPIMonitor.Services
                 throw new InvalidOperationException("Reject reason is required.");
 
             var ch = await _db.KpiFactChanges
-                .Include(x => x.KpiFact)
-                .FirstOrDefaultAsync(x => x.KpiFactChangeId == changeId);
+                .Include(c => c.KpiFact)
+                .FirstOrDefaultAsync(c => c.KpiFactChangeId == changeId);
 
             if (ch == null) throw new InvalidOperationException("Change request not found.");
-            if (ch.KpiFact == null) throw new InvalidOperationException("KPI fact missing.");
-
             if (!string.Equals(ch.ApprovalStatus, "pending", StringComparison.OrdinalIgnoreCase))
-                return;
+                throw new InvalidOperationException("Only pending changes can be rejected.");
 
             ch.ApprovalStatus = "rejected";
-            ch.ReviewedBy = NormalizeSam(reviewer);
-            ch.ReviewedAt = DateTime.UtcNow;
             ch.RejectReason = reason.Trim();
+            ch.ReviewedBy = reviewer;
+            ch.ReviewedAt = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();
 
@@ -325,24 +214,32 @@ namespace KPIMonitor.Services
             {
                 try
                 {
-                    var plan = await _db.KpiFacts.AsNoTracking()
-                        .Where(f => f.KpiFactId == ch.KpiFactId)
-                        .Join(_db.KpiYearPlans.AsNoTracking(), f => f.KpiYearPlanId, p => p.KpiYearPlanId,
-                            (f, p) => new { f.KpiId, p.EditorLogin })
-                        .FirstOrDefaultAsync();
-
-                    var to = BuildMailFromSam(!string.IsNullOrWhiteSpace(plan?.EditorLogin) ? plan!.EditorLogin : ch.SubmittedBy);
-                    if (!string.IsNullOrWhiteSpace(to))
+                    var editorEmail = await ResolveUserEmailFromSamAsync(ch.SubmittedBy);
+                    if (!string.IsNullOrWhiteSpace(editorEmail))
                     {
-                        var kpi = await _db.DimKpis.AsNoTracking()
-                            .Where(x => x.KpiId == plan!.KpiId)
-                            .Select(x => new { x.KpiCode, x.KpiName })
+                        var f = ch.KpiFact!;
+                        var k = await _db.DimKpis.AsNoTracking()
+                            .Where(x => x.KpiId == f.KpiId)
+                            .Select(x => new
+                            {
+                                x.KpiCode,
+                                x.KpiName,
+                                PillarCode = x.Pillar != null ? x.Pillar.PillarCode : null,
+                                ObjectiveCode = x.Objective != null ? x.Objective.ObjectiveCode : null
+                            })
                             .FirstOrDefaultAsync();
 
-                        var subject = EditorRejected_Subject();
-                        var raw = EditorRejected_Body(kpi?.KpiCode ?? "KPI", kpi?.KpiName ?? "-", reason.Trim());
-                        var html = HtmlEmailService(subject, $"<p>{WebUtility.HtmlEncode(raw)}</p>");
-                        await _email.SendEmailAsync(to!, subject, html);
+                        var kpiText = (k == null)
+                            ? $"KPI {f.KpiId}"
+                            : $"{(k.PillarCode ?? "")}.{(k.ObjectiveCode ?? "")} {(k.KpiCode ?? "")} — {(k.KpiName ?? "-")}";
+
+                        var subject = "Your KPI change was rejected";
+                        var bodyHtml = $@"
+<p>Your submitted KPI change for <em>{WebUtility.HtmlEncode(kpiText)}</em> has been <strong>rejected</strong>.</p>
+<p>Reason: {WebUtility.HtmlEncode(reason)}</p>
+<p>Reviewed by <strong>{WebUtility.HtmlEncode(NormalizeSam(reviewer))}</strong> at {DateTime.UtcNow:yyyy-MM-dd HH:mm} (UTC).</p>";
+
+                        await _email.SendEmailAsync(editorEmail, subject, HtmlEmail(subject, bodyHtml));
                     }
                 }
                 catch (Exception ex)
@@ -350,6 +247,74 @@ namespace KPIMonitor.Services
                     _log.LogError(ex, "Failed sending REJECTED email (single).");
                 }
             }
+        }
+
+        // ---------------- helpers ----------------
+
+        private static string NormalizeSam(string? raw)
+        {
+            var s = raw?.Trim() ?? "";
+            if (string.IsNullOrEmpty(s)) return "";
+            var bs = s.LastIndexOf('\\');
+            if (bs >= 0 && bs < s.Length - 1) s = s[(bs + 1)..];
+            var at = s.IndexOf('@');
+            if (at > 0) s = s[..at];
+            return s.Trim();
+        }
+
+        private static string HtmlEmail(string title, string bodyHtml)
+        {
+            string esc(string s) => WebUtility.HtmlEncode(s);
+            return $@"
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <meta charset='UTF-8'/>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'/>
+  <title>{esc(title)}</title>
+  <style>
+    body {{ font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#f6f7fb; margin:0; padding:0; }}
+    .container {{ max-width:640px; margin:32px auto; background:#fff; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.08); overflow:hidden; }}
+    .brand {{ background:#0d6efd10; padding:16px 24px; display:flex; gap:12px; align-items:center; }}
+    .brand img {{ height:36px; }}
+    h1 {{ margin:0; font-size:18px; font-weight:700; color:#0d3757; }}
+    .content {{ padding:24px; color:#111; line-height:1.6; }}
+    .btn {{ display:inline-block; padding:10px 16px; border-radius:10px; border:1px solid #0d6efd; text-decoration:none; }}
+    .muted {{ color:#777; font-size:12px; }}
+  </style>
+</head>
+<body>
+  <div class='container'>
+    <div class='brand'>
+      <img src='{LogoUrl}' alt='BADEA Logo'/>
+      <h1>BADEA KPI Monitor</h1>
+    </div>
+    <div class='content'>
+      <p style='margin-top:0'><strong>{esc(title)}</strong></p>
+      {bodyHtml}
+      <p style='margin:18px 0'><a class='btn' href='{InboxUrl}'>Open Approvals</a></p>
+      <p class='muted'>This is an automated message.</p>
+    </div>
+  </div>
+</body>
+</html>";
+        }
+
+        private async Task<string?> ResolveOwnerEmailAsync(string? ownerEmpId, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(ownerEmpId)) return null;
+            var login = await _dir.TryGetLoginByEmpIdAsync(ownerEmpId, ct);
+            if (string.IsNullOrWhiteSpace(login)) return null;
+            var sam = NormalizeSam(login);
+            return string.IsNullOrWhiteSpace(sam) ? null : $"{sam}@badea.org";
+        }
+
+        private async Task<string?> ResolveUserEmailFromSamAsync(string? rawSam)
+        {
+            var sam = NormalizeSam(rawSam);
+            if (string.IsNullOrWhiteSpace(sam)) return null;
+            // If you have a directory lookup for email, use it. Otherwise build directly (your project pattern).
+            return $"{sam}@badea.org";
         }
     }
 }
