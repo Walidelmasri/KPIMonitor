@@ -25,12 +25,11 @@ namespace KPIMonitor.Controllers
         private readonly IKpiFactChangeBatchService _batches;
         private readonly ILogger<KpiFactChangesController> _log;
 
-        // ===== HTML email (batch notifications only from controller; single-item handled in service) =====
         private readonly IEmailSender _email;
         private readonly IEmployeeDirectory _dir;
 
         private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFactChanges/Inbox";
-        private const string LogoUrl  = "https://kpimonitor.badea.local/kpimonitor/images/logo-en.png";
+        private const string LogoUrl  = "http://kpimonitor.badea.local/kpimonitor/images/logo-en.png"; // use http for intranet
 
         public KpiFactChangesController(
             IKpiFactChangeService svc,
@@ -98,7 +97,6 @@ namespace KPIMonitor.Controllers
             return p.Year.ToString();
         }
 
-        // Shared HTML email template for controller batch emails
         private static string HtmlEmail(string title, string bodyHtml)
         {
             return $@"
@@ -199,7 +197,7 @@ namespace KPIMonitor.Controllers
                 if (_admin.IsSuperAdmin(User))
                 {
                     await _svc.ApproveAsync(change.KpiFactChangeId, submittedBy);
-                    change.ApprovalStatus = "approved"; // keep response consistent
+                    change.ApprovalStatus = "approved";
                 }
 
                 var msg = string.Equals(change.ApprovalStatus, "approved", StringComparison.OrdinalIgnoreCase)
@@ -239,7 +237,8 @@ namespace KPIMonitor.Controllers
                 var reviewer = Sam();
                 if (string.IsNullOrWhiteSpace(reviewer)) reviewer = "owner";
 
-                await _svc.ApproveAsync(changeId, reviewer); // service sends HTML email for single change
+                // ONE email handled in service for single approval
+                await _svc.ApproveAsync(changeId, reviewer);
                 return Json(new { ok = true });
             }
             catch (Exception ex)
@@ -270,7 +269,8 @@ namespace KPIMonitor.Controllers
                 var reviewer = Sam();
                 if (string.IsNullOrWhiteSpace(reviewer)) reviewer = "owner";
 
-                await _svc.RejectAsync(changeId, reviewer, reason); // service sends HTML email for single change
+                // ONE email handled in service for single reject
+                await _svc.RejectAsync(changeId, reviewer, reason);
                 return Json(new { ok = true });
             }
             catch (Exception ex)
@@ -507,7 +507,7 @@ namespace KPIMonitor.Controllers
         }
 
         // ------------------------
-        // Submit a batch (creates batch + links children)
+        // Submit a batch (creates batch + links children) — SINGLE email only
         // ------------------------
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -580,23 +580,22 @@ namespace KPIMonitor.Controllers
                 var submittedBy = Sam();
                 if (string.IsNullOrWhiteSpace(submittedBy)) submittedBy = "editor";
 
-                int created = 0, skipped = 0;
-                var errors = new List<object>();
-                var createdIds = new List<decimal>();
-                int minKey = int.MaxValue, maxKey = int.MinValue;
+                // ---------- PLAN: figure candidates first to avoid per-row emails ----------
+                var candidates = new List<(KpiFact fact, int key, decimal? newA, decimal? newF, decimal? newT, bool changeA, bool changeF, bool changeT)>();
+                int skipped = 0, minKey = int.MaxValue, maxKey = int.MinValue;
 
                 foreach (var f in facts)
                 {
                     int key = monthly ? (f.Period!.MonthNum ?? 0) : (f.Period!.QuarterNum ?? 0);
                     if (key == 0) { skipped++; continue; }
 
-                    bool aProvided = postedActuals.ContainsKey(key) && postedActuals[key].HasValue;
-                    bool fProvided = postedForecast.ContainsKey(key) && postedForecast[key].HasValue;
-                    bool tProvided = postedTargets.ContainsKey(key) && postedTargets[key].HasValue;
-
                     postedActuals.TryGetValue(key, out var newA);
                     postedForecast.TryGetValue(key, out var newF);
                     postedTargets.TryGetValue(key, out var newT);
+
+                    bool aProvided = newA.HasValue;
+                    bool fProvided = newF.HasValue;
+                    bool tProvided = newT.HasValue;
 
                     bool changeA = aProvided && (f.ActualValue != newA);
                     bool changeF = fProvided && (f.ForecastValue != newF);
@@ -610,44 +609,24 @@ namespace KPIMonitor.Controllers
                     if (await _svc.HasPendingAsync(f.KpiFactId))
                     { skipped++; continue; }
 
-                    try
-                    {
-                        var change = await _svc.SubmitAsync(
-                            f.KpiFactId,
-                            changeA ? newA : null,   // Actual
-                            changeT ? newT : null,   // Target (super-admin only)
-                            changeF ? newF : null,   // Forecast
-                            null,                    // Status
-                            submittedBy);
+                    minKey = Math.Min(minKey, key);
+                    maxKey = Math.Max(maxKey, key);
 
-                        // Auto-approve immediately for SuperAdmin
-                        if (isSuperAdmin)
-                        {
-                            await _svc.ApproveAsync(change.KpiFactChangeId, submittedBy);
-                        }
-
-                        created++;
-                        createdIds.Add(change.KpiFactChangeId);
-
-                        minKey = Math.Min(minKey, key);
-                        maxKey = Math.Max(maxKey, key);
-                    }
-                    catch (Exception ex)
-                    {
-                        skipped++;
-                        errors.Add(new { factId = f.KpiFactId, periodKey = key, error = ex.Message });
-                    }
+                    candidates.Add((f, key, newA, newF, newT, changeA, changeF, changeT));
                 }
 
-                if (created == 0 && errors.Count > 0)
-                    return BadRequest(new { ok = false, created, skipped, errors, traceId });
+                int created = candidates.Count;
+                if (created == 0 && skipped > 0)
+                    return BadRequest(new { ok = false, created, skipped, errors = Array.Empty<object>(), traceId });
 
                 decimal? batchId = null;
+
                 if (created > 0)
                 {
                     int? periodMin = (minKey == int.MaxValue) ? (int?)null : minKey;
                     int? periodMax = (maxKey == int.MinValue) ? (int?)null : maxKey;
 
+                    // Create batch FIRST so we can pass batchId to SubmitAsync and suppress per-row emails
                     var newBatchId = await _batches.CreateBatchAsync(
                         kpiId,
                         plan.KpiYearPlanId,
@@ -659,53 +638,78 @@ namespace KPIMonitor.Controllers
                         created,
                         skipped);
 
-                    var children = await _db.KpiFactChanges
-                        .Where(c => createdIds.Contains(c.KpiFactChangeId))
-                        .ToListAsync();
-
-                    foreach (var ch in children) ch.BatchId = newBatchId;
-                    await _db.SaveChangesAsync();
-
                     batchId = newBatchId;
 
-                    // ---- ONE HTML email to OWNER for batch submission ----
-                    try
+                    var createdIds = new List<decimal>();
+
+                    foreach (var c in candidates)
                     {
-                        string? to = null;
-                        if (!string.IsNullOrWhiteSpace(plan.OwnerLogin))
-                            to = BuildMailFromSam(plan.OwnerLogin);
-                        if (string.IsNullOrWhiteSpace(to) && !string.IsNullOrWhiteSpace(plan.OwnerEmpId))
+                        try
                         {
-                            var ownerSam = await _dir.TryGetLoginByEmpIdAsync(plan.OwnerEmpId);
-                            if (!string.IsNullOrWhiteSpace(ownerSam))
-                                to = BuildMailFromSam(ownerSam);
+                            var change = await _svc.SubmitAsync(
+                                c.fact.KpiFactId,
+                                c.changeA ? c.newA : null,   // Actual
+                                c.changeT ? c.newT : null,   // Target (super-admin only)
+                                c.changeF ? c.newF : null,   // Forecast
+                                null,                        // Status
+                                submittedBy,
+                                batchId: newBatchId          // <- suppress per-row Owner emails
+                            );
+
+                            // If superadmin, auto-approve each child but suppress child emails.
+                            if (isSuperAdmin)
+                                await _svc.ApproveAsync(change.KpiFactChangeId, submittedBy, suppressEmail: true);
+
+                            createdIds.Add(change.KpiFactChangeId);
                         }
-                        if (!string.IsNullOrWhiteSpace(to))
+                        catch (Exception ex)
                         {
-                            var kpiHead = await _db.DimKpis.AsNoTracking()
-                                .Where(x => x.KpiId == kpiId)
-                                .Select(x => new
-                                {
-                                    x.KpiCode,
-                                    x.KpiName,
-                                    Pillar = x.Pillar != null ? x.Pillar.PillarCode : null,
-                                    Objective = x.Objective != null ? x.Objective.ObjectiveCode : null
-                                })
-                                .FirstOrDefaultAsync();
-
-                            var kpiText = (kpiHead == null)
-                                ? ($"KPI {kpiId}")
-                                : $"{(kpiHead.Pillar ?? "")}.{(kpiHead.Objective ?? "")} {kpiHead.KpiCode ?? ""} — {kpiHead.KpiName ?? "-"}";
-
-                            var title = "KPI batch submitted for approval";
-                            var body  = $@"<p>A batch of <strong>{created}</strong> change(s) was submitted for <em>{WebUtility.HtmlEncode(kpiText)}</em> (Year <strong>{year}</strong>, {(monthly ? "Monthly" : "Quarterly")}).</p>
-<p>Submitted by <strong>{WebUtility.HtmlEncode(submittedBy)}</strong>. Please review in Approvals.</p>";
-                            await _email.SendEmailAsync(to!, "KPI batch pending approval", HtmlEmail(title, body));
+                            skipped++;
+                            _log.LogError(ex, "Failed to create change for fact {FactId}", c.fact.KpiFactId);
                         }
                     }
-                    catch (Exception ex)
+
+                    // ONE pending email to OWNER for the batch (skip if superadmin auto-approved)
+                    if (!isSuperAdmin)
                     {
-                        _log.LogError(ex, "Failed sending batch PENDING email.");
+                        try
+                        {
+                            string? to = null;
+                            if (!string.IsNullOrWhiteSpace(plan.OwnerLogin))
+                                to = BuildMailFromSam(plan.OwnerLogin);
+                            if (string.IsNullOrWhiteSpace(to) && !string.IsNullOrWhiteSpace(plan.OwnerEmpId))
+                            {
+                                var ownerSam = await _dir.TryGetLoginByEmpIdAsync(plan.OwnerEmpId);
+                                if (!string.IsNullOrWhiteSpace(ownerSam))
+                                    to = BuildMailFromSam(ownerSam);
+                            }
+                            if (!string.IsNullOrWhiteSpace(to))
+                            {
+                                var kpiHead = await _db.DimKpis.AsNoTracking()
+                                    .Where(x => x.KpiId == kpiId)
+                                    .Select(x => new
+                                    {
+                                        x.KpiCode,
+                                        x.KpiName,
+                                        Pillar = x.Pillar != null ? x.Pillar.PillarCode : null,
+                                        Objective = x.Objective != null ? x.Objective.ObjectiveCode : null
+                                    })
+                                    .FirstOrDefaultAsync();
+
+                                var kpiText = (kpiHead == null)
+                                    ? ($"KPI {kpiId}")
+                                    : $"{(kpiHead.Pillar ?? "")}.{(kpiHead.Objective ?? "")} {kpiHead.KpiCode ?? ""} — {kpiHead.KpiName ?? "-"}";
+
+                                var title = "KPI batch submitted for approval";
+                                var body  = $@"<p>A batch of <strong>{created}</strong> change(s) was submitted for <em>{WebUtility.HtmlEncode(kpiText)}</em> (Year <strong>{year}</strong>, {(monthly ? "Monthly" : "Quarterly")}).</p>
+<p>Submitted by <strong>{WebUtility.HtmlEncode(submittedBy)}</strong>. Please review in Approvals.</p>";
+                                await _email.SendEmailAsync(to!, "KPI batch pending approval", HtmlEmail(title, body));
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _log.LogError(ex, "Failed sending batch PENDING email.");
+                        }
                     }
 
                     if (isSuperAdmin)
@@ -757,7 +761,7 @@ namespace KPIMonitor.Controllers
         }
 
         // ------------------------
-        // Approve/Reject entire batch
+        // Approve/Reject entire batch — SINGLE email only (controller), children suppressed in service
         // ------------------------
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -771,8 +775,9 @@ namespace KPIMonitor.Controllers
                 var reviewer = Sam();
                 if (string.IsNullOrWhiteSpace(reviewer)) reviewer = "owner";
 
-                await _batches.ApproveBatchAsync(batchId, reviewer, ct);
-                // Send ONE HTML email to editor (batch approved)
+                await _batches.ApproveBatchAsync(batchId, reviewer, ct); // child emails suppressed inside batch service
+
+                // ONE HTML email to Editor (summary)
                 try
                 {
                     var plan = await (
@@ -787,7 +792,7 @@ namespace KPIMonitor.Controllers
                         to = BuildMailFromSam(plan!.EditorLogin);
                     if (string.IsNullOrWhiteSpace(to) && !string.IsNullOrWhiteSpace(plan?.EditorEmpId))
                     {
-                        var editorSam = await _dir.TryGetLoginByEmpIdAsync(plan!.EditorEmpId);
+                        var editorSam = await _dir.TryGetLoginByEmpIdAsync(plan!.EditorEmpId, ct);
                         if (!string.IsNullOrWhiteSpace(editorSam))
                             to = BuildMailFromSam(editorSam);
                     }
@@ -825,8 +830,9 @@ namespace KPIMonitor.Controllers
                 var reviewer = Sam();
                 if (string.IsNullOrWhiteSpace(reviewer)) reviewer = "owner";
 
-                await _batches.RejectBatchAsync(batchId, reviewer, reason.Trim(), ct);
-                // Send ONE HTML email to editor (batch rejected)
+                await _batches.RejectBatchAsync(batchId, reviewer, reason.Trim(), ct); // child emails suppressed
+
+                // ONE HTML email to Editor (summary)
                 try
                 {
                     var plan = await (
@@ -841,7 +847,7 @@ namespace KPIMonitor.Controllers
                         to = BuildMailFromSam(plan!.EditorLogin);
                     if (string.IsNullOrWhiteSpace(to) && !string.IsNullOrWhiteSpace(plan?.EditorEmpId))
                     {
-                        var editorSam = await _dir.TryGetLoginByEmpIdAsync(plan!.EditorEmpId);
+                        var editorSam = await _dir.TryGetLoginByEmpIdAsync(plan!.EditorEmpId, ct);
                         if (!string.IsNullOrWhiteSpace(editorSam))
                             to = BuildMailFromSam(editorSam);
                     }

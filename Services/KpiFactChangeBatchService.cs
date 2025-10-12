@@ -6,40 +6,47 @@ using KPIMonitor.Data;
 using KPIMonitor.Models;
 using KPIMonitor.Services.Abstractions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace KPIMonitor.Services
 {
-    public sealed class KpiFactChangeBatchService : IKpiFactChangeBatchService
+    public class KpiFactChangeBatchService : IKpiFactChangeBatchService
     {
         private readonly AppDbContext _db;
-        private readonly IKpiFactChangeService _detailSvc;
+        private readonly IKpiFactChangeService _changeSvc;
+        private readonly ILogger<KpiFactChangeBatchService> _log;
 
-        public KpiFactChangeBatchService(AppDbContext db, IKpiFactChangeService detailSvc)
+        public KpiFactChangeBatchService(
+            AppDbContext db,
+            IKpiFactChangeService changeSvc,
+            ILogger<KpiFactChangeBatchService> log)
         {
             _db = db;
-            _detailSvc = detailSvc;
+            _changeSvc = changeSvc;
+            _log = log;
         }
 
         public async Task<decimal> CreateBatchAsync(
             decimal kpiId,
-            decimal planId,
+            decimal kpiYearPlanId,
             int year,
-            bool isMonthly,
+            bool monthly,
             int? periodMin,
             int? periodMax,
             string submittedBy,
-            int createdCount,
+            int rowCount,
             int skippedCount,
             CancellationToken ct = default)
         {
             var b = new KpiFactChangeBatch
             {
                 KpiId = kpiId,
-                KpiYearPlanId = planId,
+                KpiYearPlanId = kpiYearPlanId,
                 Year = year,
+                Frequency = monthly ? "M" : "Q",
                 PeriodMin = periodMin,
                 PeriodMax = periodMax,
-                RowCount = createdCount,
+                RowCount = rowCount,
                 SkippedCount = skippedCount,
                 SubmittedBy = submittedBy,
                 SubmittedAt = DateTime.UtcNow,
@@ -52,44 +59,51 @@ namespace KPIMonitor.Services
 
         public async Task ApproveBatchAsync(decimal batchId, string reviewer, CancellationToken ct = default)
         {
-            var childIds = await _db.KpiFactChanges
+            var b = await _db.KpiFactChangeBatches
+                .FirstOrDefaultAsync(x => x.BatchId == batchId, ct);
+            if (b == null) throw new InvalidOperationException("Batch not found.");
+            if (!string.Equals(b.ApprovalStatus, "pending", StringComparison.OrdinalIgnoreCase)) return;
+
+            var children = await _db.KpiFactChanges
                 .Where(c => c.BatchId == batchId && c.ApprovalStatus == "pending")
                 .Select(c => c.KpiFactChangeId)
                 .ToListAsync(ct);
 
-            foreach (var id in childIds)
-                await _detailSvc.ApproveAsync(id, reviewer, suppressEmail: true);
-
-            var b = await _db.KpiFactChangeBatches.FirstOrDefaultAsync(x => x.BatchId == batchId, ct);
-            if (b != null)
+            foreach (var id in children)
             {
-                b.ApprovalStatus = "approved";
-                b.ReviewedBy = reviewer;
-                b.ReviewedAt = DateTime.UtcNow;
-                b.RejectReason = null;
-                await _db.SaveChangesAsync(ct);
+                // suppress per-row editor emails → controller sends ONE summary email
+                await _changeSvc.ApproveAsync(id, reviewer, suppressEmail: true);
             }
+
+            b.ApprovalStatus = "approved";
+            b.ReviewedBy = reviewer;
+            b.ReviewedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
         }
 
         public async Task RejectBatchAsync(decimal batchId, string reviewer, string reason, CancellationToken ct = default)
         {
-            var childIds = await _db.KpiFactChanges
+            var b = await _db.KpiFactChangeBatches
+                .FirstOrDefaultAsync(x => x.BatchId == batchId, ct);
+            if (b == null) throw new InvalidOperationException("Batch not found.");
+            if (!string.Equals(b.ApprovalStatus, "pending", StringComparison.OrdinalIgnoreCase)) return;
+
+            var children = await _db.KpiFactChanges
                 .Where(c => c.BatchId == batchId && c.ApprovalStatus == "pending")
                 .Select(c => c.KpiFactChangeId)
                 .ToListAsync(ct);
 
-            foreach (var id in childIds)
-                await _detailSvc.RejectAsync(id, reviewer, reason, suppressEmail: true);
-
-            var b = await _db.KpiFactChangeBatches.FirstOrDefaultAsync(x => x.BatchId == batchId, ct);
-            if (b != null)
+            foreach (var id in children)
             {
-                b.ApprovalStatus = "rejected";
-                b.ReviewedBy = reviewer;
-                b.ReviewedAt = DateTime.UtcNow;
-                b.RejectReason = reason;
-                await _db.SaveChangesAsync(ct);
+                // suppress per-row editor emails → controller sends ONE summary email
+                await _changeSvc.RejectAsync(id, reviewer, reason, suppressEmail: true);
             }
+
+            b.ApprovalStatus = "rejected";
+            b.ReviewedBy = reviewer;
+            b.ReviewedAt = DateTime.UtcNow;
+            b.RejectReason = reason.Trim();
+            await _db.SaveChangesAsync(ct);
         }
     }
 }

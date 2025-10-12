@@ -18,9 +18,8 @@ namespace KPIMonitor.Services
         private readonly IEmailSender _email;
         private readonly ILogger<KpiFactChangeService> _log;
 
-        // ===== HTML email helpers for consistency =====
         private const string InboxUrl_Service = "http://kpimonitor.badea.local/kpimonitor/KpiFactChanges/Inbox";
-        private const string LogoUrl_Service  = "https://kpimonitor.badea.local/kpimonitor/images/logo-en.png";
+        private const string LogoUrl_Service  = "http://kpimonitor.badea.local/kpimonitor/images/logo-en.png";
 
         private static string HtmlEmailService(string title, string bodyHtml)
         {
@@ -59,7 +58,6 @@ namespace KPIMonitor.Services
 </html>";
         }
 
-        // ====================== EMAIL TEMPLATES (single item) ======================
         private static string OwnerPendingSingle_Subject() => "KPI change pending approval";
         private static string OwnerPendingSingle_Body(string kpiCode, string kpiName, string editorSam) =>
             $"A change was submitted for KPI {kpiCode} — {kpiName} by {editorSam}. Please review it in KPI Monitor.";
@@ -156,7 +154,6 @@ namespace KPIMonitor.Services
             _db.KpiFactChanges.Add(change);
             await _db.SaveChangesAsync();
 
-            // Owner/editor info
             var who = await (
                 from f in _db.KpiFacts.AsNoTracking()
                 join p in _db.KpiYearPlans.AsNoTracking() on f.KpiYearPlanId equals p.KpiYearPlanId
@@ -167,7 +164,7 @@ namespace KPIMonitor.Services
             var ownerEmp = who?.OwnerEmpId?.Trim();
             var editorEmp = who?.EditorEmpId?.Trim();
 
-            // Auto-approve when owner==editor (same person)
+            // Auto-approve when owner==editor
             if (!string.IsNullOrWhiteSpace(ownerEmp) &&
                 !string.IsNullOrWhiteSpace(editorEmp) &&
                 string.Equals(ownerEmp, editorEmp, StringComparison.Ordinal))
@@ -196,12 +193,11 @@ namespace KPIMonitor.Services
                 return change;
             }
 
-            // Not auto-approved → if this was a "single" submit (no batch), notify owner.
+            // Only send OWNER "pending" email for single submits (batchId == null)
             if (batchId == null)
             {
                 try
                 {
-                    // Resolve owner email
                     var ownerMail = await ResolveMailFromOwnerAsync(who?.OwnerLogin, who?.OwnerEmpId);
                     if (!string.IsNullOrWhiteSpace(ownerMail))
                     {
@@ -239,7 +235,6 @@ namespace KPIMonitor.Services
             if (ch == null) throw new InvalidOperationException("Change request not found.");
             if (ch.KpiFact == null) throw new InvalidOperationException("KPI fact missing.");
 
-            // Only approve pending
             if (!string.Equals(ch.ApprovalStatus, "pending", StringComparison.OrdinalIgnoreCase))
                 return;
 
@@ -316,7 +311,6 @@ namespace KPIMonitor.Services
             if (ch == null) throw new InvalidOperationException("Change request not found.");
             if (ch.KpiFact == null) throw new InvalidOperationException("KPI fact missing.");
 
-            // Only reject pending
             if (!string.Equals(ch.ApprovalStatus, "pending", StringComparison.OrdinalIgnoreCase))
                 return;
 
