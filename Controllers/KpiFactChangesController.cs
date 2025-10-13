@@ -81,6 +81,44 @@ namespace KPIMonitor.Controllers
             return p.Year.ToString();
         }
 
+        private static string HtmlEmail(string title, string bodyHtml)
+        {
+            string esc(string s) => WebUtility.HtmlEncode(s);
+            return $@"
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <meta charset='UTF-8'/>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'/>
+  <title>{esc(title)}</title>
+  <style>
+    body {{ font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#f6f7fb; margin:0; padding:0; }}
+    .container {{ max-width:640px; margin:32px auto; background:#fff; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.08); overflow:hidden; }}
+    .brand {{ background:#0d6efd10; padding:16px 24px; display:flex; gap:12px; align-items:center; }}
+    .brand img {{ height:36px; }}
+    h1 {{ margin:0; font-size:18px; font-weight:700; color:#0d3757; }}
+    .content {{ padding:24px; color:#111; line-height:1.6; }}
+    .btn {{ display:inline-block; padding:10px 16px; border-radius:10px; border:1px solid #0d6efd; text-decoration:none; }}
+    .muted {{ color:#777; font-size:12px; }}
+  </style>
+</head>
+<body>
+  <div class='container'>
+    <div class='brand'>
+      <img src='{LogoUrl}' alt='BADEA Logo'/>
+      <h1>BADEA KPI Monitor</h1>
+    </div>
+    <div class='content'>
+      <p style='margin-top:0'><strong>{esc(title)}</strong></p>
+      {bodyHtml}
+      <p style='margin:18px 0'><a class='btn' href='{InboxUrl}'>Open Approvals</a></p>
+      <p class='muted'>This is an automated message.</p>
+    </div>
+  </div>
+</body>
+</html>";
+        }
+
         // ------------------------
         // Small JSONs
         // ------------------------
@@ -91,7 +129,7 @@ namespace KPIMonitor.Controllers
             return Json(new { pending });
         }
 
-        // RESTORED: count pending by OwnerEmpId (EmpId-based)
+        // EmpId-based count (as originally)
         [HttpGet]
         public async Task<IActionResult> PendingCount()
         {
@@ -119,7 +157,7 @@ namespace KPIMonitor.Controllers
         }
 
         // ------------------------
-        // Submit / Approve / Reject (single change) — unchanged
+        // Submit / Approve / Reject (single change)
         // ------------------------
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -139,9 +177,12 @@ namespace KPIMonitor.Controllers
                     kpiFactId,
                     ProposedActualValue, ProposedTargetValue, ProposedForecastValue,
                     ProposedStatusCode,
-                    submittedBy);
+                    submittedBy,
+                    notifyOwner: true,        // SINGLE submit → send owner email here
+                    batchId: null
+                );
 
-                // Auto-approve if SuperAdmin (your original behavior)
+                // Auto-approve if SuperAdmin (unchanged)
                 if (_admin.IsSuperAdmin(User))
                 {
                     await _svc.ApproveAsync(change.KpiFactChangeId, submittedBy);
@@ -226,7 +267,7 @@ namespace KPIMonitor.Controllers
         }
 
         // ------------------------
-        // Inbox page + HTML fragments (RESTORED original comparison + filters)
+        // Inbox page + HTML fragments (unchanged)
         // ------------------------
         [HttpGet]
         public IActionResult Inbox() => View();
@@ -316,13 +357,13 @@ namespace KPIMonitor.Controllers
                     f.TargetValue,
                     f.ForecastValue,
                     f.StatusCode,
-                    PerYear = f.Period != null ? (int?)f.Period.Year : null,
-                    PerMonth = f.Period != null ? f.Period.MonthNum : null,
+                    PerYear    = f.Period != null ? (int?)f.Period.Year : null,
+                    PerMonth   = f.Period != null ? f.Period.MonthNum : null,
                     PerQuarter = f.Period != null ? f.Period.QuarterNum : null,
-                    PillarCode = f.Kpi != null && f.Kpi.Pillar != null ? f.Kpi.Pillar.PillarCode : null,
+                    PillarCode    = f.Kpi != null && f.Kpi.Pillar    != null ? f.Kpi.Pillar.PillarCode : null,
                     ObjectiveCode = f.Kpi != null && f.Kpi.Objective != null ? f.Kpi.Objective.ObjectiveCode : null,
-                    KpiCode = f.Kpi != null ? f.Kpi.KpiCode : null,
-                    KpiName = f.Kpi != null ? f.Kpi.KpiName : null
+                    KpiCode    = f.Kpi != null ? f.Kpi.KpiCode : null,
+                    KpiName    = f.Kpi != null ? f.Kpi.KpiName : null
                 })
                 .ToDictionaryAsync(x => x.KpiFactId, x => x, ct);
 
@@ -330,12 +371,12 @@ namespace KPIMonitor.Controllers
             static string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
             static string LabelStatus(string code) => (code ?? "").Trim().ToLowerInvariant() switch
             {
-                "conforme" => "Ok",
-                "ecart" => "Needs Attention",
-                "rattrapage" => "Catching Up",
-                "attente" => "Data Missing",
-                "" => "—",
-                _ => code!
+                "conforme"    => "Ok",
+                "ecart"       => "Needs Attention",
+                "rattrapage"  => "Catching Up",
+                "attente"     => "Data Missing",
+                ""            => "—",
+                _             => code!
             };
 
             string DiffNum(string title, decimal? curV, decimal? newV)
@@ -453,7 +494,7 @@ namespace KPIMonitor.Controllers
         }
 
         // ------------------------
-        // Submit a batch (kept as-is — one email total, not part of approvals page)
+        // Submit a batch (ONE email total)
         // ------------------------
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -532,7 +573,7 @@ namespace KPIMonitor.Controllers
                 var createdIds = new List<decimal>();
                 int minKey = int.MaxValue, maxKey = int.MinValue;
 
-                // Create the batch first so child submits are linked (one email total)
+                // Create the batch first so child submits are linked
                 var batchId = await _batches.CreateBatchAsync(
                     kpiId,
                     plan.KpiYearPlanId,
@@ -572,10 +613,10 @@ namespace KPIMonitor.Controllers
                             changeF ? newF : null,   // Forecast
                             null,                    // Status
                             submittedBy,
-                            batchId                  // link to batch (suppresses child emails)
+                            notifyOwner: false,      // BATCH children → NO owner email here
+                            batchId: batchId
                         );
 
-                        // Auto-approve immediately for SuperAdmin
                         if (isSuperAdmin)
                         {
                             await _svc.ApproveAsync(ch.KpiFactChangeId, submittedBy, suppressEmail: true);
@@ -613,10 +654,58 @@ namespace KPIMonitor.Controllers
                         Sam(), kpiId, plan.KpiYearPlanId, year, monthly, created, skipped, batchId, traceId);
                 }
 
-                // ONE HTML email is sent from here (already implemented previously) — NOT changing it.
-                // (kept as in your last working version where we notify the owner once)
+                // === ONE batch summary email to Owner (same as your working flow) ===
+                var kpiHead = await _db.DimKpis.AsNoTracking()
+                    .Where(x => x.KpiId == kpiId)
+                    .Select(x => new
+                    {
+                        x.KpiCode,
+                        x.KpiName,
+                        PillarCode = x.Pillar != null ? x.Pillar.PillarCode : null,
+                        ObjectiveCode = x.Objective != null ? x.Objective.ObjectiveCode : null
+                    })
+                    .FirstOrDefaultAsync(ct);
 
-                // Owner email code already handled earlier; do not duplicate or change.
+                var kpiText = (kpiHead == null)
+                    ? $"KPI {kpiId}"
+                    : $"{(kpiHead.PillarCode ?? "")}.{(kpiHead.ObjectiveCode ?? "")} {(kpiHead.KpiCode ?? "")} — {(kpiHead.KpiName ?? "-")}";
+
+                string? ownerEmail = null;
+                var ownerEmpId = plan.OwnerEmpId;
+                if (!string.IsNullOrWhiteSpace(ownerEmpId))
+                {
+                    var ownerLogin = await _dir.TryGetLoginByEmpIdAsync(ownerEmpId, ct);
+                    if (!string.IsNullOrWhiteSpace(ownerLogin))
+                    {
+                        var samLogin = ownerLogin.Trim();
+                        if (samLogin.Contains("@"))
+                        {
+                            ownerEmail = samLogin;
+                        }
+                        else
+                        {
+                            var bs = samLogin.LastIndexOf('\\');
+                            if (bs >= 0 && bs < samLogin.Length - 1) samLogin = samLogin[(bs + 1)..];
+                            var at = samLogin.IndexOf('@');
+                            if (at > 0) samLogin = samLogin[..at];
+                            ownerEmail = $"{samLogin}@badea.org";
+                        }
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(ownerEmail))
+                {
+                    var subject = "KPI batch submitted for approval";
+                    var perText = (b?.PeriodMin.HasValue == true && b?.PeriodMax.HasValue == true)
+                                    ? $"{b!.PeriodMin}–{b!.PeriodMax}" : "—";
+
+                    var bodyHtml = $@"
+<p>A batch of <strong>{created}</strong> change(s) was submitted for <em>{WebUtility.HtmlEncode(kpiText)}</em>.</p>
+<p>Year: <strong>{year}</strong> • Frequency: <strong>{(monthly ? "Monthly" : "Quarterly")}</strong> • Periods: <strong>{WebUtility.HtmlEncode(perText)}</strong></p>
+<p>Submitted by <strong>{WebUtility.HtmlEncode(submittedBy)}</strong>.</p>";
+
+                    await _email.SendEmailAsync(ownerEmail, subject, HtmlEmail(subject, bodyHtml));
+                }
 
                 return Json(new
                 {
@@ -708,7 +797,7 @@ namespace KPIMonitor.Controllers
         }
 
         // ------------------------
-        // List batches (cards) — RESTORED EmpId owner/editor filters, same display
+        // List batches (cards) — unchanged EmpId logic
         // ------------------------
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -784,7 +873,7 @@ namespace KPIMonitor.Controllers
                     k.KpiId,
                     k.KpiCode,
                     k.KpiName,
-                    PillarCode = k.Pillar != null ? k.Pillar.PillarCode : null,
+                    PillarCode    = k.Pillar != null ? k.Pillar.PillarCode : null,
                     ObjectiveCode = k.Objective != null ? k.Objective.ObjectiveCode : null
                 })
                 .ToDictionaryAsync(x => x.KpiId, x => x, ct);
@@ -1076,7 +1165,7 @@ namespace KPIMonitor.Controllers
                          x.KpiId,
                          x.KpiCode,
                          x.KpiName,
-                         PillarCode = x.Pillar != null ? x.Pillar.PillarCode : null,
+                         PillarCode    = x.Pillar != null ? x.Pillar.PillarCode : null,
                          ObjectiveCode = x.Objective != null ? x.Objective.ObjectiveCode : null
                      })
                      .FirstOrDefaultAsync(ct);
