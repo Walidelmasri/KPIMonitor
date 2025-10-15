@@ -58,10 +58,14 @@
           <div class="card-body d-flex flex-column justify-content-between h-100">
             <div>
               <h6 class="card-title text-secondary fw-bold mb-3">KPI Details</h6>
-              <p class="mb-2" style="font-size: larger;"><strong>👁️ Owner:</strong> <span id="metaOwner" class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>✍️ Editor:</strong> <span id="metaEditor" class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>📅 Frequency:</strong> <span id="metaFrequency" class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>🔢 Unit:</strong> <span id="metaUnit" class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>👁️ Owner:</strong> <span id="metaOwner"
+                  class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>✍️ Editor:</strong> <span id="metaEditor"
+                  class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>📅 Frequency:</strong> <span id="metaFrequency"
+                  class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>🔢 Unit:</strong> <span id="metaUnit"
+                  class="text-dark">—</span></p>
             </div>
             <div class="mt-auto">
               <div class="mb-4 text-center">
@@ -288,30 +292,30 @@
     });
 
     // ---------- tiny helpers ----------
-    const $ = (id) => document.getElementById(id);
+    const byId = (id) => document.getElementById(id);
     const api = (path) =>
       fetch(path, { headers: { 'Accept': 'application/json' } })
         .then(r => { if (!r.ok) throw new Error('Network error'); return r.json(); });
 
     // ---------- elements ----------
-    const selPillar   = $('pillarSelector');
-    const selObjective= $('objectiveSelector');
-    const selKpi      = $('kpiSelector');
+    const selPillar = byId('pillarSelector');
+    const selObjective = byId('objectiveSelector');
+    const selKpi = byId('kpiSelector');
 
-    const metaOwner      = $('metaOwner');
-    const metaEditor     = $('metaEditor');
-    const metaFrequency  = $('metaFrequency');
-    const metaUnit       = $('metaUnit');
+    const metaOwner = byId('metaOwner');
+    const metaEditor = byId('metaEditor');
+    const metaFrequency = byId('metaFrequency');
+    const metaUnit = byId('metaUnit');
 
-    const metaPriority   = $('metaPriority');
-    const metaStatus     = $('metaStatus');
+    const metaPriority = byId('metaPriority');
+    const metaStatus = byId('metaStatus');
 
-    const tableBody   = $('factsTbody');
-    const btnEditKpi  = document.getElementById('openEditKpiBtn');
+    const tableBody = byId('factsTbody');
+    const btnEditKpi = document.getElementById('openEditKpiBtn');
 
     // NEW: ACL state
     let currentPlanId = null;
-    let canEditFacts  = false;
+    let canEditFacts = false;
 
     function resetSelect(sel, placeholder) {
       sel.innerHTML = '';
@@ -405,10 +409,10 @@
       data: {
         labels: [],
         datasets: [
-          { type: 'bar',  label: 'Actual',   data: [], backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
-          { type: 'line', label: 'Target',   data: [], borderWidth: 2, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', tension: 0.3, fill: false },
+          { type: 'bar', label: 'Actual', data: [], backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
+          { type: 'line', label: 'Target', data: [], borderWidth: 2, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', tension: 0.3, fill: false },
           { type: 'line', label: 'Forecast', data: [], borderWidth: 2, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], tension: 0.3, fill: false },
-          { type: 'bar',  label: 'Year Target', data: [], backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
+          { type: 'bar', label: 'Year Target', data: [], backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
         ]
       },
       options: {
@@ -441,9 +445,9 @@
             outline: true,
             perDataset: [
               { dy: -12, dx: 0, color: '#800080' }, // Actual (bar)
-              { dy:  12, dx: -8, color: '#7a7a7a' }, // Target (line)
-              { dy: -16, dx:  8, color: '#fd7e14' }, // Forecast (line)
-              { dy: -12, dx:  0, color: '#7a7a7a' }  // Year Target (bar)
+              { dy: 12, dx: -8, color: '#7a7a7a' }, // Target (line)
+              { dy: -16, dx: 8, color: '#fd7e14' }, // Forecast (line)
+              { dy: -12, dx: 0, color: '#7a7a7a' }  // Year Target (bar)
             ]
           },
           tooltip: { enabled: true },
@@ -480,45 +484,45 @@
     // ====== AJAX binder for the modal form (ALWAYS intercept submit) ======
     function wireKpiModalAjax() {
       const modal = document.getElementById('editKpiModal');
-      const form  = modal ? modal.querySelector('#kpi-edit-form') : null;
+      const form = modal ? modal.querySelector('#kpi-edit-form') : null;
       if (!form || form.dataset.wired === '1') return;
       form.dataset.wired = '1';
 
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const url = form.getAttribute('action'); // /KpiFactChanges/SubmitBatch
-        const fd  = new FormData(form);          // includes antiforgery token
+        const fd = new FormData(form);          // includes antiforgery token
 
         try {
-// inside wireKpiModalAjax() submit handler, replace the fetch+success part with:
-const res  = await fetch(url, {
-  method: 'POST',
-  headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-  body: fd
-});
-const text = await res.text();        // read body even if not OK
-let data = null;
-try { data = JSON.parse(text); } catch { /* non-JSON or HTML */ }
+          // inside wireKpiModalAjax() submit handler, replace the fetch+success part with:
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+            body: fd
+          });
+          const text = await res.text();        // read body even if not OK
+          let data = null;
+          try { data = JSON.parse(text); } catch { /* non-JSON or HTML */ }
 
-if (!res.ok) {
-  console.error('[Submit] HTTP', res.status, text);
-  const msg = (data && data.error) ? data.error : ('Save failed (' + res.status + ')');
-  throw new Error(msg);
-}
+          if (!res.ok) {
+            console.error('[Submit] HTTP', res.status, text);
+            const msg = (data && data.error) ? data.error : ('Save failed (' + res.status + ')');
+            throw new Error(msg);
+          }
 
-console.log('[Submit] result:', data);
+          console.log('[Submit] result:', data);
 
-// Optional: quick visible feedback (works for single or batch)
-if (data && typeof data === 'object') {
-  if (typeof data.createdCount === 'number') {
-    alert(`Submitted: ${data.createdCount} change(s)` + (data.skippedCount ? `, skipped: ${data.skippedCount}` : ''));
-  } else if (data.status) {
-    alert(data.status === 'approved' ? 'Saved & auto-approved.' : 'Submitted for approval.');
-  }
-}
+          // Optional: quick visible feedback (works for single or batch)
+          if (data && typeof data === 'object') {
+            if (typeof data.createdCount === 'number') {
+              alert(`Submitted: ${data.createdCount} change(s)` + (data.skippedCount ? `, skipped: ${data.skippedCount}` : ''));
+            } else if (data.status) {
+              alert(data.status === 'approved' ? 'Saved & auto-approved.' : 'Submitted for approval.');
+            }
+          }
 
-bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).hide();
-await loadKpiSummary();
+          bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).hide();
+          await loadKpiSummary();
 
         } catch (err) {
           alert(err?.message || 'Save failed');
@@ -537,46 +541,46 @@ await loadKpiSummary();
 
       // ACL state from server
       currentPlanId = res?.meta?.planId ?? null;
-      canEditFacts  = !!res?.meta?.canEdit;
+      canEditFacts = !!res?.meta?.canEdit;
 
       // Title "PC.OC KPICode — Name"
       const leftParts = [];
-      if (res?.meta?.pillarCode)    leftParts.push(res.meta.pillarCode);
+      if (res?.meta?.pillarCode) leftParts.push(res.meta.pillarCode);
       if (res?.meta?.objectiveCode) leftParts.push(res.meta.objectiveCode);
       let left = leftParts.join('.');
       if (res?.meta?.code) left = left ? `${left} ${res.meta.code}` : res.meta.code;
       const finalTitle = (left ? `${left} — ` : '') + (res?.meta?.title || '—');
-      $('kpiTitle').textContent = finalTitle;
+      byId('kpiTitle').textContent = finalTitle;
 
       // Meta
-      metaOwner.textContent      = res?.meta?.owner || '—';
-      metaEditor.textContent     = res?.meta?.editor || '—';
-      metaFrequency.textContent  = res?.meta?.valueType || '—';
-      metaUnit.textContent       = res?.meta?.unit || '—';
-      metaPriority.textContent   = (res?.meta?.priority ?? '—');
+      metaOwner.textContent = res?.meta?.owner || '—';
+      metaEditor.textContent = res?.meta?.editor || '—';
+      metaFrequency.textContent = res?.meta?.valueType || '—';
+      metaUnit.textContent = res?.meta?.unit || '—';
+      metaPriority.textContent = (res?.meta?.priority ?? '—');
 
       const label = (res?.meta?.statusLabel || '—');
       const color = (res?.meta?.statusColor || '');
       metaStatus.textContent = label;
-      metaStatus.className   = 'status-pill';
+      metaStatus.className = 'status-pill';
       if (color) metaStatus.style.background = color;
 
       // Series
-      const baseLabels = res?.chart?.labels   || [];
-      const actual     = res?.chart?.actual   || [];
-      const target     = res?.chart?.target   || [];
-      const forecast   = res?.chart?.forecast || [];
+      const baseLabels = res?.chart?.labels || [];
+      const actual = res?.chart?.actual || [];
+      const target = res?.chart?.target || [];
+      const forecast = res?.chart?.forecast || [];
 
       // Five-year targets appended on the right
-      const yrArr      = Array.isArray(res?.chart?.yearTargets) ? res.chart.yearTargets : [];
+      const yrArr = Array.isArray(res?.chart?.yearTargets) ? res.chart.yearTargets : [];
       const yearLabels = yrArr.map(y => String(y.year));
-      const yearBarVals= yrArr.map(y => y.value ?? null);
+      const yearBarVals = yrArr.map(y => y.value ?? null);
 
-      const allLabels  = baseLabels.concat(yearLabels);
-      const pad        = new Array(yearLabels.length).fill(null);
-      const leftNulls  = new Array(baseLabels.length).fill(null);
+      const allLabels = baseLabels.concat(yearLabels);
+      const pad = new Array(yearLabels.length).fill(null);
+      const leftNulls = new Array(baseLabels.length).fill(null);
 
-      kpiChart.data.labels           = allLabels;
+      kpiChart.data.labels = allLabels;
       kpiChart.data.datasets[0].data = actual.concat(pad);
       kpiChart.data.datasets[1].data = target.concat(pad);
       kpiChart.data.datasets[2].data = forecast.concat(pad);
@@ -592,16 +596,16 @@ await loadKpiSummary();
         for (const r of rows) {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td>
-              ${r.period ?? '—'}
-              ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}
-            </td>
-            <td>${r.startDate ?? '—'}</td>
-            <td>${r.endDate ?? '—'}</td>
-            <td>${r.actual ?? '—'}</td>
-            <td>${r.target ?? '—'}</td>
-            <td>${r.forecast ?? '—'}</td>
-          `;
+              <td>
+                ${r.period ?? '—'}
+                ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}
+              </td>
+              <td>${r.startDate ?? '—'}</td>
+              <td>${r.endDate ?? '—'}</td>
+              <td>${r.actual ?? '—'}</td>
+              <td>${r.target ?? '—'}</td>
+              <td>${r.forecast ?? '—'}</td>
+            `;
           tableBody.appendChild(tr);
         }
       }
@@ -632,22 +636,22 @@ await loadKpiSummary();
       const modalContent = document.querySelector('#editKpiModal .modal-content');
       modalContent.innerHTML = '<div class="p-4 text-center text-muted">Loading…</div>';
 
-try {
-  const r = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-  const text = await r.text();                 // <-- read body even on errors
+      try {
+        const r = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const text = await r.text();                 // <-- read body even on errors
 
-  if (r.status === 403) throw new Error('You do not have access to edit this KPI.');
-  if (!r.ok) {
-    console.error('EditKpiFactsModal failed', r.status, text); // <-- see real server error
-    throw new Error('Failed to load edit modal. (' + r.status + ')');
-  }
+        if (r.status === 403) throw new Error('You do not have access to edit this KPI.');
+        if (!r.ok) {
+          console.error('EditKpiFactsModal failed', r.status, text); // <-- see real server error
+          throw new Error('Failed to load edit modal. (' + r.status + ')');
+        }
 
-  modalContent.innerHTML = text;
-  wireKpiModalAjax();                          // re-wire the form AFTER injecting HTML
-  bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).show();
-} catch (e) {
-  alert(e.message || 'Could not open edit modal.');
-}
+        modalContent.innerHTML = text;
+        wireKpiModalAjax();                          // re-wire the form AFTER injecting HTML
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).show();
+      } catch (e) {
+        alert(e.message || 'Could not open edit modal.');
+      }
 
     });
 
