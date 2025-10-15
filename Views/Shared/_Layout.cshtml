@@ -17,6 +17,32 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/KPIMonitor.styles.css" asp-append-version="true" />
     <link rel="preload" as="image" href="~/images/side-rail1.jpeg" fetchpriority="high" />
+    <style>
+        /* tiny inline spinner */
+        .btn-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            vertical-align: -2px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+            border-right-color: transparent;
+            animation: btnspin .6s linear infinite
+        }
+
+        @@keyframes btnspin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        /* busy state */
+        button[aria-busy="true"],
+        .btn[aria-busy="true"] {
+            pointer-events: none;
+            opacity: .75
+        }
+    </style>
 
 </head>
 
@@ -302,6 +328,208 @@
                 })
                 .finally(() => setTimeout(apprPing, 30000)); // poll every 30s
         })();
+        // ---------- helpers ----------
+        function setBusyButton(btn, busy, label) {
+            if (!btn) return;
+            if (busy) {
+                if (!btn.dataset.origHtml) btn.dataset.origHtml = btn.innerHTML;
+                btn.setAttribute('aria-busy', 'true'); btn.disabled = true;
+                btn.innerHTML = `<span class="btn-spinner"></span> <span>${label || 'Working…'}</span>`;
+            } else {
+                btn.removeAttribute('aria-busy'); btn.disabled = false;
+                if (btn.dataset.origHtml) btn.innerHTML = btn.dataset.origHtml;
+            }
+        }
+        async function postJson(url, body) {
+            const opts = { method: 'POST', headers: {} };
+            if (body instanceof FormData) { opts.body = body; }
+            else { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body || {}); }
+            const r = await fetch(url, opts);
+            const ct = (r.headers.get('content-type') || '');
+            const data = ct.includes('application/json') ? await r.json() : await r.text();
+            if (!r.ok || (data && data.ok === false)) throw new Error((data && (data.error || data.message)) || r.statusText || 'Request failed');
+            return data;
+        }
+        function showToast(msg, kind) {
+            const id = 'mini-toast-area';
+            let area = document.getElementById(id);
+            if (!area) { area = document.createElement('div'); area.id = id; area.style.position = 'fixed'; area.style.right = '16px'; area.style.bottom = '16px'; area.style.zIndex = '9999'; document.body.appendChild(area); }
+            const n = document.createElement('div');
+            n.textContent = msg || ''; n.style.marginTop = '8px'; n.style.padding = '10px 12px'; n.style.borderRadius = '10px';
+            n.style.boxShadow = '0 6px 18px rgba(0,0,0,.15)'; n.style.background = (kind === 'success') ? '#16a34a' : (kind === 'warning') ? '#d97706' : '#dc2626';
+            n.style.color = '#fff'; area.appendChild(n);
+            setTimeout(() => { n.style.opacity = '0'; n.style.transition = 'opacity .2s'; }, 1800);
+            setTimeout(() => area.removeChild(n), 2100);
+        }
+
+        // ---------- Approve/Reject buttons on Inbox cards ----------
+        document.addEventListener('click', async (ev) => {
+            const btn = ev.target.closest('.appr-btn'); // your existing class on Inbox buttons
+            if (!btn) return;
+            if (btn.getAttribute('aria-busy') === 'true') return;
+
+            const action = (btn.dataset.action || '').toLowerCase();
+            const changeId = btn.dataset.id;
+            const batchId = btn.dataset.batchId;
+
+            let url, payload, label;
+            if (action === 'approve') {
+                url = '/kpimonitor/KpiFactChanges/Approve';
+                payload = { changeId };
+                label = 'Approving…';
+            } else if (action === 'reject') {
+                // If your reject runs via a separate modal form, that form handler below will run instead.
+                // Leaving prompt as a fallback in case the inline button is used.
+                const reason = btn.dataset.reason || prompt('Reject reason:');
+                if (!reason) return;
+                url = '/kpimonitor/KpiFactChanges/Reject';
+                payload = { changeId, reason };
+                label = 'Rejecting…';
+            } else if (action === 'approve-batch') {
+                url = '/kpimonitor/KpiFactChanges/ApproveBatch';
+                payload = { batchId };
+                label = 'Approving…';
+            } else if (action === 'reject-batch') {
+                const reason = btn.dataset.reason || prompt('Reject reason:');
+                if (!reason) return;
+                url = '/kpimonitor/KpiFactChanges/RejectBatch';
+                payload = { batchId, reason };
+                label = 'Rejecting…';
+            } else {
+                return;
+            }
+
+            ev.preventDefault();
+            setBusyButton(btn, true, label);
+
+            const group = btn.closest('.btn-group');
+            const sibs = group ? group.querySelectorAll('.appr-btn') : [];
+            sibs.forEach(b => { if (b !== btn) b.disabled = true; });
+
+            try {
+                await postJson(url, payload);
+
+                const card = btn.closest('.appr-card') || btn.closest('.border.rounded-3');
+                if (card) {
+                    const headerRight = card.querySelector('.text-end');
+                    if (headerRight) {
+                        headerRight.innerHTML = (action.includes('approve'))
+                            ? "<span class='badge text-bg-success'>Approved</span>"
+                            : "<span class='badge text-bg-danger'>Rejected</span>";
+                    }
+                }
+
+                // Your existing reload hook – call whichever you actually have
+                if (typeof window.reloadActiveApprovalsTab === 'function') {
+                    await window.reloadActiveApprovalsTab();
+                } else if (typeof window.loadList === 'function') {
+                    const activePane = document.querySelector('.tab-pane.active.show');
+                    if (activePane?.id === 'tab-batches') {
+                        await window.loadList('#tab-batches', '/kpimonitor/KpiFactChanges/ListBatchesHtml', { status: 'pending' });
+                    } else {
+                        await window.loadList('#tab-changes', '/kpimonitor/KpiFactChanges/ListHtml', { status: 'pending' });
+                    }
+                }
+                showToast(action.includes('approve') ? 'Approved successfully' : 'Rejected successfully', 'success');
+            } catch (err) {
+                showToast(err.message || 'Request failed', 'error');
+            } finally {
+                setBusyButton(btn, false);
+                sibs.forEach(b => { if (b !== btn) b.disabled = false; });
+            }
+        });
+
+        // ---------- Save-for-approval modal (button inside a form) ----------
+        (function () {
+            // Pattern A: button with id="btn-save-for-approval" inside a <form>
+            const saveBtn = document.getElementById('btn-save-for-approval');
+            if (saveBtn) {
+                saveBtn.addEventListener('click', async (e) => {
+                    if (saveBtn.getAttribute('aria-busy') === 'true') return;
+                    e.preventDefault();
+                    const form = saveBtn.closest('form');
+                    if (!form) { return; }
+                    setBusyButton(saveBtn, true, 'Submitting…');
+                    try {
+                        const fd = new FormData(form); // includes antiforgery token if @Html.AntiForgeryToken() is in form
+                        const r = await fetch(form.action, { method: 'POST', body: fd });
+                        if (!r.ok) throw new Error('Submit failed');
+                        // toast + optional refresh (if you reload a list)
+                        showToast('Request sent successfully', 'success');
+                        // window.reloadActiveApprovalsTab?.();
+                    } catch (err) {
+                        showToast(err.message || 'Submit failed', 'error');
+                    } finally {
+                        setBusyButton(saveBtn, false);
+                    }
+                });
+            }
+
+            // Pattern B: form submit hook if your modal uses a plain <button type="submit">
+            const saveForm = document.getElementById('form-save-for-approval');
+            if (saveForm) {
+                saveForm.addEventListener('submit', async (e) => {
+                    const btn = saveForm.querySelector('[type="submit"]');
+                    if (btn && btn.getAttribute('aria-busy') === 'true') return;
+                    e.preventDefault();
+                    if (btn) setBusyButton(btn, true, 'Submitting…');
+                    try {
+                        const fd = new FormData(saveForm);
+                        const r = await fetch(saveForm.action, { method: 'POST', body: fd });
+                        if (!r.ok) throw new Error('Submit failed');
+                        showToast('Request sent successfully', 'success');
+                    } catch (err) {
+                        showToast(err.message || 'Submit failed', 'error');
+                    } finally {
+                        if (btn) setBusyButton(btn, false);
+                    }
+                });
+            }
+        })();
+
+        // ---------- Reject modal (collects reason, posts to Reject) ----------
+        (function () {
+            const form = document.getElementById('reject-form');            // <form id="reject-form" action="/kpimonitor/KpiFactChanges/Reject">
+            if (!form) return;
+            const submitBtn = form.querySelector('[type="submit"]');        // submit button in the modal
+            const changeIdEl = form.querySelector('input[name="changeId"]');// hidden input you already fill when opening modal
+            const reasonEl = form.querySelector('textarea[name="reason"]'); // textarea for reason
+
+            form.addEventListener('submit', async (e) => {
+                if (submitBtn && submitBtn.getAttribute('aria-busy') === 'true') return;
+                e.preventDefault();
+                const changeId = changeIdEl?.value;
+                const reason = reasonEl?.value?.trim();
+                if (!changeId) { showToast('Missing change id', 'error'); return; }
+                if (!reason) { showToast('Reject reason is required', 'warning'); return; }
+
+                setBusyButton(submitBtn, true, 'Rejecting…');
+                try {
+                    const fd = new FormData(form); // includes token
+                    const data = await postJson(form.action, fd);
+                    showToast('Rejected successfully', 'success');
+
+                    // close modal if you use Bootstrap 5
+                    const modalEl = form.closest('.modal');
+                    if (modalEl && window.bootstrap) {
+                        const inst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                        inst.hide();
+                    }
+
+                    // refresh list
+                    if (typeof window.reloadActiveApprovalsTab === 'function') {
+                        await window.reloadActiveApprovalsTab();
+                    } else if (typeof window.loadList === 'function') {
+                        await window.loadList('#tab-changes', '/kpimonitor/KpiFactChanges/ListHtml', { status: 'pending' });
+                    }
+                } catch (err) {
+                    showToast(err.message || 'Reject failed', 'error');
+                } finally {
+                    setBusyButton(submitBtn, false);
+                }
+            });
+        })();
+
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)
