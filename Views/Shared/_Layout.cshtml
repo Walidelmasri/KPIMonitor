@@ -440,52 +440,50 @@
         });
 
         // ---------- Save-for-approval modal (button inside a form) ----------
-        (function () {
-            // Pattern A: button with id="btn-save-for-approval" inside a <form>
-            const saveBtn = document.getElementById('btn-save-for-approval');
-            if (saveBtn) {
-                saveBtn.addEventListener('click', async (e) => {
-                    if (saveBtn.getAttribute('aria-busy') === 'true') return;
-                    e.preventDefault();
-                    const form = saveBtn.closest('form');
-                    if (!form) { return; }
-                    setBusyButton(saveBtn, true, 'Submitting…');
-                    try {
-                        const fd = new FormData(form); // includes antiforgery token if @Html.AntiForgeryToken() is in form
-                        const r = await fetch(form.action, { method: 'POST', body: fd });
-                        if (!r.ok) throw new Error('Submit failed');
-                        // toast + optional refresh (if you reload a list)
-                        showToast('Request sent successfully', 'success');
-                        // window.reloadActiveApprovalsTab?.();
-                    } catch (err) {
-                        showToast(err.message || 'Submit failed', 'error');
-                    } finally {
-                        setBusyButton(saveBtn, false);
-                    }
-                });
-            }
+        // Delegated handler so it works for dynamically-injected modals
+        document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('#btn-save-for-approval');
+            if (!btn) return;
+            if (btn.getAttribute('aria-busy') === 'true') return;
 
-            // Pattern B: form submit hook if your modal uses a plain <button type="submit">
-            const saveForm = document.getElementById('form-save-for-approval');
-            if (saveForm) {
-                saveForm.addEventListener('submit', async (e) => {
-                    const btn = saveForm.querySelector('[type="submit"]');
-                    if (btn && btn.getAttribute('aria-busy') === 'true') return;
-                    e.preventDefault();
-                    if (btn) setBusyButton(btn, true, 'Submitting…');
-                    try {
-                        const fd = new FormData(saveForm);
-                        const r = await fetch(saveForm.action, { method: 'POST', body: fd });
-                        if (!r.ok) throw new Error('Submit failed');
-                        showToast('Request sent successfully', 'success');
-                    } catch (err) {
-                        showToast(err.message || 'Submit failed', 'error');
-                    } finally {
-                        if (btn) setBusyButton(btn, false);
+            const form = btn.closest('form'); // your <form id="kpi-edit-form" asp-controller="KpiFactChanges" asp-action="SubmitBatch">
+            if (!form) return;
+
+            e.preventDefault();
+            setBusyButton(btn, true, 'Submitting…');
+
+            try {
+                const fd = new FormData(form); // includes the antiforgery token that’s already in your form
+                const r = await fetch(form.action, { method: 'POST', body: fd });
+                const ct = (r.headers.get('content-type') || '');
+                const data = ct.includes('application/json') ? await r.json() : await r.text();
+                if (!r.ok || (data && data.ok === false)) throw new Error((data && (data.error || data.message)) || 'Submit failed');
+
+                showToast('Request sent successfully', 'success');
+
+                // Close the modal if it’s a Bootstrap modal
+                const modalEl = form.closest('.modal');
+                if (modalEl && window.bootstrap) {
+                    (bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl)).hide();
+                }
+
+                // If you have a list reload function, call it
+                if (typeof window.reloadActiveApprovalsTab === 'function') {
+                    await window.reloadActiveApprovalsTab();
+                } else if (typeof window.loadList === 'function') {
+                    const activePane = document.querySelector('.tab-pane.active.show');
+                    if (activePane?.id === 'tab-batches') {
+                        await window.loadList('#tab-batches', '/kpimonitor/KpiFactChanges/ListBatchesHtml', { status: 'pending' });
+                    } else {
+                        await window.loadList('#tab-changes', '/kpimonitor/KpiFactChanges/ListHtml', { status: 'pending' });
                     }
-                });
+                }
+            } catch (err) {
+                showToast(err.message || 'Submit failed', 'error');
+            } finally {
+                setBusyButton(btn, false);
             }
-        })();
+        });
 
         // ---------- Reject modal (collects reason, posts to Reject) ----------
         (function () {
