@@ -121,552 +121,550 @@
   </div>
 </div>
 
-@section Scripts {
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-  <script>
-    // ---- number formatter FIRST (used by defaults + chart) ----
-    function _fmtShort(v) {
-      const n = Number(v);
-      if (!isFinite(n)) return '';
-      const a = Math.abs(n);
-      if (a >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
-      if (a >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
-      if (a >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
-      return n.toString();
-    }
+@section Scripts {<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<script>
+  // ---- number formatter FIRST (used by defaults + chart) ----
+  function _fmtShort(v) {
+    const n = Number(v);
+    if (!isFinite(n)) return '';
+    const a = Math.abs(n);
+    if (a >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
+    if (a >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (a >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+    return n.toString();
+  }
 
-    // === SmartValueLabels START (drop-in replacement) ===
-    const SmartValueLabels = {
-      id: 'smartValueLabels',
-      afterDatasetsDraw(chart, _args, opts) {
-        const { ctx, data, chartArea } = chart;
-        const o = opts || {};
-        const fmt = typeof o.formatter === 'function' ? o.formatter : (v) => String(v);
+  // === SmartValueLabels START (unchanged drop-in) ===
+  const SmartValueLabels = {
+    id: 'smartValueLabels',
+    afterDatasetsDraw(chart, _args, opts) {
+      const { ctx, data, chartArea } = chart;
+      const o = opts || {};
+      const fmt = typeof o.formatter === 'function' ? o.formatter : (v) => String(v);
+      const fontSize = o.fontSize || 12;
+      const fontWeight = o.fontWeight || '700';
+      const minGap = o.minGap || 14;
+      const padTop = o.padTop || 4;
+      const padBottom = o.padBottom || 4;
+      const maxShift = o.maxShift || 40;
+      const barDY = (o.barDY != null ? o.barDY : -12);
+      const barDYNeg = (o.barDYNeg != null ? o.barDYNeg : 14);
+      const lineDY = (o.lineDY != null ? o.lineDY : -12);
+      const perDataset = o.perDataset || [];
+      const lineStepDefault = o.lineStep || 1;
+      const onlyLastForLinesDefault = !!o.onlyLastForLines;
 
-        const fontSize = o.fontSize || 12;
-        const fontWeight = o.fontWeight || '700';
-        const minGap = o.minGap || 14;
-        const padTop = o.padTop || 4;
-        const padBottom = o.padBottom || 4;
-        const maxShift = o.maxShift || 40;
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.font = `${fontWeight} ${fontSize}px system-ui,-apple-system,Segoe UI,Roboto,Arial`;
 
-        const barDY = (o.barDY != null ? o.barDY : -12);
-        const barDYNeg = (o.barDYNeg != null ? o.barDYNeg : 14);
-        const lineDY = (o.lineDY != null ? o.lineDY : -12);
+      const byIndex = new Map();
 
-        const perDataset = o.perDataset || [];
-        const lineStepDefault = o.lineStep || 1;
-        const onlyLastForLinesDefault = !!o.onlyLastForLines;
+      data.datasets.forEach((ds, di) => {
+        if (!chart.isDatasetVisible(di)) return;
+        const meta = chart.getDatasetMeta(di);
+        const type = ds.type || meta.type;
+        const isBar = type === 'bar';
+        const isLine = type === 'line';
+        const per = perDataset[di] || {};
+        const step = Number.isInteger(per.step) ? Math.max(1, per.step) : lineStepDefault;
 
-        ctx.save();
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
-        ctx.font = `${fontWeight} ${fontSize}px system-ui,-apple-system,Segoe UI,Roboto,Arial`;
+        let lastIdxForThisLine = null;
+        if (isLine && (onlyLastForLinesDefault || per.onlyLast)) {
+          for (let i = ds.data.length - 1; i >= 0; i--) {
+            const v = ds.data[i];
+            if (v != null && !Number.isNaN(+v)) { lastIdxForThisLine = i; break; }
+          }
+        }
 
-        const byIndex = new Map();
+        meta.data.forEach((el, i) => {
+          const raw = ds.data[i];
+          const val = Number(raw);
+          if (raw == null || Number.isNaN(val)) return;
 
-        data.datasets.forEach((ds, di) => {
-          if (!chart.isDatasetVisible(di)) return;
-          const meta = chart.getDatasetMeta(di);
-          const type = ds.type || meta.type;
-          const isBar = type === 'bar';
-          const isLine = type === 'line';
-          const per = perDataset[di] || {};
-          const step = Number.isInteger(per.step) ? Math.max(1, per.step) : lineStepDefault;
-
-          let lastIdxForThisLine = null;
-          if (isLine && (onlyLastForLinesDefault || per.onlyLast)) {
-            for (let i = ds.data.length - 1; i >= 0; i--) {
-              const v = ds.data[i];
-              if (v != null && !Number.isNaN(+v)) { lastIdxForThisLine = i; break; }
-            }
+          if (isLine) {
+            if ((onlyLastForLinesDefault || per.onlyLast) && i !== lastIdxForThisLine) return;
+            if ((i % step) !== 0) return;
           }
 
-          meta.data.forEach((el, i) => {
-            const raw = ds.data[i];
-            const val = Number(raw);
-            if (raw == null || Number.isNaN(val)) return;
+          const { x, y } = el.getProps(['x', 'y'], true);
+          let dy = isBar ? (val < 0 ? barDYNeg : barDY) : lineDY;
+          if (typeof per.dy === 'number') dy = per.dy;
+          const dx = (typeof per.dx === 'number') ? per.dx : 0;
 
-            if (isLine) {
-              if ((onlyLastForLinesDefault || per.onlyLast) && i !== lastIdxForThisLine) return;
-              if ((i % step) !== 0) return;
-            }
+          const text = fmt(val);
+          const w = ctx.measureText(text).width;
+          const h = fontSize * 1.2;
 
-            const { x, y } = el.getProps(['x', 'y'], true);
-            let dy = isBar ? (val < 0 ? barDYNeg : barDY) : lineDY;
-            if (typeof per.dy === 'number') dy = per.dy;
-            const dx = (typeof per.dx === 'number') ? per.dx : 0;
-
-            const text = fmt(val);
-            const w = ctx.measureText(text).width;
-            const h = fontSize * 1.2;
-
-            const item = {
-              x: x + dx,
-              y: y + dy,
-              baseY: y + dy,
-              val,
-              text,
-              color: per.color || o.color || '#111',
-              w, h,
-              priority: isBar ? 0 : 1
-            };
-
-            const arr = byIndex.get(i);
-            if (arr) arr.push(item); else byIndex.set(i, [item]);
-          });
-        });
-
-        const topLimitBase = chartArea.top + padTop;
-        const botLimit = chartArea.bottom - padBottom;
-
-        byIndex.forEach((items) => {
-          const clampNearBase = (it) => {
-            const topLimit = topLimitBase + it.h;
-            if (it.y < topLimit) it.y = topLimit;
-
-            const low = it.baseY - maxShift;
-            const high = it.baseY + maxShift;
-            if (it.y < low) it.y = low;
-            if (it.y > high) it.y = high;
-
-            if (it.y > botLimit) it.y = botLimit;
+          const item = {
+            x: x + dx,
+            y: y + dy,
+            baseY: y + dy,
+            val,
+            text,
+            color: per.color || o.color || '#111',
+            w, h,
+            priority: isBar ? 0 : 1
           };
 
-          items.forEach(it => { it.y = it.baseY; clampNearBase(it); });
-
-          let guard = 0;
-          while (guard++ < 10) {
-            let changed = false;
-            for (let i = 0; i < items.length; i++) {
-              for (let j = i + 1; j < items.length; j++) {
-                const a = items[i], b = items[j];
-                const aL = a.x - a.w / 2, aR = a.x + a.w / 2, aT = a.y - a.h, aB = a.y;
-                const bL = b.x - b.w / 2, bR = b.x + b.w / 2, bT = b.y - b.h, bB = b.y;
-                const overlap = !(aR < bL || aL > bR || aB < bT || aT > bB);
-                if (overlap) {
-                  const hi = (a.val >= b.val) ? a : b;
-                  const lo = (hi === a) ? b : a;
-                  hi.y -= minGap;
-                  lo.y += Math.min(4, minGap / 2);
-                  clampNearBase(hi);
-                  clampNearBase(lo);
-                  changed = true;
-                }
-              }
-            }
-            if (!changed) break;
-          }
-
-          items.sort((a, b) => (a.priority - b.priority));
-          items.forEach(it => {
-            ctx.fillStyle = it.color;
-            if (o.outline) {
-              ctx.lineWidth = 3;
-              ctx.strokeStyle = 'rgba(255,255,255,0.95)';
-              ctx.strokeText(it.text, it.x, it.y);
-            }
-            ctx.fillText(it.text, it.x, it.y);
-          });
+          const arr = byIndex.get(i);
+          if (arr) arr.push(item); else byIndex.set(i, [item]);
         });
+      });
 
-        ctx.restore();
-      }
-    };
-    Chart.register(SmartValueLabels);
-    // === SmartValueLabels END ===
+      const topLimitBase = chartArea.top + padTop;
+      const botLimit = chartArea.bottom - padBottom;
 
-    // ---- register plugin + global defaults for labels ----
-    Chart.register(ChartDataLabels);
-    Chart.defaults.set('plugins.datalabels', {
-      display: (ctx) => ctx.raw != null,
-      formatter: (v) => _fmtShort(v),
-      anchor: 'end',
-      align: 'end',
-      offset: 2,
-      clamp: true,
-      clip: false,
-      color: '#111',
-      font: { weight: 'bold' }
-    });
+      byIndex.forEach((items) => {
+        const clampNearBase = (it) => {
+          const topLimit = topLimitBase + it.h;
+          if (it.y < topLimit) it.y = topLimit;
 
-    // ---------- tiny helpers ----------
-    const byId = (id) => document.getElementById(id);
-    const api = (path) => {
-      const u = new URL(path, window.location.origin);
-      u.searchParams.set('_ts', Date.now().toString());   // cache buster
-      return fetch(u.toString(), {
-        headers: { 'Accept': 'application/json' },
-        cache: 'no-store'                                  // tell browser: don't cache
-      }).then(r => { if (!r.ok) throw new Error('Network error'); return r.json(); });
-    };
+          const low = it.baseY - maxShift;
+          const high = it.baseY + maxShift;
+          if (it.y < low) it.y = low;
+          if (it.y > high) it.y = high;
 
+          if (it.y > botLimit) it.y = botLimit;
+        };
 
-    // ---------- elements ----------
-    const selPillar = byId('pillarSelector');
-    const selObjective = byId('objectiveSelector');
-    const selKpi = byId('kpiSelector');
+        items.forEach(it => { it.y = it.baseY; clampNearBase(it); });
 
-    const metaOwner = byId('metaOwner');
-    const metaEditor = byId('metaEditor');
-    const metaFrequency = byId('metaFrequency');
-    const metaUnit = byId('metaUnit');
-
-    const metaPriority = byId('metaPriority');
-    const metaStatus = byId('metaStatus');
-
-    const tableBody = byId('factsTbody');
-    const btnEditKpi = document.getElementById('openEditKpiBtn');
-
-    // NEW: ACL state
-    let currentPlanId = null;
-    let canEditFacts = false;
-
-    function resetSelect(sel, placeholder) {
-      sel.innerHTML = '';
-      const opt = document.createElement('option');
-      opt.value = '';
-      opt.textContent = placeholder;
-      sel.appendChild(opt);
-      sel.disabled = true;
-    }
-
-    // ---------- cascading dropdowns ----------
-    async function loadPillars() {
-      resetSelect(selPillar, '-- Pillar --');
-      resetSelect(selObjective, '-- Objective --');
-      resetSelect(selKpi, '-- KPI --');
-
-      const items = await api('@Url.Action("GetPillars", "Home")'); // [{id, name}]
-      for (const it of items) {
-        const o = document.createElement('option');
-        o.value = it.id; o.textContent = it.name;
-        selPillar.appendChild(o);
-      }
-      selPillar.disabled = false;
-    }
-
-    selPillar.addEventListener('change', async () => {
-      resetSelect(selObjective, '-- Objective --');
-      resetSelect(selKpi, '-- KPI --');
-      clearMeta();
-      clearChartAndTable();
-
-      const pid = selPillar.value;
-      if (!pid) return;
-
-      const items = await api('@Url.Action("GetObjectives", "Home")?pillarId=' + encodeURIComponent(pid));
-      for (const it of items) {
-        const o = document.createElement('option');
-        o.value = it.id; o.textContent = it.name;
-        selObjective.appendChild(o);
-      }
-      selObjective.disabled = items.length === 0;
-    });
-
-    selObjective.addEventListener('change', async () => {
-      resetSelect(selKpi, '-- KPI --');
-      clearMeta();
-      clearChartAndTable();
-
-      const oid = selObjective.value;
-      if (!oid) return;
-
-      const items = await api('@Url.Action("GetKpis", "Home")?objectiveId=' + encodeURIComponent(oid));
-      for (const it of items) {
-        const o = document.createElement('option');
-        o.value = it.id; o.textContent = it.name;
-        selKpi.appendChild(o);
-      }
-      selKpi.disabled = items.length === 0;
-    });
-
-    selKpi.addEventListener('change', () => {
-      loadKpiSummary().catch(console.error);
-    });
-
-    function getQS(name) {
-      const u = new URL(window.location.href);
-      return u.searchParams.get(name);
-    }
-
-    async function initPage() {
-      await loadPillars();
-
-      const qP = getQS('pillarId');
-      const qO = getQS('objectiveId');
-      const qK = getQS('kpiId');
-
-      if (qP) { selPillar.value = qP; selPillar.dispatchEvent(new Event('change')); }
-      if (qO) {
-        const waitObjectives = () => new Promise(r => setTimeout(r, 150));
-        await waitObjectives(); selObjective.value = qO; selObjective.dispatchEvent(new Event('change'));
-      }
-      if (qK) {
-        const waitKpis = () => new Promise(r => setTimeout(r, 150));
-        await waitKpis(); selKpi.value = qK; selKpi.dispatchEvent(new Event('change'));
-      }
-    }
-
-    // ---------- Chart.js ----------
-    const ctx = document.getElementById('kpiChart').getContext('2d');
-    let kpiChart = new Chart(ctx, {
-      data: {
-        labels: [],
-        datasets: [
-          { type: 'bar', label: 'Actual', data: [], backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
-          { type: 'line', label: 'Target', data: [], borderWidth: 2, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', tension: 0.3, fill: false },
-          { type: 'line', label: 'Forecast', data: [], borderWidth: 2, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], tension: 0.3, fill: false },
-          { type: 'bar', label: 'Year Target', data: [], backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        layout: { padding: { top: 28, bottom: 8 } },
-        scales: {
-          x: {
-            grid: { display: false },
-            ticks: {
-              padding: 8,
-              callback: function (value) {
-                const label = this.getLabelForValue(value);
-                // If your labels are "2025 – Jan", strip the left year prefix:
-                return String(label).replace(/^\s*\d{4}\s*[\-–—]\s*/, '');
+        let guard = 0;
+        while (guard++ < 10) {
+          let changed = false;
+          for (let i = 0; i < items.length; i++) {
+            for (let j = i + 1; j < items.length; j++) {
+              const a = items[i], b = items[j];
+              const aL = a.x - a.w / 2, aR = a.x + a.w / 2, aT = a.y - a.h, aB = a.y;
+              const bL = b.x - b.w / 2, bR = b.x + b.w / 2, bT = b.y - b.h, bB = b.y;
+              const overlap = !(aR < bL || aL > bR || aB < bT || aT > bB);
+              if (overlap) {
+                const hi = (a.val >= b.val) ? a : b;
+                const lo = (hi === a) ? b : a;
+                hi.y -= minGap;
+                lo.y += Math.min(4, minGap / 2);
+                clampNearBase(hi);
+                clampNearBase(lo);
+                changed = true;
               }
             }
-          },
-          y: { display: false, grid: { display: false }, beginAtZero: true }
-        },
-        plugins: {
-          datalabels: false,
-          smartValueLabels: {
-            formatter: _fmtShort,
-            fontSize: 12,
-            fontWeight: '700',
-            minGap: 14,
-            padTop: 12,
-            padBottom: 4,
-            outline: true,
-            perDataset: [
-              { dy: -12, dx: 0, color: '#800080' }, // Actual (bar)
-              { dy: 12, dx: -8, color: '#7a7a7a' }, // Target (line)
-              { dy: -16, dx: 8, color: '#fd7e14' }, // Forecast (line)
-              { dy: -12, dx: 0, color: '#7a7a7a' }  // Year Target (bar)
-            ]
-          },
-          tooltip: { enabled: true },
-          legend: {
-            position: 'top',
-            labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 8, weight: '700' } }
           }
+          if (!changed) break;
         }
-      }
-    });
 
-    function clearChartAndTable() {
-      kpiChart.data.labels = [];
-      for (const ds of kpiChart.data.datasets) ds.data = [];
-      kpiChart.update();
-
-      tableBody.innerHTML = '<tr class="placeholder-row"><td colspan="6" class="text-center text-muted">—</td></tr>';
-    }
-
-    function clearMeta() {
-      metaOwner.textContent = '—';
-      metaEditor.textContent = '—';
-      metaFrequency.textContent = '—';
-      metaUnit.textContent = '—';
-      metaPriority.textContent = '—';
-      metaStatus.textContent = '—';
-      metaStatus.className = 'status-pill';
-      metaStatus.style.background = '';
-
-      btnEditKpi.disabled = true;
-      btnEditKpi.textContent = '✏️ Edit KPI (Actual & Forecast)';
-    }
-
-    // ====== AJAX binder for the modal form (ALWAYS intercept submit) ======
-    function wireKpiModalAjax() {
-      const modal = document.getElementById('editKpiModal');
-      const form = modal ? modal.querySelector('#kpi-edit-form') : null;
-      if (!form || form.dataset.wired === '1') return;
-      form.dataset.wired = '1';
-
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const url = form.getAttribute('action'); // /KpiFactChanges/SubmitBatch
-        const fd = new FormData(form);          // includes antiforgery token
-
-        try {
-          // inside wireKpiModalAjax() submit handler, replace the fetch+success part with:
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-            body: fd
-          });
-          const text = await res.text();        // read body even if not OK
-          let data = null;
-          try { data = JSON.parse(text); } catch { /* non-JSON or HTML */ }
-
-          if (!res.ok) {
-            console.error('[Submit] HTTP', res.status, text);
-            const msg = (data && data.error) ? data.error : ('Save failed (' + res.status + ')');
-            throw new Error(msg);
+        items.sort((a, b) => (a.priority - b.priority));
+        items.forEach(it => {
+          ctx.fillStyle = it.color;
+          if (o.outline) {
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+            ctx.strokeText(it.text, it.x, it.y);
           }
+          ctx.fillText(it.text, it.x, it.y);
+        });
+      });
 
-          console.log('[Submit] result:', data);
+      ctx.restore();
+    }
+  };
+  Chart.register(SmartValueLabels);
+  // === SmartValueLabels END ===
 
-          // Optional: quick visible feedback (works for single or batch)
-          if (data && typeof data === 'object') {
-            if (typeof data.createdCount === 'number') {
-              alert(`Submitted: ${data.createdCount} change(s)` + (data.skippedCount ? `, skipped: ${data.skippedCount}` : ''));
-            } else if (data.status) {
-              alert(data.status === 'approved' ? 'Saved & auto-approved.' : 'Submitted for approval.');
+  // ---- register plugin + global defaults for labels ----
+  Chart.register(ChartDataLabels);
+  Chart.defaults.set('plugins.datalabels', {
+    display: (ctx) => ctx.raw != null,
+    formatter: (v) => _fmtShort(v),
+    anchor: 'end',
+    align: 'end',
+    offset: 2,
+    clamp: true,
+    clip: false,
+    color: '#111',
+    font: { weight: 'bold' }
+  });
+
+  // ---------- tiny helpers ----------
+  const byId = (id) => document.getElementById(id);
+  const api = (path) => {
+    // cache-buster so summary reflects the write immediately
+    const u = new URL(path, window.location.origin);
+    u.searchParams.set('_ts', Date.now().toString());
+    return fetch(u.toString(), {
+      headers: { 'Accept': 'application/json' },
+      cache: 'no-store'
+    }).then(r => { if (!r.ok) throw new Error('Network error'); return r.json(); });
+  };
+
+  // ---------- elements ----------
+  const selPillar    = byId('pillarSelector');
+  const selObjective = byId('objectiveSelector');
+  const selKpi       = byId('kpiSelector');
+
+  const metaOwner     = byId('metaOwner');
+  const metaEditor    = byId('metaEditor');
+  const metaFrequency = byId('metaFrequency');
+  const metaUnit      = byId('metaUnit');
+
+  const metaPriority  = byId('metaPriority');
+  const metaStatus    = byId('metaStatus');
+
+  const tableBody  = byId('factsTbody');
+  const btnEditKpi = byId('openEditKpiBtn');
+
+  // NEW: ACL state
+  let currentPlanId = null;
+  let canEditFacts  = false;
+
+  function resetSelect(sel, placeholder) {
+    sel.innerHTML = '';
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = placeholder;
+    sel.appendChild(opt);
+    sel.disabled = true;
+  }
+
+  // ---------- cascading dropdowns ----------
+  async function loadPillars() {
+    resetSelect(selPillar, '-- Pillar --');
+    resetSelect(selObjective, '-- Objective --');
+    resetSelect(selKpi, '-- KPI --');
+
+    const items = await api('@Url.Action("GetPillars", "Home")'); // [{id, name}]
+    for (const it of items) {
+      const o = document.createElement('option');
+      o.value = it.id; o.textContent = it.name;
+      selPillar.appendChild(o);
+    }
+    selPillar.disabled = false;
+  }
+
+  selPillar.addEventListener('change', async () => {
+    resetSelect(selObjective, '-- Objective --');
+    resetSelect(selKpi, '-- KPI --');
+    clearMeta();
+    clearChartAndTable();
+
+    const pid = selPillar.value;
+    if (!pid) return;
+
+    const items = await api('@Url.Action("GetObjectives", "Home")?pillarId=' + encodeURIComponent(pid));
+    for (const it of items) {
+      const o = document.createElement('option');
+      o.value = it.id; o.textContent = it.name;
+      selObjective.appendChild(o);
+    }
+    selObjective.disabled = items.length === 0;
+  });
+
+  selObjective.addEventListener('change', async () => {
+    resetSelect(selKpi, '-- KPI --');
+    clearMeta();
+    clearChartAndTable();
+
+    const oid = selObjective.value;
+    if (!oid) return;
+
+    const items = await api('@Url.Action("GetKpis", "Home")?objectiveId=' + encodeURIComponent(oid));
+    for (const it of items) {
+      const o = document.createElement('option');
+      o.value = it.id; o.textContent = it.name;
+      selKpi.appendChild(o);
+    }
+    selKpi.disabled = items.length === 0;
+  });
+
+  selKpi.addEventListener('change', () => {
+    loadKpiSummary().catch(console.error);
+  });
+
+  function getQS(name) {
+    const u = new URL(window.location.href);
+    return u.searchParams.get(name);
+  }
+
+  async function initPage() {
+    await loadPillars();
+
+    const qP = getQS('pillarId');
+    const qO = getQS('objectiveId');
+    const qK = getQS('kpiId');
+
+    if (qP) { selPillar.value = qP; selPillar.dispatchEvent(new Event('change')); }
+    if (qO) {
+      const waitObjectives = () => new Promise(r => setTimeout(r, 150));
+      await waitObjectives(); selObjective.value = qO; selObjective.dispatchEvent(new Event('change'));
+    }
+    if (qK) {
+      const waitKpis = () => new Promise(r => setTimeout(r, 150));
+      await waitKpis(); selKpi.value = qK; selKpi.dispatchEvent(new Event('change'));
+    }
+  }
+
+  // ---------- Chart.js ----------
+  const ctx = document.getElementById('kpiChart').getContext('2d');
+  let kpiChart = new Chart(ctx, {
+    data: {
+      labels: [],
+      datasets: [
+        { type: 'bar',  label: 'Actual',      data: [], backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
+        { type: 'line', label: 'Target',      data: [], borderWidth: 2, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', tension: 0.3, fill: false },
+        { type: 'line', label: 'Forecast',    data: [], borderWidth: 2, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], tension: 0.3, fill: false },
+        { type: 'bar',  label: 'Year Target', data: [], backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 28, bottom: 8 } },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            padding: 8,
+            callback: function (value) {
+              const label = this.getLabelForValue(value);
+              return String(label).replace(/^\s*\d{4}\s*[\-–—]\s*/, '');
             }
           }
-
-          // Immediately reflect pending in the UI (optimistic)
-          btnEditKpi.disabled = true;
-          btnEditKpi.textContent = '⏳ Pending approval';
-
-          bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).hide();
-          await loadKpiSummary();
-
-
-        } catch (err) {
-          alert(err?.message || 'Save failed');
-        }
-      });
-    }
-
-    async function loadKpiSummary() {
-      clearMeta();
-      clearChartAndTable();
-
-      const kpiId = selKpi.value;
-      if (!kpiId) return;
-
-      const res = await api('@Url.Action("GetKpiSummary", "Home")?kpiId=' + encodeURIComponent(kpiId));
-
-      // ACL state from server
-      currentPlanId = res?.meta?.planId ?? null;
-      canEditFacts = !!res?.meta?.canEdit;
-
-      // Title "PC.OC KPICode — Name"
-      const leftParts = [];
-      if (res?.meta?.pillarCode) leftParts.push(res.meta.pillarCode);
-      if (res?.meta?.objectiveCode) leftParts.push(res.meta.objectiveCode);
-      let left = leftParts.join('.');
-      if (res?.meta?.code) left = left ? `${left} ${res.meta.code}` : res.meta.code;
-      const finalTitle = (left ? `${left} — ` : '') + (res?.meta?.title || '—');
-      byId('kpiTitle').textContent = finalTitle;
-
-      // Meta
-      metaOwner.textContent = res?.meta?.owner || '—';
-      metaEditor.textContent = res?.meta?.editor || '—';
-      metaFrequency.textContent = res?.meta?.valueType || '—';
-      metaUnit.textContent = res?.meta?.unit || '—';
-      metaPriority.textContent = (res?.meta?.priority ?? '—');
-
-      const label = (res?.meta?.statusLabel || '—');
-      const color = (res?.meta?.statusColor || '');
-      metaStatus.textContent = label;
-      metaStatus.className = 'status-pill';
-      if (color) metaStatus.style.background = color;
-
-      // Series
-      const baseLabels = res?.chart?.labels || [];
-      const actual = res?.chart?.actual || [];
-      const target = res?.chart?.target || [];
-      const forecast = res?.chart?.forecast || [];
-
-      // Five-year targets appended on the right
-      const yrArr = Array.isArray(res?.chart?.yearTargets) ? res.chart.yearTargets : [];
-      const yearLabels = yrArr.map(y => String(y.year));
-      const yearBarVals = yrArr.map(y => y.value ?? null);
-
-      const allLabels = baseLabels.concat(yearLabels);
-      const pad = new Array(yearLabels.length).fill(null);
-      const leftNulls = new Array(baseLabels.length).fill(null);
-
-      kpiChart.data.labels = allLabels;
-      kpiChart.data.datasets[0].data = actual.concat(pad);
-      kpiChart.data.datasets[1].data = target.concat(pad);
-      kpiChart.data.datasets[2].data = forecast.concat(pad);
-      kpiChart.data.datasets[3].data = leftNulls.concat(yearBarVals);
-      kpiChart.update();
-
-      // Table
-      const rows = res?.table || [];
-      if (rows.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No facts for this plan/year.</td></tr>';
-      } else {
-        tableBody.innerHTML = '';
-        for (const r of rows) {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-                  <td>
-                    ${r.period ?? '—'}
-                    ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}
-                  </td>
-                  <td>${r.startDate ?? '—'}</td>
-                  <td>${r.endDate ?? '—'}</td>
-                  <td>${r.actual ?? '—'}</td>
-                  <td>${r.target ?? '—'}</td>
-                  <td>${r.forecast ?? '—'}</td>
-                `;
-          tableBody.appendChild(tr);
+        },
+        y: { display: false, grid: { display: false }, beginAtZero: true }
+      },
+      plugins: {
+        datalabels: false,
+        smartValueLabels: {
+          formatter: _fmtShort,
+          fontSize: 12,
+          fontWeight: '700',
+          minGap: 14,
+          padTop: 12,
+          padBottom: 4,
+          outline: true,
+          perDataset: [
+            { dy: -12, dx: 0,  color: '#800080' }, // Actual (bar)
+            { dy:  12, dx: -8, color: '#7a7a7a' }, // Target (line)
+            { dy: -16, dx:  8, color: '#fd7e14' }, // Forecast (line)
+            { dy: -12, dx:  0, color: '#7a7a7a' }  // Year Target (bar)
+          ]
+        },
+        tooltip: { enabled: true },
+        legend: {
+          position: 'top',
+          labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 8, weight: '700' } }
         }
       }
-
-      // KPI-level edit button state (editor check + pending)
-      const anyPending = Array.isArray(res?.table) && res.table.some(r => r.hasPending);
-      if (!selKpi.value) {
-        btnEditKpi.disabled = true;
-        btnEditKpi.textContent = '✏️ Edit KPI (Actual & Forecast)';
-      } else if (!canEditFacts) {
-        btnEditKpi.disabled = true;
-        btnEditKpi.textContent = '✏️ Edit KPI (no access)';
-      } else if (anyPending) {
-        btnEditKpi.disabled = true;
-        btnEditKpi.textContent = '⏳ Pending approval';
-      } else {
-        btnEditKpi.disabled = false;
-        btnEditKpi.textContent = '✏️ Edit KPI (Actual & Forecast)';
-      }
     }
+  });
 
-    // Open the bulk-edit modal (fetch partial, then wire AJAX)
-    document.getElementById('openEditKpiBtn').addEventListener('click', async () => {
-      const kpiId = selKpi.value;
-      if (!kpiId) return;
+  function clearChartAndTable() {
+    kpiChart.data.labels = [];
+    for (const ds of kpiChart.data.datasets) ds.data = [];
+    kpiChart.update();
 
-      const url = '@Url.Action("EditKpiFactsModal", "Home")' + '?kpiId=' + encodeURIComponent(kpiId);
-      const modalContent = document.querySelector('#editKpiModal .modal-content');
-      modalContent.innerHTML = '<div class="p-4 text-center text-muted">Loading…</div>';
+    tableBody.innerHTML = '<tr class="placeholder-row"><td colspan="6" class="text-center text-muted">—</td></tr>';
+  }
+
+  function clearMeta() {
+    metaOwner.textContent = '—';
+    metaEditor.textContent = '—';
+    metaFrequency.textContent = '—';
+    metaUnit.textContent = '—';
+    metaPriority.textContent = '—';
+    metaStatus.textContent = '—';
+    metaStatus.className = 'status-pill';
+    metaStatus.style.background = '';
+
+    btnEditKpi.disabled = true;
+    btnEditKpi.textContent = '✏️ Edit KPI (Actual & Forecast)';
+  }
+
+  // ====== AJAX binder for the modal form (ALWAYS intercept submit) ======
+  function wireKpiModalAjax() {
+    const modal = document.getElementById('editKpiModal');
+    const form  = modal ? modal.querySelector('#kpi-edit-form') : null;
+    if (!form || form.dataset.wired === '1') return;
+    form.dataset.wired = '1';
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const url = form.getAttribute('action'); // /KpiFactChanges/SubmitBatch
+      const fd  = new FormData(form);          // includes antiforgery token
 
       try {
-        const r = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-        const text = await r.text();                 // <-- read body even on errors
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+          body: fd
+        });
+        const text = await res.text(); // read body even if not OK
+        let data = null;
+        try { data = JSON.parse(text); } catch { /* non-JSON or HTML */ }
 
-        if (r.status === 403) throw new Error('You do not have access to edit this KPI.');
-        if (!r.ok) {
-          console.error('EditKpiFactsModal failed', r.status, text); // <-- see real server error
-          throw new Error('Failed to load edit modal. (' + r.status + ')');
+        if (!res.ok) {
+          console.error('[Submit] HTTP', res.status, text);
+          const msg = (data && data.error) ? data.error : ('Save failed (' + res.status + ')');
+          throw new Error(msg);
         }
 
-        modalContent.innerHTML = text;
-        wireKpiModalAjax();                          // re-wire the form AFTER injecting HTML
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).show();
-      } catch (e) {
-        alert(e.message || 'Could not open edit modal.');
+        // Optional feedback (unchanged)
+        if (data && typeof data === 'object') {
+          const created = (typeof data.created === 'number') ? data.created : data.createdCount;
+          const skipped = (typeof data.skipped === 'number') ? data.skipped : data.skippedCount;
+          if (typeof created === 'number') {
+            alert(`Submitted: ${created} change(s)` + (skipped ? `, skipped: ${skipped}` : ''));
+          } else if (data.status) {
+            alert(data.status === 'approved' ? 'Saved & auto-approved.' : 'Submitted for approval.');
+          }
+        }
+
+        // close modal
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).hide();
+
+        // IMMEDIATE optimistic flip so user sees it without refresh
+        if (btnEditKpi) {
+          btnEditKpi.disabled = true;
+          btnEditKpi.textContent = '⏳ Pending approval';
+        }
+
+        // give DB a breath + force fresh summary (cache-busted)
+        await new Promise(r => setTimeout(r, 350));
+        await loadKpiSummary();
+
+      } catch (err) {
+        alert(err?.message || 'Save failed');
+      }
+    });
+  }
+
+  async function loadKpiSummary() {
+    clearMeta();
+    clearChartAndTable();
+
+    const kpiId = selKpi.value;
+    if (!kpiId) return;
+
+    const res = await api('@Url.Action("GetKpiSummary", "Home")?kpiId=' + encodeURIComponent(kpiId));
+
+    // ACL state from server
+    currentPlanId = res?.meta?.planId ?? null;
+    canEditFacts  = !!res?.meta?.canEdit;
+
+    // Title "PC.OC KPICode — Name"
+    const leftParts = [];
+    if (res?.meta?.pillarCode)    leftParts.push(res.meta.pillarCode);
+    if (res?.meta?.objectiveCode) leftParts.push(res.meta.objectiveCode);
+    let left = leftParts.join('.');
+    if (res?.meta?.code) left = left ? `${left} ${res.meta.code}` : res.meta.code;
+    const finalTitle = (left ? `${left} — ` : '') + (res?.meta?.title || '—');
+    byId('kpiTitle').textContent = finalTitle;
+
+    // Meta
+    metaOwner.textContent     = res?.meta?.owner   || '—';
+    metaEditor.textContent    = res?.meta?.editor  || '—';
+    metaFrequency.textContent = res?.meta?.valueType || '—';
+    metaUnit.textContent      = res?.meta?.unit    || '—';
+    metaPriority.textContent  = (res?.meta?.priority ?? '—');
+
+    const label = (res?.meta?.statusLabel || '—');
+    const color = (res?.meta?.statusColor || '');
+    metaStatus.textContent = label;
+    metaStatus.className   = 'status-pill';
+    if (color) metaStatus.style.background = color;
+
+    // Series
+    const baseLabels = res?.chart?.labels   || [];
+    const actual     = res?.chart?.actual   || [];
+    const target     = res?.chart?.target   || [];
+    const forecast   = res?.chart?.forecast || [];
+
+    // Five-year targets appended on the right
+    const yrArr       = Array.isArray(res?.chart?.yearTargets) ? res.chart.yearTargets : [];
+    const yearLabels  = yrArr.map(y => String(y.year));
+    const yearBarVals = yrArr.map(y => y.value ?? null);
+
+    const allLabels  = baseLabels.concat(yearLabels);
+    const pad        = new Array(yearLabels.length).fill(null);
+    const leftNulls  = new Array(baseLabels.length).fill(null);
+
+    kpiChart.data.labels           = allLabels;
+    kpiChart.data.datasets[0].data = actual.concat(pad);
+    kpiChart.data.datasets[1].data = target.concat(pad);
+    kpiChart.data.datasets[2].data = forecast.concat(pad);
+    kpiChart.data.datasets[3].data = leftNulls.concat(yearBarVals);
+    kpiChart.update();
+
+    // Table
+    const rows = res?.table || [];
+    if (rows.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No facts for this plan/year.</td></tr>';
+    } else {
+      tableBody.innerHTML = '';
+      for (const r of rows) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>
+            ${r.period ?? '—'}
+            ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}
+          </td>
+          <td>${r.startDate ?? '—'}</td>
+          <td>${r.endDate ?? '—'}</td>
+          <td>${r.actual ?? '—'}</td>
+          <td>${r.target ?? '—'}</td>
+          <td>${r.forecast ?? '—'}</td>
+        `;
+        tableBody.appendChild(tr);
+      }
+    }
+
+    // KPI-level edit button state (editor check + pending)
+    const anyPending = Array.isArray(res?.table) && res.table.some(r => r.hasPending);
+    if (!selKpi.value) {
+      btnEditKpi.disabled = true;
+      btnEditKpi.textContent = '✏️ Edit KPI (Actual & Forecast)';
+    } else if (!canEditFacts) {
+      btnEditKpi.disabled = true;
+      btnEditKpi.textContent = '✏️ Edit KPI (no access)';
+    } else if (anyPending) {
+      btnEditKpi.disabled = true;
+      btnEditKpi.textContent = '⏳ Pending approval';
+    } else {
+      btnEditKpi.disabled = false;
+      btnEditKpi.textContent = '✏️ Edit KPI (Actual & Forecast)';
+    }
+  }
+
+  // Open the bulk-edit modal (fetch partial, then wire AJAX)
+  document.getElementById('openEditKpiBtn').addEventListener('click', async () => {
+    const kpiId = selKpi.value;
+    if (!kpiId) return;
+
+    const url = '@Url.Action("EditKpiFactsModal", "Home")' + '?kpiId=' + encodeURIComponent(kpiId);
+    const modalContent = document.querySelector('#editKpiModal .modal-content');
+    modalContent.innerHTML = '<div class="p-4 text-center text-muted">Loading…</div>';
+
+    try {
+      const r = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const text = await r.text(); // read body even on errors
+
+      if (r.status === 403) throw new Error('You do not have access to edit this KPI.');
+      if (!r.ok) {
+        console.error('EditKpiFactsModal failed', r.status, text);
+        throw new Error('Failed to load edit modal. (' + r.status + ')');
       }
 
-    });
+      modalContent.innerHTML = text;
+      wireKpiModalAjax(); // wire AFTER injecting HTML
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).show();
+    } catch (e) {
+      alert(e.message || 'Could not open edit modal.');
+    }
+  });
 
-    // kick things off
-    initPage().catch(console.error);
-  </script>
+  // kick things off
+  initPage().catch(console.error);
+</script>
 }
