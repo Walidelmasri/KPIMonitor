@@ -293,9 +293,15 @@
 
     // ---------- tiny helpers ----------
     const byId = (id) => document.getElementById(id);
-    const api = (path) =>
-      fetch(path, { headers: { 'Accept': 'application/json' } })
-        .then(r => { if (!r.ok) throw new Error('Network error'); return r.json(); });
+    const api = (path) => {
+      const u = new URL(path, window.location.origin);
+      u.searchParams.set('_ts', Date.now().toString());   // cache buster
+      return fetch(u.toString(), {
+        headers: { 'Accept': 'application/json' },
+        cache: 'no-store'                                  // tell browser: don't cache
+      }).then(r => { if (!r.ok) throw new Error('Network error'); return r.json(); });
+    };
+
 
     // ---------- elements ----------
     const selPillar = byId('pillarSelector');
@@ -521,8 +527,13 @@
             }
           }
 
+          // Immediately reflect pending in the UI (optimistic)
+          btnEditKpi.disabled = true;
+          btnEditKpi.textContent = '⏳ Pending approval';
+
           bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).hide();
           await loadKpiSummary();
+
 
         } catch (err) {
           alert(err?.message || 'Save failed');
@@ -596,16 +607,16 @@
         for (const r of rows) {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-              <td>
-                ${r.period ?? '—'}
-                ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}
-              </td>
-              <td>${r.startDate ?? '—'}</td>
-              <td>${r.endDate ?? '—'}</td>
-              <td>${r.actual ?? '—'}</td>
-              <td>${r.target ?? '—'}</td>
-              <td>${r.forecast ?? '—'}</td>
-            `;
+                  <td>
+                    ${r.period ?? '—'}
+                    ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}
+                  </td>
+                  <td>${r.startDate ?? '—'}</td>
+                  <td>${r.endDate ?? '—'}</td>
+                  <td>${r.actual ?? '—'}</td>
+                  <td>${r.target ?? '—'}</td>
+                  <td>${r.forecast ?? '—'}</td>
+                `;
           tableBody.appendChild(tr);
         }
       }
