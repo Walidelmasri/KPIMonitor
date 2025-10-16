@@ -962,7 +962,7 @@ namespace KPIMonitor.Controllers
                 {
                     headerRight = $@"
 <div class='btn-group'>
-  {(canAct ? $@"<button type='button' class='btn btn-success btn-sm appr-btn' data-action='approve-batch' data-batch-id='{b.BatchId}'>Approve All</button>
+  {(canAct ? $@"<button type='button' id='btn-approve-all' class='btn btn-success btn-sm appr-btn' data-action='approve-batch' data-batch-id='{b.BatchId}'>Approve All</button>
                 <button type='button' class='btn btn-outline-danger btn-sm appr-btn' data-action='reject-batch' data-batch-id='{b.BatchId}'>Reject</button>"
               : "<span class='badge text-bg-warning'>Pending</span>")}
   <button type='button' class='btn btn-sm btn-outline-secondary ms-2 appr-batch-details' data-batch-id='{b.BatchId}' data-kpi-id='{b.KpiId}'>Details</button>
@@ -1017,10 +1017,8 @@ namespace KPIMonitor.Controllers
                     {
                         facts.TryGetValue(r.KpiFactId, out var fh);
                         var perLabel = PeriodLabel(fh?.Period);
-
                         var actCell = DiffNum(fh?.ActualValue, r.ProposedActualValue);
                         var fctCell = DiffNum(fh?.ForecastValue, r.ProposedForecastValue);
-
                         sb.Append($@"
         <tr>
           <td>
