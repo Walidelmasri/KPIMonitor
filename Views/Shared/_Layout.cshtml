@@ -367,6 +367,9 @@
             const btn = ev.target.closest('.appr-btn'); // your existing class on Inbox buttons
             if (!btn) return;
             if (btn.getAttribute('aria-busy') === 'true') return;
+            // Skip handling when the click is inside the Approvals Inbox page,
+            // because that page has its own specialized handler with anti-forgery.
+            if (btn.closest('#apprBody')) return;
 
             const action = (btn.dataset.action || '').toLowerCase();
             const changeId = btn.dataset.id;
