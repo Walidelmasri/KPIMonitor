@@ -1,11 +1,15 @@
 using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+
 using KPIMonitor.Data;
 using KPIMonitor.Models;
-using KPIMonitor.Services;
-using KPIMonitor.ViewModels; // for KpiEditModalVm
-using KPIMonitor.Services.Abstractions;   // <-- this one is required                                                                                                                                                                                                                            
+using KPIMonitor.Services;                 // IEmployeeDirectory
+using KPIMonitor.ViewModels;               // KpiEditModalVm
+using KPIMonitor.Services.Abstractions;    // IKpiAccessService, IAdminAuthorizer, IKpiStatusService
 
 namespace KPIMonitor.Controllers
 {
@@ -15,20 +19,47 @@ namespace KPIMonitor.Controllers
         private readonly AppDbContext _db;
         private readonly IKpiAccessService _acl;
         private readonly global::IAdminAuthorizer _admin;
+        private readonly IEmployeeDirectory _dir;
 
         public HomeController(
             ILogger<HomeController> logger,
             AppDbContext db,
             IKpiAccessService acl,
-            global::IAdminAuthorizer admin)
+            global::IAdminAuthorizer admin,
+            IEmployeeDirectory dir)
         {
             _logger = logger;
             _db = db;
             _acl = acl;
             _admin = admin;
+            _dir = dir;
         }
 
-        // Page
+        // --------------------------
+        // helpers (same normalization you use elsewhere)
+        // --------------------------
+        private static string Sam(string? raw)
+        {
+            var s = raw ?? "";
+            var bs = s.LastIndexOf('\\');             // DOMAIN\user
+            if (bs >= 0 && bs < s.Length - 1) s = s[(bs + 1)..];
+            var at = s.IndexOf('@');                  // user@domain
+            if (at > 0) s = s[..at];
+            return s.Trim();
+        }
+        private string Sam() => Sam(User?.Identity?.Name);
+
+        private async Task<string?> MyEmpIdAsync(CancellationToken ct = default)
+        {
+            var sam = Sam();
+            if (string.IsNullOrWhiteSpace(sam)) return null;
+            var rec = await _dir.TryGetByUserIdAsync(sam, ct);
+            return rec?.EmpId; // BADEA_ADDONS.EMPLOYEES.EMP_ID
+        }
+
+        // --------------------------
+        // Pages
+        // --------------------------
         public IActionResult Index() => View();
         public IActionResult Privacy() => View();
 
@@ -175,15 +206,15 @@ namespace KPIMonitor.Controllers
 
             (string label, string color) status = latestStatusCode?.Trim().ToLowerInvariant() switch
             {
-                "green" => ("Ok", "#28a745"),
-                "red" => ("Needs Attention", "#dc3545"),
-                "orange" => ("Catching Up", "#fd7e14"),
-                "blue" => ("Data Missing", "#0d6efd"),
-                "conforme" => ("Ok", "#28a745"),
-                "ecart" => ("Needs Attention", "#dc3545"),
-                "rattrapage" => ("Catching Up", "#fd7e14"),
-                "attente" => ("Data Missing", "#0d6efd"),
-                _ => ("—", "")
+                "green"       => ("Ok",               "#28a745"),
+                "red"         => ("Needs Attention",  "#dc3545"),
+                "orange"      => ("Catching Up",      "#fd7e14"),
+                "blue"        => ("Data Missing",     "#0d6efd"),
+                "conforme"    => ("Ok",               "#28a745"),
+                "ecart"       => ("Needs Attention",  "#dc3545"),
+                "rattrapage"  => ("Catching Up",      "#fd7e14"),
+                "attente"     => ("Data Missing",     "#0d6efd"),
+                _             => ("—",                "")
             };
 
             var fy = await _db.KpiFiveYearTargets
@@ -209,7 +240,7 @@ namespace KPIMonitor.Controllers
             var table = facts.Select(f => new
             {
                 id = f.KpiFactId,
-                period = LabelFor(f.Period),
+                period = LabelFor(f.Period!),
                 startDate = f.Period?.StartDate?.ToString("yyyy-MM-dd") ?? "—",
                 endDate = f.Period?.EndDate?.ToString("yyyy-MM-dd") ?? "—",
 
@@ -305,6 +336,7 @@ namespace KPIMonitor.Controllers
 
                 return Forbid();
             }
+
             fact.ActualValue = input.ActualValue;
             fact.TargetValue = input.TargetValue;
             fact.ForecastValue = input.ForecastValue;
@@ -326,7 +358,6 @@ namespace KPIMonitor.Controllers
                 return Ok(new { ok = true });
 
             return RedirectToAction("Index", "Home", new { pillarId, objectiveId, kpiId });
-
         }
 
         // GET: modal with Actual + Forecast (+ Target for superadmin) grid for the active plan
@@ -431,6 +462,85 @@ namespace KPIMonitor.Controllers
 
                 throw;
             }
+        }
+
+        // --------------------------
+        // New: roles for the dashboard card (Editor/Owner by EmpId via Year Plans)
+        // --------------------------
+        /// <summary>
+        /// Returns the KPIs where the current user is Editor and/or Owner.
+        /// JSON: { editor: [{id, text}], owner: [{id, text}] }
+        /// Optional filters: pillarId, objectiveId (purely for payload trimming).
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> MyKpiRoles(int? pillarId, int? objectiveId, CancellationToken ct = default)
+        {
+            var myEmp = await MyEmpIdAsync(ct);
+            if (string.IsNullOrWhiteSpace(myEmp))
+                return Json(new { editor = Array.Empty<object>(), owner = Array.Empty<object>() });
+
+            var plans = _db.KpiYearPlans
+                .AsNoTracking()
+                .Include(p => p.Kpi).ThenInclude(k => k.Pillar)
+                .Include(p => p.Kpi).ThenInclude(k => k.Objective)
+                .Where(p => p.IsActive == 1 && p.Kpi != null);
+
+            if (pillarId.HasValue)
+                plans = plans.Where(p => p.Kpi!.PillarId == pillarId.Value);
+
+            if (objectiveId.HasValue)
+                plans = plans.Where(p => p.Kpi!.ObjectiveId == objectiveId.Value);
+
+            var editorKpis = await plans
+                .Where(p => p.EditorEmpId != null && p.EditorEmpId == myEmp)
+                .Select(p => new
+                {
+                    id = p.KpiId,
+                    pillar = p.Kpi!.Pillar != null ? p.Kpi.Pillar.PillarCode : null,
+                    obj    = p.Kpi!.Objective != null ? p.Kpi.Objective.ObjectiveCode : null,
+                    code   = p.Kpi!.KpiCode,
+                    name   = p.Kpi!.KpiName
+                })
+                .Distinct()
+                .OrderBy(x => x.pillar).ThenBy(x => x.obj).ThenBy(x => x.code)
+                .Take(200)
+                .ToListAsync(ct);
+
+            var ownerKpis = await plans
+                .Where(p => p.OwnerEmpId != null && p.OwnerEmpId == myEmp)
+                .Select(p => new
+                {
+                    id = p.KpiId,
+                    pillar = p.Kpi!.Pillar != null ? p.Kpi.Pillar.PillarCode : null,
+                    obj    = p.Kpi!.Objective != null ? p.Kpi.Objective.ObjectiveCode : null,
+                    code   = p.Kpi!.KpiCode,
+                    name   = p.Kpi!.KpiName
+                })
+                .Distinct()
+                .OrderBy(x => x.pillar).ThenBy(x => x.obj).ThenBy(x => x.code)
+                .Take(200)
+                .ToListAsync(ct);
+
+            static string Label(dynamic x)
+            {
+                var left = string.Join('.', new[] { x.pillar as string, x.obj as string }.Where(s => !string.IsNullOrWhiteSpace(s)));
+                var code = string.IsNullOrWhiteSpace(x.code as string) ? "" : (left?.Length > 0 ? $" {x.code}" : x.code);
+                var head = (left?.Length > 0 ? left : "") + code;
+                var name = string.IsNullOrWhiteSpace(x.name as string) ? "-" : x.name;
+                return string.IsNullOrWhiteSpace(head) ? name : $"{head} — {name}";
+            }
+
+            var editor = editorKpis
+                .GroupBy(x => x.id)
+                .Select(g => new { id = g.Key, text = Label(g.First()) })
+                .ToList();
+
+            var owner = ownerKpis
+                .GroupBy(x => x.id)
+                .Select(g => new { id = g.Key, text = Label(g.First()) })
+                .ToList();
+
+            return Json(new { editor, owner });
         }
     }
 }
