@@ -6,8 +6,8 @@ using System.Text;
 using System.Net;
 using System.Linq;
 using System;
-using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace KPIMonitor.Controllers
 {
@@ -51,7 +51,7 @@ namespace KPIMonitor.Controllers
                     p.Priority
                 };
 
-            // Step 3a: for each KPI/plan-year, find the latest fact by PeriodId within that year
+            // Step 3a: for each KPI/plan-year, find the *latest* fact by period start date within that same year
             var latestFactPerKpi =
                 from lp in latestPlans
                 join f in _db.KpiFacts on new { lp.KpiId, PlanId = lp.KpiYearPlanId } equals new { f.KpiId, PlanId = f.KpiYearPlanId }
@@ -64,15 +64,15 @@ namespace KPIMonitor.Controllers
                     g.Key.KpiYearPlanId,
                     g.Key.Year,
                     g.Key.Priority,
-                    MaxPeriodId = g.Max(x => x.per.PeriodId)
+                    MaxStart = g.Max(x => x.per.StartDate)
                 };
 
-            // Step 3b: join back to get the record for that MaxPeriodId so we can read its StatusCode
+            // Step 3b: join to get the *record* that has that MaxStart so we can read its StatusCode
             var latestWithStatus =
                 from lf in latestFactPerKpi
                 join f in _db.KpiFacts on new { lf.KpiId, PlanId = lf.KpiYearPlanId } equals new { f.KpiId, PlanId = f.KpiYearPlanId }
                 join per in _db.DimPeriods on f.PeriodId equals per.PeriodId
-                where per.Year == lf.Year && per.PeriodId == lf.MaxPeriodId && f.StatusCode != null
+                where per.Year == lf.Year && per.StartDate == lf.MaxStart && f.StatusCode != null
                 select new
                 {
                     lf.KpiId,
@@ -83,8 +83,7 @@ namespace KPIMonitor.Controllers
             // Step 4: keep only those whose latest status is red, then project with KPI info
             var query =
                 from lw in latestWithStatus
-                let latest = (lw.LatestStatus ?? "").ToLower()
-                where redCodes.Contains(latest)
+                where redCodes.Contains(lw.LatestStatus.ToLower())
                 join k in _db.DimKpis on lw.KpiId equals k.KpiId
                 join o in _db.DimObjectives on k.ObjectiveId equals o.ObjectiveId into gobj
                 from o in gobj.DefaultIfEmpty()
@@ -92,22 +91,21 @@ namespace KPIMonitor.Controllers
                 from p in gpil.DefaultIfEmpty()
                 select new
                 {
-                    // 👇 names your frontend expects
-                    id = lw.KpiId,
-                    code = k.KpiCode ?? "",
-                    name = k.KpiName ?? "",
-                    priority = (int?)k.Priority ?? lw.Priority, // keep your original ordering behavior
-                    pillarCode = p != null ? p.PillarCode ?? "" : "",
-                    pillarName = p != null ? p.PillarName ?? "" : "",
-                    objectiveCode = o != null ? o.ObjectiveCode ?? "" : "",
-                    objectiveName = o != null ? o.ObjectiveName ?? "" : ""
+                    lw.KpiId,
+                    KpiName = k.KpiName ?? "",
+                    KpiCode = k.KpiCode ?? "",
+                    lw.Priority,
+                    PillarCode = p != null ? (p.PillarCode ?? "") : "",
+                    PillarName = p != null ? (p.PillarName ?? "") : "",
+                    ObjectiveCode = o != null ? (o.ObjectiveCode ?? "") : "",
+                    ObjectiveName = o != null ? (o.ObjectiveName ?? "") : ""
                 };
 
             var list = await query
-                .OrderBy(x => x.priority)
-                .ThenBy(x => x.pillarCode)
-                .ThenBy(x => x.objectiveCode)
-                .ThenBy(x => x.code)
+                .OrderBy(x => x.Priority)
+                .ThenBy(x => x.PillarCode)
+                .ThenBy(x => x.ObjectiveCode)
+                .ThenBy(x => x.KpiCode)
                 .ToListAsync();
 
             return Json(list);
@@ -180,7 +178,7 @@ namespace KPIMonitor.Controllers
                     .ThenInclude(k => k.Objective)
                 .Include(a => a.Kpi)
                     .ThenInclude(k => k.Pillar)
-                .Where(a => a.KpiId.HasValue && kpiIds.Contains(a.KpiId.Value))
+                .Where(a => a.KpiId.HasValue && kpiIds.Contains(a.KpiId.Value))  // fix for nullable KpiId
                 .OrderBy(a => a.StatusCode).ThenBy(a => a.DueDate)
                 .ToListAsync();
 
@@ -216,6 +214,7 @@ namespace KPIMonitor.Controllers
                 {
                     foreach (var a in items)
                     {
+                        // Build the KPI/general info block
                         string infoBlock;
                         if (a.KpiId == null || a.IsGeneral)
                         {
