@@ -476,6 +476,8 @@ namespace KPIMonitor.Controllers
                 .AsNoTracking()
                 .Include(p => p.Kpi).ThenInclude(k => k.Pillar)
                 .Include(p => p.Kpi).ThenInclude(k => k.Objective)
+                        .ThenInclude(o => o.Pillar)   // ← add this line
+
                 .Where(p => p.IsActive == 1 && p.Kpi != null);
 
             if (pillarId.HasValue)
