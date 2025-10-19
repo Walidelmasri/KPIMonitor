@@ -206,15 +206,15 @@ namespace KPIMonitor.Controllers
 
             (string label, string color) status = latestStatusCode?.Trim().ToLowerInvariant() switch
             {
-                "green"       => ("Ok",               "#28a745"),
-                "red"         => ("Needs Attention",  "#dc3545"),
-                "orange"      => ("Catching Up",      "#fd7e14"),
-                "blue"        => ("Data Missing",     "#0d6efd"),
-                "conforme"    => ("Ok",               "#28a745"),
-                "ecart"       => ("Needs Attention",  "#dc3545"),
-                "rattrapage"  => ("Catching Up",      "#fd7e14"),
-                "attente"     => ("Data Missing",     "#0d6efd"),
-                _             => ("—",                "")
+                "green" => ("Ok", "#28a745"),
+                "red" => ("Needs Attention", "#dc3545"),
+                "orange" => ("Catching Up", "#fd7e14"),
+                "blue" => ("Data Missing", "#0d6efd"),
+                "conforme" => ("Ok", "#28a745"),
+                "ecart" => ("Needs Attention", "#dc3545"),
+                "rattrapage" => ("Catching Up", "#fd7e14"),
+                "attente" => ("Data Missing", "#0d6efd"),
+                _ => ("—", "")
             };
 
             var fy = await _db.KpiFiveYearTargets
@@ -496,10 +496,12 @@ namespace KPIMonitor.Controllers
                 .Select(p => new
                 {
                     id = p.KpiId,
+                    pillarId = p.Kpi!.PillarId,
+                    objectiveId = p.Kpi!.ObjectiveId,
                     pillar = p.Kpi!.Pillar != null ? p.Kpi.Pillar.PillarCode : null,
-                    obj    = p.Kpi!.Objective != null ? p.Kpi.Objective.ObjectiveCode : null,
-                    code   = p.Kpi!.KpiCode,
-                    name   = p.Kpi!.KpiName
+                    obj = p.Kpi!.Objective != null ? p.Kpi.Objective.ObjectiveCode : null,
+                    code = p.Kpi!.KpiCode,
+                    name = p.Kpi!.KpiName
                 })
                 .Distinct()
                 .OrderBy(x => x.pillar).ThenBy(x => x.obj).ThenBy(x => x.code)
@@ -511,10 +513,12 @@ namespace KPIMonitor.Controllers
                 .Select(p => new
                 {
                     id = p.KpiId,
+                    pillarId = p.Kpi!.PillarId,
+                    objectiveId = p.Kpi!.ObjectiveId,
                     pillar = p.Kpi!.Pillar != null ? p.Kpi.Pillar.PillarCode : null,
-                    obj    = p.Kpi!.Objective != null ? p.Kpi.Objective.ObjectiveCode : null,
-                    code   = p.Kpi!.KpiCode,
-                    name   = p.Kpi!.KpiName
+                    obj = p.Kpi!.Objective != null ? p.Kpi.Objective.ObjectiveCode : null,
+                    code = p.Kpi!.KpiCode,
+                    name = p.Kpi!.KpiName
                 })
                 .Distinct()
                 .OrderBy(x => x.pillar).ThenBy(x => x.obj).ThenBy(x => x.code)

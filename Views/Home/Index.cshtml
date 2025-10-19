@@ -10,6 +10,11 @@
     display:inline-block;margin:2px 6px 2px 0;padding:4px 8px;
     border-radius:999px;background:#f1f3f5;border:1px solid #e3e7eb;
     white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;
+    cursor:pointer; user-select:none;
+  }
+  #roleSummaryCard .role-chip:hover { background:#e9ecef; }
+  #roleSummaryCard .role-chip.active{
+    background:#dbeafe; border-color:#93c5fd; color:#0b5ed7; font-weight:600;
   }
   #roleSummaryCard .role-list{ max-height:84px; overflow:auto; }
 </style>
@@ -308,14 +313,22 @@
     sel.disabled = true;
   }
 
-  // ---- Role summary (static-on-load) ----
+  // ===== Role summary (static-on-load) =====
   const roleCard  = byId('roleSummaryCard');
   const roleBadge = byId('roleSummaryBadge');
   const roleRows  = byId('roleSummaryRows');
 
-  function _mkChip(text){
+  // Make a chip element with data attributes (for quick-jump)
+  function _mkChip(item){
+    // item: { id, text, pillarId?, objectiveId? }
     const s=document.createElement('span');
-    s.className='role-chip'; s.title=text; s.textContent=text; return s;
+    s.className='role-chip';
+    s.title=item.text || String(item.id);
+    s.textContent=item.text || String(item.id);
+    if (item.id         != null) s.dataset.kpiId = item.id;
+    if (item.pillarId   != null) s.dataset.pillarId = item.pillarId;
+    if (item.objectiveId!= null) s.dataset.objectiveId = item.objectiveId;
+    return s;
   }
 
   function renderRoleSummary(data){
@@ -329,8 +342,8 @@
       const h=document.createElement('div'); h.className='fw-bold mb-1'; h.textContent=title;
       const list=document.createElement('div'); list.className='role-list';
       const MAX=12;
-      items.slice(0,MAX).forEach(it=>list.appendChild(_mkChip(it.text || String(it.id))));
-      if (items.length>MAX) list.appendChild(_mkChip(`+${items.length-MAX} more`));
+      items.slice(0,MAX).forEach(it=>list.appendChild(_mkChip(it)));
+      if (items.length>MAX) list.appendChild(_mkChip({ text:`+${items.length-MAX} more` }));
       col.appendChild(h); col.appendChild(list); return col;
     };
     if (ed.length) roleRows.appendChild(makeCol('Editor for', ed));
@@ -338,8 +351,12 @@
 
     roleBadge.textContent = (ed.length && ow.length) ? 'Editor for • Owner for' : (ed.length ? 'Editor for' : 'Owner for');
     roleCard.classList.remove('d-none');
+
+    // Sync active highlight (after first render)
+    markActiveRoleChip(selKpi.value);
   }
 
+  // Load once; if endpoint missing → hide quietly
   async function loadRoleSummary(){
     try{
       const r = await fetch('@Url.Action("MyKpiRoles","Home")', { headers:{'Accept':'application/json'}, cache:'no-store' });
@@ -348,6 +365,44 @@
     }catch{
       roleCard?.classList.add('d-none');
     }
+  }
+
+  // Click any chip to jump selectors and load that KPI
+  roleRows.addEventListener('click', async (e)=>{
+    const chip = e.target.closest('.role-chip');
+    if (!chip) return;
+    const pillarId    = chip.dataset.pillarId;
+    const objectiveId = chip.dataset.objectiveId;
+    const kpiId       = chip.dataset.kpiId;
+    if (!kpiId) return;
+
+    await selectKpiByIds(pillarId, objectiveId, kpiId);
+    markActiveRoleChip(kpiId);
+  });
+
+  // Helper: set selectors and trigger loads
+  async function selectKpiByIds(pillarId, objectiveId, kpiId){
+    if (pillarId && selPillar.value !== String(pillarId)){
+      selPillar.value = String(pillarId);
+      selPillar.dispatchEvent(new Event('change'));
+      await new Promise(r=>setTimeout(r,120));
+    }
+    if (objectiveId && selObjective.value !== String(objectiveId)){
+      selObjective.value = String(objectiveId);
+      selObjective.dispatchEvent(new Event('change'));
+      await new Promise(r=>setTimeout(r,120));
+    }
+    if (kpiId){
+      selKpi.value = String(kpiId);
+      selKpi.dispatchEvent(new Event('change'));
+    }
+  }
+
+  // Highlight the current KPI chip
+  function markActiveRoleChip(currentKpiId){
+    document.querySelectorAll('#roleSummaryRows .role-chip').forEach(el=>{
+      el.classList.toggle('active', currentKpiId && (el.dataset.kpiId === String(currentKpiId)));
+    });
   }
 
   // ---------- cascading dropdowns ----------
@@ -394,7 +449,7 @@
 
   async function initPage(){
     await loadPillars();
-    loadRoleSummary(); // load once (static)
+    loadRoleSummary(); // load once (static list)
 
     const qP=getQS('pillarId'), qO=getQS('objectiveId'), qK=getQS('kpiId');
     if (qP){ selPillar.value=qP; selPillar.dispatchEvent(new Event('change')); }
@@ -446,7 +501,7 @@
   function clearMeta(){
     metaOwner.textContent='—'; metaEditor.textContent='—'; metaFrequency.textContent='—'; metaUnit.textContent='—';
     metaPriority.textContent='—'; metaStatus.textContent='—'; metaStatus.className='status-pill'; metaStatus.style.background='';
-    btnEditKpi.disabled=true; btnEditKpi.textContent='✏️ Edit KPI Data';
+    btnEditKpi.disabled=true; btnEditKpi.textContent='✏️ Edit KPI (Actual & Forecast)';
   }
 
   // ====== AJAX binder for the modal form (ALWAYS intercept submit) ======
@@ -553,6 +608,9 @@
     else if (!canEditFacts){ btnEditKpi.disabled=true; btnEditKpi.textContent='✏️ Edit KPI (no access)'; }
     else if (anyPending){ btnEditKpi.disabled=true; btnEditKpi.textContent='⏳ Pending approval'; }
     else { btnEditKpi.disabled=false; btnEditKpi.textContent='✏️ Edit KPI (Actual & Forecast)'; }
+
+    // Keep chip highlight in sync with the selected KPI
+    markActiveRoleChip(selKpi.value);
   }
 
   // Open the bulk-edit modal
@@ -574,5 +632,15 @@
 
   // kick things off
   initPage().catch(console.error);
+
+  async function initPage(){
+    await loadPillars();
+    loadRoleSummary(); // static card showing your roles
+
+    const qP=getQS('pillarId'), qO=getQS('objectiveId'), qK=getQS('kpiId');
+    if (qP){ selPillar.value=qP; selPillar.dispatchEvent(new Event('change')); }
+    if (qO){ await new Promise(r=>setTimeout(r,150)); selObjective.value=qO; selObjective.dispatchEvent(new Event('change')); }
+    if (qK){ await new Promise(r=>setTimeout(r,150)); selKpi.value=qK; selKpi.dispatchEvent(new Event('change')); }
+  }
 </script>
 }
