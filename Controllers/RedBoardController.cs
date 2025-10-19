@@ -51,7 +51,7 @@ namespace KPIMonitor.Controllers
                     p.Priority
                 };
 
-            // Step 3a: For each KPI/plan-year, find the *latest* fact by PeriodId (robust if StartDate is null)
+            // Step 3a: for each KPI/plan-year, find the latest fact by PeriodId within that year
             var latestFactPerKpi =
                 from lp in latestPlans
                 join f in _db.KpiFacts on new { lp.KpiId, PlanId = lp.KpiYearPlanId } equals new { f.KpiId, PlanId = f.KpiYearPlanId }
@@ -67,7 +67,7 @@ namespace KPIMonitor.Controllers
                     MaxPeriodId = g.Max(x => x.per.PeriodId)
                 };
 
-            // Step 3b: Join back to get that record so we can read its StatusCode
+            // Step 3b: join back to get the record for that MaxPeriodId so we can read its StatusCode
             var latestWithStatus =
                 from lf in latestFactPerKpi
                 join f in _db.KpiFacts on new { lf.KpiId, PlanId = lf.KpiYearPlanId } equals new { f.KpiId, PlanId = f.KpiYearPlanId }
@@ -83,7 +83,8 @@ namespace KPIMonitor.Controllers
             // Step 4: keep only those whose latest status is red, then project with KPI info
             var query =
                 from lw in latestWithStatus
-                where redCodes.Contains(lw.LatestStatus.ToLower())
+                let latest = (lw.LatestStatus ?? "").ToLower()
+                where redCodes.Contains(latest)
                 join k in _db.DimKpis on lw.KpiId equals k.KpiId
                 join o in _db.DimObjectives on k.ObjectiveId equals o.ObjectiveId into gobj
                 from o in gobj.DefaultIfEmpty()
@@ -91,21 +92,22 @@ namespace KPIMonitor.Controllers
                 from p in gpil.DefaultIfEmpty()
                 select new
                 {
-                    lw.KpiId,
-                    KpiName = k.KpiName,
-                    KpiCode = k.KpiCode,
-                    lw.Priority,
-                    PillarCode = p != null ? p.PillarCode : "",
-                    PillarName = p != null ? p.PillarName : "",
-                    ObjectiveCode = o != null ? o.ObjectiveCode : "",
-                    ObjectiveName = o != null ? o.ObjectiveName : ""
+                    // 👇 names your frontend expects
+                    id = lw.KpiId,
+                    code = k.KpiCode ?? "",
+                    name = k.KpiName ?? "",
+                    priority = (int?)k.Priority ?? lw.Priority, // keep your original ordering behavior
+                    pillarCode = p != null ? p.PillarCode ?? "" : "",
+                    pillarName = p != null ? p.PillarName ?? "" : "",
+                    objectiveCode = o != null ? o.ObjectiveCode ?? "" : "",
+                    objectiveName = o != null ? o.ObjectiveName ?? "" : ""
                 };
 
             var list = await query
-                .OrderBy(x => x.Priority)
-                .ThenBy(x => x.PillarCode)
-                .ThenBy(x => x.ObjectiveCode)
-                .ThenBy(x => x.KpiCode)
+                .OrderBy(x => x.priority)
+                .ThenBy(x => x.pillarCode)
+                .ThenBy(x => x.objectiveCode)
+                .ThenBy(x => x.code)
                 .ToListAsync();
 
             return Json(list);
