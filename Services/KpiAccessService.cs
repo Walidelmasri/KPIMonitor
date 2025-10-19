@@ -2,10 +2,10 @@ using KPIMonitor.Data;                          // AppDbContext
 using Microsoft.EntityFrameworkCore;           // EF Core
 using Microsoft.Extensions.Configuration;      // IConfiguration
 using Microsoft.Extensions.Logging;            // ILogger<T>
-using System.Linq;                             
+using System.Linq;
 using System.Security.Claims;                  // ClaimsPrincipal
-using System.Threading;                        
-using System.Threading.Tasks;                  
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace KPIMonitor.Services
 {
@@ -44,7 +44,8 @@ namespace KPIMonitor.Services
 
             if (plan == null) return false;
 
-            var ok = string.Equals(plan.OwnerEmpId, empId) || string.Equals(plan.EditorEmpId, empId);
+            // CHANGE: Owner alone no longer grants edit; must be Editor (or Admin above).
+            var ok = string.Equals(plan.EditorEmpId, empId);
             _log.LogDebug("ACL planId={Plan} user={User} empId={Emp} => {Ok}", planId, userId, empId, ok);
             return ok;
         }
@@ -61,10 +62,10 @@ namespace KPIMonitor.Services
 
             var empId = emp.Value.EmpId;
 
-            // owner/editor on any plan of this KPI
+            // CHANGE: Only editor on any plan of this KPI (or Admin) grants edit.
             var ok = await _db.KpiYearPlans
                 .AsNoTracking()
-                .AnyAsync(p => p.KpiId == kpiId && (p.OwnerEmpId == empId || p.EditorEmpId == empId), ct);
+                .AnyAsync(p => p.KpiId == kpiId && p.EditorEmpId == empId, ct);
 
             _log.LogDebug("ACL kpiId={Kpi} user={User} empId={Emp} => {Ok}", kpiId, userId, empId, ok);
             return ok;
@@ -74,7 +75,7 @@ namespace KPIMonitor.Services
         {
             var sam = GetSam(user);
 
-            // read both AdminUsers and SuperAdminUsers from config (additive, no logic removed)
+            // read both AdminUsers and SuperAdminUsers from config (additive)
             var admins = _cfg.GetSection("App:AdminUsers").Get<string[]>() ?? new string[0];
             var superAdmins = _cfg.GetSection("App:SuperAdminUsers").Get<string[]>() ?? new string[0];
 

@@ -34,11 +34,11 @@ namespace KPIMonitor.Services
         public static (string Label, string Hex) Visual(string? canonical)
             => canonical switch
             {
-                "green"  => ("Ok",               "#28a745"),
-                "red"    => ("Needs Attention",  "#dc3545"),
-                "orange" => ("Catching Up",      "#fd7e14"),
-                "blue"   => ("Data Missing",     "#0d6efd"),
-                _        => ("—",                "#6c757d")
+                "green"  => ("Target Achieved", "#28a745"),
+                "red"    => ("Target Missed",   "#dc3545"),
+                "orange" => ("On Forecast",     "#fd7e14"),
+                "blue"   => ("Data Missing",    "#0d6efd"),
+                _        => ("—",               "#6c757d")
             };
     }
 }

@@ -7,9 +7,11 @@ using Microsoft.EntityFrameworkCore;
 
 using KPIMonitor.Data;
 using KPIMonitor.Models;
-using KPIMonitor.Services;                 // IEmployeeDirectory
+using KPIMonitor.Services;                 // IEmployeeDirectory + StatusPalette
 using KPIMonitor.ViewModels;               // KpiEditModalVm
 using KPIMonitor.Services.Abstractions;    // IKpiAccessService, IAdminAuthorizer, IKpiStatusService
+using System;
+using System.Collections.Generic;
 
 namespace KPIMonitor.Controllers
 {
@@ -204,18 +206,9 @@ namespace KPIMonitor.Controllers
             var lastWithStatus = facts.LastOrDefault(f => !string.IsNullOrWhiteSpace(f.StatusCode));
             string? latestStatusCode = lastWithStatus?.StatusCode;
 
-            (string label, string color) status = latestStatusCode?.Trim().ToLowerInvariant() switch
-            {
-                "green" => ("Ok", "#28a745"),
-                "red" => ("Needs Attention", "#dc3545"),
-                "orange" => ("Catching Up", "#fd7e14"),
-                "blue" => ("Data Missing", "#0d6efd"),
-                "conforme" => ("Ok", "#28a745"),
-                "ecart" => ("Needs Attention", "#dc3545"),
-                "rattrapage" => ("Catching Up", "#fd7e14"),
-                "attente" => ("Data Missing", "#0d6efd"),
-                _ => ("—", "")
-            };
+            // CHANGE: use StatusPalette for canonical + label/color mapping
+            var canonical = StatusPalette.Canonicalize(latestStatusCode);
+            var vis = StatusPalette.Visual(canonical);
 
             var fy = await _db.KpiFiveYearTargets
                 .AsNoTracking()
@@ -271,8 +264,8 @@ namespace KPIMonitor.Controllers
                 valueType = string.IsNullOrWhiteSpace(plan.Frequency) ? "—" : plan.Frequency,
                 unit = string.IsNullOrWhiteSpace(plan.Unit) ? "—" : plan.Unit,
                 priority = plan.Priority,
-                statusLabel = status.label,
-                statusColor = status.color,
+                statusLabel = vis.Label,        // ← updated label
+                statusColor = vis.Hex,          // ← updated color
                 statusRaw = string.IsNullOrWhiteSpace(latestStatusCode) ? "" : latestStatusCode,
 
                 planId = planId,
@@ -467,9 +460,11 @@ namespace KPIMonitor.Controllers
         // --------------------------
         // New: roles for the dashboard card (Editor/Owner by EmpId via Year Plans)
         // --------------------------
+        /// <summary>
         /// Returns the KPIs where the current user is Editor and/or Owner.
         /// JSON: { editor: [{id, text}], owner: [{id, text}] }
         /// Optional filters: pillarId, objectiveId (purely for payload trimming).
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> MyKpiRoles(int? pillarId, int? objectiveId, CancellationToken ct = default)
         {
@@ -477,12 +472,10 @@ namespace KPIMonitor.Controllers
             if (string.IsNullOrWhiteSpace(myEmp))
                 return Json(new { editor = Array.Empty<object>(), owner = Array.Empty<object>() });
 
-            // Include Kpi -> Objective -> Pillar to build labels and expose path
             var plans = _db.KpiYearPlans
                 .AsNoTracking()
-                .Include(p => p.Kpi)
-                    .ThenInclude(k => k.Objective!)
-                        .ThenInclude(o => o.Pillar)
+                .Include(p => p.Kpi).ThenInclude(k => k.Pillar)
+                .Include(p => p.Kpi).ThenInclude(k => k.Objective)
                 .Where(p => p.IsActive == 1 && p.Kpi != null);
 
             if (pillarId.HasValue)
@@ -491,84 +484,60 @@ namespace KPIMonitor.Controllers
             if (objectiveId.HasValue)
                 plans = plans.Where(p => p.Kpi!.ObjectiveId == objectiveId.Value);
 
-            // Common projection (keep the path fields!)
-            var baseQuery = plans.Select(p => new
-            {
-                p.KpiId,
-                p.Kpi!.PillarId,
-                p.Kpi!.ObjectiveId,
-                PillarCode = p.Kpi!.Objective!.Pillar!.PillarCode,
-                ObjectiveCode = p.Kpi!.Objective!.ObjectiveCode,
-                KpiCode = p.Kpi!.KpiCode,
-                KpiName = p.Kpi!.KpiName
-            });
-
-            // Editor KPIs
-            var editorRaw = await baseQuery
-                .Where(p => _db.KpiYearPlans.Any(q =>
-                    q.IsActive == 1 &&
-                    q.KpiId == p.KpiId &&
-                    q.EditorEmpId != null &&
-                    q.EditorEmpId == myEmp))
+            var editorKpis = await plans
+                .Where(p => p.EditorEmpId != null && p.EditorEmpId == myEmp)
+                .Select(p => new
+                {
+                    id = p.KpiId,
+                    pillarId = p.Kpi!.PillarId,
+                    objectiveId = p.Kpi!.ObjectiveId,
+                    pillar = p.Kpi!.Pillar != null ? p.Kpi.Pillar.PillarCode : null,
+                    obj = p.Kpi!.Objective != null ? p.Kpi.Objective.ObjectiveCode : null,
+                    code = p.Kpi!.KpiCode,
+                    name = p.Kpi!.KpiName
+                })
+                .Distinct()
+                .OrderBy(x => x.pillar).ThenBy(x => x.obj).ThenBy(x => x.code)
+                .Take(200)
                 .ToListAsync(ct);
 
-            // Owner KPIs
-            var ownerRaw = await baseQuery
-                .Where(p => _db.KpiYearPlans.Any(q =>
-                    q.IsActive == 1 &&
-                    q.KpiId == p.KpiId &&
-                    q.OwnerEmpId != null &&
-                    q.OwnerEmpId == myEmp))
+            var ownerKpis = await plans
+                .Where(p => p.OwnerEmpId != null && p.OwnerEmpId == myEmp)
+                .Select(p => new
+                {
+                    id = p.KpiId,
+                    pillarId = p.Kpi!.PillarId,
+                    objectiveId = p.Kpi!.ObjectiveId,
+                    pillar = p.Kpi!.Pillar != null ? p.Kpi.Pillar.PillarCode : null,
+                    obj = p.Kpi!.Objective != null ? p.Kpi.Objective.ObjectiveCode : null,
+                    code = p.Kpi!.KpiCode,
+                    name = p.Kpi!.KpiName
+                })
+                .Distinct()
+                .OrderBy(x => x.pillar).ThenBy(x => x.obj).ThenBy(x => x.code)
+                .Take(200)
                 .ToListAsync(ct);
 
             static string Label(dynamic x)
             {
-                var left = string.Join('.',
-                    new[] { x.PillarCode as string, x.ObjectiveCode as string }
-                    .Where(s => !string.IsNullOrWhiteSpace(s)));
-                var code = string.IsNullOrWhiteSpace(x.KpiCode as string) ? "" : (left?.Length > 0 ? $" {x.KpiCode}" : x.KpiCode);
+                var left = string.Join('.', new[] { x.pillar as string, x.obj as string }.Where(s => !string.IsNullOrWhiteSpace(s)));
+                var code = string.IsNullOrWhiteSpace(x.code as string) ? "" : (left?.Length > 0 ? $" {x.code}" : x.code);
                 var head = (left?.Length > 0 ? left : "") + code;
-                var name = string.IsNullOrWhiteSpace(x.KpiName as string) ? "-" : x.KpiName;
+                var name = string.IsNullOrWhiteSpace(x.name as string) ? "-" : x.name;
                 return string.IsNullOrWhiteSpace(head) ? name : $"{head} — {name}";
             }
 
-            // De-dup by KPI, but KEEP pillar/objective ids for the client
-            var editor = editorRaw
-                .GroupBy(x => x.KpiId)
-                .Select(g =>
-                {
-                    var f = g.First();
-                    return new
-                    {
-                        id = f.KpiId,
-                        pillarId = f.PillarId,
-                        objectiveId = f.ObjectiveId,
-                        text = Label(f)
-                    };
-                })
-                .OrderBy(x => x.text)
-                .Take(200)
+            var editor = editorKpis
+                .GroupBy(x => x.id)
+                .Select(g => new { id = g.Key, text = Label(g.First()) })
                 .ToList();
 
-            var owner = ownerRaw
-                .GroupBy(x => x.KpiId)
-                .Select(g =>
-                {
-                    var f = g.First();
-                    return new
-                    {
-                        id = f.KpiId,
-                        pillarId = f.PillarId,
-                        objectiveId = f.ObjectiveId,
-                        text = Label(f)
-                    };
-                })
-                .OrderBy(x => x.text)
-                .Take(200)
+            var owner = ownerKpis
+                .GroupBy(x => x.id)
+                .Select(g => new { id = g.Key, text = Label(g.First()) })
                 .ToList();
 
             return Json(new { editor, owner });
         }
-
     }
 }
