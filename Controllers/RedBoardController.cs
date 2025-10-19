@@ -6,7 +6,6 @@ using System.Text;
 using System.Net;
 using System.Linq;
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace KPIMonitor.Controllers
@@ -92,13 +91,13 @@ namespace KPIMonitor.Controllers
                 select new
                 {
                     lw.KpiId,
-                    KpiName = k.KpiName ?? "",
-                    KpiCode = k.KpiCode ?? "",
+                    KpiName = k.KpiName,
+                    KpiCode = k.KpiCode,
                     lw.Priority,
-                    PillarCode = p != null ? (p.PillarCode ?? "") : "",
-                    PillarName = p != null ? (p.PillarName ?? "") : "",
-                    ObjectiveCode = o != null ? (o.ObjectiveCode ?? "") : "",
-                    ObjectiveName = o != null ? (o.ObjectiveName ?? "") : ""
+                    PillarCode = p != null ? p.PillarCode : "",
+                    PillarName = p != null ? p.PillarName : "",
+                    ObjectiveCode = o != null ? o.ObjectiveCode : "",
+                    ObjectiveName = o != null ? o.ObjectiveName : ""
                 };
 
             var list = await query
