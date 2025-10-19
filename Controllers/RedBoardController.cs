@@ -7,6 +7,7 @@ using System.Net;
 using System.Linq;
 using System;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace KPIMonitor.Controllers
 {
@@ -50,7 +51,7 @@ namespace KPIMonitor.Controllers
                     p.Priority
                 };
 
-            // Step 3a: for each KPI/plan-year, find the *latest* fact by period start date within that same year
+            // Step 3a: For each KPI/plan-year, find the *latest* fact by PeriodId (robust if StartDate is null)
             var latestFactPerKpi =
                 from lp in latestPlans
                 join f in _db.KpiFacts on new { lp.KpiId, PlanId = lp.KpiYearPlanId } equals new { f.KpiId, PlanId = f.KpiYearPlanId }
@@ -63,15 +64,15 @@ namespace KPIMonitor.Controllers
                     g.Key.KpiYearPlanId,
                     g.Key.Year,
                     g.Key.Priority,
-                    MaxStart = g.Max(x => x.per.StartDate)
+                    MaxPeriodId = g.Max(x => x.per.PeriodId)
                 };
 
-            // Step 3b: join to get the *record* that has that MaxStart so we can read its StatusCode
+            // Step 3b: Join back to get that record so we can read its StatusCode
             var latestWithStatus =
                 from lf in latestFactPerKpi
                 join f in _db.KpiFacts on new { lf.KpiId, PlanId = lf.KpiYearPlanId } equals new { f.KpiId, PlanId = f.KpiYearPlanId }
                 join per in _db.DimPeriods on f.PeriodId equals per.PeriodId
-                where per.Year == lf.Year && per.StartDate == lf.MaxStart && f.StatusCode != null
+                where per.Year == lf.Year && per.PeriodId == lf.MaxPeriodId && f.StatusCode != null
                 select new
                 {
                     lf.KpiId,
@@ -177,7 +178,7 @@ namespace KPIMonitor.Controllers
                     .ThenInclude(k => k.Objective)
                 .Include(a => a.Kpi)
                     .ThenInclude(k => k.Pillar)
-                .Where(a => a.KpiId.HasValue && kpiIds.Contains(a.KpiId.Value))  // fix for nullable KpiId
+                .Where(a => a.KpiId.HasValue && kpiIds.Contains(a.KpiId.Value))
                 .OrderBy(a => a.StatusCode).ThenBy(a => a.DueDate)
                 .ToListAsync();
 
@@ -213,7 +214,6 @@ namespace KPIMonitor.Controllers
                 {
                     foreach (var a in items)
                     {
-                        // Build the KPI/general info block
                         string infoBlock;
                         if (a.KpiId == null || a.IsGeneral)
                         {

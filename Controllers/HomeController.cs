@@ -7,11 +7,12 @@ using Microsoft.EntityFrameworkCore;
 
 using KPIMonitor.Data;
 using KPIMonitor.Models;
-using KPIMonitor.Services;                 // IEmployeeDirectory + StatusPalette
+using KPIMonitor.Services;                 // StatusPalette, IEmployeeDirectory
 using KPIMonitor.ViewModels;               // KpiEditModalVm
 using KPIMonitor.Services.Abstractions;    // IKpiAccessService, IAdminAuthorizer, IKpiStatusService
 using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.DependencyInjection;        // GetService<T>
 
 namespace KPIMonitor.Controllers
 {
@@ -21,20 +22,22 @@ namespace KPIMonitor.Controllers
         private readonly AppDbContext _db;
         private readonly IKpiAccessService _acl;
         private readonly global::IAdminAuthorizer _admin;
-        private readonly IEmployeeDirectory _dir;
+
+        // IMPORTANT: resolve optional services lazily to avoid DI hard-failures
+        private readonly IServiceProvider _sp;
 
         public HomeController(
             ILogger<HomeController> logger,
             AppDbContext db,
             IKpiAccessService acl,
             global::IAdminAuthorizer admin,
-            IEmployeeDirectory dir)
+            IServiceProvider sp)
         {
             _logger = logger;
             _db = db;
             _acl = acl;
             _admin = admin;
-            _dir = dir;
+            _sp = sp;
         }
 
         // --------------------------
@@ -55,7 +58,12 @@ namespace KPIMonitor.Controllers
         {
             var sam = Sam();
             if (string.IsNullOrWhiteSpace(sam)) return null;
-            var rec = await _dir.TryGetByUserIdAsync(sam, ct);
+
+            // Lazily resolve, tolerate missing registration to avoid 500s
+            var dir = _sp.GetService<IEmployeeDirectory>();
+            if (dir == null) return null;
+
+            var rec = await dir.TryGetByUserIdAsync(sam, ct);
             return rec?.EmpId; // BADEA_ADDONS.EMPLOYEES.EMP_ID
         }
 
@@ -206,7 +214,7 @@ namespace KPIMonitor.Controllers
             var lastWithStatus = facts.LastOrDefault(f => !string.IsNullOrWhiteSpace(f.StatusCode));
             string? latestStatusCode = lastWithStatus?.StatusCode;
 
-            // CHANGE: use StatusPalette for canonical + label/color mapping
+            // Map UI label/color without changing DB codes
             var canonical = StatusPalette.Canonicalize(latestStatusCode);
             var vis = StatusPalette.Visual(canonical);
 
@@ -264,8 +272,8 @@ namespace KPIMonitor.Controllers
                 valueType = string.IsNullOrWhiteSpace(plan.Frequency) ? "—" : plan.Frequency,
                 unit = string.IsNullOrWhiteSpace(plan.Unit) ? "—" : plan.Unit,
                 priority = plan.Priority,
-                statusLabel = vis.Label,        // ← updated label
-                statusColor = vis.Hex,          // ← updated color
+                statusLabel = vis.Label,
+                statusColor = vis.Hex,
                 statusRaw = string.IsNullOrWhiteSpace(latestStatusCode) ? "" : latestStatusCode,
 
                 planId = planId,
@@ -458,13 +466,8 @@ namespace KPIMonitor.Controllers
         }
 
         // --------------------------
-        // New: roles for the dashboard card (Editor/Owner by EmpId via Year Plans)
+        // Roles card
         // --------------------------
-        /// <summary>
-        /// Returns the KPIs where the current user is Editor and/or Owner.
-        /// JSON: { editor: [{id, text}], owner: [{id, text}] }
-        /// Optional filters: pillarId, objectiveId (purely for payload trimming).
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> MyKpiRoles(int? pillarId, int? objectiveId, CancellationToken ct = default)
         {
@@ -476,8 +479,7 @@ namespace KPIMonitor.Controllers
                 .AsNoTracking()
                 .Include(p => p.Kpi).ThenInclude(k => k.Pillar)
                 .Include(p => p.Kpi).ThenInclude(k => k.Objective)
-                        .ThenInclude(o => o.Pillar)   // ← add this line
-
+                    .ThenInclude(o => o.Pillar)   // ensure pillar code available through objective
                 .Where(p => p.IsActive == 1 && p.Kpi != null);
 
             if (pillarId.HasValue)
