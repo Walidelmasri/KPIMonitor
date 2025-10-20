@@ -49,57 +49,66 @@ namespace KPIMonitor.Controllers
                     p.Priority
                 };
 
-            // Step 3: one shot join to facts (same plan & same year) and to KPI/Objective/Pillar
-            var query =
+            // Step 3a: for each KPI/plan-year, find the *latest* fact by period start date within that same year (with a non-null status)
+            var latestFactPerKpi =
                 from lp in latestPlans
-                join f in _db.KpiFacts
-                    on new { lp.KpiId, PlanId = lp.KpiYearPlanId }
-                    equals new { f.KpiId, PlanId = f.KpiYearPlanId }
+                join f in _db.KpiFacts on new { lp.KpiId, PlanId = lp.KpiYearPlanId } equals new { f.KpiId, PlanId = f.KpiYearPlanId }
                 join per in _db.DimPeriods on f.PeriodId equals per.PeriodId
-                where f.IsActive == 1
-                   && per.Year == lp.Year
-                   && f.StatusCode != null
-                   && redCodes.Contains(f.StatusCode.ToLower())
-                join k in _db.DimKpis on lp.KpiId equals k.KpiId
+                where f.IsActive == 1 && per.Year == lp.Year && f.StatusCode != null
+                group new { f, per, lp } by new { lp.KpiId, lp.KpiYearPlanId, lp.Year, lp.Priority } into g
+                select new
+                {
+                    g.Key.KpiId,
+                    g.Key.KpiYearPlanId,
+                    g.Key.Year,
+                    g.Key.Priority,
+                    MaxStart = g.Max(x => x.per.StartDate)
+                };
+
+            // Step 3b: join to get the *record* that has that MaxStart so we can read its StatusCode
+            var latestWithStatus =
+                from lf in latestFactPerKpi
+                join f in _db.KpiFacts on new { lf.KpiId, PlanId = lf.KpiYearPlanId } equals new { f.KpiId, PlanId = f.KpiYearPlanId }
+                join per in _db.DimPeriods on f.PeriodId equals per.PeriodId
+                where per.Year == lf.Year && per.StartDate == lf.MaxStart && f.StatusCode != null
+                select new
+                {
+                    lf.KpiId,
+                    lf.Priority,
+                    LatestStatus = f.StatusCode
+                };
+
+            // Step 4: keep only those whose latest status is red, then project with KPI info
+            var redLatest =
+                from lw in latestWithStatus
+                where redCodes.Contains(lw.LatestStatus.ToLower())
+                join k in _db.DimKpis on lw.KpiId equals k.KpiId
                 join o in _db.DimObjectives on k.ObjectiveId equals o.ObjectiveId into gobj
                 from o in gobj.DefaultIfEmpty()
                 join p in _db.DimPillars on k.PillarId equals p.PillarId into gpil
                 from p in gpil.DefaultIfEmpty()
                 select new
                 {
-                    lp.KpiId,
+                    lw.KpiId,
                     KpiName = k.KpiName,
                     KpiCode = k.KpiCode,
-                    lp.Priority,
+                    lw.Priority,
                     PillarCode = p != null ? p.PillarCode : "",
                     PillarName = p != null ? p.PillarName : "",
                     ObjectiveCode = o != null ? o.ObjectiveCode : "",
                     ObjectiveName = o != null ? o.ObjectiveName : ""
                 };
 
-            // Distinct KPIs (one red KPI per list entry)
-            var deduped = await query
+            var list = await redLatest
                 .AsNoTracking()
-                .GroupBy(x => new
-                {
-                    x.KpiId,
-                    x.KpiName,
-                    x.KpiCode,
-                    x.Priority,
-                    x.PillarCode,
-                    x.PillarName,
-                    x.ObjectiveCode,
-                    x.ObjectiveName
-                })
-                .Select(g => g.Key)
-                .ToListAsync();
-
-            // Build the payload your view expects
-            var result = deduped
-                .OrderBy(x => x.Priority ?? int.MaxValue)
+                .OrderBy(x => x.Priority)
                 .ThenBy(x => x.PillarCode)
                 .ThenBy(x => x.ObjectiveCode)
                 .ThenBy(x => x.KpiCode)
+                .ToListAsync();
+
+            // Build the payload your view expects
+            var result = list
                 .Select(x =>
                 {
                     string pillCode = (x.PillarCode ?? "").Trim();
@@ -124,6 +133,7 @@ namespace KPIMonitor.Controllers
                     };
                 })
                 .ToList();
+
 
             return Json(result);
         }
