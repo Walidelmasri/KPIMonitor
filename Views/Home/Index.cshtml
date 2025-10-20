@@ -306,6 +306,36 @@
 
     // ---------- tiny helpers ----------
     const byId = id => document.getElementById(id);
+    // === UI status name mapper (code or label in, pretty label out) ===
+    function uiStatus(codeOrLabel) {
+      const s = String(codeOrLabel || '').trim().toLowerCase();
+      switch (s) {
+        // canonical codes
+        case 'green':       // english
+        case 'conforme':    // fr
+        case 'ok':          // your server label
+          return 'Target Achieved';
+
+        case 'orange':
+        case 'rattrapage':
+        case 'catching up':
+          return 'On Forecast';
+
+        case 'red':
+        case 'ecart':
+        case 'needs attention':
+          return 'Target Missed';
+
+        case 'blue':
+        case 'attente':
+        case 'data missing':
+          return 'Data Missing (No Changes)';
+
+        default:
+          return '—';
+      }
+    }
+
     const api = (path) => {
       const u = new URL(path, window.location.origin);
       u.searchParams.set('_ts', Date.now().toString());
@@ -621,8 +651,12 @@
       metaUnit.textContent = res?.meta?.unit || '—';
       metaPriority.textContent = (res?.meta?.priority ?? '—');
 
-      const label = (res?.meta?.statusLabel || '—'); const color = (res?.meta?.statusColor || '');
-      metaStatus.textContent = label; metaStatus.className = 'status-pill'; if (color) metaStatus.style.background = color;
+      const raw = res?.meta?.statusRaw ?? res?.meta?.statusLabel;
+      const color = (res?.meta?.statusColor || '');
+      metaStatus.textContent = uiStatus(raw);
+      metaStatus.className = 'status-pill';
+      if (color) metaStatus.style.background = color;
+
 
       // Series
       const baseLabels = res?.chart?.labels || [];
@@ -655,12 +689,12 @@
         for (const r of rows) {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-                    <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
-                    <td>${r.startDate ?? '—'}</td>
-                    <td>${r.endDate ?? '—'}</td>
-                    <td>${r.actual ?? '—'}</td>
-                    <td>${r.target ?? '—'}</td>
-                    <td>${r.forecast ?? '—'}</td>`;
+                        <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
+                        <td>${r.startDate ?? '—'}</td>
+                        <td>${r.endDate ?? '—'}</td>
+                        <td>${r.actual ?? '—'}</td>
+                        <td>${r.target ?? '—'}</td>
+                        <td>${r.forecast ?? '—'}</td>`;
           tableBody.appendChild(tr);
         }
       }

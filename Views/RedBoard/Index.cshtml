@@ -2,7 +2,7 @@
 @inject IAdminAuthorizer AdminAuthorizer
 @{
     ViewData["Title"] = "RedBoard";
-var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User);
+    var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User);
 }
 <style>
     /* subtle alert tint for RedBoard */
@@ -16,8 +16,11 @@ var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User
     .alert-tint h6 {
         color: #842029;
     }
-    #redCountBadge { font-weight: 700; font-size: 0.95rem; }
 
+    #redCountBadge {
+        font-weight: 700;
+        font-size: 0.95rem;
+    }
 </style>
 
 @section Scripts {
@@ -32,6 +35,30 @@ var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User
         const qs = (sel, root = document) => root.querySelector(sel);
         const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
         const ENABLE_DECISIONS = false; // <- turn off the last slide safely
+        // === UI status name mapper (code or label in, pretty label out) ===
+        function uiStatus(codeOrLabel) {
+            const s = String(codeOrLabel || '').trim().toLowerCase();
+            switch (s) {
+                case 'green':
+                case 'conforme':
+                case 'ok':
+                    return 'Target Achieved';
+                case 'orange':
+                case 'rattrapage':
+                case 'catching up':
+                    return 'On Forecast';
+                case 'red':
+                case 'ecart':
+                case 'needs attention':
+                    return 'Target Missed';
+                case 'blue':
+                case 'attente':
+                case 'data missing':
+                    return 'Data Missing (No Changes)';
+                default:
+                    return '—';
+            }
+        }
 
         // Antiforgery token (we render it below in a hidden form)
         const anti = () => (qs('input[name="__RequestVerificationToken"]')?.value || '');
@@ -327,11 +354,11 @@ var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User
             $('m_frequency').innerText = data?.meta?.valueType ?? '—';
             $('m_unit').innerText = data?.meta?.unit ?? '—';
             $('m_priority').innerText = data?.meta?.priority ?? '—';
-
             const status = $('m_status');
-            status.innerText = data?.meta?.statusLabel ?? '—';
+            status.innerText = uiStatus(data?.meta?.statusLabel);
             status.style.background = data?.meta?.statusColor ?? '';
             status.className = 'status-pill';
+
 
             // chart (unchanged except data refs)
             const baseLabels = data?.chart?.labels || [];
