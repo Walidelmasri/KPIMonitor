@@ -316,6 +316,8 @@ namespace KPIMonitor.Controllers
                 else
                 {
                     q = q.Where(c =>
+                        // own submissions OR KPIs where you're configured as Editor
+                        (c.SubmittedBy != null && c.SubmittedBy.ToUpper() == mySamUp) ||
                         (from f in _db.KpiFacts
                          join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
                          where f.KpiFactId == c.KpiFactId
@@ -797,7 +799,7 @@ namespace KPIMonitor.Controllers
         }
 
         // ------------------------
-        // List batches (cards) — unchanged EmpId logic
+        // List batches (cards) — unchanged EmpId logic (plus own submissions)
         // ------------------------
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -808,6 +810,8 @@ namespace KPIMonitor.Controllers
 
             var isAdmin = _admin.IsAdmin(User) || _admin.IsSuperAdmin(User);
             var myEmp = await MyEmpIdAsync(ct);
+            var mySam = Sam();
+            var mySamUp = (mySam ?? "").ToUpperInvariant();
 
             var isOwnerSomewhere = !string.IsNullOrWhiteSpace(myEmp) &&
                                    await _db.KpiYearPlans.AsNoTracking()
@@ -832,6 +836,9 @@ namespace KPIMonitor.Controllers
             else if (mode == "editor")
             {
                 qb = qb.Where(b =>
+                    // own batches OR KPIs where you're configured as Editor
+                    (b.SubmittedBy != null && b.SubmittedBy.ToUpper() == mySamUp)
+                    ||
                     (from p in _db.KpiYearPlans
                      where p.KpiYearPlanId == b.KpiYearPlanId
                            && p.EditorEmpId != null
