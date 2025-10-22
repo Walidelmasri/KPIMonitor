@@ -569,6 +569,91 @@ namespace KPIMonitor.Controllers
 
             return Json(new { editor, owner });
         }
+[HttpGet]
+public async Task<IActionResult> GetDashboardSummary(CancellationToken ct = default)
+{
+    // ---- KPI STATUS COUNTS ----
+    var kpiStatusesRaw = await _db.KpiFacts
+        .AsNoTracking()
+        .Where(f => f.StatusCode != null)
+        .Select(f => f.StatusCode!)
+        .ToListAsync(ct);
+
+    string CanonStatus(string code)
+    {
+        var s = (code ?? "").Trim().ToLowerInvariant();
+        return s switch
+        {
+            "green" or "conforme" or "ok" => "green",
+            "red" or "ecart" or "needs attention" => "red",
+            "orange" or "rattrapage" or "catching up" => "orange",
+            "blue" or "attente" or "data missing" => "blue",
+            _ => "unknown"
+        };
+    }
+
+    var kpiStatusCounts = kpiStatusesRaw
+        .Select(CanonStatus)
+        .GroupBy(s => s)
+        .Select(g => new { Status = g.Key, Count = g.Count() })
+        .ToDictionary(g => g.Status, g => g.Count);
+
+    foreach (var key in new[] { "green", "red", "orange", "blue", "unknown" })
+        if (!kpiStatusCounts.ContainsKey(key)) kpiStatusCounts[key] = 0;
+
+
+    // ---- ACTION PLAN COUNTS ----
+    var actionStatusesRaw = await _db.KpiActions
+        .AsNoTracking()
+        .Where(a => a.StatusCode != null)
+        .Select(a => a.StatusCode!)
+        .ToListAsync(ct);
+
+    string CanonAction(string code)
+    {
+        var s = (code ?? "").Trim().ToLowerInvariant();
+        return s switch
+        {
+            "todo" => "todo",
+            "in progress" or "doing" or "working" => "inprogress",
+            "done" or "completed" => "done",
+            _ => "other"
+        };
+    }
+
+    var actionCounts = actionStatusesRaw
+        .Select(CanonAction)
+        .GroupBy(s => s)
+        .Select(g => new { Status = g.Key, Count = g.Count() })
+        .ToDictionary(g => g.Status, g => g.Count);
+
+    foreach (var key in new[] { "todo", "inprogress", "done", "other" })
+        if (!actionCounts.ContainsKey(key)) actionCounts[key] = 0;
+
+
+    // ---- TREND (optional quick win: skip heavy joins, just last N months) ----
+    var lastMonths = DateTime.UtcNow.AddMonths(-6);
+    var trend = await _db.KpiFacts
+        .AsNoTracking()
+        .Where(f => f.Period != null && f.Period.StartDate >= lastMonths)
+        .GroupBy(f => f.Period!.Year * 100 + (f.Period.MonthNum ?? 0))
+        .Select(g => new
+        {
+            Label = g.Max(f => f.Period!.Year) + "-" + g.Max(f => f.Period!.MonthNum),
+            Count = g.Count()
+        })
+        .OrderBy(x => x.Label)
+        .ToListAsync(ct);
+
+    var result = new
+    {
+        kpiStatusCounts,
+        actionCounts,
+        trend
+    };
+
+    return Json(result);
+}
 
     }
 }

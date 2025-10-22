@@ -3,41 +3,25 @@
 }
 <style>
   /* Make all data cells inherit the row's striped background */
-  #factsTbody td {
-    background-color: inherit !important;
-  }
+  #factsTbody td { background-color: inherit !important; }
+
+  /* Summary card layout */
+  #summaryCard .kpi { display:flex; align-items:center; gap:10px; }
+  #summaryCard .kpi .n { font-size:1.6rem; font-weight:800; line-height:1; }
+  #summaryCard .kpi .lbl { color:#6c757d; font-weight:600; }
+
+  /* Give the pies a consistent height without reflow jank */
+  #summaryPies .pie { min-height:220px; }
 
   /* Role summary chips */
-  #roleSummaryCard .role-chip {
-    display: inline-block;
-    margin: 2px 6px 2px 0;
-    padding: 4px 8px;
-    border-radius: 999px;
-    background: #f1f3f5;
-    border: 1px solid #e3e7eb;
-    white-space: nowrap;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    cursor: pointer;
-    user-select: none;
+  #roleSummaryCard .role-chip{
+    display:inline-block;margin:2px 6px 2px 0;padding:4px 8px;border-radius:999px;
+    background:#f1f3f5;border:1px solid #e3e7eb;white-space:nowrap;max-width:100%;
+    overflow:hidden;text-overflow:ellipsis;cursor:pointer;user-select:none;
   }
-
-  #roleSummaryCard .role-chip:hover {
-    background: #e9ecef;
-  }
-
-  #roleSummaryCard .role-chip.active {
-    background: #dbeafe;
-    border-color: #93c5fd;
-    color: #0b5ed7;
-    font-weight: 600;
-  }
-
-  #roleSummaryCard .role-list {
-    max-height: 84px;
-    overflow: auto;
-  }
+  #roleSummaryCard .role-chip:hover{background:#e9ecef;}
+  #roleSummaryCard .role-chip.active{background:#dbeafe;border-color:#93c5fd;color:#0b5ed7;font-weight:600;}
+  #roleSummaryCard .role-list{max-height:84px;overflow:auto;}
 </style>
 
 <div class="container py-4">
@@ -49,8 +33,79 @@
     </div>
   }
 
-  <!-- Selector row (one line) -->
+  <!-- ======= NEW: Summary card (totals only, no percentages) ======= -->
   <div class="with-rails">
+    <div id="summaryCard" class="card shadow-sm rounded-4 mb-4 d-none">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h6 class="m-0 text-secondary fw-bold">Overall Summary</h6>
+          <span class="text-muted small" id="summaryUpdated">—</span>
+        </div>
+
+        <div class="row g-4" id="summaryPies">
+          <div class="col-lg-6">
+            <div class="border rounded-3 p-3 h-100">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="fw-bold text-secondary">Indicators by Status</div>
+                <div class="d-flex gap-3">
+                  <div class="kpi"><span class="n" id="cntGreen">0</span><span class="lbl ms-1">Green</span></div>
+                  <div class="kpi"><span class="n" id="cntOrange">0</span><span class="lbl ms-1">Orange</span></div>
+                  <div class="kpi"><span class="n" id="cntRed">0</span><span class="lbl ms-1">Red</span></div>
+                  <div class="kpi"><span class="n" id="cntBlue">0</span><span class="lbl ms-1">Blue</span></div>
+                </div>
+              </div>
+              <div class="pie">
+                <canvas id="pieKpiStatus" aria-label="Indicators by Status" role="img"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <div class="border rounded-3 p-3 h-100">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="fw-bold text-secondary">Action Plans by Status</div>
+                <div class="d-flex gap-3">
+                  <div class="kpi"><span class="n" id="cntTodo">0</span><span class="lbl ms-1">To&nbsp;Do</span></div>
+                  <div class="kpi"><span class="n" id="cntProg">0</span><span class="lbl ms-1">In&nbsp;Progress</span></div>
+                  <div class="kpi"><span class="n" id="cntDone">0</span><span class="lbl ms-1">Done</span></div>
+                </div>
+              </div>
+              <div class="pie">
+                <canvas id="pieActionStatus" aria-label="Actions by Status" role="img"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Optional mini trend: counts (no %). Hidden if backend doesn't provide. -->
+        <div id="trendRow" class="row g-4 mt-1 d-none">
+          <div class="col-12">
+            <div class="border rounded-3 p-3">
+              <div class="fw-bold text-secondary mb-2">Recent Red KPI Trend</div>
+              <div style="height:160px;">
+                <canvas id="lineRedTrend" aria-label="Red KPIs Trend" role="img"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ======= Roles summary card (kept; now second) ======= -->
+    <div class="card shadow-sm rounded-4 mb-4" id="roleSummaryCard">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <div class="text-muted small">Your role on indicators</div>
+          <span class="badge rounded-pill text-bg-light" id="roleSummaryBadge">—</span>
+        </div>
+        <div class="row g-3 small" id="roleSummaryRows">
+          <div class="col-12 text-muted small" id="roleSummaryPlaceholder">Loading your indicators…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======= Selector row ======= -->
     <div class="card shadow-sm rounded-4 mb-4">
       <div class="card-body">
         <div class="row g-3 align-items-end">
@@ -76,21 +131,7 @@
       </div>
     </div>
 
-    <!-- Role summary (hidden by default; shown only when we have data) -->
-    <div class="card shadow-sm rounded-4 mb-4" id="roleSummaryCard">
-      <div class="card-body">
-        <div class="d-flex align-items-center justify-content-between mb-1">
-          <div class="text-muted small">Your role on indicators</div>
-          <span class="badge rounded-pill text-bg-light" id="roleSummaryBadge">—</span>
-        </div>
-        <div class="row g-3 small" id="roleSummaryRows">
-          <div class="col-12 text-muted small" id="roleSummaryPlaceholder">Loading your indicators…</div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- Chart + side card -->
+    <!-- ======= Chart + side card ======= -->
     <div class="row mb-5 g-4">
       <div class="col-md-9">
         <div class="bg-white border rounded shadow-sm p-3" style="height: 550px;">
@@ -104,14 +145,10 @@
           <div class="card-body d-flex flex-column justify-content-between h-100">
             <div>
               <h6 class="card-title text-secondary fw-bold mb-3">KPI Details</h6>
-              <p class="mb-2" style="font-size: larger;"><strong>👁️ Owner:</strong> <span id="metaOwner"
-                  class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>✍️ Editor:</strong> <span id="metaEditor"
-                  class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>📅 Frequency:</strong> <span id="metaFrequency"
-                  class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>🔢 Unit:</strong> <span id="metaUnit"
-                  class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>👁️ Owner:</strong> <span id="metaOwner" class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>✍️ Editor:</strong> <span id="metaEditor" class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>📅 Frequency:</strong> <span id="metaFrequency" class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>🔢 Unit:</strong> <span id="metaUnit" class="text-dark">—</span></p>
             </div>
             <div class="mt-auto">
               <div class="mb-4 text-center">
@@ -306,36 +343,16 @@
 
     // ---------- tiny helpers ----------
     const byId = id => document.getElementById(id);
-    // === UI status name mapper (code or label in, pretty label out) ===
     function uiStatus(codeOrLabel) {
       const s = String(codeOrLabel || '').trim().toLowerCase();
       switch (s) {
-        // canonical codes
-        case 'green':       // english
-        case 'conforme':    // fr
-        case 'ok':          // your server label
-          return 'Target Achieved';
-
-        case 'orange':
-        case 'rattrapage':
-        case 'catching up':
-          return 'On Forecast';
-
-        case 'red':
-        case 'ecart':
-        case 'needs attention':
-          return 'Target Missed';
-
-        case 'blue':
-        case 'attente':
-        case 'data missing':
-          return 'Data Missing (No Changes)';
-
-        default:
-          return '—';
+        case 'green': case 'conforme': case 'ok': return 'Target Achieved';
+        case 'orange': case 'rattrapage': case 'catching up': return 'On Forecast';
+        case 'red': case 'ecart': case 'needs attention': return 'Target Missed';
+        case 'blue': case 'attente': case 'data missing': return 'Data Missing (No Changes)';
+        default: return '—';
       }
     }
-
     const api = (path) => {
       const u = new URL(path, window.location.origin);
       u.searchParams.set('_ts', Date.now().toString());
@@ -352,7 +369,6 @@
     const metaEditor = byId('metaEditor');
     const metaFrequency = byId('metaFrequency');
     const metaUnit = byId('metaUnit');
-
     const metaPriority = byId('metaPriority');
     const metaStatus = byId('metaStatus');
 
@@ -371,186 +387,237 @@
       sel.disabled = true;
     }
 
-    // ===== Role summary (static-on-load) =====
+    // ======= SUMMARY CARD (fast, one-hit endpoint) =======
+    let pieKpis, pieActs, lineTrend;
+    async function loadSummary() {
+      // Expected payload from /Home/DashboardSummary:
+      // {
+      //   kpiStatus: { green: n, orange: n, red: n, blue: n },
+      //   actionStatus: { todo: n, inprogress: n, done: n },
+      //   trend: { labels: [...], redCounts: [...] },   // optional
+      //   updatedAt: "yyyy-MM-dd HH:mm"
+      // }
+      try {
+        const data = await api('@Url.Action("DashboardSummary", "Home")');
+        // Fill counters
+        byId('cntGreen').textContent  = data?.kpiStatus?.green ?? 0;
+        byId('cntOrange').textContent = data?.kpiStatus?.orange ?? 0;
+        byId('cntRed').textContent    = data?.kpiStatus?.red ?? 0;
+        byId('cntBlue').textContent   = data?.kpiStatus?.blue ?? 0;
+
+        byId('cntTodo').textContent = data?.actionStatus?.todo ?? 0;
+        byId('cntProg').textContent = data?.actionStatus?.inprogress ?? 0;
+        byId('cntDone').textContent = data?.actionStatus?.done ?? 0;
+
+        byId('summaryUpdated').textContent = data?.updatedAt ? ('Updated ' + data.updatedAt) : '—';
+
+        // Build pies (totals only; labels show raw numbers)
+        const kpiCtx = document.getElementById('pieKpiStatus').getContext('2d');
+        const actCtx = document.getElementById('pieActionStatus').getContext('2d');
+
+        const kpiVals = [
+          data?.kpiStatus?.green ?? 0,
+          data?.kpiStatus?.orange ?? 0,
+          data?.kpiStatus?.red ?? 0,
+          data?.kpiStatus?.blue ?? 0
+        ];
+        const actVals = [
+          data?.actionStatus?.todo ?? 0,
+          data?.actionStatus?.inprogress ?? 0,
+          data?.actionStatus?.done ?? 0
+        ];
+
+        if (pieKpis) pieKpis.destroy();
+        if (pieActs) pieActs.destroy();
+
+        pieKpis = new Chart(kpiCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Green','Orange','Red','Blue'],
+            datasets: [{
+              data: kpiVals,
+              backgroundColor: ['#28a745','#fd7e14','#dc3545','#0d6efd'],
+              borderColor: '#fff',
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive:true, maintainAspectRatio:false, cutout:'62%',
+            plugins: {
+              legend: { display:true, position:'bottom' },
+              tooltip: { enabled:true, callbacks:{ label: (ctx)=> `${ctx.label}: ${ctx.raw}` } },
+              datalabels: {
+                display: (c)=> c.raw>0,
+                formatter: (v)=> String(v),
+                color:'#111', font:{ weight:'700' }
+              }
+            }
+          }
+        });
+
+        pieActs = new Chart(actCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['To Do','In Progress','Done'],
+            datasets: [{
+              data: actVals,
+              backgroundColor: ['#6c757d','#ffc107','#198754'],
+              borderColor: '#fff',
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive:true, maintainAspectRatio:false, cutout:'62%',
+            plugins: {
+              legend: { display:true, position:'bottom' },
+              tooltip: { enabled:true, callbacks:{ label: (ctx)=> `${ctx.label}: ${ctx.raw}` } },
+              datalabels: {
+                display: (c)=> c.raw>0,
+                formatter: (v)=> String(v),
+                color:'#111', font:{ weight:'700' }
+              }
+            }
+          }
+        });
+
+        // Optional red trend
+        const labels = data?.trend?.labels || [];
+        const series = data?.trend?.redCounts || [];
+        if (labels.length && series.length) {
+          const trCtx = document.getElementById('lineRedTrend').getContext('2d');
+          byId('trendRow').classList.remove('d-none');
+          if (lineTrend) lineTrend.destroy();
+          lineTrend = new Chart(trCtx, {
+            type: 'line',
+            data: { labels, datasets: [{ label:'Red KPIs', data: series, borderColor:'#dc3545', pointBackgroundColor:'#dc3545', tension:.25, fill:false, borderWidth:2 }] },
+            options: {
+              responsive:true, maintainAspectRatio:false,
+              plugins:{ legend:{ display:false }, datalabels:false, tooltip:{ enabled:true, callbacks:{ label:(c)=> ` ${c.raw}` } } },
+              scales:{ x:{ grid:{ display:false } }, y:{ beginAtZero:true, grid:{ display:false } } }
+            }
+          });
+        }
+
+        // Show card once data is OK
+        byId('summaryCard').classList.remove('d-none');
+      } catch {
+        // Hide if endpoint not ready; nothing else changes
+        byId('summaryCard').classList.add('d-none');
+      }
+    }
+
+    // ===== Role summary (unchanged) =====
     const roleCard = byId('roleSummaryCard');
     const roleBadge = byId('roleSummaryBadge');
     const roleRows = byId('roleSummaryRows');
 
-    // Make a chip element with data attributes (for quick-jump)
-    function _mkChip(item) {
-      // item: { id, text, pillarId?, objectiveId? }
-      const s = document.createElement('span');
-      s.className = 'role-chip';
-      s.title = item.text || String(item.id);
-      s.textContent = item.text || String(item.id);
-      if (item.id != null) s.dataset.kpiId = item.id;
-      if (item.pillarId != null) s.dataset.pillarId = item.pillarId;
-      if (item.objectiveId != null) s.dataset.objectiveId = item.objectiveId;
+    function _mkChip(item){
+      const s=document.createElement('span');
+      s.className='role-chip'; s.title=item.text||String(item.id); s.textContent=item.text||String(item.id);
+      if(item.id!=null) s.dataset.kpiId=item.id;
+      if(item.pillarId!=null) s.dataset.pillarId=item.pillarId;
+      if(item.objectiveId!=null) s.dataset.objectiveId=item.objectiveId;
       return s;
     }
-
-    function renderRoleSummary(data) {
-      const ed = Array.isArray(data?.editor) ? data.editor : [];
-      const ow = Array.isArray(data?.owner) ? data.owner : [];
-      const ph = document.getElementById('roleSummaryPlaceholder');
-      if (ph) ph.remove();
-      if (!ed.length && !ow.length) {
-        roleRows.innerHTML = '<div class="col-12 text-muted small">No indicators available.</div>';
-        roleBadge.textContent = '—';
-        return;
-      }
-
-      roleRows.innerHTML = '';
-      const makeCol = (title, items) => {
-        const col = document.createElement('div'); col.className = 'col-md-6';
-        const h = document.createElement('div'); h.className = 'fw-bold mb-1'; h.textContent = title;
-        const list = document.createElement('div'); list.className = 'role-list';
-        const MAX = 12;
-        items.slice(0, MAX).forEach(it => list.appendChild(_mkChip(it)));
-        if (items.length > MAX) list.appendChild(_mkChip({ text: `+${items.length - MAX} more` }));
-        col.appendChild(h); col.appendChild(list); return col;
-      };
-      if (ed.length) roleRows.appendChild(makeCol('Editor for', ed));
-      if (ow.length) roleRows.appendChild(makeCol('Owner for', ow));
-
+    function renderRoleSummary(data){
+      const ed=Array.isArray(data?.editor)?data.editor:[], ow=Array.isArray(data?.owner)?data.owner:[];
+      const ph=document.getElementById('roleSummaryPlaceholder'); if(ph) ph.remove();
+      if(!ed.length && !ow.length){ roleRows.innerHTML='<div class="col-12 text-muted small">No indicators available.</div>'; roleBadge.textContent='—'; return; }
+      roleRows.innerHTML='';
+      const makeCol=(title,items)=>{ const col=document.createElement('div'); col.className='col-md-6';
+        const h=document.createElement('div'); h.className='fw-bold mb-1'; h.textContent=title;
+        const list=document.createElement('div'); list.className='role-list';
+        const MAX=12; items.slice(0,MAX).forEach(it=>list.appendChild(_mkChip(it)));
+        if(items.length>MAX) list.appendChild(_mkChip({ text:`+${items.length-MAX} more` }));
+        col.appendChild(h); col.appendChild(list); return col; };
+      if(ed.length) roleRows.appendChild(makeCol('Editor for', ed));
+      if(ow.length) roleRows.appendChild(makeCol('Owner for', ow));
       roleBadge.textContent = (ed.length && ow.length) ? 'Editor for • Owner for' : (ed.length ? 'Editor for' : 'Owner for');
       roleCard.classList.remove('d-none');
-
-      // Sync active highlight (after first render)
       markActiveRoleChip(selKpi.value);
     }
-
-    // Load once; if endpoint missing → hide quietly
-    async function loadRoleSummary() {
-      try {
-        const r = await fetch('@Url.Action("MyKpiRoles", "Home")', { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
-        if (!r.ok) throw 0;
-        renderRoleSummary(await r.json());
-      } catch {
-        const ph = document.getElementById('roleSummaryPlaceholder');
-        if (ph) ph.textContent = 'Could not load your indicators.';
-        roleBadge.textContent = '—';
+    async function loadRoleSummary(){
+      try{
+        const r=await fetch('@Url.Action("MyKpiRoles", "Home")',{ headers:{ 'Accept':'application/json' }, cache:'no-store' });
+        if(!r.ok) throw 0; renderRoleSummary(await r.json());
+      }catch{
+        const ph=document.getElementById('roleSummaryPlaceholder'); if(ph) ph.textContent='Could not load your indicators.'; roleBadge.textContent='—';
       }
     }
-    function waitForOption(selectEl, value, timeout = 4000) {
-      return new Promise((resolve, reject) => {
-        const target = String(value);
-        const t0 = performance.now();
-        const i = setInterval(() => {
-          const has = Array.from(selectEl.options).some(o => String(o.value) === target);
-          if (has) { clearInterval(i); resolve(); }
-          if (performance.now() - t0 > timeout) { clearInterval(i); reject(new Error('Option not found: ' + target)); }
-        }, 80);
+    function waitForOption(selectEl, value, timeout=4000){
+      return new Promise((resolve,reject)=>{
+        const target=String(value); const t0=performance.now();
+        const i=setInterval(()=>{
+          const has=Array.from(selectEl.options).some(o=>String(o.value)===target);
+          if(has){ clearInterval(i); resolve(); }
+          if(performance.now()-t0>timeout){ clearInterval(i); reject(new Error('Option not found: '+target)); }
+        },80);
       });
     }
-
-    // Click any chip to jump selectors and load that KPI
-    roleRows.addEventListener('click', async (e) => {
-      const chip = e.target.closest('.role-chip');
-      if (!chip) return;
-      const pillarId = chip.dataset.pillarId;
-      const objectiveId = chip.dataset.objectiveId;
-      const kpiId = chip.dataset.kpiId;
-      if (!kpiId) return;
-
-      await selectKpiByIds(pillarId, objectiveId, kpiId);
-      markActiveRoleChip(kpiId);
+    roleRows.addEventListener('click', async (e)=>{
+      const chip=e.target.closest('.role-chip'); if(!chip) return;
+      const pillarId=chip.dataset.pillarId, objectiveId=chip.dataset.objectiveId, kpiId=chip.dataset.kpiId;
+      if(!kpiId) return; await selectKpiByIds(pillarId, objectiveId, kpiId); markActiveRoleChip(kpiId);
     });
-
-    async function selectKpiByIds(pillarId, objectiveId, kpiId) {
-      // pillar
-      if (pillarId) {
-        // ensure pillars are loaded (initPage already calls loadPillars, but guard anyway)
-        if (!selPillar.options.length || selPillar.disabled) {
-          await loadPillars();
-        }
+    async function selectKpiByIds(pillarId, objectiveId, kpiId){
+      if(pillarId){
+        if(!selPillar.options.length || selPillar.disabled){ await loadPillars(); }
         await waitForOption(selPillar, pillarId);
-        if (selPillar.value !== String(pillarId)) {
-          selPillar.value = String(pillarId);
-          selPillar.dispatchEvent(new Event('change'));
-        }
+        if(selPillar.value!==String(pillarId)){ selPillar.value=String(pillarId); selPillar.dispatchEvent(new Event('change')); }
       }
-
-      // objective
-      if (objectiveId) {
-        await waitForOption(selObjective, objectiveId);      // waits until GetObjectives populated
-        if (selObjective.value !== String(objectiveId)) {
-          selObjective.value = String(objectiveId);
-          selObjective.dispatchEvent(new Event('change'));
-        }
+      if(objectiveId){
+        await waitForOption(selObjective, objectiveId);
+        if(selObjective.value!==String(objectiveId)){ selObjective.value=String(objectiveId); selObjective.dispatchEvent(new Event('change')); }
       }
-
-      // kpi
-      if (kpiId) {
-        await waitForOption(selKpi, kpiId);                  // waits until GetKpis populated
-        if (selKpi.value !== String(kpiId)) {
-          selKpi.value = String(kpiId);
-          selKpi.dispatchEvent(new Event('change'));
-        }
+      if(kpiId){
+        await waitForOption(selKpi, kpiId);
+        if(selKpi.value!==String(kpiId)){ selKpi.value=String(kpiId); selKpi.dispatchEvent(new Event('change')); }
       }
     }
-
-
-    // Highlight the current KPI chip
-    function markActiveRoleChip(currentKpiId) {
-      document.querySelectorAll('#roleSummaryRows .role-chip').forEach(el => {
-        el.classList.toggle('active', currentKpiId && (el.dataset.kpiId === String(currentKpiId)));
+    function markActiveRoleChip(currentKpiId){
+      document.querySelectorAll('#roleSummaryRows .role-chip').forEach(el=>{
+        el.classList.toggle('active', currentKpiId && (el.dataset.kpiId===String(currentKpiId)));
       });
     }
 
     // ---------- cascading dropdowns ----------
-    async function loadPillars() {
-      resetSelect(selPillar, '-- Pillar --');
-      resetSelect(selObjective, '-- Objective --');
-      resetSelect(selKpi, '-- KPI --');
-
+    async function loadPillars(){
+      resetSelect(selPillar,'-- Pillar --'); resetSelect(selObjective,'-- Objective --'); resetSelect(selKpi,'-- KPI --');
       const items = await api('@Url.Action("GetPillars", "Home")'); // [{id,name}]
-      for (const it of items) {
-        const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; selPillar.appendChild(o);
-      }
-      selPillar.disabled = false;
+      for (const it of items){ const o=document.createElement('option'); o.value=it.id; o.textContent=it.name; selPillar.appendChild(o); }
+      selPillar.disabled=false;
     }
-
-    selPillar.addEventListener('change', async () => {
-      resetSelect(selObjective, '-- Objective --');
-      resetSelect(selKpi, '-- KPI --');
-      clearMeta(); clearChartAndTable();
-
-      const pid = selPillar.value; if (!pid) return;
-      const items = await api('@Url.Action("GetObjectives", "Home")?pillarId=' + encodeURIComponent(pid));
-      for (const it of items) {
-        const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; selObjective.appendChild(o);
-      }
-      selObjective.disabled = items.length === 0;
+    selPillar.addEventListener('change', async ()=>{
+      resetSelect(selObjective,'-- Objective --'); resetSelect(selKpi,'-- KPI --'); clearMeta(); clearChartAndTable();
+      const pid=selPillar.value; if(!pid) return;
+      const items=await api('@Url.Action("GetObjectives", "Home")?pillarId='+encodeURIComponent(pid));
+      for(const it of items){ const o=document.createElement('option'); o.value=it.id; o.textContent=it.name; selObjective.appendChild(o); }
+      selObjective.disabled=items.length===0;
     });
-
-    selObjective.addEventListener('change', async () => {
-      resetSelect(selKpi, '-- KPI --');
-      clearMeta(); clearChartAndTable();
-
-      const oid = selObjective.value; if (!oid) return;
-      const items = await api('@Url.Action("GetKpis", "Home")?objectiveId=' + encodeURIComponent(oid));
-      for (const it of items) {
-        const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; selKpi.appendChild(o);
-      }
-      selKpi.disabled = items.length === 0;
+    selObjective.addEventListener('change', async ()=>{
+      resetSelect(selKpi,'-- KPI --'); clearMeta(); clearChartAndTable();
+      const oid=selObjective.value; if(!oid) return;
+      const items=await api('@Url.Action("GetKpis", "Home")?objectiveId='+encodeURIComponent(oid));
+      for(const it of items){ const o=document.createElement('option'); o.value=it.id; o.textContent=it.name; selKpi.appendChild(o); }
+      selKpi.disabled=items.length===0;
     });
+    selKpi.addEventListener('change', ()=>{ loadKpiSummary().catch(console.error); });
 
-    selKpi.addEventListener('change', () => { loadKpiSummary().catch(console.error); });
+    function getQS(name){ const u=new URL(window.location.href); return u.searchParams.get(name); }
 
-    function getQS(name) { const u = new URL(window.location.href); return u.searchParams.get(name); }
-
-    async function initPage() {
+    async function initPage(){
+      // Load summary FIRST (cheap one-hit), then roles, then selectors
+      loadSummary();             // non-blocking
+      loadRoleSummary();         // non-blocking
       await loadPillars();
-      loadRoleSummary(); // load once (static list)
 
-      const qP = getQS('pillarId'), qO = getQS('objectiveId'), qK = getQS('kpiId');
-      if (qP) { selPillar.value = qP; selPillar.dispatchEvent(new Event('change')); }
-      if (qO) { await new Promise(r => setTimeout(r, 150)); selObjective.value = qO; selObjective.dispatchEvent(new Event('change')); }
-      if (qK) { await new Promise(r => setTimeout(r, 150)); selKpi.value = qK; selKpi.dispatchEvent(new Event('change')); }
+      const qP=getQS('pillarId'), qO=getQS('objectiveId'), qK=getQS('kpiId');
+      if(qP){ selPillar.value=qP; selPillar.dispatchEvent(new Event('change')); }
+      if(qO){ await new Promise(r=>setTimeout(r,150)); selObjective.value=qO; selObjective.dispatchEvent(new Event('change')); }
+      if(qK){ await new Promise(r=>setTimeout(r,150)); selKpi.value=qK; selKpi.dispatchEvent(new Event('change')); }
     }
 
-    // ---------- Chart.js ----------
+    // ---------- Chart.js (main KPI) ----------
     const ctx = document.getElementById('kpiChart').getContext('2d');
     let kpiChart = new Chart(ctx, {
       data: {
@@ -590,14 +657,12 @@
       kpiChart.data.labels = []; for (const ds of kpiChart.data.datasets) ds.data = []; kpiChart.update();
       tableBody.innerHTML = '<tr class="placeholder-row"><td colspan="6" class="text-center text-muted">—</td></tr>';
     }
-
     function clearMeta() {
-      metaOwner.textContent = '—'; metaEditor.textContent = '—'; metaFrequency.textContent = '—'; metaUnit.textContent = '—';
-      metaPriority.textContent = '—'; metaStatus.textContent = '—'; metaStatus.className = 'status-pill'; metaStatus.style.background = '';
-      btnEditKpi.disabled = true; btnEditKpi.textContent = '✏️ Edit KPI (Actual & Forecast)';
+      metaOwner.textContent='—'; metaEditor.textContent='—'; metaFrequency.textContent='—'; metaUnit.textContent='—';
+      metaPriority.textContent='—'; metaStatus.textContent='—'; metaStatus.className='status-pill'; metaStatus.style.background='';
+      btnEditKpi.disabled=true; btnEditKpi.textContent='✏️ Edit KPI (Actual & Forecast)';
     }
 
-    // ====== AJAX binder for the modal form (ALWAYS intercept submit) ======
     function wireKpiModalAjax() {
       const modal = document.getElementById('editKpiModal');
       const form = modal ? modal.querySelector('#kpi-edit-form') : null;
@@ -606,22 +671,19 @@
 
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const url = form.getAttribute('action'); // /KpiFactChanges/SubmitBatch
-        const fd = new FormData(form);          // includes antiforgery token
+        const url = form.getAttribute('action');
+        const fd = new FormData(form);
         try {
           const res = await fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: fd });
           const text = await res.text(); let data = null; try { data = JSON.parse(text); } catch { }
-          if (!res.ok) { console.error('[Submit] HTTP', res.status, text); const msg = (data && data.error) ? data.error : ('Save failed (' + res.status + ')'); throw new Error(msg); }
-
+          if (!res.ok) { const msg = (data && data.error) ? data.error : ('Save failed (' + res.status + ')'); throw new Error(msg); }
           if (data && typeof data === 'object') {
             const created = (typeof data.created === 'number') ? data.created : data.createdCount;
             const skipped = (typeof data.skipped === 'number') ? data.skipped : data.skippedCount;
             if (typeof created === 'number') { alert(`Submitted: ${created} change(s)` + (skipped ? `, skipped: ${skipped}` : '')); }
             else if (data.status) { alert(data.status === 'approved' ? 'Saved & auto-approved.' : 'Submitted for approval.'); }
           }
-
           bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).hide();
-
           if (btnEditKpi) { btnEditKpi.disabled = true; btnEditKpi.textContent = '⏳ Pending approval'; }
           await new Promise(r => setTimeout(r, 350));
           await loadKpiSummary();
@@ -640,8 +702,11 @@
       canEditFacts = !!res?.meta?.canEdit;
 
       // Title "PC.OC KPICode — Name"
-      const leftParts = []; if (res?.meta?.pillarCode) leftParts.push(res.meta.pillarCode); if (res?.meta?.objectiveCode) leftParts.push(res.meta.objectiveCode);
-      let left = leftParts.join('.'); if (res?.meta?.code) left = left ? `${left} ${res.meta.code}` : res.meta.code;
+      const leftParts = [];
+      if (res?.meta?.pillarCode) leftParts.push(res.meta.pillarCode);
+      if (res?.meta?.objectiveCode) leftParts.push(res.meta.objectiveCode);
+      let left = leftParts.join('.');
+      if (res?.meta?.code) left = left ? `${left} ${res.meta.code}` : res.meta.code;
       byId('kpiTitle').textContent = (left ? `${left} — ` : '') + (res?.meta?.title || '—');
 
       // Meta
@@ -656,7 +721,6 @@
       metaStatus.textContent = uiStatus(raw);
       metaStatus.className = 'status-pill';
       if (color) metaStatus.style.background = color;
-
 
       // Series
       const baseLabels = res?.chart?.labels || [];
@@ -689,12 +753,12 @@
         for (const r of rows) {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-                        <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
-                        <td>${r.startDate ?? '—'}</td>
-                        <td>${r.endDate ?? '—'}</td>
-                        <td>${r.actual ?? '—'}</td>
-                        <td>${r.target ?? '—'}</td>
-                        <td>${r.forecast ?? '—'}</td>`;
+            <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
+            <td>${r.startDate ?? '—'}</td>
+            <td>${r.endDate ?? '—'}</td>
+            <td>${r.actual ?? '—'}</td>
+            <td>${r.target ?? '—'}</td>
+            <td>${r.forecast ?? '—'}</td>`;
           tableBody.appendChild(tr);
         }
       }
@@ -706,7 +770,6 @@
       else if (anyPending) { btnEditKpi.disabled = true; btnEditKpi.textContent = '⏳ Pending approval'; }
       else { btnEditKpi.disabled = false; btnEditKpi.textContent = '✏️ Edit KPI (Actual & Forecast)'; }
 
-      // Keep chip highlight in sync with the selected KPI
       markActiveRoleChip(selKpi.value);
     }
 
@@ -721,23 +784,12 @@
         const text = await r.text();
         if (r.status === 403) throw new Error('You do not have access to edit this KPI.');
         if (!r.ok) { console.error('EditKpiFactsModal failed', r.status, text); throw new Error('Failed to load edit modal. (' + r.status + ')'); }
-        modalContent.innerHTML = text;
-        wireKpiModalAjax();
+        modalContent.innerHTML = text; wireKpiModalAjax();
         bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).show();
       } catch (e) { alert(e.message || 'Could not open edit modal.'); }
     });
 
     // kick things off
     initPage().catch(console.error);
-
-    async function initPage() {
-      await loadPillars();
-      loadRoleSummary(); // static card showing your roles
-
-      const qP = getQS('pillarId'), qO = getQS('objectiveId'), qK = getQS('kpiId');
-      if (qP) { selPillar.value = qP; selPillar.dispatchEvent(new Event('change')); }
-      if (qO) { await new Promise(r => setTimeout(r, 150)); selObjective.value = qO; selObjective.dispatchEvent(new Event('change')); }
-      if (qK) { await new Promise(r => setTimeout(r, 150)); selKpi.value = qK; selKpi.dispatchEvent(new Event('change')); }
-    }
   </script>
 }
