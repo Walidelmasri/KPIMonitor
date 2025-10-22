@@ -11,11 +11,20 @@
         box-shadow: 0 2px 8px rgba(220, 53, 69, .10) !important;
     } *@
     .alert-tint .card-title, .alert-tint h6 { color: #842029; }
+
+    /* DO NOT touch the counter styling */
     #kpiCountBadge { font-weight: 700; font-size: 0.95rem; }
+
     .status-pill {
         display:inline-block; padding:.35rem .7rem; border-radius:999px; color:#fff; font-weight:700; font-size:.9rem;
         background:#6c757d;
     }
+
+    /* NEW: status-matched tints for the GRAPH TILE ONLY */
+    .tint-red    { background:#fff5f5 !important; border-color:#f8d7da !important; box-shadow:0 2px 8px rgba(220,53,69,.10) !important; }
+    .tint-blue   { background:#f0f6ff !important; border-color:#cfe2ff !important; box-shadow:0 2px 8px rgba(13,110,253,.12) !important; }
+    .tint-green  { background:#ecf7ef !important; border-color:#d4edda !important; box-shadow:0 2px 8px rgba(40,167,69,.10) !important; }
+    .tint-orange { background:#fff6ef !important; border-color:#ffe5d0 !important; box-shadow:0 2px 8px rgba(253,126,20,.12) !important; }
 </style>
 
 @section Scripts {
@@ -45,6 +54,16 @@
             case 'blue': case 'attente': case 'data missing': return 'Data Missing (No Changes)';
             default: return '—';
         }
+    }
+
+    // NEW: map status (code/label) -> tint class
+    function statusToTintClass(codeOrLabel) {
+        const s = String(codeOrLabel || '').trim().toLowerCase();
+        if (s === 'green' || s === 'conforme' || s === 'ok' || s === 'target achieved') return 'tint-green';
+        if (s === 'orange' || s === 'rattrapage' || s === 'on forecast' || s === 'catching up') return 'tint-orange';
+        if (s === 'red' || s === 'ecart' || s === 'target missed' || s === 'needs attention') return 'tint-red';
+        if (s === 'blue' || s === 'attente' || s === 'data missing') return 'tint-blue';
+        return ''; // no tint fallback
     }
 
     // strip/disable admin-only controls in injected Actions HTML
@@ -192,6 +211,11 @@
             $('titleSlide').classList.remove('d-none');
             $('kpiSlide').classList.add('d-none');
             $('actionsBlock').classList.add('d-none');
+
+            // optional: clear tile tint when not showing a KPI
+            const tile = $('chartTile');
+            if (tile) ['tint-red','tint-blue','tint-green','tint-orange'].forEach(c => tile.classList.remove(c));
+
             return;
         }
 
@@ -223,6 +247,15 @@
         status.innerText = uiStatus(data?.meta?.statusLabel);
         status.style.background = data?.meta?.statusColor ?? '';
         status.className = 'status-pill';
+
+        // NEW: set the GRAPH TILE background to match status
+        (function setTileTint(){
+            const tile = $('chartTile');
+            if (!tile) return;
+            const tint = statusToTintClass(data?.meta?.statusLabel || data?.meta?.statusColor || '');
+            ['tint-red','tint-blue','tint-green','tint-orange'].forEach(c => tile.classList.remove(c));
+            if (tint) tile.classList.add(tint);
+        })();
 
         // chart
         const baseLabels = data?.chart?.labels || [];
@@ -426,7 +459,8 @@
             <div id="kpiSlide">
                 <div class="row g-4 mb-4">
                     <div class="col-md-9">
-                        <div class="bg-white border rounded shadow-sm p-3 alert-tint" style="height:550px;">
+                        <!-- NOTE: id added so we can tint this tile; class alert-tint kept -->
+                        <div id="chartTile" class="bg-white border rounded shadow-sm p-3 alert-tint" style="height:550px;">
                             <canvas id="pbChart" role="img" aria-label="KPI Chart"></canvas>
                         </div>
                     </div>
