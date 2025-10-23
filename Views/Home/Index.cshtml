@@ -390,15 +390,16 @@
     // ======= SUMMARY CARD (fast, one-hit endpoint) =======
     let pieKpis, pieActs, lineTrend;
     async function loadSummary() {
-      // Expected payload from /Home/DashboardSummary:
+      // Expected payload from /Home/GetDashboardSummary:
       // {
-      //   kpiStatus: { green: n, orange: n, red: n, blue: n },
-      //   actionStatus: { todo: n, inprogress: n, done: n },
-      //   trend: { labels: [...], redCounts: [...] },   // optional
+      //   kpiStatus: { green: n, orange: n, red: n, blue: n, unknown?: n },
+      //   actionStatus: { todo: n, inprogress: n, done: n, other?: n },
+      //   trend?: { labels: [...], redCounts: [...] },
       //   updatedAt: "yyyy-MM-dd HH:mm"
       // }
       try {
-        const data = await api('@Url.Action("DashboardSummary", "Home")');
+        const data = await api('@Url.Action("GetDashboardSummary", "Home")');
+
         // Fill counters
         byId('cntGreen').textContent  = data?.kpiStatus?.green ?? 0;
         byId('cntOrange').textContent = data?.kpiStatus?.orange ?? 0;
@@ -506,7 +507,7 @@
       }
     }
 
-    // ===== Role summary (unchanged) =====
+    // ===== Role summary (unchanged logic) =====
     const roleCard = byId('roleSummaryCard');
     const roleBadge = byId('roleSummaryBadge');
     const roleRows = byId('roleSummaryRows');
