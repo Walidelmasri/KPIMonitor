@@ -2,6 +2,10 @@
   ViewData["Title"] = "Dashboard";
 }
 <style>
+  /* Tajawal everywhere for visual match */
+  :root { --app-font: 'Tajawal', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+  body, .card, .form-select, .btn { font-family: var(--app-font); }
+
   /* Make all data cells inherit the row's striped background */
   #factsTbody td { background-color: inherit !important; }
 
@@ -13,15 +17,17 @@
   /* Give the pies a consistent height without reflow jank */
   #summaryPies .pie { min-height:220px; }
 
-  /* Role summary chips */
-  #roleSummaryCard .role-chip{
+  /* Role/segment chips */
+  .role-chip{
     display:inline-block;margin:2px 6px 2px 0;padding:4px 8px;border-radius:999px;
     background:#f1f3f5;border:1px solid #e3e7eb;white-space:nowrap;max-width:100%;
     overflow:hidden;text-overflow:ellipsis;cursor:pointer;user-select:none;
+    font-family: var(--app-font);
   }
-  #roleSummaryCard .role-chip:hover{background:#e9ecef;}
-  #roleSummaryCard .role-chip.active{background:#dbeafe;border-color:#93c5fd;color:#0b5ed7;font-weight:600;}
+  .role-chip:hover{background:#e9ecef;}
+  .role-chip.active{background:#dbeafe;border-color:#93c5fd;color:#0b5ed7;font-weight:600;}
   #roleSummaryCard .role-list{max-height:84px;overflow:auto;}
+  #segmentKpiList .role-list{max-height:132px;overflow:auto;}
 </style>
 
 <div class="container py-4">
@@ -33,14 +39,16 @@
     </div>
   }
 
-  <!-- ======= NEW: Summary card (totals only, no percentages) ======= -->
+  <!-- ======= Summary card ======= -->
   <div class="with-rails">
     <div id="summaryCard" class="card shadow-sm rounded-4 mb-4">
       <div class="card-body">
         <div class="d-flex align-items-center justify-content-between mb-3">
           <h6 class="m-0 text-secondary fw-bold">Overall Summary</h6>
-          <span class="text-muted small" id="summaryUpdated">—</span>
-          <span class="text-muted small" id="summaryLoading">Loading…</span>
+          <div class="d-flex align-items-center gap-3">
+            <span class="text-muted small" id="summaryUpdated">—</span>
+            <span class="text-muted small" id="summaryLoading">Loading…</span>
+          </div>
         </div>
 
         <div class="row g-4" id="summaryPies">
@@ -49,10 +57,11 @@
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <div class="fw-bold text-secondary">Indicators by Status</div>
                 <div class="d-flex gap-3">
-                  <div class="kpi"><span class="n" id="cntGreen">0</span><span class="lbl ms-1">Target Achieved</span></div>
-                  <div class="kpi"><span class="n" id="cntOrange">0</span><span class="lbl ms-1">On Forecast</span></div>
-                  <div class="kpi"><span class="n" id="cntRed">0</span><span class="lbl ms-1">Target Missed</span></div>
-                  <div class="kpi"><span class="n" id="cntBlue">0</span><span class="lbl ms-1">Data Missing</span></div>
+                  <!-- label first, number to the right -->
+                  <div class="kpi"><span class="lbl">Green</span><span class="n ms-1" id="cntGreen">0</span></div>
+                  <div class="kpi"><span class="lbl">Orange</span><span class="n ms-1" id="cntOrange">0</span></div>
+                  <div class="kpi"><span class="lbl">Red</span><span class="n ms-1" id="cntRed">0</span></div>
+                  <div class="kpi"><span class="lbl">Blue</span><span class="n ms-1" id="cntBlue">0</span></div>
                 </div>
               </div>
               <div class="pie">
@@ -66,9 +75,10 @@
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <div class="fw-bold text-secondary">Action Plans by Status</div>
                 <div class="d-flex gap-3">
-                  <div class="kpi"><span class="n" id="cntTodo">0</span><span class="lbl ms-1">To&nbsp;Do</span></div>
-                  <div class="kpi"><span class="n" id="cntProg">0</span><span class="lbl ms-1">In&nbsp;Progress</span></div>
-                  <div class="kpi"><span class="n" id="cntDone">0</span><span class="lbl ms-1">Done</span></div>
+                  <!-- label first, number to the right -->
+                  <div class="kpi"><span class="lbl">To&nbsp;Do</span><span class="n ms-1" id="cntTodo">0</span></div>
+                  <div class="kpi"><span class="lbl">In&nbsp;Progress</span><span class="n ms-1" id="cntProg">0</span></div>
+                  <div class="kpi"><span class="lbl">Done</span><span class="n ms-1" id="cntDone">0</span></div>
                 </div>
               </div>
               <div class="pie">
@@ -78,22 +88,19 @@
           </div>
         </div>
 
-        @* <!-- Optional mini trend: counts (no %). Hidden if backend doesn't provide. -->
-        <div id="trendRow" class="row g-4 mt-1 d-none">
-          <div class="col-12">
-            <div class="border rounded-3 p-3">
-              <div class="fw-bold text-secondary mb-2">Recent Red KPI Trend</div>
-              <div style="height:160px;">
-                <canvas id="lineRedTrend" aria-label="Red KPIs Trend" role="img"></canvas>
-              </div>
-            </div>
+        <!-- NEW: KPIs from clicked segment -->
+        <div id="segmentKpiList" class="mt-3 d-none">
+          <div class="d-flex align-items-center justify-content-between mb-1">
+            <div class="text-muted small" id="segmentTitle">KPIs</div>
+            <button class="btn btn-sm btn-outline-secondary" id="clearSegmentBtn">Clear</button>
           </div>
-        </div> *@
+          <div class="role-list" id="segmentKpiRows"></div>
+        </div>
 
       </div>
     </div>
 
-    <!-- ======= Roles summary card (kept; now second) ======= -->
+    <!-- ======= Roles summary card (second) ======= -->
     <div class="card shadow-sm rounded-4 mb-4" id="roleSummaryCard">
       <div class="card-body">
         <div class="d-flex align-items-center justify-content-between mb-1">
@@ -206,6 +213,9 @@
 </div>
 
 @section Scripts {
+  <!-- Tajawal (if not already in layout) -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;800&display=swap" rel="stylesheet">
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <script>
@@ -219,6 +229,10 @@
       if (a >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
       return n.toString();
     }
+
+    // Global chart font -> Tajawal
+    Chart.defaults.font.family = 'Tajawal, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+    Chart.defaults.font.size = 12;
 
     // === SmartValueLabels plugin ===
     const SmartValueLabels = {
@@ -242,7 +256,7 @@
 
         ctx.save();
         ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-        ctx.font = `${fontWeight} ${fontSize}px system-ui,-apple-system,Segoe UI,Roboto,Arial`;
+        ctx.font = `${fontWeight} ${fontSize}px Tajawal, system-ui,-apple-system,Segoe UI,Roboto,Arial`;
 
         const byIndex = new Map();
 
@@ -339,7 +353,8 @@
       display: (c) => c.raw != null,
       formatter: (v) => _fmtShort(v),
       anchor: 'end', align: 'end', offset: 2, clamp: true, clip: false,
-      color: '#111', font: { weight: 'bold' }
+      color: '#111',
+      font: { family: Chart.defaults.font.family, weight: 'bold' }
     });
 
     // ---------- tiny helpers ----------
@@ -376,7 +391,13 @@
     const tableBody = byId('factsTbody');
     const btnEditKpi = byId('openEditKpiBtn');
 
-    // NEW: ACL state
+    // NEW: segment chips nodes
+    const segWrap = byId('segmentKpiList');
+    const segRows = byId('segmentKpiRows');
+    const segTitle = byId('segmentTitle');
+    byId('clearSegmentBtn').addEventListener('click', ()=>{ segRows.innerHTML=''; segWrap.classList.add('d-none'); });
+
+    // ACL state
     let currentPlanId = null;
     let canEditFacts = false;
 
@@ -388,94 +409,141 @@
       sel.disabled = true;
     }
 
-    // ======= SUMMARY CARD (fast, one-hit endpoint) =======
-let pieKpis, pieActs, lineTrend;
-async function loadSummary() {
-  const loadingEl = document.getElementById('summaryLoading');
-  try {
-    const data = await api('@Url.Action("GetDashboardSummary", "Home")');
+    // ======= SUMMARY CARD =======
+    let pieKpis, pieActs, lineTrend;
+    async function loadSummary() {
+      const loadingEl = document.getElementById('summaryLoading');
+      try {
+        const data = await api('@Url.Action("GetDashboardSummary", "Home")');
 
-    // Accept either {kpiStatus, actionStatus} or {kpiStatusCounts, actionCounts}
-    const k = data?.kpiStatus ?? data?.kpiStatusCounts ?? {};
-    const a = data?.actionStatus ?? data?.actionCounts ?? {};
+        const k = data?.kpiStatus ?? data?.kpiStatusCounts ?? {};
+        const a = data?.actionStatus ?? data?.actionCounts ?? {};
 
-    // Fill counters (raw totals)
-    byId('cntGreen').textContent  = k.green  ?? 0;
-    byId('cntOrange').textContent = k.orange ?? 0;
-    byId('cntRed').textContent    = k.red    ?? 0;
-    byId('cntBlue').textContent   = k.blue   ?? 0;
+        // counters
+        byId('cntGreen').textContent  = k.green  ?? 0;
+        byId('cntOrange').textContent = k.orange ?? 0;
+        byId('cntRed').textContent    = k.red    ?? 0;
+        byId('cntBlue').textContent   = k.blue   ?? 0;
 
-    byId('cntTodo').textContent = a.todo       ?? 0;
-    byId('cntProg').textContent = a.inprogress ?? 0;
-    byId('cntDone').textContent = a.done       ?? 0;
+        byId('cntTodo').textContent = a.todo       ?? 0;
+        byId('cntProg').textContent = a.inprogress ?? 0;
+        byId('cntDone').textContent = a.done       ?? 0;
 
-    byId('summaryUpdated').textContent = data?.updatedAt ? ('Updated ' + data.updatedAt) : '—';
-    if (loadingEl) loadingEl.textContent = '';
+        byId('summaryUpdated').textContent = data?.updatedAt ? ('Updated ' + data.updatedAt) : '—';
+        if (loadingEl) loadingEl.textContent = '';
 
-    // ---- pies (numbers only) ----
-    const kpiVals = [k.green ?? 0, k.orange ?? 0, k.red ?? 0, k.blue ?? 0];
-    const actVals = [a.todo ?? 0, a.inprogress ?? 0, a.done ?? 0];
+        // pies
+        const kpiVals = [k.green ?? 0, k.orange ?? 0, k.red ?? 0, k.blue ?? 0];
+        const actVals = [a.todo ?? 0, a.inprogress ?? 0, a.done ?? 0];
 
-    const kpiCtx = document.getElementById('pieKpiStatus').getContext('2d');
-    const actCtx = document.getElementById('pieActionStatus').getContext('2d');
-    if (pieKpis) pieKpis.destroy();
-    if (pieActs) pieActs.destroy();
+        const kpiCtx = document.getElementById('pieKpiStatus').getContext('2d');
+        const actCtx = document.getElementById('pieActionStatus').getContext('2d');
+        if (pieKpis) pieKpis.destroy();
+        if (pieActs) pieActs.destroy();
 
-    pieKpis = new Chart(kpiCtx, {
-      type: 'doughnut',
-      data: {
-        labels: ['Green','Orange','Red','Blue'],
-        datasets: [{ data: kpiVals, backgroundColor: ['#28a745','#fd7e14','#dc3545','#0d6efd'], borderColor: '#fff', borderWidth: 2 }]
-      },
-      options: {
-        responsive:true, maintainAspectRatio:false, cutout:'62%',
-        plugins: {
-          legend: { display:true, position:'bottom' },
-          tooltip: { enabled:true, callbacks:{ label: (ctx)=> `${ctx.label}: ${ctx.raw}` } },
-          datalabels: { display:(c)=> c.raw>0, formatter:(v)=> String(v), color:'#111', font:{ weight:'700' } }
-        }
+        pieKpis = new Chart(kpiCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Green','Orange','Red','Blue'],
+            datasets: [{ data: kpiVals, backgroundColor: ['#28a745','#fd7e14','#dc3545','#0d6efd'], borderColor: '#fff', borderWidth: 2 }]
+          },
+          options: {
+            responsive:true, maintainAspectRatio:false, cutout:'62%',
+            plugins: {
+              legend: { display:true, position:'bottom' },
+              tooltip: { enabled:true, callbacks:{ label: (ctx)=> `${ctx.label}: ${ctx.raw}` } },
+              datalabels: { display:(c)=> c.raw>0, formatter:(v)=> String(v), color:'#111', font:{ family: Chart.defaults.font.family, weight:'700' } }
+            },
+            onClick: (_e, _els, chart)=>onPieClick(chart, 'kpi')
+          }
+        });
+
+        pieActs = new Chart(actCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['To Do','In Progress','Done'],
+            datasets: [{ data: actVals, backgroundColor: ['#6c757d','#ffc107','#198754'], borderColor: '#fff', borderWidth: 2 }]
+          },
+          options: {
+            responsive:true, maintainAspectRatio:false, cutout:'62%',
+            plugins: {
+              legend: { display:true, position:'bottom' },
+              tooltip: { enabled:true, callbacks:{ label: (ctx)=> `${ctx.label}: ${ctx.raw}` } },
+              datalabels: { display:(c)=> c.raw>0, formatter:(v)=> String(v), color:'#111', font:{ family: Chart.defaults.font.family, weight:'700' } }
+            },
+            onClick: (_e, _els, chart)=>onPieClick(chart, 'action')
+          }
+        });
+
+      } catch {
+        const loadingEl = document.getElementById('summaryLoading');
+        if (loadingEl) loadingEl.textContent = 'Could not load summary.';
       }
-    });
-
-    pieActs = new Chart(actCtx, {
-      type: 'doughnut',
-      data: {
-        labels: ['To Do','In Progress','Done'],
-        datasets: [{ data: actVals, backgroundColor: ['#6c757d','#ffc107','#198754'], borderColor: '#fff', borderWidth: 2 }]
-      },
-      options: {
-        responsive:true, maintainAspectRatio:false, cutout:'62%',
-        plugins: {
-          legend: { display:true, position:'bottom' },
-          tooltip: { enabled:true, callbacks:{ label: (ctx)=> `${ctx.label}: ${ctx.raw}` } },
-          datalabels: { display:(c)=> c.raw>0, formatter:(v)=> String(v), color:'#111', font:{ weight:'700' } }
-        }
-      }
-    });
-
-    // ---- optional trend (expects {trend:{labels, redCounts}}) ----
-    const labels = data?.trend?.labels || [];
-    const series = data?.trend?.redCounts || [];
-    if (labels.length && series.length) {
-      const trCtx = document.getElementById('lineRedTrend').getContext('2d');
-      byId('trendRow').classList.remove('d-none');
-      if (lineTrend) lineTrend.destroy();
-      lineTrend = new Chart(trCtx, {
-        type: 'line',
-        data: { labels, datasets: [{ label:'Red KPIs', data: series, borderColor:'#dc3545', pointBackgroundColor:'#dc3545', tension:.25, fill:false, borderWidth:2 }] },
-        options: {
-          responsive:true, maintainAspectRatio:false,
-          plugins:{ legend:{ display:false }, datalabels:false, tooltip:{ enabled:true, callbacks:{ label:(c)=> ` ${c.raw}` } } },
-          scales:{ x:{ grid:{ display:false } }, y:{ beginAtZero:true, grid:{ display:false } } }
-        }
-      });
     }
-  } catch (e) {
-    // Never hide the card; just show an error message and keep zeros
-    if (loadingEl) loadingEl.textContent = 'Could not load summary.';
-    // leave counters at 0; pies won’t render until data arrives
-  }
-}
+
+    // Map a pie label to canonical code used by server
+    function mapLabel(kind, label){
+      const s = String(label||'').trim().toLowerCase();
+      if (kind === 'kpi') {
+        if (s === 'green') return 'green';
+        if (s === 'orange') return 'orange';
+        if (s === 'red') return 'red';
+        if (s === 'blue') return 'blue';
+        return 'unknown';
+      } else {
+        if (s === 'to do') return 'todo';
+        if (s === 'in progress') return 'inprogress';
+        if (s === 'done') return 'done';
+        return 'other';
+      }
+    }
+
+    // Handle pie clicks -> fetch KPIs for that segment -> render chips -> click to select
+    async function onPieClick(chart, kind){
+      const points = chart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+      if (!points || !points.length) return;
+      const idx = points[0].index;
+      const label = chart.data.labels[idx];
+      const code = mapLabel(kind, label);
+      if (!code) return;
+
+      segRows.innerHTML = '<span class="text-muted small ms-1">Loading…</span>';
+      segWrap.classList.remove('d-none');
+      segTitle.textContent = (kind === 'kpi' ? 'KPIs with status: ' : 'KPIs with actions: ') + label;
+
+      try{
+        const url = '@Url.Action("GetKpisForSummarySegment","Home")' + `?kind=${encodeURIComponent(kind)}&code=${encodeURIComponent(code)}`;
+        const data = await api(url);
+        const items = Array.isArray(data?.items) ? data.items : [];
+        if (!items.length){
+          segRows.innerHTML = '<span class="text-muted small ms-1">No KPIs found.</span>';
+          return;
+        }
+        segRows.innerHTML = '';
+        for (const it of items){
+          const chip=document.createElement('span');
+          chip.className='role-chip';
+          chip.textContent=it.text || String(it.id);
+          chip.title = it.text || String(it.id);
+          chip.dataset.kpiId = it.id;
+          chip.dataset.pillarId = it.pillarId;
+          chip.dataset.objectiveId = it.objectiveId;
+          segRows.appendChild(chip);
+        }
+      }catch{
+        segRows.innerHTML = '<span class="text-danger small ms-1">Failed to load KPIs.</span>';
+      }
+    }
+
+    // Clicking segment chips behaves like role chips
+    document.getElementById('segmentKpiRows').addEventListener('click', async (e)=>{
+      const chip = e.target.closest('.role-chip'); if (!chip) return;
+      const pillarId=chip.dataset.pillarId, objectiveId=chip.dataset.objectiveId, kpiId=chip.dataset.kpiId;
+      if(!kpiId) return; await selectKpiByIds(pillarId, objectiveId, kpiId);
+      // highlight selection
+      document.querySelectorAll('#segmentKpiRows .role-chip').forEach(x=>x.classList.remove('active'));
+      chip.classList.add('active');
+    });
 
     // ===== Role summary (unchanged logic) =====
     const roleCard = byId('roleSummaryCard');
@@ -554,7 +622,7 @@ async function loadSummary() {
     // ---------- cascading dropdowns ----------
     async function loadPillars(){
       resetSelect(selPillar,'-- Pillar --'); resetSelect(selObjective,'-- Objective --'); resetSelect(selKpi,'-- KPI --');
-      const items = await api('@Url.Action("GetPillars", "Home")'); // [{id,name}]
+      const items = await api('@Url.Action("GetPillars", "Home")');
       for (const it of items){ const o=document.createElement('option'); o.value=it.id; o.textContent=it.name; selPillar.appendChild(o); }
       selPillar.disabled=false;
     }
@@ -577,7 +645,6 @@ async function loadSummary() {
     function getQS(name){ const u=new URL(window.location.href); return u.searchParams.get(name); }
 
     async function initPage(){
-      // Load summary FIRST (cheap one-hit), then roles, then selectors
       loadSummary();             // non-blocking
       loadRoleSummary();         // non-blocking
       await loadPillars();
@@ -619,7 +686,7 @@ async function loadSummary() {
             ]
           },
           tooltip: { enabled: true },
-          legend: { position: 'top', labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 8, weight: '700' } } }
+          legend: { position: 'top', labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 8, weight: '700', family: Chart.defaults.font.family } } }
         }
       }
     });
@@ -734,7 +801,7 @@ async function loadSummary() {
         }
       }
 
-      // KPI-level edit button state (editor check + pending)
+      // KPI-level edit button state
       const anyPending = Array.isArray(res?.table) && res.table.some(r => r.hasPending);
       if (!selKpi.value) { btnEditKpi.disabled = true; btnEditKpi.textContent = '✏️ Edit KPI (Actual & Forecast)'; }
       else if (!canEditFacts) { btnEditKpi.disabled = true; btnEditKpi.textContent = '✏️ Edit KPI (no access)'; }

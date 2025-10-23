@@ -36,7 +36,7 @@ namespace KPIMonitor.Controllers
         }
 
         // --------------------------
-        // helpers (same normalization you use elsewhere)
+        // helpers
         // --------------------------
         private static string Sam(string? raw)
         {
@@ -54,7 +54,7 @@ namespace KPIMonitor.Controllers
             var sam = Sam();
             if (string.IsNullOrWhiteSpace(sam)) return null;
             var rec = await _dir.TryGetByUserIdAsync(sam, ct);
-            return rec?.EmpId; // BADEA_ADDONS.EMPLOYEES.EMP_ID
+            return rec?.EmpId;
         }
 
         // --------------------------
@@ -360,7 +360,7 @@ namespace KPIMonitor.Controllers
             return RedirectToAction("Index", "Home", new { pillarId, objectiveId, kpiId });
         }
 
-        // GET: modal with Actual + Forecast (+ Target for superadmin) grid for the active plan
+        // GET: modal with grid
         [HttpGet]
         public async Task<IActionResult> EditKpiFactsModal(decimal kpiId)
         {
@@ -465,11 +465,8 @@ namespace KPIMonitor.Controllers
         }
 
         // --------------------------
-        // New: roles for the dashboard card (Editor/Owner by EmpId via Year Plans)
+        // Roles for roles card
         // --------------------------
-        /// Returns the KPIs where the current user is Editor and/or Owner.
-        /// JSON: { editor: [{id, text}], owner: [{id, text}] }
-        /// Optional filters: pillarId, objectiveId (purely for payload trimming).
         [HttpGet]
         public async Task<IActionResult> MyKpiRoles(int? pillarId, int? objectiveId, CancellationToken ct = default)
         {
@@ -477,7 +474,6 @@ namespace KPIMonitor.Controllers
             if (string.IsNullOrWhiteSpace(myEmp))
                 return Json(new { editor = Array.Empty<object>(), owner = Array.Empty<object>() });
 
-            // Include Kpi -> Objective -> Pillar to build labels and expose path
             var plans = _db.KpiYearPlans
                 .AsNoTracking()
                 .Include(p => p.Kpi)
@@ -491,7 +487,6 @@ namespace KPIMonitor.Controllers
             if (objectiveId.HasValue)
                 plans = plans.Where(p => p.Kpi!.ObjectiveId == objectiveId.Value);
 
-            // Common projection (keep the path fields!)
             var baseQuery = plans.Select(p => new
             {
                 p.KpiId,
@@ -503,7 +498,6 @@ namespace KPIMonitor.Controllers
                 KpiName = p.Kpi!.KpiName
             });
 
-            // Editor KPIs
             var editorRaw = await baseQuery
                 .Where(p => _db.KpiYearPlans.Any(q =>
                     q.IsActive == 1 &&
@@ -512,7 +506,6 @@ namespace KPIMonitor.Controllers
                     q.EditorEmpId == myEmp))
                 .ToListAsync(ct);
 
-            // Owner KPIs
             var ownerRaw = await baseQuery
                 .Where(p => _db.KpiYearPlans.Any(q =>
                     q.IsActive == 1 &&
@@ -532,7 +525,6 @@ namespace KPIMonitor.Controllers
                 return string.IsNullOrWhiteSpace(head) ? name : $"{head} — {name}";
             }
 
-            // De-dup by KPI, but KEEP pillar/objective ids for the client
             var editor = editorRaw
                 .GroupBy(x => x.KpiId)
                 .Select(g =>
@@ -569,143 +561,283 @@ namespace KPIMonitor.Controllers
 
             return Json(new { editor, owner });
         }
-[HttpGet]
-public async Task<IActionResult> GetDashboardSummary(CancellationToken ct = default)
-{
-    // ---- Latest active plan per KPI (EF-safe) ----
-    // 1) Get latest plan id per KPI (by max KpiYearPlanId) where plan is active and has a Period.
-    var latestPlanIds = await _db.KpiYearPlans
-        .AsNoTracking()
-        .Where(p => p.IsActive == 1 && p.PeriodId != null)
-        .GroupBy(p => p.KpiId)
-        .Select(g => g.Max(p => p.KpiYearPlanId))
-        .ToListAsync(ct);
 
-    if (latestPlanIds.Count == 0)
-    {
-        return Json(new
+        // --------------------------
+        // Dashboard summary (latest-status-only)
+        // --------------------------
+        [HttpGet]
+        public async Task<IActionResult> GetDashboardSummary(CancellationToken ct = default)
         {
-            kpiStatus = new { green = 0, orange = 0, red = 0, blue = 0, unknown = 0 },
-            actionStatus = new { todo = 0, inprogress = 0, done = 0, other = 0 },
-            trend = (object?)null,
-            updatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm")
-        });
-    }
+            // Latest active plan id per KPI
+            var latestPlanIds = await _db.KpiYearPlans
+                .AsNoTracking()
+                .Where(p => p.IsActive == 1 && p.PeriodId != null)
+                .GroupBy(p => p.KpiId)
+                .Select(g => g.Max(p => p.KpiYearPlanId))
+                .ToListAsync(ct);
 
-    // 2) For those plans, get (KpiId, PlanId, Year) so we can scope facts to the plan year.
-    var planTriples = await _db.KpiYearPlans
-        .AsNoTracking()
-        .Where(p => latestPlanIds.Contains(p.KpiYearPlanId))
-        .Select(p => new { p.KpiId, p.KpiYearPlanId, Year = p.Period!.Year })
-        .ToListAsync(ct);
+            if (latestPlanIds.Count == 0)
+            {
+                return Json(new
+                {
+                    kpiStatus = new { green = 0, orange = 0, red = 0, blue = 0, unknown = 0 },
+                    actionStatus = new { todo = 0, inprogress = 0, done = 0, other = 0 },
+                    trend = (object?)null,
+                    updatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm")
+                });
+            }
 
-    var planIdSet = latestPlanIds.ToHashSet();
+            var planTriples = await _db.KpiYearPlans
+                .AsNoTracking()
+                .Where(p => latestPlanIds.Contains(p.KpiYearPlanId))
+                .Select(p => new { p.KpiId, p.KpiYearPlanId, Year = p.Period!.Year })
+                .ToListAsync(ct);
 
-    // 3) Pull facts for those plans (minimal columns) – server-side filter by PlanId, then (in-memory) match Year.
-    var facts = await _db.KpiFacts
-        .AsNoTracking()
-        .Where(f => f.IsActive == 1
-                 && f.StatusCode != null
-                 && planIdSet.Contains(f.KpiYearPlanId))
-        .Select(f => new
+            var planIdSet = latestPlanIds.ToHashSet();
+
+            var facts = await _db.KpiFacts
+                .AsNoTracking()
+                .Where(f => f.IsActive == 1
+                         && f.StatusCode != null
+                         && planIdSet.Contains(f.KpiYearPlanId))
+                .Select(f => new
+                {
+                    f.KpiId,
+                    f.KpiYearPlanId,
+                    f.StatusCode,
+                    PeriodYear = f.Period!.Year,
+                    Start = f.Period!.StartDate
+                })
+                .ToListAsync(ct);
+
+            var planByPlanId = planTriples.ToDictionary(x => x.KpiYearPlanId, x => x);
+            var sameYearFacts = facts.Where(f =>
+            {
+                if (!planByPlanId.TryGetValue(f.KpiYearPlanId, out var p)) return false;
+                return f.PeriodYear == p.Year;
+            });
+
+            var latestStatusPerKpi = sameYearFacts
+                .GroupBy(f => f.KpiId)
+                .Select(g => g.OrderByDescending(x => x.KpiYearPlanId)
+                              .ThenByDescending(x => x.Start)
+                              .Select(x => x.StatusCode)
+                              .FirstOrDefault())
+                .ToList();
+
+            static string CanonStatus(string? code)
+            {
+                var s = (code ?? "").Trim().ToLowerInvariant();
+                return s switch
+                {
+                    "green" or "conforme" or "ok" => "green",
+                    "red" or "ecart" or "needs attention" => "red",
+                    "orange" or "rattrapage" or "catching up" => "orange",
+                    "blue" or "attente" or "data missing" => "blue",
+                    _ => "unknown"
+                };
+            }
+
+            var kpiCounts = latestStatusPerKpi
+                .Select(CanonStatus)
+                .GroupBy(s => s)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            int KC(string k) => kpiCounts.TryGetValue(k, out var n) ? n : 0;
+            var kpiStatus = new
+            {
+                green = KC("green"),
+                orange = KC("orange"),
+                red = KC("red"),
+                blue = KC("blue"),
+                unknown = KC("unknown")
+            };
+
+            // Action plans (exact 3 statuses)
+            var actionStatusRaw = await _db.KpiActions
+                .AsNoTracking()
+                .Where(a => a.StatusCode != null)
+                .Select(a => a.StatusCode!)
+                .ToListAsync(ct);
+
+            static string CanonAction(string code)
+            {
+                var s = (code ?? "").Trim().ToLowerInvariant();
+                s = s.Replace('_', ' ').Replace('-', ' ').Replace("  ", " ");
+                if (s == "to do" || s == "todo") return "todo";
+                if (s == "in progress") return "inprogress";
+                if (s == "done") return "done";
+                return "other";
+            }
+
+            var actionCounts = actionStatusRaw
+                .Select(CanonAction)
+                .GroupBy(s => s)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            int AC(string k) => actionCounts.TryGetValue(k, out var n) ? n : 0;
+            var actionStatus = new
+            {
+                todo = AC("todo"),
+                inprogress = AC("inprogress"),
+                done = AC("done"),
+                other = AC("other")
+            };
+
+            return Json(new
+            {
+                kpiStatus,
+                actionStatus,
+                trend = (object?)null, // trend off
+                updatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm")
+            });
+        }
+
+        // --------------------------
+        // NEW: List KPIs for a clicked summary segment (pie)
+        // kind: "kpi" | "action"
+        // code: "green"/"orange"/"red"/"blue"  OR  "todo"/"inprogress"/"done"
+        // --------------------------
+        [HttpGet]
+        public async Task<IActionResult> GetKpisForSummarySegment(string kind, string code, CancellationToken ct = default)
         {
-            f.KpiId,
-            f.KpiYearPlanId,
-            f.StatusCode,
-            PeriodYear = f.Period!.Year,
-            Start = f.Period!.StartDate
-        })
-        .ToListAsync(ct);
+            kind = (kind ?? "").Trim().ToLowerInvariant();
+            code = (code ?? "").Trim().ToLowerInvariant();
 
-    // 4) Keep only facts whose Period.Year == plan.Year for that KPI/Plan
-    var planByPlanId = planTriples.ToDictionary(x => x.KpiYearPlanId, x => x);
-    var sameYearFacts = facts.Where(f =>
-    {
-        if (!planByPlanId.TryGetValue(f.KpiYearPlanId, out var p)) return false;
-        return f.PeriodYear == p.Year;
-    });
+            // Helper to build label and ids
+            async Task<List<object>> BuildKpiListAsync(IEnumerable<decimal> kpiIds)
+            {
+                var ids = kpiIds.Distinct().ToList();
+                if (ids.Count == 0) return new List<object>();
 
-    // 5) For each KPI, take the latest fact (by Period.StartDate)
-    var latestStatusPerKpi = sameYearFacts
-        .GroupBy(f => f.KpiId)
-        .Select(g => g.OrderByDescending(x => x.KpiYearPlanId)     // tie-breaker if multiple plans leaked
-                      .ThenByDescending(x => x.Start)
-                      .Select(x => x.StatusCode)
-                      .FirstOrDefault())
-        .ToList();
+                var rows = await _db.DimKpis
+                    .AsNoTracking()
+                    .Include(k => k.Objective!)
+                        .ThenInclude(o => o.Pillar)
+                    .Where(k => ids.Contains(k.KpiId))
+                    .Select(k => new
+                    {
+                        k.KpiId,
+                        k.PillarId,
+                        k.ObjectiveId,
+                        PillarCode = k.Objective!.Pillar!.PillarCode,
+                        ObjectiveCode = k.Objective!.ObjectiveCode,
+                        KpiCode = k.KpiCode,
+                        KpiName = k.KpiName
+                    })
+                    .ToListAsync(ct);
 
-    // Canonicalize + count
-    static string CanonStatus(string? code)
-    {
-        var s = (code ?? "").Trim().ToLowerInvariant();
-        return s switch
-        {
-            "green" or "conforme" or "ok" => "green",
-            "red" or "ecart" or "needs attention" => "red",
-            "orange" or "rattrapage" or "catching up" => "orange",
-            "blue" or "attente" or "data missing" => "blue",
-            _ => "unknown"
-        };
-    }
+                string Label(dynamic x)
+                {
+                    var left = string.Join('.', new[] { x.PillarCode as string, x.ObjectiveCode as string }
+                        .Where(s => !string.IsNullOrWhiteSpace(s)));
+                    var code2 = string.IsNullOrWhiteSpace(x.KpiCode as string) ? "" : (left?.Length > 0 ? $" {x.KpiCode}" : x.KpiCode);
+                    var head = (left?.Length > 0 ? left : "") + code2;
+                    var name = string.IsNullOrWhiteSpace(x.KpiName as string) ? "-" : x.KpiName;
+                    return string.IsNullOrWhiteSpace(head) ? name : $"{head} — {name}";
+                }
 
-    var kpiCounts = latestStatusPerKpi
-        .Select(CanonStatus)
-        .GroupBy(s => s)
-        .ToDictionary(g => g.Key, g => g.Count());
+                return rows
+                    .Select(r => new { id = r.KpiId, pillarId = r.PillarId, objectiveId = r.ObjectiveId, text = Label(r) })
+                    .OrderBy(x => x.text)
+                    .Cast<object>()
+                    .ToList();
+            }
 
-    int KC(string k) => kpiCounts.TryGetValue(k, out var n) ? n : 0;
-    var kpiStatus = new
-    {
-        green = KC("green"),
-        orange = KC("orange"),
-        red = KC("red"),
-        blue = KC("blue"),
-        unknown = KC("unknown")
-    };
+            if (kind == "kpi")
+            {
+                // same latest-status-only logic, then filter by the canonical code
+                var latestPlanIds = await _db.KpiYearPlans
+                    .AsNoTracking()
+                    .Where(p => p.IsActive == 1 && p.PeriodId != null)
+                    .GroupBy(p => p.KpiId)
+                    .Select(g => g.Max(p => p.KpiYearPlanId))
+                    .ToListAsync(ct);
 
-    // ---- Action plan totals (one action = one row) ----
-    var actionStatusRaw = await _db.KpiActions
-        .AsNoTracking()
-        .Where(a => a.StatusCode != null)
-        .Select(a => a.StatusCode!)
-        .ToListAsync(ct);
+                var planTriples = await _db.KpiYearPlans
+                    .AsNoTracking()
+                    .Where(p => latestPlanIds.Contains(p.KpiYearPlanId))
+                    .Select(p => new { p.KpiId, p.KpiYearPlanId, Year = p.Period!.Year })
+                    .ToListAsync(ct);
 
-    static string CanonAction(string code)
-    {
-        var s = (code ?? "").Trim().ToLowerInvariant();
-        return s switch
-        {
-            "todo" => "todo",
-            "in progress" or "in-progress" or "doing" or "working" => "inprogress",
-            "done" or "completed" or "complete" => "done",
-            _ => "other"
-        };
-    }
+                var planIdSet = latestPlanIds.ToHashSet();
 
-    var actionCounts = actionStatusRaw
-        .Select(CanonAction)
-        .GroupBy(s => s)
-        .ToDictionary(g => g.Key, g => g.Count());
+                var facts = await _db.KpiFacts
+                    .AsNoTracking()
+                    .Where(f => f.IsActive == 1
+                             && f.StatusCode != null
+                             && planIdSet.Contains(f.KpiYearPlanId))
+                    .Select(f => new
+                    {
+                        f.KpiId,
+                        f.KpiYearPlanId,
+                        f.StatusCode,
+                        PeriodYear = f.Period!.Year,
+                        Start = f.Period!.StartDate
+                    })
+                    .ToListAsync(ct);
 
-    int AC(string k) => actionCounts.TryGetValue(k, out var n) ? n : 0;
-    var actionStatus = new
-    {
-        todo = AC("todo"),
-        inprogress = AC("inprogress"),
-        done = AC("done"),
-        other = AC("other")
-    };
+                var planByPlanId = planTriples.ToDictionary(x => x.KpiYearPlanId, x => x);
+                var sameYearFacts = facts.Where(f =>
+                {
+                    if (!planByPlanId.TryGetValue(f.KpiYearPlanId, out var p)) return false;
+                    return f.PeriodYear == p.Year;
+                });
 
-    // Trend: disable (returns null). Your UI hides it automatically.
-    object? trend = null;
+                static string CanonStatus(string? s)
+                {
+                    s = (s ?? "").Trim().ToLowerInvariant();
+                    return s switch
+                    {
+                        "green" or "conforme" or "ok" => "green",
+                        "red" or "ecart" or "needs attention" => "red",
+                        "orange" or "rattrapage" or "catching up" => "orange",
+                        "blue" or "attente" or "data missing" => "blue",
+                        _ => "unknown"
+                    };
+                }
 
-    return Json(new
-    {
-        kpiStatus,
-        actionStatus,
-        trend,
-        updatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm")
-    });
-}
+                var latest = sameYearFacts
+                    .GroupBy(f => f.KpiId)
+                    .Select(g => g.OrderByDescending(x => x.KpiYearPlanId)
+                                  .ThenByDescending(x => x.Start)
+                                  .First())
+                    .ToList();
+
+                var filteredIds = latest
+                    .Where(x => CanonStatus(x.StatusCode) == code)
+                    .Select(x => x.KpiId);
+
+                var list = await BuildKpiListAsync(filteredIds);
+                return Json(new { items = list });
+            }
+            else if (kind == "action")
+            {
+                static string CanonAction(string s)
+                {
+                    s = (s ?? "").Trim().ToLowerInvariant();
+                    s = s.Replace('_', ' ').Replace('-', ' ').Replace("  ", " ");
+                    if (s == "to do" || s == "todo") return "todo";
+                    if (s == "in progress") return "inprogress";
+                    if (s == "done") return "done";
+                    return "other";
+                }
+
+                var rows = await _db.KpiActions
+                    .AsNoTracking()
+                    .Where(a => a.StatusCode != null)
+                    .Select(a => new { a.KpiId, a.StatusCode })
+                    .ToListAsync(ct);
+
+                var ids = rows
+                    .Where(r => CanonAction(r.StatusCode!) == code)
+                    .Select(r => r.KpiId);
+
+                var list = await BuildKpiListAsync(ids.Where(x => x.HasValue).Select(x => x.Value));
+                return Json(new { items = list });
+            }
+
+            return Json(new { items = Array.Empty<object>() });
+        }
     }
 }
