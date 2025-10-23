@@ -3,31 +3,82 @@
 }
 <style>
   /* Tajawal everywhere for visual match */
-  :root { --app-font: 'Tajawal', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-  body, .card, .form-select, .btn { font-family: var(--app-font); }
+  :root {
+    --app-font: 'Tajawal', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  }
 
-  /* Make all data cells inherit the row's striped background */
-  #factsTbody td { background-color: inherit !important; }
-
-  /* Summary card layout */
-  #summaryCard .kpi { display:flex; align-items:center; gap:10px; }
-  #summaryCard .kpi .n { font-size:1.6rem; font-weight:800; line-height:1; }
-  #summaryCard .kpi .lbl { color:#6c757d; font-weight:600; }
-
-  /* Give the pies a consistent height without reflow jank */
-  #summaryPies .pie { min-height:220px; }
-
-  /* Role/segment chips */
-  .role-chip{
-    display:inline-block;margin:2px 6px 2px 0;padding:4px 8px;border-radius:999px;
-    background:#f1f3f5;border:1px solid #e3e7eb;white-space:nowrap;max-width:100%;
-    overflow:hidden;text-overflow:ellipsis;cursor:pointer;user-select:none;
+  body,
+  .card,
+  .form-select,
+  .btn {
     font-family: var(--app-font);
   }
-  .role-chip:hover{background:#e9ecef;}
-  .role-chip.active{background:#dbeafe;border-color:#93c5fd;color:#0b5ed7;font-weight:600;}
-  #roleSummaryCard .role-list{max-height:84px;overflow:auto;}
-  #segmentKpiList .role-list{max-height:132px;overflow:auto;}
+
+  /* Make all data cells inherit the row's striped background */
+  #factsTbody td {
+    background-color: inherit !important;
+  }
+
+  /* Summary card layout */
+  #summaryCard .kpi {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  #summaryCard .kpi .n {
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  #summaryCard .kpi .lbl {
+    color: #6c757d;
+    font-weight: 600;
+  }
+
+  /* Give the pies a consistent height without reflow jank */
+  #summaryPies .pie {
+    min-height: 220px;
+  }
+
+  /* Role/segment chips */
+  .role-chip {
+    display: inline-block;
+    margin: 2px 6px 2px 0;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #f1f3f5;
+    border: 1px solid #e3e7eb;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    user-select: none;
+    font-family: var(--app-font);
+  }
+
+  .role-chip:hover {
+    background: #e9ecef;
+  }
+
+  .role-chip.active {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #0b5ed7;
+    font-weight: 600;
+  }
+
+  #roleSummaryCard .role-list {
+    max-height: 84px;
+    overflow: auto;
+  }
+
+  #segmentKpiList .role-list {
+    max-height: 132px;
+    overflow: auto;
+  }
 </style>
 
 <div class="container py-4">
@@ -58,8 +109,10 @@
                 <div class="fw-bold text-secondary">Indicators by Status</div>
                 <div class="d-flex gap-3">
                   <!-- label first, number to the right -->
-                  <div class="kpi"><span class="lbl">Target Achieved</span><span class="n ms-1" id="cntGreen">0</span></div>
-                  <div class="kpi"><span class="lbl">On Forecast</span><span class="n ms-1" id="cntOrange">0</span></div>
+                  <div class="kpi"><span class="lbl">Target Achieved</span><span class="n ms-1" id="cntGreen">0</span>
+                  </div>
+                  <div class="kpi"><span class="lbl">On Forecast</span><span class="n ms-1" id="cntOrange">0</span>
+                  </div>
                   <div class="kpi"><span class="lbl">Target Missed</span><span class="n ms-1" id="cntRed">0</span></div>
                   <div class="kpi"><span class="lbl">Data Missing</span><span class="n ms-1" id="cntBlue">0</span></div>
                 </div>
@@ -77,7 +130,8 @@
                 <div class="d-flex gap-3">
                   <!-- label first, number to the right -->
                   <div class="kpi"><span class="lbl">To&nbsp;Do</span><span class="n ms-1" id="cntTodo">0</span></div>
-                  <div class="kpi"><span class="lbl">In&nbsp;Progress</span><span class="n ms-1" id="cntProg">0</span></div>
+                  <div class="kpi"><span class="lbl">In&nbsp;Progress</span><span class="n ms-1" id="cntProg">0</span>
+                  </div>
                   <div class="kpi"><span class="lbl">Done</span><span class="n ms-1" id="cntDone">0</span></div>
                 </div>
               </div>
@@ -142,7 +196,7 @@
     <!-- ======= Chart + side card ======= -->
     <div class="row mb-5 g-4">
       <div class="col-md-9">
-        <div class="bg-white border rounded shadow-sm p-3" style="height: 550px;">
+        <div id="chartSection" class="bg-white border rounded shadow-sm p-3" style="height: 550px;">
           <h6 id="kpiTitle" class="text-center text-secondary mb-2">KPI Title</h6>
           <canvas id="kpiChart" aria-label="KPI Chart" role="img"></canvas>
         </div>
@@ -153,10 +207,14 @@
           <div class="card-body d-flex flex-column justify-content-between h-100">
             <div>
               <h6 class="card-title text-secondary fw-bold mb-3">KPI Details</h6>
-              <p class="mb-2" style="font-size: larger;"><strong>👁️ Owner:</strong> <span id="metaOwner" class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>✍️ Editor:</strong> <span id="metaEditor" class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>📅 Frequency:</strong> <span id="metaFrequency" class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>🔢 Unit:</strong> <span id="metaUnit" class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>👁️ Owner:</strong> <span id="metaOwner"
+                  class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>✍️ Editor:</strong> <span id="metaEditor"
+                  class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>📅 Frequency:</strong> <span id="metaFrequency"
+                  class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>🔢 Unit:</strong> <span id="metaUnit"
+                  class="text-dark">—</span></p>
             </div>
             <div class="mt-auto">
               <div class="mb-4 text-center">
@@ -233,6 +291,13 @@
     // Global chart font -> Tajawal
     Chart.defaults.font.family = 'Tajawal, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
     Chart.defaults.font.size = 12;
+    // smooth scroll target + flag
+    let _pendingScrollToChart = false;
+    function _scrollToChart() {
+      const el = document.getElementById('chartSection');
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 
     // === SmartValueLabels plugin ===
     const SmartValueLabels = {
@@ -313,34 +378,34 @@
             if (it.y > botLimit) it.y = botLimit;
           };
 
-        items.forEach(it => { it.y = it.baseY; clamp(it); });
+          items.forEach(it => { it.y = it.baseY; clamp(it); });
 
-        let guard = 0;
-        while (guard++ < 10) {
-          let changed = false;
-          for (let i = 0; i < items.length; i++) {
-            for (let j = i + 1; j < items.length; j++) {
-              const a = items[i], b = items[j];
-              const aL = a.x - a.w / 2, aR = a.x + a.w / 2, aT = a.y - a.h, aB = a.y;
-              const bL = b.x - b.w / 2, bR = b.x + b.w / 2, bT = b.y - b.h, bB = b.y;
-              const overlap = !(aR < bL || aL > bR || aB < bT || aT > bB);
-              if (overlap) {
-                const hi = (a.val >= b.val) ? a : b, lo = (hi === a) ? b : a;
-                hi.y -= minGap; lo.y += Math.min(4, minGap / 2);
-                clamp(hi); clamp(lo); changed = true;
+          let guard = 0;
+          while (guard++ < 10) {
+            let changed = false;
+            for (let i = 0; i < items.length; i++) {
+              for (let j = i + 1; j < items.length; j++) {
+                const a = items[i], b = items[j];
+                const aL = a.x - a.w / 2, aR = a.x + a.w / 2, aT = a.y - a.h, aB = a.y;
+                const bL = b.x - b.w / 2, bR = b.x + b.w / 2, bT = b.y - b.h, bB = b.y;
+                const overlap = !(aR < bL || aL > bR || aB < bT || aT > bB);
+                if (overlap) {
+                  const hi = (a.val >= b.val) ? a : b, lo = (hi === a) ? b : a;
+                  hi.y -= minGap; lo.y += Math.min(4, minGap / 2);
+                  clamp(hi); clamp(lo); changed = true;
+                }
               }
             }
+            if (!changed) break;
           }
-          if (!changed) break;
-        }
 
-        items.sort((a, b) => a.priority - b.priority);
-        items.forEach(it => {
-          ctx.fillStyle = it.color;
-          if (o.outline) { ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.strokeText(it.text, it.x, it.y); }
-          ctx.fillText(it.text, it.x, it.y);
+          items.sort((a, b) => a.priority - b.priority);
+          items.forEach(it => {
+            ctx.fillStyle = it.color;
+            if (o.outline) { ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.strokeText(it.text, it.x, it.y); }
+            ctx.fillText(it.text, it.x, it.y);
+          });
         });
-      });
 
         ctx.restore();
       }
@@ -395,7 +460,7 @@
     const segWrap = byId('segmentKpiList');
     const segRows = byId('segmentKpiRows');
     const segTitle = byId('segmentTitle');
-    byId('clearSegmentBtn').addEventListener('click', ()=>{ segRows.innerHTML=''; segWrap.classList.add('d-none'); });
+    byId('clearSegmentBtn').addEventListener('click', () => { segRows.innerHTML = ''; segWrap.classList.add('d-none'); });
 
     // ACL state
     let currentPlanId = null;
@@ -420,14 +485,14 @@
         const a = data?.actionStatus ?? data?.actionCounts ?? {};
 
         // counters
-        byId('cntGreen').textContent  = k.green  ?? 0;
+        byId('cntGreen').textContent = k.green ?? 0;
         byId('cntOrange').textContent = k.orange ?? 0;
-        byId('cntRed').textContent    = k.red    ?? 0;
-        byId('cntBlue').textContent   = k.blue   ?? 0;
+        byId('cntRed').textContent = k.red ?? 0;
+        byId('cntBlue').textContent = k.blue ?? 0;
 
-        byId('cntTodo').textContent = a.todo       ?? 0;
+        byId('cntTodo').textContent = a.todo ?? 0;
         byId('cntProg').textContent = a.inprogress ?? 0;
-        byId('cntDone').textContent = a.done       ?? 0;
+        byId('cntDone').textContent = a.done ?? 0;
 
         byId('summaryUpdated').textContent = data?.updatedAt ? ('Updated ' + data.updatedAt) : '—';
         if (loadingEl) loadingEl.textContent = '';
@@ -445,17 +510,17 @@
         pieKpis = new Chart(kpiCtx, {
           type: 'doughnut',
           data: {
-            labels: ['Target Achieved','On Forecast','Target Missed','Data Missing'],
-            datasets: [{ data: kpiVals, backgroundColor: ['#28a745','#fd7e14','#dc3545','#0d6efd'], borderColor: '#fff', borderWidth: 2 }]
+            labels: ['Target Achieved', 'On Forecast', 'Target Missed', 'Data Missing'],
+            datasets: [{ data: kpiVals, backgroundColor: ['#28a745', '#fd7e14', '#dc3545', '#0d6efd'], borderColor: '#fff', borderWidth: 2 }]
           },
           options: {
-            responsive:true, maintainAspectRatio:false, cutout:'62%',
+            responsive: true, maintainAspectRatio: false, cutout: '62%',
             plugins: {
-              legend: { display:true, position:'bottom' },
-              tooltip: { enabled:true, callbacks:{ label: (ctx)=> `${ctx.label}: ${ctx.raw}` } },
-              datalabels: { display:(c)=> c.raw>0, formatter:(v)=> String(v), color:'#111', font:{ family: Chart.defaults.font.family, weight:'700' } }
+              legend: { display: true, position: 'bottom' },
+              tooltip: { enabled: true, callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw}` } },
+              datalabels: { display: (c) => c.raw > 0, formatter: (v) => String(v), color: '#111', font: { family: Chart.defaults.font.family, weight: '700' } }
             },
-            onClick: (evt, _els, chart)=>onPieClick(evt, chart, 'kpi')
+            onClick: (evt, _els, chart) => onPieClick(evt, chart, 'kpi')
           }
         });
 
@@ -463,17 +528,17 @@
         pieActs = new Chart(actCtx, {
           type: 'doughnut',
           data: {
-            labels: ['To Do','In Progress','Done'],
-            datasets: [{ data: actVals, backgroundColor: ['#6c757d','#ffc107','#198754'], borderColor: '#fff', borderWidth: 2 }]
+            labels: ['To Do', 'In Progress', 'Done'],
+            datasets: [{ data: actVals, backgroundColor: ['#6c757d', '#ffc107', '#198754'], borderColor: '#fff', borderWidth: 2 }]
           },
           options: {
-            responsive:true, maintainAspectRatio:false, cutout:'62%',
+            responsive: true, maintainAspectRatio: false, cutout: '62%',
             plugins: {
-              legend: { display:true, position:'bottom' },
-              tooltip: { enabled:true, callbacks:{ label: (ctx)=> `${ctx.label}: ${ctx.raw}` } },
-              datalabels: { display:(c)=> c.raw>0, formatter:(v)=> String(v), color:'#111', font:{ family: Chart.defaults.font.family, weight:'700' } }
+              legend: { display: true, position: 'bottom' },
+              tooltip: { enabled: true, callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw}` } },
+              datalabels: { display: (c) => c.raw > 0, formatter: (v) => String(v), color: '#111', font: { family: Chart.defaults.font.family, weight: '700' } }
             },
-            onClick: (evt, _els, chart)=>onPieClick(evt, chart, 'action')
+            onClick: (evt, _els, chart) => onPieClick(evt, chart, 'action')
           }
         });
 
@@ -483,8 +548,8 @@
     }
 
     // Map a pie label to canonical code used by server
-    function mapLabel(kind, label){
-      const s = String(label||'').trim().toLowerCase();
+    function mapLabel(kind, label) {
+      const s = String(label || '').trim().toLowerCase();
       if (kind === 'kpi') {
         if (s === 'target achieved') return 'green';
         if (s === 'on forecast') return 'orange';
@@ -500,7 +565,7 @@
     }
 
     // Handle pie clicks -> fetch KPIs for that segment -> render chips -> click to select
-    async function onPieClick(evt, chart, kind){
+    async function onPieClick(evt, chart, kind) {
       const points = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
       if (!points || !points.length) return;
       const idx = points[0].index;
@@ -512,37 +577,37 @@
       segWrap.classList.remove('d-none');
       segTitle.textContent = (kind === 'kpi' ? 'KPIs with status: ' : 'KPIs with actions: ') + label;
 
-      try{
-        const url = '@Url.Action("GetKpisForSummarySegment","Home")' + `?kind=${encodeURIComponent(kind)}&code=${encodeURIComponent(code)}`;
+      try {
+        const url = '@Url.Action("GetKpisForSummarySegment", "Home")' + `?kind=${encodeURIComponent(kind)}&code=${encodeURIComponent(code)}`;
         const data = await api(url);
         const items = Array.isArray(data?.items) ? data.items : [];
-        if (!items.length){
+        if (!items.length) {
           segRows.innerHTML = '<span class="text-muted small ms-1">No KPIs found.</span>';
           return;
         }
         segRows.innerHTML = '';
-        for (const it of items){
-          const chip=document.createElement('span');
-          chip.className='role-chip';
-          chip.textContent=it.text || String(it.id);
+        for (const it of items) {
+          const chip = document.createElement('span');
+          chip.className = 'role-chip';
+          chip.textContent = it.text || String(it.id);
           chip.title = it.text || String(it.id);
           chip.dataset.kpiId = it.id;
           chip.dataset.pillarId = it.pillarId;
           chip.dataset.objectiveId = it.objectiveId;
           segRows.appendChild(chip);
         }
-      }catch{
+      } catch {
         segRows.innerHTML = '<span class="text-danger small ms-1">Failed to load KPIs.</span>';
       }
     }
 
     // Clicking segment chips behaves like role chips
-    document.getElementById('segmentKpiRows').addEventListener('click', async (e)=>{
+    document.getElementById('segmentKpiRows').addEventListener('click', async (e) => {
       const chip = e.target.closest('.role-chip'); if (!chip) return;
-      const pillarId=chip.dataset.pillarId, objectiveId=chip.dataset.objectiveId, kpiId=chip.dataset.kpiId;
-      if(!kpiId) return; await selectKpiByIds(pillarId, objectiveId, kpiId);
+      const pillarId = chip.dataset.pillarId, objectiveId = chip.dataset.objectiveId, kpiId = chip.dataset.kpiId;
+      if (!kpiId) return; await selectKpiByIds(pillarId, objectiveId, kpiId);
       // highlight selection
-      document.querySelectorAll('#segmentKpiRows .role-chip').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('#segmentKpiRows .role-chip').forEach(x => x.classList.remove('active'));
       chip.classList.add('active');
     });
 
@@ -551,109 +616,130 @@
     const roleBadge = byId('roleSummaryBadge');
     const roleRows = byId('roleSummaryRows');
 
-    function _mkChip(item){
-      const s=document.createElement('span');
-      s.className='role-chip'; s.title=item.text||String(item.id); s.textContent=item.text||String(item.id);
-      if(item.id!=null) s.dataset.kpiId=item.id;
-      if(item.pillarId!=null) s.dataset.pillarId=item.pillarId;
-      if(item.objectiveId!=null) s.dataset.objectiveId=item.objectiveId;
+    function _mkChip(item) {
+      const s = document.createElement('span');
+      s.className = 'role-chip'; s.title = item.text || String(item.id); s.textContent = item.text || String(item.id);
+      if (item.id != null) s.dataset.kpiId = item.id;
+      if (item.pillarId != null) s.dataset.pillarId = item.pillarId;
+      if (item.objectiveId != null) s.dataset.objectiveId = item.objectiveId;
       return s;
     }
-    function renderRoleSummary(data){
-      const ed=Array.isArray(data?.editor)?data.editor:[], ow=Array.isArray(data?.owner)?data.owner:[];
-      const ph=document.getElementById('roleSummaryPlaceholder'); if(ph) ph.remove();
-      if(!ed.length && !ow.length){ roleRows.innerHTML='<div class="col-12 text-muted small">No indicators available.</div>'; roleBadge.textContent='—'; return; }
-      roleRows.innerHTML='';
-      const makeCol=(title,items)=>{ const col=document.createElement('div'); col.className='col-md-6';
-        const h=document.createElement('div'); h.className='fw-bold mb-1'; h.textContent=title;
-        const list=document.createElement('div'); list.className='role-list';
-        const MAX=12; items.slice(0,MAX).forEach(it=>list.appendChild(_mkChip(it)));
-        if(items.length>MAX) list.appendChild(_mkChip({ text:`+${items.length-MAX} more` }));
-        col.appendChild(h); col.appendChild(list); return col; };
-      if(ed.length) roleRows.appendChild(makeCol('Editor for', ed));
-      if(ow.length) roleRows.appendChild(makeCol('Owner for', ow));
+    function renderRoleSummary(data) {
+      const ed = Array.isArray(data?.editor) ? data.editor : [], ow = Array.isArray(data?.owner) ? data.owner : [];
+      const ph = document.getElementById('roleSummaryPlaceholder'); if (ph) ph.remove();
+      if (!ed.length && !ow.length) { roleRows.innerHTML = '<div class="col-12 text-muted small">No indicators available.</div>'; roleBadge.textContent = '—'; return; }
+      roleRows.innerHTML = '';
+      const makeCol = (title, items) => {
+        const col = document.createElement('div'); col.className = 'col-md-6';
+        const h = document.createElement('div'); h.className = 'fw-bold mb-1'; h.textContent = title;
+        const list = document.createElement('div'); list.className = 'role-list';
+        const MAX = 12; items.slice(0, MAX).forEach(it => list.appendChild(_mkChip(it)));
+        if (items.length > MAX) list.appendChild(_mkChip({ text: `+${items.length - MAX} more` }));
+        col.appendChild(h); col.appendChild(list); return col;
+      };
+      if (ed.length) roleRows.appendChild(makeCol('Editor for', ed));
+      if (ow.length) roleRows.appendChild(makeCol('Owner for', ow));
       roleBadge.textContent = (ed.length && ow.length) ? 'Editor for • Owner for' : (ed.length ? 'Editor for' : 'Owner for');
       roleCard.classList.remove('d-none');
       markActiveRoleChip(selKpi.value);
     }
-    async function loadRoleSummary(){
-      try{
-        const r=await fetch('@Url.Action("MyKpiRoles", "Home")',{ headers:{ 'Accept':'application/json' }, cache:'no-store' });
-        if(!r.ok) throw 0; renderRoleSummary(await r.json());
-      }catch{
-        const ph=document.getElementById('roleSummaryPlaceholder'); if(ph) ph.textContent='Could not load your indicators.'; roleBadge.textContent='—';
+    async function loadRoleSummary() {
+      try {
+        const r = await fetch('@Url.Action("MyKpiRoles", "Home")', { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+        if (!r.ok) throw 0; renderRoleSummary(await r.json());
+      } catch {
+        const ph = document.getElementById('roleSummaryPlaceholder'); if (ph) ph.textContent = 'Could not load your indicators.'; roleBadge.textContent = '—';
       }
     }
-    function waitForOption(selectEl, value, timeout=4000){
-      return new Promise((resolve,reject)=>{
-        const target=String(value); const t0=performance.now();
-        const i=setInterval(()=>{
-          const has=Array.from(selectEl.options).some(o=>String(o.value)===target);
-          if(has){ clearInterval(i); resolve(); }
-          if(performance.now()-t0>timeout){ clearInterval(i); reject(new Error('Option not found: '+target)); }
-        },80);
+    document.getElementById('segmentKpiRows').addEventListener('click', async (e) => {
+      const chip = e.target.closest('.role-chip'); if (!chip) return;
+      const pillarId = chip.dataset.pillarId, objectiveId = chip.dataset.objectiveId, kpiId = chip.dataset.kpiId;
+      if (!kpiId) return;
+      _pendingScrollToChart = true;                 // <-- add this line
+      await selectKpiByIds(pillarId, objectiveId, kpiId);
+      document.querySelectorAll('#segmentKpiRows .role-chip').forEach(x => x.classList.remove('active'));
+      chip.classList.add('active');
+    });
+    roleRows.addEventListener('click', async (e) => {
+      const chip = e.target.closest('.role-chip'); if (!chip) return;
+      const pillarId = chip.dataset.pillarId, objectiveId = chip.dataset.objectiveId, kpiId = chip.dataset.kpiId;
+      if (!kpiId) return;
+      _pendingScrollToChart = true;                 // <-- add this line
+      await selectKpiByIds(pillarId, objectiveId, kpiId);
+      markActiveRoleChip(kpiId);
+    });
+
+
+    function waitForOption(selectEl, value, timeout = 4000) {
+      return new Promise((resolve, reject) => {
+        const target = String(value); const t0 = performance.now();
+        const i = setInterval(() => {
+          const has = Array.from(selectEl.options).some(o => String(o.value) === target);
+          if (has) { clearInterval(i); resolve(); }
+          if (performance.now() - t0 > timeout) { clearInterval(i); reject(new Error('Option not found: ' + target)); }
+        }, 80);
       });
     }
-    roleRows.addEventListener('click', async (e)=>{
-      const chip=e.target.closest('.role-chip'); if(!chip) return;
-      const pillarId=chip.dataset.pillarId, objectiveId=chip.dataset.objectiveId, kpiId=chip.dataset.kpiId;
-      if(!kpiId) return; await selectKpiByIds(pillarId, objectiveId, kpiId); markActiveRoleChip(kpiId);
+    roleRows.addEventListener('click', async (e) => {
+      const chip = e.target.closest('.role-chip'); if (!chip) return;
+      const pillarId = chip.dataset.pillarId, objectiveId = chip.dataset.objectiveId, kpiId = chip.dataset.kpiId;
+      if (!kpiId) return; await selectKpiByIds(pillarId, objectiveId, kpiId); markActiveRoleChip(kpiId);
     });
-    async function selectKpiByIds(pillarId, objectiveId, kpiId){
-      if(pillarId){
-        if(!selPillar.options.length || selPillar.disabled){ await loadPillars(); }
+    async function selectKpiByIds(pillarId, objectiveId, kpiId) {
+      if (pillarId) {
+        if (!selPillar.options.length || selPillar.disabled) { await loadPillars(); }
         await waitForOption(selPillar, pillarId);
-        if(selPillar.value!==String(pillarId)){ selPillar.value=String(pillarId); selPillar.dispatchEvent(new Event('change')); }
+        if (selPillar.value !== String(pillarId)) { selPillar.value = String(pillarId); selPillar.dispatchEvent(new Event('change')); }
       }
-      if(objectiveId){
+      if (objectiveId) {
         await waitForOption(selObjective, objectiveId);
-        if(selObjective.value!==String(objectiveId)){ selObjective.value=String(objectiveId); selObjective.dispatchEvent(new Event('change')); }
+        if (selObjective.value !== String(objectiveId)) { selObjective.value = String(objectiveId); selObjective.dispatchEvent(new Event('change')); }
       }
-      if(kpiId){
+      if (kpiId) {
         await waitForOption(selKpi, kpiId);
-        if(selKpi.value!==String(kpiId)){ selKpi.value=String(kpiId); selKpi.dispatchEvent(new Event('change')); }
+        if (selKpi.value !== String(kpiId)) { selKpi.value = String(kpiId); selKpi.dispatchEvent(new Event('change')); }
       }
     }
-    function markActiveRoleChip(currentKpiId){
-      document.querySelectorAll('#roleSummaryRows .role-chip').forEach(el=>{
-        el.classList.toggle('active', currentKpiId && (el.dataset.kpiId===String(currentKpiId)));
+    function markActiveRoleChip(currentKpiId) {
+      document.querySelectorAll('#roleSummaryRows .role-chip').forEach(el => {
+        el.classList.toggle('active', currentKpiId && (el.dataset.kpiId === String(currentKpiId)));
       });
     }
 
     // ---------- cascading dropdowns ----------
-    async function loadPillars(){
-      resetSelect(selPillar,'-- Pillar --'); resetSelect(selObjective,'-- Objective --'); resetSelect(selKpi,'-- KPI --');
+    async function loadPillars() {
+      resetSelect(selPillar, '-- Pillar --'); resetSelect(selObjective, '-- Objective --'); resetSelect(selKpi, '-- KPI --');
       const items = await api('@Url.Action("GetPillars", "Home")');
-      for (const it of items){ const o=document.createElement('option'); o.value=it.id; o.textContent=it.name; selPillar.appendChild(o); }
-      selPillar.disabled=false;
+      for (const it of items) { const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; selPillar.appendChild(o); }
+      selPillar.disabled = false;
     }
-    selPillar.addEventListener('change', async ()=>{
-      resetSelect(selObjective,'-- Objective --'); resetSelect(selKpi,'-- KPI --'); clearMeta(); clearChartAndTable();
-      const pid=selPillar.value; if(!pid) return;
-      const items=await api('@Url.Action("GetObjectives", "Home")?pillarId='+encodeURIComponent(pid));
-      for(const it of items){ const o=document.createElement('option'); o.value=it.id; o.textContent=it.name; selObjective.appendChild(o); }
-      selObjective.disabled=items.length===0;
+    selPillar.addEventListener('change', async () => {
+      resetSelect(selObjective, '-- Objective --'); resetSelect(selKpi, '-- KPI --'); clearMeta(); clearChartAndTable();
+      const pid = selPillar.value; if (!pid) return;
+      const items = await api('@Url.Action("GetObjectives", "Home")?pillarId=' + encodeURIComponent(pid));
+      for (const it of items) { const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; selObjective.appendChild(o); }
+      selObjective.disabled = items.length === 0;
     });
-    selObjective.addEventListener('change', async ()=>{
-      resetSelect(selKpi,'-- KPI --'); clearMeta(); clearChartAndTable();
-      const oid=selObjective.value; if(!oid) return;
-      const items=await api('@Url.Action("GetKpis", "Home")?objectiveId='+encodeURIComponent(oid));
-      for(const it of items){ const o=document.createElement('option'); o.value=it.id; o.textContent=it.name; selKpi.appendChild(o); }
-      selKpi.disabled=items.length===0;
+    selObjective.addEventListener('change', async () => {
+      resetSelect(selKpi, '-- KPI --'); clearMeta(); clearChartAndTable();
+      const oid = selObjective.value; if (!oid) return;
+      const items = await api('@Url.Action("GetKpis", "Home")?objectiveId=' + encodeURIComponent(oid));
+      for (const it of items) { const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; selKpi.appendChild(o); }
+      selKpi.disabled = items.length === 0;
     });
-    selKpi.addEventListener('change', ()=>{ loadKpiSummary().catch(console.error); });
+    selKpi.addEventListener('change', () => { loadKpiSummary().catch(console.error); });
 
-    function getQS(name){ const u=new URL(window.location.href); return u.searchParams.get(name); }
+    function getQS(name) { const u = new URL(window.location.href); return u.searchParams.get(name); }
 
-    async function initPage(){
+    async function initPage() {
       loadSummary();             // non-blocking
       loadRoleSummary();         // non-blocking
       await loadPillars();
 
-      const qP=getQS('pillarId'), qO=getQS('objectiveId'), qK=getQS('kpiId');
-      if(qP){ selPillar.value=qP; selPillar.dispatchEvent(new Event('change')); }
-      if(qO){ await new Promise(r=>setTimeout(r,150)); selObjective.value=qO; selObjective.dispatchEvent(new Event('change')); }
-      if(qK){ await new Promise(r=>setTimeout(r,150)); selKpi.value=qK; selKpi.dispatchEvent(new Event('change')); }
+      const qP = getQS('pillarId'), qO = getQS('objectiveId'), qK = getQS('kpiId');
+      if (qP) { selPillar.value = qP; selPillar.dispatchEvent(new Event('change')); }
+      if (qO) { await new Promise(r => setTimeout(r, 150)); selObjective.value = qO; selObjective.dispatchEvent(new Event('change')); }
+      if (qK) { await new Promise(r => setTimeout(r, 150)); selKpi.value = qK; selKpi.dispatchEvent(new Event('change')); }
     }
 
     // ---------- Chart.js (main KPI) ----------
@@ -697,9 +783,9 @@
       tableBody.innerHTML = '<tr class="placeholder-row"><td colspan="6" class="text-center text-muted">—</td></tr>';
     }
     function clearMeta() {
-      metaOwner.textContent='—'; metaEditor.textContent='—'; metaFrequency.textContent='—'; metaUnit.textContent='—';
-      metaPriority.textContent='—'; metaStatus.textContent='—'; metaStatus.className='status-pill'; metaStatus.style.background='';
-      btnEditKpi.disabled=true; btnEditKpi.textContent='✏️ Edit KPI (Actual & Forecast)';
+      metaOwner.textContent = '—'; metaEditor.textContent = '—'; metaFrequency.textContent = '—'; metaUnit.textContent = '—';
+      metaPriority.textContent = '—'; metaStatus.textContent = '—'; metaStatus.className = 'status-pill'; metaStatus.style.background = '';
+      btnEditKpi.disabled = true; btnEditKpi.textContent = '✏️ Edit KPI (Actual & Forecast)';
     }
 
     function wireKpiModalAjax() {
@@ -792,12 +878,12 @@
         for (const r of rows) {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
-            <td>${r.startDate ?? '—'}</td>
-            <td>${r.endDate ?? '—'}</td>
-            <td>${r.actual ?? '—'}</td>
-            <td>${r.target ?? '—'}</td>
-            <td>${r.forecast ?? '—'}</td>`;
+                  <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
+                  <td>${r.startDate ?? '—'}</td>
+                  <td>${r.endDate ?? '—'}</td>
+                  <td>${r.actual ?? '—'}</td>
+                  <td>${r.target ?? '—'}</td>
+                  <td>${r.forecast ?? '—'}</td>`;
           tableBody.appendChild(tr);
         }
       }
@@ -810,6 +896,12 @@
       else { btnEditKpi.disabled = false; btnEditKpi.textContent = '✏️ Edit KPI (Actual & Forecast)'; }
 
       markActiveRoleChip(selKpi.value);
+      // KPI fully loaded -> if a chip triggered this load, scroll now
+      if (_pendingScrollToChart) {
+        _pendingScrollToChart = false;
+        _scrollToChart();
+      }
+
     }
 
     // Open the bulk-edit modal
