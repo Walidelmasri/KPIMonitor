@@ -572,14 +572,14 @@ namespace KPIMonitor.Controllers
 [HttpGet]
 public async Task<IActionResult> GetDashboardSummary(CancellationToken ct = default)
 {
-    // ---- KPI STATUS COUNTS ----
-    var kpiStatusesRaw = await _db.KpiFacts
+    // ---- KPI status counts (map to canonical + count) ----
+    var kpiStatusCodes = await _db.KpiFacts
         .AsNoTracking()
         .Where(f => f.StatusCode != null)
         .Select(f => f.StatusCode!)
         .ToListAsync(ct);
 
-    string CanonStatus(string code)
+    static string CanonStatus(string code)
     {
         var s = (code ?? "").Trim().ToLowerInvariant();
         return s switch
@@ -592,68 +592,72 @@ public async Task<IActionResult> GetDashboardSummary(CancellationToken ct = defa
         };
     }
 
-    var kpiStatusCounts = kpiStatusesRaw
+    var kpiStatus = kpiStatusCodes
         .Select(CanonStatus)
-        .GroupBy(s => s)
-        .Select(g => new { Status = g.Key, Count = g.Count() })
-        .ToDictionary(g => g.Status, g => g.Count);
+        .GroupBy(x => x)
+        .ToDictionary(g => g.Key, g => g.Count());
 
-    foreach (var key in new[] { "green", "red", "orange", "blue", "unknown" })
-        if (!kpiStatusCounts.ContainsKey(key)) kpiStatusCounts[key] = 0;
+    // ensure all keys exist
+    foreach (var k in new[] { "green", "orange", "red", "blue" })
+        if (!kpiStatus.ContainsKey(k)) kpiStatus[k] = 0;
 
-
-    // ---- ACTION PLAN COUNTS ----
-    var actionStatusesRaw = await _db.KpiActions
+    // ---- Action plan counts ----
+    var actionStatusCodes = await _db.KpiActions
         .AsNoTracking()
         .Where(a => a.StatusCode != null)
         .Select(a => a.StatusCode!)
         .ToListAsync(ct);
 
-    string CanonAction(string code)
+    static string CanonAction(string code)
     {
         var s = (code ?? "").Trim().ToLowerInvariant();
         return s switch
         {
             "todo" => "todo",
-            "in progress" or "doing" or "working" => "inprogress",
+            "in progress" or "inprogress" or "doing" or "working" => "inprogress",
             "done" or "completed" => "done",
             _ => "other"
         };
     }
 
-    var actionCounts = actionStatusesRaw
+    var actionStatus = actionStatusCodes
         .Select(CanonAction)
-        .GroupBy(s => s)
-        .Select(g => new { Status = g.Key, Count = g.Count() })
-        .ToDictionary(g => g.Status, g => g.Count);
+        .GroupBy(x => x)
+        .ToDictionary(g => g.Key, g => g.Count());
 
-    foreach (var key in new[] { "todo", "inprogress", "done", "other" })
-        if (!actionCounts.ContainsKey(key)) actionCounts[key] = 0;
+    foreach (var k in new[] { "todo", "inprogress", "done" })
+        if (!actionStatus.ContainsKey(k)) actionStatus[k] = 0;
 
+    // ---- Optional trend: last 6 full months of RED KPIs only ----
+    // Use a join to DimPeriods so EF can translate cleanly
+    var start = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1).AddMonths(-5); // include current month -> 6 points
+    var redSet = new[] { "red", "ecart", "needs attention" };
 
-    // ---- TREND (optional quick win: skip heavy joins, just last N months) ----
-    var lastMonths = DateTime.UtcNow.AddMonths(-6);
-    var trend = await _db.KpiFacts
+    var monthly = await _db.KpiFacts
         .AsNoTracking()
-        .Where(f => f.Period != null && f.Period.StartDate >= lastMonths)
-        .GroupBy(f => f.Period!.Year * 100 + (f.Period.MonthNum ?? 0))
-        .Select(g => new
-        {
-            Label = g.Max(f => f.Period!.Year) + "-" + g.Max(f => f.Period!.MonthNum),
-            Count = g.Count()
-        })
-        .OrderBy(x => x.Label)
+        .Where(f => f.StatusCode != null && redSet.Contains(f.StatusCode!.ToLower()))
+        .Join(_db.DimPeriods,
+              f => f.PeriodId,
+              p => p.PeriodId,
+              (f, p) => new { p.Year, p.MonthNum, p.StartDate })
+        .Where(x => x.MonthNum != null && x.StartDate >= start)
+        .GroupBy(x => new { x.Year, x.MonthNum })
+        .Select(g => new { Year = g.Key.Year, Month = g.Key.MonthNum!.Value, Count = g.Count() })
+        .OrderBy(x => x.Year).ThenBy(x => x.Month)
         .ToListAsync(ct);
 
-    var result = new
+    var labels = monthly.Select(x => new DateTime(x.Year, x.Month, 1).ToString("MMM yyyy")).ToList();
+    var redCounts = monthly.Select(x => x.Count).ToList();
+
+    var payload = new
     {
-        kpiStatusCounts,
-        actionCounts,
-        trend
+        kpiStatus = new { green = kpiStatus["green"], orange = kpiStatus["orange"], red = kpiStatus["red"], blue = kpiStatus["blue"] },
+        actionStatus = new { todo = actionStatus["todo"], inprogress = actionStatus["inprogress"], done = actionStatus["done"] },
+        trend = (labels.Count > 0 ? new { labels, redCounts } : null),
+        updatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm")
     };
 
-    return Json(result);
+    return Json(payload);
 }
-
     }
 }

@@ -35,11 +35,12 @@
 
   <!-- ======= NEW: Summary card (totals only, no percentages) ======= -->
   <div class="with-rails">
-    <div id="summaryCard" class="card shadow-sm rounded-4 mb-4 d-none">
+    <div id="summaryCard" class="card shadow-sm rounded-4 mb-4">
       <div class="card-body">
         <div class="d-flex align-items-center justify-content-between mb-3">
           <h6 class="m-0 text-secondary fw-bold">Overall Summary</h6>
           <span class="text-muted small" id="summaryUpdated">—</span>
+          <span class="text-muted small" id="summaryLoading">Loading…</span>
         </div>
 
         <div class="row g-4" id="summaryPies">
@@ -388,124 +389,93 @@
     }
 
     // ======= SUMMARY CARD (fast, one-hit endpoint) =======
-    let pieKpis, pieActs, lineTrend;
-    async function loadSummary() {
-      // Expected payload from /Home/GetDashboardSummary:
-      // {
-      //   kpiStatus: { green: n, orange: n, red: n, blue: n, unknown?: n },
-      //   actionStatus: { todo: n, inprogress: n, done: n, other?: n },
-      //   trend?: { labels: [...], redCounts: [...] },
-      //   updatedAt: "yyyy-MM-dd HH:mm"
-      // }
-      try {
-        const data = await api('@Url.Action("GetDashboardSummary", "Home")');
+let pieKpis, pieActs, lineTrend;
+async function loadSummary() {
+  const loadingEl = document.getElementById('summaryLoading');
+  try {
+    const data = await api('@Url.Action("GetDashboardSummary", "Home")');
 
-        // Fill counters
-        byId('cntGreen').textContent  = data?.kpiStatus?.green ?? 0;
-        byId('cntOrange').textContent = data?.kpiStatus?.orange ?? 0;
-        byId('cntRed').textContent    = data?.kpiStatus?.red ?? 0;
-        byId('cntBlue').textContent   = data?.kpiStatus?.blue ?? 0;
+    // Accept either {kpiStatus, actionStatus} or {kpiStatusCounts, actionCounts}
+    const k = data?.kpiStatus ?? data?.kpiStatusCounts ?? {};
+    const a = data?.actionStatus ?? data?.actionCounts ?? {};
 
-        byId('cntTodo').textContent = data?.actionStatus?.todo ?? 0;
-        byId('cntProg').textContent = data?.actionStatus?.inprogress ?? 0;
-        byId('cntDone').textContent = data?.actionStatus?.done ?? 0;
+    // Fill counters (raw totals)
+    byId('cntGreen').textContent  = k.green  ?? 0;
+    byId('cntOrange').textContent = k.orange ?? 0;
+    byId('cntRed').textContent    = k.red    ?? 0;
+    byId('cntBlue').textContent   = k.blue   ?? 0;
 
-        byId('summaryUpdated').textContent = data?.updatedAt ? ('Updated ' + data.updatedAt) : '—';
+    byId('cntTodo').textContent = a.todo       ?? 0;
+    byId('cntProg').textContent = a.inprogress ?? 0;
+    byId('cntDone').textContent = a.done       ?? 0;
 
-        // Build pies (totals only; labels show raw numbers)
-        const kpiCtx = document.getElementById('pieKpiStatus').getContext('2d');
-        const actCtx = document.getElementById('pieActionStatus').getContext('2d');
+    byId('summaryUpdated').textContent = data?.updatedAt ? ('Updated ' + data.updatedAt) : '—';
+    if (loadingEl) loadingEl.textContent = '';
 
-        const kpiVals = [
-          data?.kpiStatus?.green ?? 0,
-          data?.kpiStatus?.orange ?? 0,
-          data?.kpiStatus?.red ?? 0,
-          data?.kpiStatus?.blue ?? 0
-        ];
-        const actVals = [
-          data?.actionStatus?.todo ?? 0,
-          data?.actionStatus?.inprogress ?? 0,
-          data?.actionStatus?.done ?? 0
-        ];
+    // ---- pies (numbers only) ----
+    const kpiVals = [k.green ?? 0, k.orange ?? 0, k.red ?? 0, k.blue ?? 0];
+    const actVals = [a.todo ?? 0, a.inprogress ?? 0, a.done ?? 0];
 
-        if (pieKpis) pieKpis.destroy();
-        if (pieActs) pieActs.destroy();
+    const kpiCtx = document.getElementById('pieKpiStatus').getContext('2d');
+    const actCtx = document.getElementById('pieActionStatus').getContext('2d');
+    if (pieKpis) pieKpis.destroy();
+    if (pieActs) pieActs.destroy();
 
-        pieKpis = new Chart(kpiCtx, {
-          type: 'doughnut',
-          data: {
-            labels: ['Green','Orange','Red','Blue'],
-            datasets: [{
-              data: kpiVals,
-              backgroundColor: ['#28a745','#fd7e14','#dc3545','#0d6efd'],
-              borderColor: '#fff',
-              borderWidth: 2
-            }]
-          },
-          options: {
-            responsive:true, maintainAspectRatio:false, cutout:'62%',
-            plugins: {
-              legend: { display:true, position:'bottom' },
-              tooltip: { enabled:true, callbacks:{ label: (ctx)=> `${ctx.label}: ${ctx.raw}` } },
-              datalabels: {
-                display: (c)=> c.raw>0,
-                formatter: (v)=> String(v),
-                color:'#111', font:{ weight:'700' }
-              }
-            }
-          }
-        });
-
-        pieActs = new Chart(actCtx, {
-          type: 'doughnut',
-          data: {
-            labels: ['To Do','In Progress','Done'],
-            datasets: [{
-              data: actVals,
-              backgroundColor: ['#6c757d','#ffc107','#198754'],
-              borderColor: '#fff',
-              borderWidth: 2
-            }]
-          },
-          options: {
-            responsive:true, maintainAspectRatio:false, cutout:'62%',
-            plugins: {
-              legend: { display:true, position:'bottom' },
-              tooltip: { enabled:true, callbacks:{ label: (ctx)=> `${ctx.label}: ${ctx.raw}` } },
-              datalabels: {
-                display: (c)=> c.raw>0,
-                formatter: (v)=> String(v),
-                color:'#111', font:{ weight:'700' }
-              }
-            }
-          }
-        });
-
-        // Optional red trend
-        const labels = data?.trend?.labels || [];
-        const series = data?.trend?.redCounts || [];
-        if (labels.length && series.length) {
-          const trCtx = document.getElementById('lineRedTrend').getContext('2d');
-          byId('trendRow').classList.remove('d-none');
-          if (lineTrend) lineTrend.destroy();
-          lineTrend = new Chart(trCtx, {
-            type: 'line',
-            data: { labels, datasets: [{ label:'Red KPIs', data: series, borderColor:'#dc3545', pointBackgroundColor:'#dc3545', tension:.25, fill:false, borderWidth:2 }] },
-            options: {
-              responsive:true, maintainAspectRatio:false,
-              plugins:{ legend:{ display:false }, datalabels:false, tooltip:{ enabled:true, callbacks:{ label:(c)=> ` ${c.raw}` } } },
-              scales:{ x:{ grid:{ display:false } }, y:{ beginAtZero:true, grid:{ display:false } } }
-            }
-          });
+    pieKpis = new Chart(kpiCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Green','Orange','Red','Blue'],
+        datasets: [{ data: kpiVals, backgroundColor: ['#28a745','#fd7e14','#dc3545','#0d6efd'], borderColor: '#fff', borderWidth: 2 }]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false, cutout:'62%',
+        plugins: {
+          legend: { display:true, position:'bottom' },
+          tooltip: { enabled:true, callbacks:{ label: (ctx)=> `${ctx.label}: ${ctx.raw}` } },
+          datalabels: { display:(c)=> c.raw>0, formatter:(v)=> String(v), color:'#111', font:{ weight:'700' } }
         }
-
-        // Show card once data is OK
-        byId('summaryCard').classList.remove('d-none');
-      } catch {
-        // Hide if endpoint not ready; nothing else changes
-        byId('summaryCard').classList.add('d-none');
       }
+    });
+
+    pieActs = new Chart(actCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['To Do','In Progress','Done'],
+        datasets: [{ data: actVals, backgroundColor: ['#6c757d','#ffc107','#198754'], borderColor: '#fff', borderWidth: 2 }]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false, cutout:'62%',
+        plugins: {
+          legend: { display:true, position:'bottom' },
+          tooltip: { enabled:true, callbacks:{ label: (ctx)=> `${ctx.label}: ${ctx.raw}` } },
+          datalabels: { display:(c)=> c.raw>0, formatter:(v)=> String(v), color:'#111', font:{ weight:'700' } }
+        }
+      }
+    });
+
+    // ---- optional trend (expects {trend:{labels, redCounts}}) ----
+    const labels = data?.trend?.labels || [];
+    const series = data?.trend?.redCounts || [];
+    if (labels.length && series.length) {
+      const trCtx = document.getElementById('lineRedTrend').getContext('2d');
+      byId('trendRow').classList.remove('d-none');
+      if (lineTrend) lineTrend.destroy();
+      lineTrend = new Chart(trCtx, {
+        type: 'line',
+        data: { labels, datasets: [{ label:'Red KPIs', data: series, borderColor:'#dc3545', pointBackgroundColor:'#dc3545', tension:.25, fill:false, borderWidth:2 }] },
+        options: {
+          responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{ display:false }, datalabels:false, tooltip:{ enabled:true, callbacks:{ label:(c)=> ` ${c.raw}` } } },
+          scales:{ x:{ grid:{ display:false } }, y:{ beginAtZero:true, grid:{ display:false } } }
+        }
+      });
     }
+  } catch (e) {
+    // Never hide the card; just show an error message and keep zeros
+    if (loadingEl) loadingEl.textContent = 'Could not load summary.';
+    // leave counters at 0; pies won’t render until data arrives
+  }
+}
 
     // ===== Role summary (unchanged logic) =====
     const roleCard = byId('roleSummaryCard');
