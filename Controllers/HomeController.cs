@@ -572,52 +572,69 @@ namespace KPIMonitor.Controllers
 [HttpGet]
 public async Task<IActionResult> GetDashboardSummary(CancellationToken ct = default)
 {
-    // ---- 1) Latest status PER KPI (latest active plan, then last fact in that plan's year) ----
-    // Get latest active plan per KPI (includes Period.Year to scope facts to same year)
-    var latestPlans = await _db.KpiYearPlans
+    // ---- Latest active plan per KPI (EF-safe) ----
+    // 1) Get latest plan id per KPI (by max KpiYearPlanId) where plan is active and has a Period.
+    var latestPlanIds = await _db.KpiYearPlans
         .AsNoTracking()
-        .Include(p => p.Period)
-        .Where(p => p.IsActive == 1 && p.Period != null)
+        .Where(p => p.IsActive == 1 && p.PeriodId != null)
         .GroupBy(p => p.KpiId)
-        .Select(g => g.OrderByDescending(p => p.KpiYearPlanId).FirstOrDefault()!)
+        .Select(g => g.Max(p => p.KpiYearPlanId))
+        .ToListAsync(ct);
+
+    if (latestPlanIds.Count == 0)
+    {
+        return Json(new
+        {
+            kpiStatus = new { green = 0, orange = 0, red = 0, blue = 0, unknown = 0 },
+            actionStatus = new { todo = 0, inprogress = 0, done = 0, other = 0 },
+            trend = (object?)null,
+            updatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm")
+        });
+    }
+
+    // 2) For those plans, get (KpiId, PlanId, Year) so we can scope facts to the plan year.
+    var planTriples = await _db.KpiYearPlans
+        .AsNoTracking()
+        .Where(p => latestPlanIds.Contains(p.KpiYearPlanId))
         .Select(p => new { p.KpiId, p.KpiYearPlanId, Year = p.Period!.Year })
         .ToListAsync(ct);
 
-    // Build a set for fast filtering (EF can’t consume in-memory sets in joins directly, so we do a join style in-memory)
-    var planKeys = latestPlans
-        .Select(lp => new { lp.KpiId, lp.KpiYearPlanId, lp.Year })
-        .ToList();
+    var planIdSet = latestPlanIds.ToHashSet();
 
-    // Pull facts just for those (KpiId, PlanId, Year) triples — do it in two stages to stay server-side:
-    var planIds = latestPlans.Select(lp => lp.KpiYearPlanId).Distinct().ToList();
-    var factsForLatestPlans = await _db.KpiFacts
+    // 3) Pull facts for those plans (minimal columns) – server-side filter by PlanId, then (in-memory) match Year.
+    var facts = await _db.KpiFacts
         .AsNoTracking()
-        .Include(f => f.Period)
         .Where(f => f.IsActive == 1
                  && f.StatusCode != null
-                 && planIds.Contains(f.KpiYearPlanId)
-                 && f.Period != null)
+                 && planIdSet.Contains(f.KpiYearPlanId))
         .Select(f => new
         {
             f.KpiId,
             f.KpiYearPlanId,
-            Year = f.Period!.Year,
-            Start = f.Period!.StartDate,
-            f.StatusCode
+            f.StatusCode,
+            PeriodYear = f.Period!.Year,
+            Start = f.Period!.StartDate
         })
         .ToListAsync(ct);
 
-    // Filter to same plan-year, then pick the last fact per KPI (by StartDate)
-    var latestStatusPerKpi = factsForLatestPlans
-        .Join(planKeys,
-              f => new { f.KpiId, f.KpiYearPlanId, f.Year },
-              lp => new { lp.KpiId, lp.KpiYearPlanId, lp.Year },
-              (f, lp) => f)
+    // 4) Keep only facts whose Period.Year == plan.Year for that KPI/Plan
+    var planByPlanId = planTriples.ToDictionary(x => x.KpiYearPlanId, x => x);
+    var sameYearFacts = facts.Where(f =>
+    {
+        if (!planByPlanId.TryGetValue(f.KpiYearPlanId, out var p)) return false;
+        return f.PeriodYear == p.Year;
+    });
+
+    // 5) For each KPI, take the latest fact (by Period.StartDate)
+    var latestStatusPerKpi = sameYearFacts
         .GroupBy(f => f.KpiId)
-        .Select(g => g.OrderByDescending(x => x.Start).Select(x => x.StatusCode).FirstOrDefault())
+        .Select(g => g.OrderByDescending(x => x.KpiYearPlanId)     // tie-breaker if multiple plans leaked
+                      .ThenByDescending(x => x.Start)
+                      .Select(x => x.StatusCode)
+                      .FirstOrDefault())
         .ToList();
 
-    // Canonicalize -> count
+    // Canonicalize + count
     static string CanonStatus(string? code)
     {
         var s = (code ?? "").Trim().ToLowerInvariant();
@@ -636,17 +653,17 @@ public async Task<IActionResult> GetDashboardSummary(CancellationToken ct = defa
         .GroupBy(s => s)
         .ToDictionary(g => g.Key, g => g.Count());
 
-    int GetKpi(string k) => kpiCounts.TryGetValue(k, out var n) ? n : 0;
+    int KC(string k) => kpiCounts.TryGetValue(k, out var n) ? n : 0;
     var kpiStatus = new
     {
-        green = GetKpi("green"),
-        orange = GetKpi("orange"),
-        red = GetKpi("red"),
-        blue = GetKpi("blue"),
-        unknown = GetKpi("unknown")
+        green = KC("green"),
+        orange = KC("orange"),
+        red = KC("red"),
+        blue = KC("blue"),
+        unknown = KC("unknown")
     };
 
-    // ---- 2) Action plan totals (one row = one action) ----
+    // ---- Action plan totals (one action = one row) ----
     var actionStatusRaw = await _db.KpiActions
         .AsNoTracking()
         .Where(a => a.StatusCode != null)
@@ -670,21 +687,18 @@ public async Task<IActionResult> GetDashboardSummary(CancellationToken ct = defa
         .GroupBy(s => s)
         .ToDictionary(g => g.Key, g => g.Count());
 
-    int GetAct(string k) => actionCounts.TryGetValue(k, out var n) ? n : 0;
+    int AC(string k) => actionCounts.TryGetValue(k, out var n) ? n : 0;
     var actionStatus = new
     {
-        todo = GetAct("todo"),
-        inprogress = GetAct("inprogress"),
-        done = GetAct("done"),
-        other = GetAct("other")
+        todo = AC("todo"),
+        inprogress = AC("inprogress"),
+        done = AC("done"),
+        other = AC("other")
     };
 
-    // ---- 3) (Optional) Red KPI trend (last 6 months). If you don't want it, set trend = null. ----
-    // This was counting how many facts in each recent month had status red; since you might drop it,
-    // we’ll return null so your UI keeps the trend hidden.
+    // Trend: disable (returns null). Your UI hides it automatically.
     object? trend = null;
 
-    // Final payload (shape matches your JS)
     return Json(new
     {
         kpiStatus,
