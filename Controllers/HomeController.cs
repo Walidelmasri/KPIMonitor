@@ -572,14 +572,53 @@ namespace KPIMonitor.Controllers
 [HttpGet]
 public async Task<IActionResult> GetDashboardSummary(CancellationToken ct = default)
 {
-    // ---- KPI status counts (map to canonical + count) ----
-    var kpiStatusCodes = await _db.KpiFacts
+    // ---- 1) Latest status PER KPI (latest active plan, then last fact in that plan's year) ----
+    // Get latest active plan per KPI (includes Period.Year to scope facts to same year)
+    var latestPlans = await _db.KpiYearPlans
         .AsNoTracking()
-        .Where(f => f.StatusCode != null)
-        .Select(f => f.StatusCode!)
+        .Include(p => p.Period)
+        .Where(p => p.IsActive == 1 && p.Period != null)
+        .GroupBy(p => p.KpiId)
+        .Select(g => g.OrderByDescending(p => p.KpiYearPlanId).FirstOrDefault()!)
+        .Select(p => new { p.KpiId, p.KpiYearPlanId, Year = p.Period!.Year })
         .ToListAsync(ct);
 
-    static string CanonStatus(string code)
+    // Build a set for fast filtering (EF can’t consume in-memory sets in joins directly, so we do a join style in-memory)
+    var planKeys = latestPlans
+        .Select(lp => new { lp.KpiId, lp.KpiYearPlanId, lp.Year })
+        .ToList();
+
+    // Pull facts just for those (KpiId, PlanId, Year) triples — do it in two stages to stay server-side:
+    var planIds = latestPlans.Select(lp => lp.KpiYearPlanId).Distinct().ToList();
+    var factsForLatestPlans = await _db.KpiFacts
+        .AsNoTracking()
+        .Include(f => f.Period)
+        .Where(f => f.IsActive == 1
+                 && f.StatusCode != null
+                 && planIds.Contains(f.KpiYearPlanId)
+                 && f.Period != null)
+        .Select(f => new
+        {
+            f.KpiId,
+            f.KpiYearPlanId,
+            Year = f.Period!.Year,
+            Start = f.Period!.StartDate,
+            f.StatusCode
+        })
+        .ToListAsync(ct);
+
+    // Filter to same plan-year, then pick the last fact per KPI (by StartDate)
+    var latestStatusPerKpi = factsForLatestPlans
+        .Join(planKeys,
+              f => new { f.KpiId, f.KpiYearPlanId, f.Year },
+              lp => new { lp.KpiId, lp.KpiYearPlanId, lp.Year },
+              (f, lp) => f)
+        .GroupBy(f => f.KpiId)
+        .Select(g => g.OrderByDescending(x => x.Start).Select(x => x.StatusCode).FirstOrDefault())
+        .ToList();
+
+    // Canonicalize -> count
+    static string CanonStatus(string? code)
     {
         var s = (code ?? "").Trim().ToLowerInvariant();
         return s switch
@@ -592,17 +631,23 @@ public async Task<IActionResult> GetDashboardSummary(CancellationToken ct = defa
         };
     }
 
-    var kpiStatus = kpiStatusCodes
+    var kpiCounts = latestStatusPerKpi
         .Select(CanonStatus)
-        .GroupBy(x => x)
+        .GroupBy(s => s)
         .ToDictionary(g => g.Key, g => g.Count());
 
-    // ensure all keys exist
-    foreach (var k in new[] { "green", "orange", "red", "blue" })
-        if (!kpiStatus.ContainsKey(k)) kpiStatus[k] = 0;
+    int GetKpi(string k) => kpiCounts.TryGetValue(k, out var n) ? n : 0;
+    var kpiStatus = new
+    {
+        green = GetKpi("green"),
+        orange = GetKpi("orange"),
+        red = GetKpi("red"),
+        blue = GetKpi("blue"),
+        unknown = GetKpi("unknown")
+    };
 
-    // ---- Action plan counts ----
-    var actionStatusCodes = await _db.KpiActions
+    // ---- 2) Action plan totals (one row = one action) ----
+    var actionStatusRaw = await _db.KpiActions
         .AsNoTracking()
         .Where(a => a.StatusCode != null)
         .Select(a => a.StatusCode!)
@@ -614,50 +659,39 @@ public async Task<IActionResult> GetDashboardSummary(CancellationToken ct = defa
         return s switch
         {
             "todo" => "todo",
-            "in progress" or "inprogress" or "doing" or "working" => "inprogress",
-            "done" or "completed" => "done",
+            "in progress" or "in-progress" or "doing" or "working" => "inprogress",
+            "done" or "completed" or "complete" => "done",
             _ => "other"
         };
     }
 
-    var actionStatus = actionStatusCodes
+    var actionCounts = actionStatusRaw
         .Select(CanonAction)
-        .GroupBy(x => x)
+        .GroupBy(s => s)
         .ToDictionary(g => g.Key, g => g.Count());
 
-    foreach (var k in new[] { "todo", "inprogress", "done" })
-        if (!actionStatus.ContainsKey(k)) actionStatus[k] = 0;
-
-    // ---- Optional trend: last 6 full months of RED KPIs only ----
-    // Use a join to DimPeriods so EF can translate cleanly
-    var start = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1).AddMonths(-5); // include current month -> 6 points
-    var redSet = new[] { "red", "ecart", "needs attention" };
-
-    var monthly = await _db.KpiFacts
-        .AsNoTracking()
-        .Where(f => f.StatusCode != null && redSet.Contains(f.StatusCode!.ToLower()))
-        .Join(_db.DimPeriods,
-              f => f.PeriodId,
-              p => p.PeriodId,
-              (f, p) => new { p.Year, p.MonthNum, p.StartDate })
-        .Where(x => x.MonthNum != null && x.StartDate >= start)
-        .GroupBy(x => new { x.Year, x.MonthNum })
-        .Select(g => new { Year = g.Key.Year, Month = g.Key.MonthNum!.Value, Count = g.Count() })
-        .OrderBy(x => x.Year).ThenBy(x => x.Month)
-        .ToListAsync(ct);
-
-    var labels = monthly.Select(x => new DateTime(x.Year, x.Month, 1).ToString("MMM yyyy")).ToList();
-    var redCounts = monthly.Select(x => x.Count).ToList();
-
-    var payload = new
+    int GetAct(string k) => actionCounts.TryGetValue(k, out var n) ? n : 0;
+    var actionStatus = new
     {
-        kpiStatus = new { green = kpiStatus["green"], orange = kpiStatus["orange"], red = kpiStatus["red"], blue = kpiStatus["blue"] },
-        actionStatus = new { todo = actionStatus["todo"], inprogress = actionStatus["inprogress"], done = actionStatus["done"] },
-        trend = (labels.Count > 0 ? new { labels, redCounts } : null),
-        updatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm")
+        todo = GetAct("todo"),
+        inprogress = GetAct("inprogress"),
+        done = GetAct("done"),
+        other = GetAct("other")
     };
 
-    return Json(payload);
+    // ---- 3) (Optional) Red KPI trend (last 6 months). If you don't want it, set trend = null. ----
+    // This was counting how many facts in each recent month had status red; since you might drop it,
+    // we’ll return null so your UI keeps the trend hidden.
+    object? trend = null;
+
+    // Final payload (shape matches your JS)
+    return Json(new
+    {
+        kpiStatus,
+        actionStatus,
+        trend,
+        updatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm")
+    });
 }
     }
 }
