@@ -839,5 +839,164 @@ namespace KPIMonitor.Controllers
 
             return Json(new { items = Array.Empty<object>() });
         }
+        [HttpGet]
+        public async Task<IActionResult> ListKpisByKpiStatus(string status, CancellationToken ct = default)
+        {
+            // canon target
+            string CanonStatus(string? code)
+            {
+                var s = (code ?? "").Trim().ToLowerInvariant();
+                return s switch
+                {
+                    "green" or "conforme" or "ok" => "green",
+                    "red" or "ecart" or "needs attention" => "red",
+                    "orange" or "rattrapage" or "catching up" => "orange",
+                    "blue" or "attente" or "data missing" => "blue",
+                    _ => "unknown"
+                };
+            }
+            var target = CanonStatus(status);
+
+            // latest active plan per KPI
+            var latestPlanIds = await _db.KpiYearPlans
+                .AsNoTracking()
+                .Where(p => p.IsActive == 1 && p.PeriodId != null)
+                .GroupBy(p => p.KpiId)
+                .Select(g => g.Max(p => p.KpiYearPlanId))
+                .ToListAsync(ct);
+
+            if (latestPlanIds.Count == 0) return Json(Array.Empty<object>());
+
+            var planTriples = await _db.KpiYearPlans
+                .AsNoTracking()
+                .Where(p => latestPlanIds.Contains(p.KpiYearPlanId))
+                .Select(p => new { p.KpiId, p.KpiYearPlanId, Year = p.Period!.Year })
+                .ToListAsync(ct);
+
+            var planIdSet = latestPlanIds.ToHashSet();
+
+            // facts for those plans in the plan year
+            var facts = await _db.KpiFacts
+                .AsNoTracking()
+                .Where(f => f.IsActive == 1 && f.StatusCode != null && planIdSet.Contains(f.KpiYearPlanId))
+                .Select(f => new { f.KpiId, f.KpiYearPlanId, f.StatusCode, Year = f.Period!.Year, Start = f.Period!.StartDate })
+                .ToListAsync(ct);
+
+            var planByPlanId = planTriples.ToDictionary(x => x.KpiYearPlanId, x => x);
+            var latestPerKpi = facts
+                .Where(f => planByPlanId.TryGetValue(f.KpiYearPlanId, out var p) && f.Year == p.Year)
+                .GroupBy(f => f.KpiId)
+                .Select(g => g.OrderByDescending(x => x.KpiYearPlanId).ThenByDescending(x => x.Start).First())
+                .Where(x => CanonStatus(x.StatusCode) == target)
+                .Select(x => x.KpiId)
+                .Distinct()
+                .ToList();
+
+            if (latestPerKpi.Count == 0) return Json(Array.Empty<object>());
+
+            // label + path (pillar/objective) for chips
+            var items = await _db.DimKpis
+                .AsNoTracking()
+                .Include(k => k.Objective)!.ThenInclude(o => o.Pillar)
+                .Where(k => latestPerKpi.Contains(k.KpiId))
+                .Select(k => new
+                {
+                    id = k.KpiId,
+                    pillarId = k.PillarId,
+                    objectiveId = k.ObjectiveId,
+                    PillarCode = k.Objective!.Pillar!.PillarCode,
+                    ObjectiveCode = k.Objective!.ObjectiveCode,
+                    KpiCode = k.KpiCode,
+                    KpiName = k.KpiName
+                })
+                .ToListAsync(ct);
+
+            static string Label(dynamic x)
+            {
+                var left = string.Join('.', new[] { x.PillarCode as string, x.ObjectiveCode as string }.Where(s => !string.IsNullOrWhiteSpace(s)));
+                var code = string.IsNullOrWhiteSpace(x.KpiCode as string) ? "" : (left?.Length > 0 ? $" {x.KpiCode}" : x.KpiCode);
+                var head = (left?.Length > 0 ? left : "") + code;
+                var name = string.IsNullOrWhiteSpace(x.KpiName as string) ? "-" : x.KpiName;
+                return string.IsNullOrWhiteSpace(head) ? name : $"{head} — {name}";
+            }
+
+            var chips = items
+                .Select(f => new { id = f.id, pillarId = f.pillarId, objectiveId = f.objectiveId, text = Label(f) })
+                .OrderBy(x => x.text)
+                .Take(200)
+                .ToList();
+
+            return Json(chips);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ListKpisByActionStatus(string status, CancellationToken ct = default)
+        {
+            // canonicalize action status
+            string CanonAction(string? s)
+            {
+                s = (s ?? "").Trim().ToLowerInvariant();
+                return s switch
+                {
+                    "todo" => "todo",
+                    "in progress" or "in-progress" or "doing" or "working" => "inprogress",
+                    "done" or "completed" or "complete" => "done",
+                    _ => "other"
+                };
+            }
+            var target = CanonAction(status);
+
+            // 1) Pull minimal data from SQL
+            var actionRows = await _db.KpiActions
+                .AsNoTracking()
+                .Where(a => a.StatusCode != null)
+                .Select(a => new { a.KpiId, a.StatusCode })
+                .ToListAsync(ct); // <-- materialize here
+
+            // 2) Now use your local function in memory
+            var kpiIds = actionRows
+                .Select(a => new { a.KpiId, Canon = CanonAction(a.StatusCode!) })
+                .Where(x => x.Canon == target)
+                .Select(x => x.KpiId)
+                .Distinct()
+                .ToList();
+
+
+            if (kpiIds.Count == 0) return Json(Array.Empty<object>());
+
+            var items = await _db.DimKpis
+                .AsNoTracking()
+                .Include(k => k.Objective)!.ThenInclude(o => o.Pillar)
+                .Where(k => kpiIds.Contains(k.KpiId))
+                .Select(k => new
+                {
+                    id = k.KpiId,
+                    pillarId = k.PillarId,
+                    objectiveId = k.ObjectiveId,
+                    PillarCode = k.Objective!.Pillar!.PillarCode,
+                    ObjectiveCode = k.Objective!.ObjectiveCode,
+                    KpiCode = k.KpiCode,
+                    KpiName = k.KpiName
+                })
+                .ToListAsync(ct);
+
+            static string Label(dynamic x)
+            {
+                var left = string.Join('.', new[] { x.PillarCode as string, x.ObjectiveCode as string }.Where(s => !string.IsNullOrWhiteSpace(s)));
+                var code = string.IsNullOrWhiteSpace(x.KpiCode as string) ? "" : (left?.Length > 0 ? $" {x.KpiCode}" : x.KpiCode);
+                var head = (left?.Length > 0 ? left : "") + code;
+                var name = string.IsNullOrWhiteSpace(x.KpiName as string) ? "-" : x.KpiName;
+                return string.IsNullOrWhiteSpace(head) ? name : $"{head} — {name}";
+            }
+
+            var chips = items
+                .Select(f => new { id = f.id, pillarId = f.pillarId, objectiveId = f.objectiveId, text = Label(f) })
+                .OrderBy(x => x.text)
+                .Take(200)
+                .ToList();
+
+            return Json(chips);
+        }
+
     }
 }

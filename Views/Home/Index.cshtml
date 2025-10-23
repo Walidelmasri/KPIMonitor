@@ -58,10 +58,10 @@
                 <div class="fw-bold text-secondary">Indicators by Status</div>
                 <div class="d-flex gap-3">
                   <!-- label first, number to the right -->
-                  <div class="kpi"><span class="lbl">Green</span><span class="n ms-1" id="cntGreen">0</span></div>
-                  <div class="kpi"><span class="lbl">Orange</span><span class="n ms-1" id="cntOrange">0</span></div>
-                  <div class="kpi"><span class="lbl">Red</span><span class="n ms-1" id="cntRed">0</span></div>
-                  <div class="kpi"><span class="lbl">Blue</span><span class="n ms-1" id="cntBlue">0</span></div>
+                  <div class="kpi"><span class="lbl">Target Achieved</span><span class="n ms-1" id="cntGreen">0</span></div>
+                  <div class="kpi"><span class="lbl">On Forecast</span><span class="n ms-1" id="cntOrange">0</span></div>
+                  <div class="kpi"><span class="lbl">Target Missed</span><span class="n ms-1" id="cntRed">0</span></div>
+                  <div class="kpi"><span class="lbl">Data Missing</span><span class="n ms-1" id="cntBlue">0</span></div>
                 </div>
               </div>
               <div class="pie">
@@ -88,7 +88,7 @@
           </div>
         </div>
 
-        <!-- NEW: KPIs from clicked segment -->
+        <!-- KPIs from clicked segment -->
         <div id="segmentKpiList" class="mt-3 d-none">
           <div class="d-flex align-items-center justify-content-between mb-1">
             <div class="text-muted small" id="segmentTitle">KPIs</div>
@@ -313,34 +313,34 @@
             if (it.y > botLimit) it.y = botLimit;
           };
 
-          items.forEach(it => { it.y = it.baseY; clamp(it); });
+        items.forEach(it => { it.y = it.baseY; clamp(it); });
 
-          let guard = 0;
-          while (guard++ < 10) {
-            let changed = false;
-            for (let i = 0; i < items.length; i++) {
-              for (let j = i + 1; j < items.length; j++) {
-                const a = items[i], b = items[j];
-                const aL = a.x - a.w / 2, aR = a.x + a.w / 2, aT = a.y - a.h, aB = a.y;
-                const bL = b.x - b.w / 2, bR = b.x + b.w / 2, bT = b.y - b.h, bB = b.y;
-                const overlap = !(aR < bL || aL > bR || aB < bT || aT > bB);
-                if (overlap) {
-                  const hi = (a.val >= b.val) ? a : b, lo = (hi === a) ? b : a;
-                  hi.y -= minGap; lo.y += Math.min(4, minGap / 2);
-                  clamp(hi); clamp(lo); changed = true;
-                }
+        let guard = 0;
+        while (guard++ < 10) {
+          let changed = false;
+          for (let i = 0; i < items.length; i++) {
+            for (let j = i + 1; j < items.length; j++) {
+              const a = items[i], b = items[j];
+              const aL = a.x - a.w / 2, aR = a.x + a.w / 2, aT = a.y - a.h, aB = a.y;
+              const bL = b.x - b.w / 2, bR = b.x + b.w / 2, bT = b.y - b.h, bB = b.y;
+              const overlap = !(aR < bL || aL > bR || aB < bT || aT > bB);
+              if (overlap) {
+                const hi = (a.val >= b.val) ? a : b, lo = (hi === a) ? b : a;
+                hi.y -= minGap; lo.y += Math.min(4, minGap / 2);
+                clamp(hi); clamp(lo); changed = true;
               }
             }
-            if (!changed) break;
           }
+          if (!changed) break;
+        }
 
-          items.sort((a, b) => a.priority - b.priority);
-          items.forEach(it => {
-            ctx.fillStyle = it.color;
-            if (o.outline) { ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.strokeText(it.text, it.x, it.y); }
-            ctx.fillText(it.text, it.x, it.y);
-          });
+        items.sort((a, b) => a.priority - b.priority);
+        items.forEach(it => {
+          ctx.fillStyle = it.color;
+          if (o.outline) { ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.strokeText(it.text, it.x, it.y); }
+          ctx.fillText(it.text, it.x, it.y);
         });
+      });
 
         ctx.restore();
       }
@@ -365,7 +365,7 @@
         case 'green': case 'conforme': case 'ok': return 'Target Achieved';
         case 'orange': case 'rattrapage': case 'catching up': return 'On Forecast';
         case 'red': case 'ecart': case 'needs attention': return 'Target Missed';
-        case 'blue': case 'attente': case 'data missing': return 'Data Missing (No Changes)';
+        case 'blue': case 'attente': case 'data missing': return 'Data Missing';
         default: return '—';
       }
     }
@@ -441,10 +441,11 @@
         if (pieKpis) pieKpis.destroy();
         if (pieActs) pieActs.destroy();
 
+        // KPI Status pie with new labels
         pieKpis = new Chart(kpiCtx, {
           type: 'doughnut',
           data: {
-            labels: ['Green','Orange','Red','Blue'],
+            labels: ['Target Achieved','On Forecast','Target Missed','Data Missing'],
             datasets: [{ data: kpiVals, backgroundColor: ['#28a745','#fd7e14','#dc3545','#0d6efd'], borderColor: '#fff', borderWidth: 2 }]
           },
           options: {
@@ -454,10 +455,11 @@
               tooltip: { enabled:true, callbacks:{ label: (ctx)=> `${ctx.label}: ${ctx.raw}` } },
               datalabels: { display:(c)=> c.raw>0, formatter:(v)=> String(v), color:'#111', font:{ family: Chart.defaults.font.family, weight:'700' } }
             },
-            onClick: (_e, _els, chart)=>onPieClick(chart, 'kpi')
+            onClick: (evt, _els, chart)=>onPieClick(evt, chart, 'kpi')
           }
         });
 
+        // Action Status pie
         pieActs = new Chart(actCtx, {
           type: 'doughnut',
           data: {
@@ -471,12 +473,11 @@
               tooltip: { enabled:true, callbacks:{ label: (ctx)=> `${ctx.label}: ${ctx.raw}` } },
               datalabels: { display:(c)=> c.raw>0, formatter:(v)=> String(v), color:'#111', font:{ family: Chart.defaults.font.family, weight:'700' } }
             },
-            onClick: (_e, _els, chart)=>onPieClick(chart, 'action')
+            onClick: (evt, _els, chart)=>onPieClick(evt, chart, 'action')
           }
         });
 
       } catch {
-        const loadingEl = document.getElementById('summaryLoading');
         if (loadingEl) loadingEl.textContent = 'Could not load summary.';
       }
     }
@@ -485,10 +486,10 @@
     function mapLabel(kind, label){
       const s = String(label||'').trim().toLowerCase();
       if (kind === 'kpi') {
-        if (s === 'green') return 'green';
-        if (s === 'orange') return 'orange';
-        if (s === 'red') return 'red';
-        if (s === 'blue') return 'blue';
+        if (s === 'target achieved') return 'green';
+        if (s === 'on forecast') return 'orange';
+        if (s === 'target missed') return 'red';
+        if (s === 'data missing') return 'blue';
         return 'unknown';
       } else {
         if (s === 'to do') return 'todo';
@@ -499,8 +500,8 @@
     }
 
     // Handle pie clicks -> fetch KPIs for that segment -> render chips -> click to select
-    async function onPieClick(chart, kind){
-      const points = chart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+    async function onPieClick(evt, chart, kind){
+      const points = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
       if (!points || !points.length) return;
       const idx = points[0].index;
       const label = chart.data.labels[idx];
