@@ -234,48 +234,50 @@
                 <span id="metaStatus" class="status-pill">—</span>
                 <!-- Admin/SuperAdmin-only manual set button -->
                 <div class="mt-2">
-                  <button id="btnAdminSetStatus" type="button" class="btn btn-outline-secondary btn-sm d-none">
+                  <!-- Admin/SuperAdmin-only manual set button (server-side visibility) -->
+                  <button asp-admin-only id="btnAdminSetStatus" type="button" class="btn btn-outline-secondary btn-sm">
                     ⚙️ Set Status
                   </button>
                 </div>
               </div>
-
             </div>
+
           </div>
         </div>
       </div>
     </div>
-
-    <!-- KPI-level Edit Button -->
-    <div class="d-flex justify-content-between align-items-center mb-2">
-      <h6 class="m-0 text-secondary">Facts</h6>
-      <button id="openEditKpiBtn" class="btn btn-primary btn-sm" disabled>
-        ✏️ Edit KPI (Actual & Forecast)
-      </button>
-    </div>
-
-    <!-- Data Table -->
-    <div class="table-responsive shadow-sm rounded-4 mt-4">
-      <table class="table table-striped table-bordered mb-0 align-middle" aria-describedby="dataTableCaption">
-        <caption id="dataTableCaption">KPI Facts For the Selected Year Plan</caption>
-        <thead class="table-light">
-          <tr>
-            <th>Period</th>
-            <th>Start</th>
-            <th>End</th>
-            <th>Actual</th>
-            <th>Target</th>
-            <th>Forecast</th>
-          </tr>
-        </thead>
-        <tbody id="factsTbody">
-          <tr>
-            <td colspan="6" class="text-center text-muted">—</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
   </div>
+
+  <!-- KPI-level Edit Button -->
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h6 class="m-0 text-secondary">Facts</h6>
+    <button id="openEditKpiBtn" class="btn btn-primary btn-sm" disabled>
+      ✏️ Edit KPI (Actual & Forecast)
+    </button>
+  </div>
+
+  <!-- Data Table -->
+  <div class="table-responsive shadow-sm rounded-4 mt-4">
+    <table class="table table-striped table-bordered mb-0 align-middle" aria-describedby="dataTableCaption">
+      <caption id="dataTableCaption">KPI Facts For the Selected Year Plan</caption>
+      <thead class="table-light">
+        <tr>
+          <th>Period</th>
+          <th>Start</th>
+          <th>End</th>
+          <th>Actual</th>
+          <th>Target</th>
+          <th>Forecast</th>
+        </tr>
+      </thead>
+      <tbody id="factsTbody">
+        <tr>
+          <td colspan="6" class="text-center text-muted">—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+@* </div> *@
 </div>
 
 <!-- Bulk Edit Modal (content loaded via AJAX) -->
@@ -706,17 +708,17 @@
     }
 
     // Clicking segment chips behaves like role chips
-    document.getElementById('segmentKpiRows').addEventListener('click', async (e) => {
+    @* document.getElementById('segmentKpiRows').addEventListener('click', async (e) => {
       const chip = e.target.closest('.role-chip'); if (!chip) return;
       const pillarId = chip.dataset.pillarId, objectiveId = chip.dataset.objectiveId, kpiId = chip.dataset.kpiId;
       if (!kpiId) return; await selectKpiByIds(pillarId, objectiveId, kpiId);
       // highlight selection
       document.querySelectorAll('#segmentKpiRows .role-chip').forEach(x => x.classList.remove('active'));
       chip.classList.add('active');
-    });
+    }); *@
 
-    // ===== Role summary (unchanged logic) =====
-    const roleCard = byId('roleSummaryCard');
+      // ===== Role summary (unchanged logic) =====
+      const roleCard = byId('roleSummaryCard');
     const roleBadge = byId('roleSummaryBadge');
     const roleRows = byId('roleSummaryRows');
 
@@ -784,26 +786,26 @@
         }, 80);
       });
     }
-    roleRows.addEventListener('click', async (e) => {
+    @* roleRows.addEventListener('click', async (e) => {
       const chip = e.target.closest('.role-chip'); if (!chip) return;
       const pillarId = chip.dataset.pillarId, objectiveId = chip.dataset.objectiveId, kpiId = chip.dataset.kpiId;
       if (!kpiId) return; await selectKpiByIds(pillarId, objectiveId, kpiId); markActiveRoleChip(kpiId);
-    });
-    async function selectKpiByIds(pillarId, objectiveId, kpiId) {
-      if (pillarId) {
-        if (!selPillar.options.length || selPillar.disabled) { await loadPillars(); }
-        await waitForOption(selPillar, pillarId);
-        if (selPillar.value !== String(pillarId)) { selPillar.value = String(pillarId); selPillar.dispatchEvent(new Event('change')); }
+    }); *@
+      async function selectKpiByIds(pillarId, objectiveId, kpiId) {
+        if (pillarId) {
+          if (!selPillar.options.length || selPillar.disabled) { await loadPillars(); }
+          await waitForOption(selPillar, pillarId);
+          if (selPillar.value !== String(pillarId)) { selPillar.value = String(pillarId); selPillar.dispatchEvent(new Event('change')); }
+        }
+        if (objectiveId) {
+          await waitForOption(selObjective, objectiveId);
+          if (selObjective.value !== String(objectiveId)) { selObjective.value = String(objectiveId); selObjective.dispatchEvent(new Event('change')); }
+        }
+        if (kpiId) {
+          await waitForOption(selKpi, kpiId);
+          if (selKpi.value !== String(kpiId)) { selKpi.value = String(kpiId); selKpi.dispatchEvent(new Event('change')); }
+        }
       }
-      if (objectiveId) {
-        await waitForOption(selObjective, objectiveId);
-        if (selObjective.value !== String(objectiveId)) { selObjective.value = String(objectiveId); selObjective.dispatchEvent(new Event('change')); }
-      }
-      if (kpiId) {
-        await waitForOption(selKpi, kpiId);
-        if (selKpi.value !== String(kpiId)) { selKpi.value = String(kpiId); selKpi.dispatchEvent(new Event('change')); }
-      }
-    }
     function markActiveRoleChip(currentKpiId) {
       document.querySelectorAll('#roleSummaryRows .role-chip').forEach(el => {
         el.classList.toggle('active', currentKpiId && (el.dataset.kpiId === String(currentKpiId)));
@@ -982,12 +984,12 @@
         for (const r of rows) {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-                                    <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
-                                    <td>${r.startDate ?? '—'}</td>
-                                    <td>${r.endDate ?? '—'}</td>
-                                    <td>${r.actual ?? '—'}</td>
-                                    <td>${r.target ?? '—'}</td>
-                                    <td>${r.forecast ?? '—'}</td>`;
+                                        <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
+                                        <td>${r.startDate ?? '—'}</td>
+                                        <td>${r.endDate ?? '—'}</td>
+                                        <td>${r.actual ?? '—'}</td>
+                                        <td>${r.target ?? '—'}</td>
+                                        <td>${r.forecast ?? '—'}</td>`;
           tableBody.appendChild(tr);
         }
       }
@@ -1013,7 +1015,7 @@
     const adminStatusForm = document.getElementById('adminStatusForm');
     const adminStatusSelect = document.getElementById('adminStatusSelect');
 
-    function canonStatusForUi(raw) {
+    @* function canonStatusForUi(raw) {
       // Map UI/raw -> canonical option values for the select
       const s = String(raw || '').trim().toLowerCase();
       if (['green', 'conforme', 'ok'].includes(s)) return 'green';
@@ -1021,10 +1023,10 @@
       if (['red', 'ecart', 'needs attention'].includes(s)) return 'red';
       if (['blue', 'attente', 'data missing'].includes(s)) return 'blue';
       return 'green';
-    }
+    } *@
 
-    // Augment loadKpiSummary to toggle the admin button (monkey-patch style)
-    const _loadKpiSummary_orig = loadKpiSummary;
+      // Augment loadKpiSummary to toggle the admin button (monkey-patch style)
+      const _loadKpiSummary_orig = loadKpiSummary;
     loadKpiSummary = async function () {
       await _loadKpiSummary_orig();
 
@@ -1044,14 +1046,15 @@
       } catch { /* ignore */ }
     };
 
-    // Open the small admin modal on click
+    // Open the small admin modal on click (preselect from the current pill)
     if (btnAdminSetStatus) {
       btnAdminSetStatus.addEventListener('click', () => {
-        const kpiId = btnAdminSetStatus.dataset.kpiId || selKpi.value;
-        const currentCanon = btnAdminSetStatus.dataset.status || 'green';
-        if (adminStatusSelect) adminStatusSelect.value = currentCanon;
-        // stash kpiId on the form for submit
-        adminStatusForm.dataset.kpiId = kpiId;
+        const kpiId = selKpi.value;
+        // read current human label from the pill and map
+        const pillText = (document.getElementById('metaStatus')?.textContent || '').trim().toLowerCase();
+        const map = { 'target achieved': 'green', 'on forecast': 'orange', 'target missed': 'red', 'data missing': 'blue' };
+        adminStatusSelect.value = map[pillText] || 'green';
+        adminStatusForm.dataset.kpiId = kpiId || '';
         bootstrap.Modal.getOrCreateInstance(adminStatusModalEl).show();
       });
     }

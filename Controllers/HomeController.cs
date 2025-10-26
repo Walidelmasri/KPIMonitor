@@ -4,13 +4,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-
+using System.Security.Claims;                  // ClaimsPrincipal
 using KPIMonitor.Data;
 using KPIMonitor.Models;
 using KPIMonitor.Services;                 // IEmployeeDirectory
 using KPIMonitor.ViewModels;               // KpiEditModalVm
 using KPIMonitor.Services.Abstractions;    // IKpiAccessService, IAdminAuthorizer, IKpiStatusService
-
+using Microsoft.Extensions.Configuration;  // IConfiguration
 namespace KPIMonitor.Controllers
 {
     public class HomeController : Controller
@@ -20,19 +20,23 @@ namespace KPIMonitor.Controllers
         private readonly IKpiAccessService _acl;
         private readonly global::IAdminAuthorizer _admin;
         private readonly IEmployeeDirectory _dir;
+        private readonly IConfiguration _cfg;
 
         public HomeController(
             ILogger<HomeController> logger,
             AppDbContext db,
             IKpiAccessService acl,
             global::IAdminAuthorizer admin,
-            IEmployeeDirectory dir)
+            IEmployeeDirectory dir,
+            IConfiguration cfg)
+
         {
             _logger = logger;
             _db = db;
             _acl = acl;
             _admin = admin;
             _dir = dir;
+            _cfg = cfg;
         }
 
         // --------------------------
@@ -57,23 +61,30 @@ namespace KPIMonitor.Controllers
             return rec?.EmpId;
         }
         // ---- Admin helper (Admin OR SuperAdmin) ----
-        private bool IsAdminOrSuperAdmin()
-        {
-            // If your IAdminAuthorizer exposes IsAdmin(User), use it:
-            try
-            {
-                // Prefer this if available in your implementation:
-                // return _admin.IsSuperAdmin(User) || _admin.IsAdmin(User);
+// ---- Admin helper (Admin OR SuperAdmin) ----
+private bool IsAdminOrSuperAdmin()
+{
+    var sam = Sam(); // "walid.salem" etc.
+    if (string.IsNullOrWhiteSpace(sam)) return false;
 
-                // If you only have IsSuperAdmin, also allow the "Admin" role from claims:
-                return _admin.IsSuperAdmin(User) || User.IsInRole("Admin");
-            }
-            catch
-            {
-                // Fallback to claims only (won't throw)
-                return User.IsInRole("SuperAdmin") || User.IsInRole("Admin");
-            }
-        }
+    var admins = _cfg.GetSection("App:AdminUsers").Get<string[]>() ?? Array.Empty<string>();
+    var supers = _cfg.GetSection("App:SuperAdminUsers").Get<string[]>() ?? Array.Empty<string>();
+
+    bool inAdmins = admins.Any(a => string.Equals(a?.Trim(), sam, StringComparison.OrdinalIgnoreCase));
+    bool inSupers = supers.Any(a => string.Equals(a?.Trim(), sam, StringComparison.OrdinalIgnoreCase));
+
+    // Also allow your authorizer if it’s wired the same way
+    try
+    {
+        if (_admin?.IsSuperAdmin(User) == true) return true;
+
+        var m = _admin?.GetType().GetMethod("IsAdmin", new[] { typeof(ClaimsPrincipal) });
+        if (m != null && (bool)m.Invoke(_admin, new object[] { User })!) return true;
+    }
+    catch { /* ignore */ }
+
+    return inAdmins || inSupers;
+}
         [HttpPost]
         public async Task<IActionResult> AdminSetKpiStatus(decimal kpiId, string status)
         {
