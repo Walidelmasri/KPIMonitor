@@ -56,6 +56,95 @@ namespace KPIMonitor.Controllers
             var rec = await _dir.TryGetByUserIdAsync(sam, ct);
             return rec?.EmpId;
         }
+        // ---- Admin helper (Admin OR SuperAdmin) ----
+        private bool IsAdminOrSuperAdmin()
+        {
+            // If your IAdminAuthorizer exposes IsAdmin(User), use it:
+            try
+            {
+                // Prefer this if available in your implementation:
+                // return _admin.IsSuperAdmin(User) || _admin.IsAdmin(User);
+
+                // If you only have IsSuperAdmin, also allow the "Admin" role from claims:
+                return _admin.IsSuperAdmin(User) || User.IsInRole("Admin");
+            }
+            catch
+            {
+                // Fallback to claims only (won't throw)
+                return User.IsInRole("SuperAdmin") || User.IsInRole("Admin");
+            }
+        }
+        [HttpPost]
+        public async Task<IActionResult> AdminSetKpiStatus(decimal kpiId, string status)
+        {
+            if (!IsAdminOrSuperAdmin())
+                return StatusCode(403, new { ok = false, error = "Not allowed." });
+
+            status = (status ?? "").Trim().ToLowerInvariant();
+            // normalize a few friendly aliases
+            string Canon(string s)
+            {
+                s = s.Replace('_', ' ').Replace('-', ' ').Trim();
+                return s switch
+                {
+                    "green" or "conforme" or "ok" => "green",
+                    "orange" or "rattrapage" or "catching up" => "orange",
+                    "red" or "ecart" or "needs attention" => "red",
+                    "blue" or "attente" or "data missing" => "blue",
+                    _ => "unknown"
+                };
+            }
+            var canon = Canon(status);
+            if (canon == "unknown")
+                return BadRequest(new { ok = false, error = "Invalid status." });
+
+            // Find latest active plan for this KPI (same pattern used elsewhere)
+            var plan = await _db.KpiYearPlans
+                .Include(p => p.Period)
+                .AsNoTracking()
+                .Where(p => p.KpiId == kpiId && p.IsActive == 1 && p.Period != null)
+                .OrderByDescending(p => p.KpiYearPlanId)
+                .FirstOrDefaultAsync();
+
+            if (plan == null || plan.Period == null)
+                return NotFound(new { ok = false, error = "No active plan found." });
+
+            var year = plan.Period.Year;
+
+            // Latest fact within that plan/year by StartDate
+            var latestFact = await _db.KpiFacts
+                .Include(f => f.Period)
+                .Where(f => f.KpiId == kpiId
+                         && f.IsActive == 1
+                         && f.KpiYearPlanId == plan.KpiYearPlanId
+                         && f.Period != null
+                         && f.Period.Year == year)
+                .OrderByDescending(f => f.Period!.StartDate)
+                .FirstOrDefaultAsync();
+
+            if (latestFact == null)
+                return NotFound(new { ok = false, error = "No facts found for current plan year." });
+
+            latestFact.StatusCode = canon;
+            latestFact.LastChangedBy = string.IsNullOrWhiteSpace(latestFact.LastChangedBy) ? Sam() : latestFact.LastChangedBy;
+            await _db.SaveChangesAsync();
+
+            // Keep the UI consistent with your existing recompute pattern
+            var statusSvc = HttpContext.RequestServices.GetRequiredService<IKpiStatusService>();
+            await statusSvc.RecomputePlanYearAsync(latestFact.KpiYearPlanId, year);
+
+            // Return the UI label/color you already use
+            (string label, string color) ui = canon switch
+            {
+                "green" => ("Ok", "#28a745"),
+                "orange" => ("Catching Up", "#fd7e14"),
+                "red" => ("Needs Attention", "#dc3545"),
+                "blue" => ("Data Missing", "#0d6efd"),
+                _ => ("—", "")
+            };
+
+            return Ok(new { ok = true, raw = canon, label = ui.label, color = ui.color });
+        }
 
         // --------------------------
         // Pages
@@ -276,7 +365,10 @@ namespace KPIMonitor.Controllers
                 statusRaw = string.IsNullOrWhiteSpace(latestStatusCode) ? "" : latestStatusCode,
 
                 planId = planId,
-                canEdit = canEdit
+                canEdit = canEdit,
+
+                // inside: var meta = new { ... }
+                canAdminSetStatus = IsAdminOrSuperAdmin(),
             };
 
             return Json(new

@@ -232,7 +232,14 @@
               <div class="text-center">
                 <div class="text-muted mb-1">Status</div>
                 <span id="metaStatus" class="status-pill">—</span>
+                <!-- Admin/SuperAdmin-only manual set button -->
+                <div class="mt-2">
+                  <button id="btnAdminSetStatus" type="button" class="btn btn-outline-secondary btn-sm d-none">
+                    ⚙️ Set Status
+                  </button>
+                </div>
               </div>
+
             </div>
           </div>
         </div>
@@ -277,7 +284,32 @@
     <div class="modal-content"></div>
   </div>
 </div>
-
+<!-- Admin: Manual KPI Status Modal -->
+<div class="modal fade" id="adminStatusModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title">Set KPI Status</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="adminStatusForm" class="p-3">
+        <div class="mb-2">
+          <label for="adminStatusSelect" class="form-label small text-muted">Status</label>
+          <select id="adminStatusSelect" class="form-select form-select-sm">
+            <option value="green">Target Achieved</option>
+            <option value="orange">On Forecast</option>
+            <option value="red">Target Missed</option>
+            <option value="blue">Data Missing</option>
+          </select>
+        </div>
+        <div class="d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 @section Scripts {
   <!-- Tajawal (if not already in layout) -->
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -950,12 +982,12 @@
         for (const r of rows) {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-                              <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
-                              <td>${r.startDate ?? '—'}</td>
-                              <td>${r.endDate ?? '—'}</td>
-                              <td>${r.actual ?? '—'}</td>
-                              <td>${r.target ?? '—'}</td>
-                              <td>${r.forecast ?? '—'}</td>`;
+                                    <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
+                                    <td>${r.startDate ?? '—'}</td>
+                                    <td>${r.endDate ?? '—'}</td>
+                                    <td>${r.actual ?? '—'}</td>
+                                    <td>${r.target ?? '—'}</td>
+                                    <td>${r.forecast ?? '—'}</td>`;
           tableBody.appendChild(tr);
         }
       }
@@ -975,7 +1007,54 @@
       }
 
     }
+    // --- Admin status button helpers ---
+    const btnAdminSetStatus = byId('btnAdminSetStatus');
+    const adminStatusModalEl = document.getElementById('adminStatusModal');
+    const adminStatusForm = document.getElementById('adminStatusForm');
+    const adminStatusSelect = document.getElementById('adminStatusSelect');
 
+    function canonStatusForUi(raw) {
+      // Map UI/raw -> canonical option values for the select
+      const s = String(raw || '').trim().toLowerCase();
+      if (['green', 'conforme', 'ok'].includes(s)) return 'green';
+      if (['orange', 'rattrapage', 'catching up'].includes(s)) return 'orange';
+      if (['red', 'ecart', 'needs attention'].includes(s)) return 'red';
+      if (['blue', 'attente', 'data missing'].includes(s)) return 'blue';
+      return 'green';
+    }
+
+    // Augment loadKpiSummary to toggle the admin button (monkey-patch style)
+    const _loadKpiSummary_orig = loadKpiSummary;
+    loadKpiSummary = async function () {
+      await _loadKpiSummary_orig();
+
+      // Use the DOM state (metaStatus text) & API meta to decide visibility
+      try {
+        const kpiId = selKpi.value;
+        const url = '@Url.Action("GetKpiSummary", "Home")' + '?kpiId=' + encodeURIComponent(kpiId);
+        const res = await api(url);
+        const canAdmin = !!res?.meta?.canAdminSetStatus;
+
+        if (btnAdminSetStatus) {
+          btnAdminSetStatus.classList.toggle('d-none', !canAdmin);
+          btnAdminSetStatus.dataset.kpiId = kpiId || '';
+          // Preselect the current status when opening later
+          btnAdminSetStatus.dataset.status = canonStatusForUi(res?.meta?.statusRaw ?? res?.meta?.statusLabel);
+        }
+      } catch { /* ignore */ }
+    };
+
+    // Open the small admin modal on click
+    if (btnAdminSetStatus) {
+      btnAdminSetStatus.addEventListener('click', () => {
+        const kpiId = btnAdminSetStatus.dataset.kpiId || selKpi.value;
+        const currentCanon = btnAdminSetStatus.dataset.status || 'green';
+        if (adminStatusSelect) adminStatusSelect.value = currentCanon;
+        // stash kpiId on the form for submit
+        adminStatusForm.dataset.kpiId = kpiId;
+        bootstrap.Modal.getOrCreateInstance(adminStatusModalEl).show();
+      });
+    }
     // Open the bulk-edit modal
     document.getElementById('openEditKpiBtn').addEventListener('click', async () => {
       const kpiId = selKpi.value; if (!kpiId) return;
@@ -991,7 +1070,39 @@
         bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).show();
       } catch (e) { alert(e.message || 'Could not open edit modal.'); }
     });
+    // Save admin-set status
+    if (adminStatusForm) {
+      adminStatusForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const kpiId = adminStatusForm.dataset.kpiId || selKpi.value;
+        const status = adminStatusSelect.value;
 
+        try {
+          // Form-encoded (matches your action signature)
+          const res = await fetch('@Url.Action("AdminSetKpiStatus", "Home")', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ kpiId, status }).toString()
+          });
+
+          const data = await res.json();
+          if (!res.ok || !data.ok) {
+            throw new Error(data?.error || `Failed (${res.status})`);
+          }
+
+          // Update the pill instantly
+          metaStatus.textContent = uiStatus(data.raw || status);
+          metaStatus.style.background = data.color || '';
+
+          // Refresh top summary pies too
+          loadSummary();
+
+          bootstrap.Modal.getOrCreateInstance(adminStatusModalEl).hide();
+        } catch (err) {
+          alert(err?.message || 'Failed to update status');
+        }
+      });
+    }
     // kick things off
     initPage().catch(console.error);
   </script>
