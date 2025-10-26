@@ -109,7 +109,7 @@ namespace KPIMonitor.Services
                             ? $"KPI {fact.KpiId}"
                             : $"{(planInfo.Pillar ?? "")}.{(planInfo.Obj ?? "")} {(planInfo.KpiCode ?? "")} — {(planInfo.KpiName ?? "-")}";
 
-                        var subject = SubjectPrefix + "KPI change pending approval";
+                        var subject = "KPI change pending approval";
                         var bodyHtml = $@"
 <p>A KPI change was submitted for <em>{WebUtility.HtmlEncode(kpiText)}</em>.</p>
 <p>Submitted by <strong>{WebUtility.HtmlEncode(ch.SubmittedBy)}</strong> at {DateTime.UtcNow:yyyy-MM-dd HH:mm} (UTC).</p>";
@@ -175,7 +175,7 @@ namespace KPIMonitor.Services
                             ? $"KPI {f.KpiId}"
                             : $"{(k.Pillar ?? "")}.{(k.Obj ?? "")} {(k.KpiCode ?? "")} — {(k.KpiName ?? "-")}";
 
-                        var subject = SubjectPrefix + "Your KPI change was approved";
+                        var subject = "Your KPI change was approved";
                         var bodyHtml = $@"
 <p>Your submitted KPI change for <em>{WebUtility.HtmlEncode(kpiText)}</em> has been <strong>approved</strong>.</p>
 <p>Reviewed by <strong>{WebUtility.HtmlEncode(ch.ReviewedBy)}</strong> at {DateTime.UtcNow:yyyy-MM-dd HH:mm} (UTC).</p>";
@@ -231,7 +231,7 @@ namespace KPIMonitor.Services
                             ? $"KPI {f.KpiId}"
                             : $"{(k.Pillar ?? "")}.{(k.Obj ?? "")} {(k.KpiCode ?? "")} — {(k.KpiName ?? "-")}";
 
-                        var subject = SubjectPrefix + "Your KPI change was rejected";
+                        var subject = "Your KPI change was rejected";
                         var bodyHtml = $@"
 <p>Your submitted KPI change for <em>{WebUtility.HtmlEncode(kpiText)}</em> has been <strong>rejected</strong>.</p>
 <p>Reason: {WebUtility.HtmlEncode(reason)}</p>

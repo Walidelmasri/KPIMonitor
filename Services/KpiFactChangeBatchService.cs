@@ -138,7 +138,7 @@ namespace KPIMonitor.Services
                     var (kpiCode, kpiName, pillar, objective) = await GetKpiHeadAsync(b.KpiId, ct);
                     var kpiText = $"{(pillar ?? "")}.{(objective ?? "")} {(kpiCode ?? "")} — {(kpiName ?? "-")}";
                     var perText = (b.PeriodMin.HasValue && b.PeriodMax.HasValue) ? $"{b.PeriodMin}–{b.PeriodMax}" : "—";
-                    var subject = SubjectPrefix + "Your KPI batch was approved";
+                    var subject =  "Your KPI batch was approved";
 
                     var bodyHtml = $@"
 <p>Your submitted batch for <em>{WebUtility.HtmlEncode(kpiText)}</em> has been <strong>approved</strong>.</p>
@@ -192,7 +192,7 @@ namespace KPIMonitor.Services
                     var (kpiCode, kpiName, pillar, objective) = await GetKpiHeadAsync(b.KpiId, ct);
                     var kpiText = $"{(pillar ?? "")}.{(objective ?? "")} {(kpiCode ?? "")} — {(kpiName ?? "-")}";
                     var perText = (b.PeriodMin.HasValue && b.PeriodMax.HasValue) ? $"{b.PeriodMin}–{b.PeriodMax}" : "—";
-                    var subject = SubjectPrefix + "Your KPI batch was rejected";
+                    var subject = "Your KPI batch was rejected";
 
                     var bodyHtml = $@"
 <p>Your submitted batch for <em>{WebUtility.HtmlEncode(kpiText)}</em> has been <strong>rejected</strong>.</p>
