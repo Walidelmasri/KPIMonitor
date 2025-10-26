@@ -19,7 +19,9 @@ namespace KPIMonitor.Services
 
         // Keep http so images render in intranet mail clients
         private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFactChanges/Inbox";
-        private const string LogoUrl  = "http://kpimonitor.badea.local/kpimonitor/images/logo-en.png";
+        private const string LogoUrl = "http://kpimonitor.badea.local/kpimonitor/images/logo-en.png";
+        private const string SubjectPrefix = "(Test email. Do not reply or take any action) ";
+
 
         public KpiFactChangeBatchService(
             AppDbContext db,
@@ -129,7 +131,7 @@ namespace KPIMonitor.Services
                     var (kpiCode, kpiName, pillar, objective) = await GetKpiHeadAsync(b.KpiId, ct);
                     var kpiText = $"{(pillar ?? "")}.{(objective ?? "")} {(kpiCode ?? "")} — {(kpiName ?? "-")}";
                     var perText = (b.PeriodMin.HasValue && b.PeriodMax.HasValue) ? $"{b.PeriodMin}–{b.PeriodMax}" : "—";
-                    var subject = "Your KPI batch was approved";
+                    var subject = SubjectPrefix + "Your KPI batch was approved";
 
                     var bodyHtml = $@"
 <p>Your submitted batch for <em>{WebUtility.HtmlEncode(kpiText)}</em> has been <strong>approved</strong>.</p>
@@ -183,7 +185,7 @@ namespace KPIMonitor.Services
                     var (kpiCode, kpiName, pillar, objective) = await GetKpiHeadAsync(b.KpiId, ct);
                     var kpiText = $"{(pillar ?? "")}.{(objective ?? "")} {(kpiCode ?? "")} — {(kpiName ?? "-")}";
                     var perText = (b.PeriodMin.HasValue && b.PeriodMax.HasValue) ? $"{b.PeriodMin}–{b.PeriodMax}" : "—";
-                    var subject = "Your KPI batch was rejected";
+                    var subject = SubjectPrefix + "Your KPI batch was rejected";
 
                     var bodyHtml = $@"
 <p>Your submitted batch for <em>{WebUtility.HtmlEncode(kpiText)}</em> has been <strong>rejected</strong>.</p>

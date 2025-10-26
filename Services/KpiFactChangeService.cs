@@ -21,7 +21,9 @@ namespace KPIMonitor.Services
 
         // Use HTTP for intranet images (avoid blocked https/self-signed in mail clients)
         private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFactChanges/Inbox";
-        private const string LogoUrl  = "http://kpimonitor.badea.local/kpimonitor/images/logo-en.png";
+        private const string LogoUrl = "http://kpimonitor.badea.local/kpimonitor/images/logo-en.png";
+        private const string SubjectPrefix = "(Test email. Do not reply or take any action) ";
+
 
         public KpiFactChangeService(
             AppDbContext db,
@@ -107,7 +109,7 @@ namespace KPIMonitor.Services
                             ? $"KPI {fact.KpiId}"
                             : $"{(planInfo.Pillar ?? "")}.{(planInfo.Obj ?? "")} {(planInfo.KpiCode ?? "")} — {(planInfo.KpiName ?? "-")}";
 
-                        var subject  = "KPI change pending approval";
+                        var subject  = SubjectPrefix + "KPI change pending approval";
                         var bodyHtml = $@"
 <p>A KPI change was submitted for <em>{WebUtility.HtmlEncode(kpiText)}</em>.</p>
 <p>Submitted by <strong>{WebUtility.HtmlEncode(ch.SubmittedBy)}</strong> at {DateTime.UtcNow:yyyy-MM-dd HH:mm} (UTC).</p>";
@@ -167,7 +169,7 @@ namespace KPIMonitor.Services
                             ? $"KPI {f.KpiId}"
                             : $"{(k.Pillar ?? "")}.{(k.Obj ?? "")} {(k.KpiCode ?? "")} — {(k.KpiName ?? "-")}";
 
-                        var subject  = "Your KPI change was approved";
+                        var subject  = SubjectPrefix + "Your KPI change was approved";
                         var bodyHtml = $@"
 <p>Your submitted KPI change for <em>{WebUtility.HtmlEncode(kpiText)}</em> has been <strong>approved</strong>.</p>
 <p>Reviewed by <strong>{WebUtility.HtmlEncode(ch.ReviewedBy)}</strong> at {DateTime.UtcNow:yyyy-MM-dd HH:mm} (UTC).</p>";
@@ -223,7 +225,7 @@ namespace KPIMonitor.Services
                             ? $"KPI {f.KpiId}"
                             : $"{(k.Pillar ?? "")}.{(k.Obj ?? "")} {(k.KpiCode ?? "")} — {(k.KpiName ?? "-")}";
 
-                        var subject  = "Your KPI change was rejected";
+                        var subject  = SubjectPrefix + "Your KPI change was rejected";
                         var bodyHtml = $@"
 <p>Your submitted KPI change for <em>{WebUtility.HtmlEncode(kpiText)}</em> has been <strong>rejected</strong>.</p>
 <p>Reason: {WebUtility.HtmlEncode(reason)}</p>

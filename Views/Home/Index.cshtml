@@ -422,13 +422,13 @@
 
     // ---- ChartDataLabels defaults ----
     Chart.register(ChartDataLabels);
+    // Turn OFF globally; we'll turn it ON per-chart where needed.
     Chart.defaults.set('plugins.datalabels', {
-      display: (c) => c.raw != null,
-      formatter: (v) => _fmtShort(v),
-      anchor: 'end', align: 'end', offset: 2, clamp: true, clip: false,
+      display: false,
       color: '#111',
       font: { family: Chart.defaults.font.family, weight: 'bold' }
     });
+
 
     // ---------- tiny helpers ----------
     const byId = id => document.getElementById(id);
@@ -556,14 +556,21 @@
           if (lineTrend) lineTrend.destroy();
           const labels = Array.isArray(trend?.labels) ? trend.labels : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
           const dataVals = Array.isArray(trend?.redCounts) ? trend.redCounts : new Array(12).fill(0);
+          // ADD this trim:
+          const now = new Date();
+          const trendYear = Number(trend?.year) || now.getFullYear(); // if API doesn't return year, assume current
+          const isThisYear = trendYear === now.getFullYear();
+          const maxMonth = isThisYear ? (now.getMonth() + 1) : 12;    // slice to current month if this year
 
+          const labelsTrimmed = labels.slice(0, maxMonth);
+          const dataTrimmed = dataVals.slice(0, maxMonth);
           lineTrend = new Chart(trendCtx, {
             type: 'line',
             data: {
-              labels,
+              labels: labelsTrimmed,
               datasets: [{
                 label: 'Red KPIs',
-                data: dataVals,
+                data: dataTrimmed,
                 borderWidth: 2,
                 tension: 0.3,
                 pointRadius: 3,
@@ -584,7 +591,6 @@
               plugins: {
                 legend: { display: false },
                 tooltip: { enabled: true },
-                // datalabels for THIS chart only: bigger & above the points
                 datalabels: {
                   display: (ctx) => Number.isFinite(ctx.raw),
                   formatter: (v) => v,
@@ -597,6 +603,7 @@
                   font: { family: Chart.defaults.font.family, size: 14, weight: '700' }
                 }
               }
+
             }
 
           });
@@ -943,12 +950,12 @@
         for (const r of rows) {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-                        <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
-                        <td>${r.startDate ?? '—'}</td>
-                        <td>${r.endDate ?? '—'}</td>
-                        <td>${r.actual ?? '—'}</td>
-                        <td>${r.target ?? '—'}</td>
-                        <td>${r.forecast ?? '—'}</td>`;
+                              <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
+                              <td>${r.startDate ?? '—'}</td>
+                              <td>${r.endDate ?? '—'}</td>
+                              <td>${r.actual ?? '—'}</td>
+                              <td>${r.target ?? '—'}</td>
+                              <td>${r.forecast ?? '—'}</td>`;
           tableBody.appendChild(tr);
         }
       }
