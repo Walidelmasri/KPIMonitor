@@ -16,6 +16,7 @@ namespace KPIMonitor.Services
         private readonly AppDbContext _db;
         private readonly ILogger<KpiFactChangeBatchService> _log;
         private readonly IEmailSender _email;
+        private readonly IKpiStatusService _status;
 
         // Keep http so images render in intranet mail clients
         private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFactChanges/Inbox";
@@ -26,11 +27,15 @@ namespace KPIMonitor.Services
         public KpiFactChangeBatchService(
             AppDbContext db,
             ILogger<KpiFactChangeBatchService> log,
-            IEmailSender email)
+            IEmailSender email,
+                IKpiStatusService status          // <— add
+
+            )
         {
             _db = db;
             _log = log;
             _email = email;
+            _status = status;
         }
 
         // Creates the batch row. Must match DB CHECK:
@@ -68,17 +73,17 @@ namespace KPIMonitor.Services
 
             var batch = new KpiFactChangeBatch
             {
-                KpiId         = kpiId,
+                KpiId = kpiId,
                 KpiYearPlanId = kpiYearPlanId,
-                Year          = year,
-                Frequency     = frequency,
-                PeriodMin     = periodMin,
-                PeriodMax     = periodMax,
-                RowCount      = createdCount,
-                SkippedCount  = skippedCount,
-                SubmittedBy   = string.IsNullOrWhiteSpace(submittedBy) ? "editor" : NormalizeSam(submittedBy),
-                SubmittedAt   = DateTime.UtcNow,
-                ApprovalStatus= "pending"
+                Year = year,
+                Frequency = frequency,
+                PeriodMin = periodMin,
+                PeriodMax = periodMax,
+                RowCount = createdCount,
+                SkippedCount = skippedCount,
+                SubmittedBy = string.IsNullOrWhiteSpace(submittedBy) ? "editor" : NormalizeSam(submittedBy),
+                SubmittedAt = DateTime.UtcNow,
+                ApprovalStatus = "pending"
             };
 
             await _db.KpiFactChangeBatches.AddAsync(batch, ct);
@@ -107,20 +112,22 @@ namespace KPIMonitor.Services
             foreach (var ch in children)
             {
                 ch.ApprovalStatus = "approved";
-                ch.ReviewedBy     = b.ReviewedBy;
-                ch.ReviewedAt     = b.ReviewedAt;
+                ch.ReviewedBy = b.ReviewedBy;
+                ch.ReviewedAt = b.ReviewedAt;
 
                 var f = await _db.KpiFacts.FirstOrDefaultAsync(x => x.KpiFactId == ch.KpiFactId, ct);
                 if (f != null)
                 {
-                    if (ch.ProposedActualValue.HasValue)   f.ActualValue   = ch.ProposedActualValue;
-                    if (ch.ProposedTargetValue.HasValue)   f.TargetValue   = ch.ProposedTargetValue;
+                    if (ch.ProposedActualValue.HasValue) f.ActualValue = ch.ProposedActualValue;
+                    if (ch.ProposedTargetValue.HasValue) f.TargetValue = ch.ProposedTargetValue;
                     if (ch.ProposedForecastValue.HasValue) f.ForecastValue = ch.ProposedForecastValue;
                     if (!string.IsNullOrWhiteSpace(ch.ProposedStatusCode)) f.StatusCode = ch.ProposedStatusCode;
                 }
             }
 
             await _db.SaveChangesAsync(ct);
+            // Recompute plan-year status for the batch's plan and year
+            await _status.RecomputePlanYearAsync(b.KpiYearPlanId, b.Year);
 
             // ---- ONE email to the submitting editor (summary) ----
             try
@@ -158,9 +165,9 @@ namespace KPIMonitor.Services
             if (b == null) throw new InvalidOperationException("Batch not found.");
 
             b.ApprovalStatus = "rejected";
-            b.RejectReason   = reason.Trim();
-            b.ReviewedBy     = string.IsNullOrWhiteSpace(reviewer) ? "owner" : NormalizeSam(reviewer);
-            b.ReviewedAt     = DateTime.UtcNow;
+            b.RejectReason = reason.Trim();
+            b.ReviewedBy = string.IsNullOrWhiteSpace(reviewer) ? "owner" : NormalizeSam(reviewer);
+            b.ReviewedAt = DateTime.UtcNow;
 
             var children = await _db.KpiFactChanges
                             .Where(c => c.BatchId == batchId && c.ApprovalStatus == "pending")
@@ -169,9 +176,9 @@ namespace KPIMonitor.Services
             foreach (var ch in children)
             {
                 ch.ApprovalStatus = "rejected";
-                ch.ReviewedBy     = b.ReviewedBy;
-                ch.ReviewedAt     = b.ReviewedAt;
-                ch.RejectReason   = b.RejectReason;
+                ch.ReviewedBy = b.ReviewedBy;
+                ch.ReviewedAt = b.ReviewedAt;
+                ch.RejectReason = b.RejectReason;
             }
 
             await _db.SaveChangesAsync(ct);
@@ -263,7 +270,7 @@ body{{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f6f
                     x.KpiCode,
                     x.KpiName,
                     Pillar = x.Pillar != null ? x.Pillar.PillarCode : null,
-                    Obj    = x.Objective != null ? x.Objective.ObjectiveCode : null
+                    Obj = x.Objective != null ? x.Objective.ObjectiveCode : null
                 })
                 .FirstOrDefaultAsync(ct);
 

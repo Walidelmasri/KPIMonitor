@@ -69,14 +69,14 @@ namespace KPIMonitor.Services
             var ch = new KpiFactChange
             {
                 KpiFactId = kpiFactId,
-                ProposedActualValue   = actual,
-                ProposedTargetValue   = target,
+                ProposedActualValue = actual,
+                ProposedTargetValue = target,
                 ProposedForecastValue = forecast,
-                ProposedStatusCode    = string.IsNullOrWhiteSpace(statusCode) ? null : statusCode.Trim(),
-                SubmittedBy           = NormalizeSam(submittedBy),
-                SubmittedAt           = DateTime.UtcNow,
-                ApprovalStatus        = "pending",
-                BatchId               = batchId
+                ProposedStatusCode = string.IsNullOrWhiteSpace(statusCode) ? null : statusCode.Trim(),
+                SubmittedBy = NormalizeSam(submittedBy),
+                SubmittedAt = DateTime.UtcNow,
+                ApprovalStatus = "pending",
+                BatchId = batchId
             };
 
             _db.KpiFactChanges.Add(ch);
@@ -95,11 +95,11 @@ namespace KPIMonitor.Services
                         select new
                         {
                             yp.OwnerEmpId,
-                            KpiId    = f.KpiId,
-                            KpiCode  = k.KpiCode,
-                            KpiName  = k.KpiName,
-                            Pillar   = k.Pillar != null ? k.Pillar.PillarCode : null,
-                            Obj      = k.Objective != null ? k.Objective.ObjectiveCode : null
+                            KpiId = f.KpiId,
+                            KpiCode = k.KpiCode,
+                            KpiName = k.KpiName,
+                            Pillar = k.Pillar != null ? k.Pillar.PillarCode : null,
+                            Obj = k.Objective != null ? k.Objective.ObjectiveCode : null
                         }).FirstOrDefaultAsync();
 
                     var ownerEmail = await ResolveOwnerEmailAsync(planInfo?.OwnerEmpId, CancellationToken.None);
@@ -109,7 +109,7 @@ namespace KPIMonitor.Services
                             ? $"KPI {fact.KpiId}"
                             : $"{(planInfo.Pillar ?? "")}.{(planInfo.Obj ?? "")} {(planInfo.KpiCode ?? "")} — {(planInfo.KpiName ?? "-")}";
 
-                        var subject  = SubjectPrefix + "KPI change pending approval";
+                        var subject = SubjectPrefix + "KPI change pending approval";
                         var bodyHtml = $@"
 <p>A KPI change was submitted for <em>{WebUtility.HtmlEncode(kpiText)}</em>.</p>
 <p>Submitted by <strong>{WebUtility.HtmlEncode(ch.SubmittedBy)}</strong> at {DateTime.UtcNow:yyyy-MM-dd HH:mm} (UTC).</p>";
@@ -137,16 +137,22 @@ namespace KPIMonitor.Services
 
             var f = ch.KpiFact ?? throw new InvalidOperationException("KPI fact missing.");
 
-            if (ch.ProposedActualValue.HasValue)   f.ActualValue   = ch.ProposedActualValue;
-            if (ch.ProposedTargetValue.HasValue)   f.TargetValue   = ch.ProposedTargetValue;
+            if (ch.ProposedActualValue.HasValue) f.ActualValue = ch.ProposedActualValue;
+            if (ch.ProposedTargetValue.HasValue) f.TargetValue = ch.ProposedTargetValue;
             if (ch.ProposedForecastValue.HasValue) f.ForecastValue = ch.ProposedForecastValue;
             if (!string.IsNullOrWhiteSpace(ch.ProposedStatusCode)) f.StatusCode = ch.ProposedStatusCode;
 
             ch.ApprovalStatus = "approved";
-            ch.ReviewedBy     = NormalizeSam(reviewer);
-            ch.ReviewedAt     = DateTime.UtcNow;
+            ch.ReviewedBy = NormalizeSam(reviewer);
+            ch.ReviewedAt = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();
+            // Recompute plan-year status so dashboards reflect the approval immediately
+            var yr = await _db.DimPeriods
+                .Where(p => p.PeriodId == f.PeriodId)
+                .Select(p => p.Year)
+                .FirstAsync();
+            await _status.RecomputePlanYearAsync(f.KpiYearPlanId, yr);
 
             if (!suppressEmail)
             {
@@ -162,14 +168,14 @@ namespace KPIMonitor.Services
                                 x.KpiCode,
                                 x.KpiName,
                                 Pillar = x.Pillar != null ? x.Pillar.PillarCode : null,
-                                Obj    = x.Objective != null ? x.Objective.ObjectiveCode : null
+                                Obj = x.Objective != null ? x.Objective.ObjectiveCode : null
                             }).FirstOrDefaultAsync();
 
                         var kpiText = (k == null)
                             ? $"KPI {f.KpiId}"
                             : $"{(k.Pillar ?? "")}.{(k.Obj ?? "")} {(k.KpiCode ?? "")} — {(k.KpiName ?? "-")}";
 
-                        var subject  = SubjectPrefix + "Your KPI change was approved";
+                        var subject = SubjectPrefix + "Your KPI change was approved";
                         var bodyHtml = $@"
 <p>Your submitted KPI change for <em>{WebUtility.HtmlEncode(kpiText)}</em> has been <strong>approved</strong>.</p>
 <p>Reviewed by <strong>{WebUtility.HtmlEncode(ch.ReviewedBy)}</strong> at {DateTime.UtcNow:yyyy-MM-dd HH:mm} (UTC).</p>";
@@ -197,9 +203,9 @@ namespace KPIMonitor.Services
                 throw new InvalidOperationException("Only pending changes can be rejected.");
 
             ch.ApprovalStatus = "rejected";
-            ch.RejectReason   = reason.Trim();
-            ch.ReviewedBy     = NormalizeSam(reviewer);
-            ch.ReviewedAt     = DateTime.UtcNow;
+            ch.RejectReason = reason.Trim();
+            ch.ReviewedBy = NormalizeSam(reviewer);
+            ch.ReviewedAt = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();
 
@@ -218,14 +224,14 @@ namespace KPIMonitor.Services
                                 x.KpiCode,
                                 x.KpiName,
                                 Pillar = x.Pillar != null ? x.Pillar.PillarCode : null,
-                                Obj    = x.Objective != null ? x.Objective.ObjectiveCode : null
+                                Obj = x.Objective != null ? x.Objective.ObjectiveCode : null
                             }).FirstOrDefaultAsync();
 
                         var kpiText = (k == null)
                             ? $"KPI {f.KpiId}"
                             : $"{(k.Pillar ?? "")}.{(k.Obj ?? "")} {(k.KpiCode ?? "")} — {(k.KpiName ?? "-")}";
 
-                        var subject  = SubjectPrefix + "Your KPI change was rejected";
+                        var subject = SubjectPrefix + "Your KPI change was rejected";
                         var bodyHtml = $@"
 <p>Your submitted KPI change for <em>{WebUtility.HtmlEncode(kpiText)}</em> has been <strong>rejected</strong>.</p>
 <p>Reason: {WebUtility.HtmlEncode(reason)}</p>
