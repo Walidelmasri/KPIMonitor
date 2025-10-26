@@ -692,6 +692,146 @@ namespace KPIMonitor.Controllers
                 updatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm")
             });
         }
+        // --------------------------
+        // Monthly "Red" trend (12 months for a given year)
+        // --------------------------
+        [HttpGet]
+        public async Task<IActionResult> GetRedMonthlyTrend(int? year, CancellationToken ct = default)
+        {
+            int targetYear = year ?? DateTime.UtcNow.Year;
+
+            // Latest active plan id per KPI (same as pies)
+            var latestPlanIds = await _db.KpiYearPlans
+                .AsNoTracking()
+                .Where(p => p.IsActive == 1 && p.PeriodId != null)
+                .GroupBy(p => p.KpiId)
+                .Select(g => g.Max(p => p.KpiYearPlanId))
+                .ToListAsync(ct);
+
+            if (latestPlanIds.Count == 0)
+            {
+                return Json(new
+                {
+                    labels = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" },
+                    redCounts = Enumerable.Repeat(0, 12).ToArray(),
+                    updatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm")
+                });
+            }
+
+            // Pull the plan year for those plans (we only consider plans for targetYear)
+            var planTriples = await _db.KpiYearPlans
+                .AsNoTracking()
+                .Where(p => latestPlanIds.Contains(p.KpiYearPlanId))
+                .Select(p => new { p.KpiId, p.KpiYearPlanId, Year = p.Period!.Year })
+                .ToListAsync(ct);
+
+            var planIdsForYear = planTriples
+                .Where(t => t.Year == targetYear)
+                .Select(t => t.KpiYearPlanId)
+                .ToHashSet();
+
+            if (planIdsForYear.Count == 0)
+            {
+                return Json(new
+                {
+                    labels = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" },
+                    redCounts = Enumerable.Repeat(0, 12).ToArray(),
+                    updatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm")
+                });
+            }
+
+            // Facts for those planIds within the year (materialize minimal fields, then compute in-memory)
+            var factRows = await _db.KpiFacts
+                .AsNoTracking()
+                .Where(f => f.IsActive == 1
+                         && f.StatusCode != null
+                         && planIdsForYear.Contains(f.KpiYearPlanId)
+                         && f.Period != null
+                         && f.Period.Year == targetYear)
+                .Select(f => new
+                {
+                    f.KpiId,
+                    f.KpiYearPlanId,
+                    f.StatusCode,
+                    MonthNum = f.Period!.MonthNum,       // null if quarterly
+                    QuarterNum = f.Period!.QuarterNum,   // null if monthly
+                    Start = f.Period!.StartDate
+                })
+                .ToListAsync(ct);
+
+            // Canonicalize "red"
+            static string CanonStatus(string? code)
+            {
+                var s = (code ?? "").Trim().ToLowerInvariant();
+                return s switch
+                {
+                    "red" or "ecart" or "needs attention" => "red",
+                    "green" or "conforme" or "ok" => "green",
+                    "orange" or "rattrapage" or "catching up" => "orange",
+                    "blue" or "attente" or "data missing" => "blue",
+                    _ => "unknown"
+                };
+            }
+
+            // Build red counts for each month [0..11]
+            var redCounts = new int[12];
+
+            // Group by KPI, compute that KPI's 12-month status (monthly direct, else quarterly spread)
+            foreach (var g in factRows.GroupBy(r => r.KpiId))
+            {
+                var isMonthly = g.Any(r => r.MonthNum.HasValue);
+
+                // For each month, store canonical status
+                var monthStatus = new string?[12];
+
+                if (isMonthly)
+                {
+                    // For each month, take the latest Status by Start
+                    var latestByMonth = g
+                        .Where(r => r.MonthNum.HasValue)
+                        .GroupBy(r => r.MonthNum!.Value)
+                        .Select(gg => gg.OrderByDescending(x => x.Start).First());
+
+                    foreach (var mrec in latestByMonth)
+                    {
+                        int mi = Math.Clamp(mrec.MonthNum!.Value, 1, 12) - 1;
+                        monthStatus[mi] = CanonStatus(mrec.StatusCode);
+                    }
+                }
+                else
+                {
+                    // Quarterly KPI: pick the latest per quarter, then paint each quarter across its 3 months
+                    var latestByQuarter = g
+                        .Where(r => r.QuarterNum.HasValue)
+                        .GroupBy(r => r.QuarterNum!.Value)
+                        .Select(gg => gg.OrderByDescending(x => x.Start).First())
+                        .ToDictionary(x => x.QuarterNum!.Value, x => CanonStatus(x.StatusCode));
+
+                    // Fill Q1..Q4 blocks
+                    for (int q = 1; q <= 4; q++)
+                    {
+                        if (!latestByQuarter.TryGetValue(q, out var status)) continue;
+                        int startMonth = (q - 1) * 3; // 0,3,6,9
+                        monthStatus[startMonth + 0] = status;
+                        monthStatus[startMonth + 1] = status;
+                        monthStatus[startMonth + 2] = status;
+                    }
+                }
+
+                // This KPI contributes +1 to month if that month is "red"
+                for (int i = 0; i < 12; i++)
+                {
+                    if (monthStatus[i] == "red") redCounts[i]++;
+                }
+            }
+
+            return Json(new
+            {
+                labels = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" },
+                redCounts,
+                updatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm")
+            });
+        }
 
         // --------------------------
         // NEW: List KPIs for a clicked summary segment (pie)

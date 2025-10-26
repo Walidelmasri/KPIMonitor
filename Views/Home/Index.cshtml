@@ -141,6 +141,16 @@
             </div>
           </div>
         </div>
+        <!-- Red monthly trend (same card under pies) -->
+        <div class="mt-3">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="fw-bold text-secondary">Red KPIs this Year</div>
+            <span class="text-muted small" id="trendLoading">Loading…</span>
+          </div>
+          <div style="min-height:160px">
+            <canvas id="lineRedTrend" aria-label="Red KPIs this Year" role="img"></canvas>
+          </div>
+        </div>
 
         <!-- KPIs from clicked segment -->
         <div id="segmentKpiList" class="mt-3 d-none">
@@ -541,6 +551,49 @@
             onClick: (evt, _els, chart) => onPieClick(evt, chart, 'action')
           }
         });
+        // ---- Red monthly trend line (12 months) ----
+        try {
+          const trend = await api('@Url.Action("GetRedMonthlyTrend", "Home")');
+          const trendCtx = document.getElementById('lineRedTrend').getContext('2d');
+          if (lineTrend) lineTrend.destroy();
+          const labels = Array.isArray(trend?.labels) ? trend.labels : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          const dataVals = Array.isArray(trend?.redCounts) ? trend.redCounts : new Array(12).fill(0);
+
+          lineTrend = new Chart(trendCtx, {
+            type: 'line',
+            data: {
+              labels,
+              datasets: [{
+                label: 'Red KPIs',
+                data: dataVals,
+                borderWidth: 2,
+                tension: 0.3,
+                pointRadius: 3,
+                pointHoverRadius: 4,
+                borderColor: '#dc3545',
+                pointBackgroundColor: '#dc3545',
+                pointBorderColor: '#dc3545',
+                fill: false
+              }]
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,.06)' } }
+              },
+              plugins: {
+                legend: { display: false },
+                tooltip: { enabled: true }
+              }
+            }
+          });
+          const tl = document.getElementById('trendLoading');
+          if (tl) tl.textContent = '';
+        } catch {
+          const tl = document.getElementById('trendLoading');
+          if (tl) tl.textContent = 'Could not load trend.';
+        }
 
       } catch {
         if (loadingEl) loadingEl.textContent = 'Could not load summary.';
@@ -878,12 +931,12 @@
         for (const r of rows) {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-                  <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
-                  <td>${r.startDate ?? '—'}</td>
-                  <td>${r.endDate ?? '—'}</td>
-                  <td>${r.actual ?? '—'}</td>
-                  <td>${r.target ?? '—'}</td>
-                  <td>${r.forecast ?? '—'}</td>`;
+                    <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
+                    <td>${r.startDate ?? '—'}</td>
+                    <td>${r.endDate ?? '—'}</td>
+                    <td>${r.actual ?? '—'}</td>
+                    <td>${r.target ?? '—'}</td>
+                    <td>${r.forecast ?? '—'}</td>`;
           tableBody.appendChild(tr);
         }
       }
