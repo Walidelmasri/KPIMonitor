@@ -79,6 +79,35 @@
     max-height: 132px;
     overflow: auto;
   }
+
+  /* Make left/right headers stop colliding when the pies became 4-col */
+  #summaryPies .d-flex.gap-3 {
+    flex-wrap: wrap;
+    /* allow the counters to wrap neatly */
+    gap: 6px 12px;
+    /* tighter gap so title has room */
+    justify-content: flex-end;
+    max-width: 60%;
+    /* don't let counters steal the whole row */
+  }
+
+  #summaryPies .kpi .lbl {
+    font-size: 0.85rem;
+  }
+
+  #summaryPies .kpi .n {
+    font-size: 1.25rem;
+  }
+
+  /* Middle card (bar chart) visual balance with pies */
+  #summaryPies .bar-share .pie {
+    min-height: 220px;
+  }
+
+  /* same as pies */
+  #summaryPies .bar-share .card-title {
+    margin-bottom: .25rem;
+  }
 </style>
 
 <div class="container py-4">
@@ -125,7 +154,7 @@
 
           <!-- MIDDLE: Red Share by Pillar (NEW) -->
           <div class="col-lg-4">
-            <div class="border rounded-3 p-3 h-100">
+            <div class="border rounded-3 p-3 h-100 bar-share">
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <div class="fw-bold text-secondary">Red Share by Pillar</div>
                 <span class="text-muted small" id="redShareLoading">Loading…</span>
@@ -616,31 +645,44 @@
           const redCounts = items.map(x => x.red);
           const totals = items.map(x => x.total);
           const pillarIds = items.map(x => x.pillarId);
+          const short = (s) => (String(s).length > 26 ? String(s).slice(0, 23) + '…' : s);
+          const yLabels = labels.map(short);
 
           window._barRedShare = new Chart(shareCtx, {
             type: 'bar',
             data: {
-              labels,
+              labels: yLabels,          // <— use shortened labels on the axis
               datasets: [{
                 label: '% Red',
                 data: pctData,
-                borderWidth: 1,
                 backgroundColor: '#dc3545',
-                borderColor: '#dc3545'
+                borderColor: '#dc3545',
+                borderWidth: 1,
+                maxBarThickness: 16,    // <— keep bars slim
+                categoryPercentage: 0.7,
+                barPercentage: 0.8
               }]
             },
             options: {
               responsive: true,
               maintainAspectRatio: false,
+              layout: { padding: { top: 6, right: 6, bottom: 0, left: 0 } },  // tighter frame
               indexAxis: 'y',
               scales: {
                 x: {
                   beginAtZero: true,
                   max: 100,
-                  ticks: { callback: (v) => v + '%' },
+                  ticks: {
+                    padding: 4,
+                    callback: (v) => v + '%',
+                    font: { size: 11 }
+                  },
                   grid: { color: 'rgba(0,0,0,.06)' }
                 },
-                y: { grid: { display: false } }
+                y: {
+                  ticks: { padding: 4, font: { size: 11 } },
+                  grid: { display: false }
+                }
               },
               plugins: {
                 legend: { display: false },
@@ -657,11 +699,11 @@
                   display: true,
                   formatter: (v) => `${v}%`,
                   anchor: 'end',
-                  align: 'right',
-                  offset: 4,
+                  align: 'right',   // keep to the right end of the bar
+                  offset: 2,        // closer to the bar end
                   clamp: true,
                   color: '#111',
-                  font: { family: Chart.defaults.font.family, size: 12, weight: '700' }
+                  font: { family: Chart.defaults.font.family, size: 11, weight: '700' }
                 },
                 smartValueLabels: false
               },
@@ -842,8 +884,8 @@
       chip.classList.add('active');
     }); *@
 
-        // ===== Role summary (unchanged logic) =====
-        const roleCard = byId('roleSummaryCard');
+          // ===== Role summary (unchanged logic) =====
+          const roleCard = byId('roleSummaryCard');
     const roleBadge = byId('roleSummaryBadge');
     const roleRows = byId('roleSummaryRows');
 
@@ -1109,12 +1151,12 @@
         for (const r of rows) {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-                                          <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
-                                          <td>${r.startDate ?? '—'}</td>
-                                          <td>${r.endDate ?? '—'}</td>
-                                          <td>${r.actual ?? '—'}</td>
-                                          <td>${r.target ?? '—'}</td>
-                                          <td>${r.forecast ?? '—'}</td>`;
+                                            <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
+                                            <td>${r.startDate ?? '—'}</td>
+                                            <td>${r.endDate ?? '—'}</td>
+                                            <td>${r.actual ?? '—'}</td>
+                                            <td>${r.target ?? '—'}</td>
+                                            <td>${r.forecast ?? '—'}</td>`;
           tableBody.appendChild(tr);
         }
       }
@@ -1150,8 +1192,8 @@
       return 'green';
     } *@
 
-        // Augment loadKpiSummary to toggle the admin button (monkey-patch style)
-        const _loadKpiSummary_orig = loadKpiSummary;
+          // Augment loadKpiSummary to toggle the admin button (monkey-patch style)
+          const _loadKpiSummary_orig = loadKpiSummary;
     loadKpiSummary = async function () {
       await _loadKpiSummary_orig();
 
