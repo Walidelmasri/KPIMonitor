@@ -61,30 +61,30 @@ namespace KPIMonitor.Controllers
             return rec?.EmpId;
         }
         // ---- Admin helper (Admin OR SuperAdmin) ----
-// ---- Admin helper (Admin OR SuperAdmin) ----
-private bool IsAdminOrSuperAdmin()
-{
-    var sam = Sam(); // "walid.salem" etc.
-    if (string.IsNullOrWhiteSpace(sam)) return false;
+        // ---- Admin helper (Admin OR SuperAdmin) ----
+        private bool IsAdminOrSuperAdmin()
+        {
+            var sam = Sam(); // "walid.salem" etc.
+            if (string.IsNullOrWhiteSpace(sam)) return false;
 
-    var admins = _cfg.GetSection("App:AdminUsers").Get<string[]>() ?? Array.Empty<string>();
-    var supers = _cfg.GetSection("App:SuperAdminUsers").Get<string[]>() ?? Array.Empty<string>();
+            var admins = _cfg.GetSection("App:AdminUsers").Get<string[]>() ?? Array.Empty<string>();
+            var supers = _cfg.GetSection("App:SuperAdminUsers").Get<string[]>() ?? Array.Empty<string>();
 
-    bool inAdmins = admins.Any(a => string.Equals(a?.Trim(), sam, StringComparison.OrdinalIgnoreCase));
-    bool inSupers = supers.Any(a => string.Equals(a?.Trim(), sam, StringComparison.OrdinalIgnoreCase));
+            bool inAdmins = admins.Any(a => string.Equals(a?.Trim(), sam, StringComparison.OrdinalIgnoreCase));
+            bool inSupers = supers.Any(a => string.Equals(a?.Trim(), sam, StringComparison.OrdinalIgnoreCase));
 
-    // Also allow your authorizer if it’s wired the same way
-    try
-    {
-        if (_admin?.IsSuperAdmin(User) == true) return true;
+            // Also allow your authorizer if it’s wired the same way
+            try
+            {
+                if (_admin?.IsSuperAdmin(User) == true) return true;
 
-        var m = _admin?.GetType().GetMethod("IsAdmin", new[] { typeof(ClaimsPrincipal) });
-        if (m != null && (bool)m.Invoke(_admin, new object[] { User })!) return true;
-    }
-    catch { /* ignore */ }
+                var m = _admin?.GetType().GetMethod("IsAdmin", new[] { typeof(ClaimsPrincipal) });
+                if (m != null && (bool)m.Invoke(_admin, new object[] { User })!) return true;
+            }
+            catch { /* ignore */ }
 
-    return inAdmins || inSupers;
-}
+            return inAdmins || inSupers;
+        }
         [HttpPost]
         public async Task<IActionResult> AdminSetKpiStatus(decimal kpiId, string status)
         {
@@ -1239,6 +1239,203 @@ private bool IsAdminOrSuperAdmin()
                 .ToList();
 
             return Json(chips);
+        }
+        [HttpGet]
+        public async Task<IActionResult> GetRedShareByPillar(CancellationToken ct = default)
+        {
+            // Latest active plan id per KPI (same approach as your pies)
+            var latestPlanIds = await _db.KpiYearPlans
+                .AsNoTracking()
+                .Where(p => p.IsActive == 1 && p.PeriodId != null)
+                .GroupBy(p => p.KpiId)
+                .Select(g => g.Max(p => p.KpiYearPlanId))
+                .ToListAsync(ct);
+
+            if (latestPlanIds.Count == 0)
+                return Json(new { items = Array.Empty<object>() });
+
+            // Map plan -> year (so we only consider facts from that plan's year)
+            var planTriples = await _db.KpiYearPlans
+                .AsNoTracking()
+                .Where(p => latestPlanIds.Contains(p.KpiYearPlanId))
+                .Select(p => new { p.KpiId, p.KpiYearPlanId, Year = p.Period!.Year })
+                .ToListAsync(ct);
+
+            var planById = planTriples.ToDictionary(x => x.KpiYearPlanId, x => x);
+            var planIdSet = latestPlanIds.ToHashSet();
+
+            // Facts minimal projection; order by (Plan desc, Period.StartDate desc)
+            var facts = await _db.KpiFacts
+                .AsNoTracking()
+                .Where(f => f.IsActive == 1
+                         && f.StatusCode != null
+                         && planIdSet.Contains(f.KpiYearPlanId))
+                .Select(f => new
+                {
+                    f.KpiId,
+                    f.KpiYearPlanId,
+                    f.StatusCode,
+                    PeriodYear = f.Period!.Year,
+                    Start = f.Period!.StartDate
+                })
+                .ToListAsync(ct);
+
+            // Only facts that belong to same year as the plan
+            var sameYearFacts = facts.Where(f =>
+            {
+                if (!planById.TryGetValue(f.KpiYearPlanId, out var p)) return false;
+                return f.PeriodYear == p.Year;
+            });
+
+            // Latest status per KPI (respects monthly/quarterly via StartDate)
+            var latest = sameYearFacts
+                .GroupBy(f => f.KpiId)
+                .Select(g => g.OrderByDescending(x => x.KpiYearPlanId)
+                              .ThenByDescending(x => x.Start)
+                              .Select(x => new { x.KpiId, x.StatusCode })
+                              .First())
+                .ToList();
+
+            static string CanonStatus(string? code)
+            {
+                var s = (code ?? "").Trim().ToLowerInvariant();
+                return s switch
+                {
+                    "green" or "conforme" or "ok" => "green",
+                    "red" or "ecart" or "needs attention" => "red",
+                    "orange" or "rattrapage" or "catching up" => "orange",
+                    "blue" or "attente" or "data missing" => "blue",
+                    _ => "unknown"
+                };
+            }
+
+            // Kpi -> Pillar & pillar name
+            var kpiToPillar = await _db.DimKpis
+                .AsNoTracking()
+                .Include(k => k.Objective!)
+                    .ThenInclude(o => o.Pillar)
+                .Select(k => new
+                {
+                    k.KpiId,
+                    PillarId = k.Objective!.PillarId,
+                    PillarName = k.Objective!.Pillar!.PillarName
+                })
+                .ToListAsync(ct);
+
+            var latestStatusByKpi = latest
+                .ToDictionary(x => x.KpiId, x => CanonStatus(x.StatusCode));
+
+            // Aggregate per pillar: total KPIs that have a latest status; red subset
+            var items = kpiToPillar
+                .GroupBy(x => new { x.PillarId, x.PillarName })
+                .Select(g =>
+                {
+                    var total = g.Count(xx => latestStatusByKpi.ContainsKey(xx.KpiId));
+                    var red = g.Count(xx => latestStatusByKpi.TryGetValue(xx.KpiId, out var s) && s == "red");
+                    var pct = total == 0 ? 0 : (double)red / total;
+                    return new
+                    {
+                        pillarId = g.Key.PillarId,
+                        pillarName = string.IsNullOrWhiteSpace(g.Key.PillarName) ? $"Pillar {g.Key.PillarId}" : g.Key.PillarName,
+                        red,
+                        total,
+                        pct
+                    };
+                })
+                .OrderByDescending(x => x.pct)
+                .ToList();
+
+            return Json(new { items });
+        }
+        [HttpGet]
+        public async Task<IActionResult> GetRedKpisForPillar(decimal pillarId, CancellationToken ct = default)
+        {
+            // Latest active plan id per KPI
+            var latestPlanIds = await _db.KpiYearPlans
+                .AsNoTracking()
+                .Where(p => p.IsActive == 1 && p.PeriodId != null)
+                .GroupBy(p => p.KpiId)
+                .Select(g => g.Max(p => p.KpiYearPlanId))
+                .ToListAsync(ct);
+
+            if (latestPlanIds.Count == 0)
+                return Json(new { items = Array.Empty<object>() });
+
+            var planTriples = await _db.KpiYearPlans
+                .AsNoTracking()
+                .Where(p => latestPlanIds.Contains(p.KpiYearPlanId))
+                .Select(p => new { p.KpiId, p.KpiYearPlanId, Year = p.Period!.Year })
+                .ToListAsync(ct);
+
+            var planById = planTriples.ToDictionary(x => x.KpiYearPlanId, x => x);
+            var planIdSet = latestPlanIds.ToHashSet();
+
+            var facts = await _db.KpiFacts
+                .AsNoTracking()
+                .Where(f => f.IsActive == 1
+                         && f.StatusCode != null
+                         && planIdSet.Contains(f.KpiYearPlanId))
+                .Select(f => new
+                {
+                    f.KpiId,
+                    f.KpiYearPlanId,
+                    f.StatusCode,
+                    PeriodYear = f.Period!.Year,
+                    Start = f.Period!.StartDate
+                })
+                .ToListAsync(ct);
+
+            var sameYearFacts = facts.Where(f =>
+            {
+                if (!planById.TryGetValue(f.KpiYearPlanId, out var p)) return false;
+                return f.PeriodYear == p.Year;
+            });
+
+            var latest = sameYearFacts
+                .GroupBy(f => f.KpiId)
+                .Select(g => g.OrderByDescending(x => x.KpiYearPlanId)
+                              .ThenByDescending(x => x.Start)
+                              .Select(x => new { x.KpiId, x.StatusCode })
+                              .First())
+                .ToList();
+
+            static string CanonStatus(string? code)
+            {
+                var s = (code ?? "").Trim().ToLowerInvariant();
+                return s switch
+                {
+                    "green" or "conforme" or "ok" => "green",
+                    "red" or "ecart" or "needs attention" => "red",
+                    "orange" or "rattrapage" or "catching up" => "orange",
+                    "blue" or "attente" or "data missing" => "blue",
+                    _ => "unknown"
+                };
+            }
+
+            var redIds = latest
+                .Where(x => CanonStatus(x.StatusCode) == "red")
+                .Select(x => x.KpiId)
+                .ToHashSet();
+
+            // Chip-ready rows (same fields you use elsewhere to build labels)
+            var items = await _db.DimKpis
+                .AsNoTracking()
+                .Include(k => k.Objective!)
+                    .ThenInclude(o => o.Pillar)
+                .Where(k => redIds.Contains(k.KpiId) && k.Objective!.PillarId == pillarId)
+                .Select(k => new
+                {
+                    id = k.KpiId,
+                    pillarId = k.Objective!.PillarId,
+                    objectiveId = k.ObjectiveId,
+                    // keep it simple; your chip renderer uses .text for display
+                    text = k.KpiName
+                })
+                .OrderBy(x => x.text)
+                .Take(300)
+                .ToListAsync(ct);
+
+            return Json(new { items });
         }
 
     }

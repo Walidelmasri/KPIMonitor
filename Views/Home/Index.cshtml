@@ -103,12 +103,12 @@
         </div>
 
         <div class="row g-4" id="summaryPies">
-          <div class="col-lg-6">
+          <!-- LEFT: KPI status doughnut -->
+          <div class="col-lg-4">
             <div class="border rounded-3 p-3 h-100">
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <div class="fw-bold text-secondary">Indicators by Status</div>
                 <div class="d-flex gap-3">
-                  <!-- label first, number to the right -->
                   <div class="kpi"><span class="lbl">Target Achieved</span><span class="n ms-1" id="cntGreen">0</span>
                   </div>
                   <div class="kpi"><span class="lbl">On Forecast</span><span class="n ms-1" id="cntOrange">0</span>
@@ -123,12 +123,25 @@
             </div>
           </div>
 
-          <div class="col-lg-6">
+          <!-- MIDDLE: Red Share by Pillar (NEW) -->
+          <div class="col-lg-4">
+            <div class="border rounded-3 p-3 h-100">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="fw-bold text-secondary">Red Share by Pillar</div>
+                <span class="text-muted small" id="redShareLoading">Loading…</span>
+              </div>
+              <div class="pie">
+                <canvas id="barRedShare" aria-label="Red Share by Pillar" role="img"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: Action status doughnut -->
+          <div class="col-lg-4">
             <div class="border rounded-3 p-3 h-100">
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <div class="fw-bold text-secondary">Action Plans by Status</div>
                 <div class="d-flex gap-3">
-                  <!-- label first, number to the right -->
                   <div class="kpi"><span class="lbl">To&nbsp;Do</span><span class="n ms-1" id="cntTodo">0</span></div>
                   <div class="kpi"><span class="lbl">In&nbsp;Progress</span><span class="n ms-1" id="cntProg">0</span>
                   </div>
@@ -141,6 +154,7 @@
             </div>
           </div>
         </div>
+
         <!-- KPIs from clicked segment -->
         <div id="segmentKpiList" class="mt-3 d-none">
           <div class="d-flex align-items-center justify-content-between mb-1">
@@ -277,7 +291,7 @@
       </tbody>
     </table>
   </div>
-@* </div> *@
+  @* </div> *@
 </div>
 
 <!-- Bulk Edit Modal (content loaded via AJAX) -->
@@ -561,7 +575,7 @@
               legend: { display: true, position: 'bottom' },
               tooltip: { enabled: true, callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw}` } },
               datalabels: { display: false },
-              smartValueLabels : false
+              smartValueLabels: false
             },
             onClick: (evt, _els, chart) => onPieClick(evt, chart, 'kpi')
           }
@@ -580,11 +594,120 @@
               legend: { display: true, position: 'bottom' },
               tooltip: { enabled: true, callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw}` } },
               datalabels: { display: false },
-              smartValueLabels : false
+              smartValueLabels: false
             },
             onClick: (evt, _els, chart) => onPieClick(evt, chart, 'action')
           }
         });
+        // ---- Reds share by pillar (middle chart) ----
+        try {
+          const shareCtx = document.getElementById('barRedShare').getContext('2d');
+          const loading = document.getElementById('redShareLoading');
+          if (window._barRedShare) window._barRedShare.destroy();
+
+          const resp = await api('@Url.Action("GetRedShareByPillar", "Home")');
+          const items = Array.isArray(resp?.items) ? resp.items : [];
+
+          // Sort by percentage desc
+          items.sort((a, b) => (b.pct || 0) - (a.pct || 0));
+
+          const labels = items.map(x => x.pillarName);
+          const pctData = items.map(x => Math.round((x.pct || 0) * 100));
+          const redCounts = items.map(x => x.red);
+          const totals = items.map(x => x.total);
+          const pillarIds = items.map(x => x.pillarId);
+
+          window._barRedShare = new Chart(shareCtx, {
+            type: 'bar',
+            data: {
+              labels,
+              datasets: [{
+                label: '% Red',
+                data: pctData,
+                borderWidth: 1,
+                backgroundColor: '#dc3545',
+                borderColor: '#dc3545'
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              indexAxis: 'y',
+              scales: {
+                x: {
+                  beginAtZero: true,
+                  max: 100,
+                  ticks: { callback: (v) => v + '%' },
+                  grid: { color: 'rgba(0,0,0,.06)' }
+                },
+                y: { grid: { display: false } }
+              },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  enabled: true,
+                  callbacks: {
+                    label: (ctx) => {
+                      const i = ctx.dataIndex;
+                      return `${pctData[i]}%  (${redCounts[i]} / ${totals[i]} red)`;
+                    }
+                  }
+                },
+                datalabels: {
+                  display: true,
+                  formatter: (v) => `${v}%`,
+                  anchor: 'end',
+                  align: 'right',
+                  offset: 4,
+                  clamp: true,
+                  color: '#111',
+                  font: { family: Chart.defaults.font.family, size: 12, weight: '700' }
+                },
+                smartValueLabels: false
+              },
+              onClick: async (evt, _els, chart) => {
+                const points = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+                if (!points || !points.length) return;
+                const idx = points[0].index;
+                const pillarId = pillarIds[idx];
+                const pillarName = labels[idx];
+
+                // Reuse your chips UI
+                segRows.innerHTML = '<span class="text-muted small ms-1">Loading…</span>';
+                segWrap.classList.remove('d-none');
+                segTitle.textContent = `Red KPIs — ${pillarName}`;
+
+                try {
+                  const data = await api('@Url.Action("GetRedKpisForPillar", "Home")' + `?pillarId=${encodeURIComponent(pillarId)}`);
+                  const list = Array.isArray(data?.items) ? data.items : [];
+                  if (!list.length) {
+                    segRows.innerHTML = '<span class="text-muted small ms-1">No red KPIs.</span>';
+                    return;
+                  }
+                  segRows.innerHTML = '';
+                  for (const it of list) {
+                    const chip = document.createElement('span');
+                    chip.className = 'role-chip';
+                    chip.textContent = it.text || String(it.id);
+                    chip.title = it.text || String(it.id);
+                    chip.dataset.kpiId = it.id;
+                    chip.dataset.pillarId = it.pillarId;
+                    chip.dataset.objectiveId = it.objectiveId;
+                    segRows.appendChild(chip);
+                  }
+                } catch {
+                  segRows.innerHTML = '<span class="text-danger small ms-1">Failed to load KPIs.</span>';
+                }
+              }
+            }
+          });
+
+          if (loading) loading.textContent = '';
+        } catch {
+          const loading = document.getElementById('redShareLoading');
+          if (loading) loading.textContent = 'Could not load.';
+        }
+
         // ---- Red monthly trend line (12 months) ----
         try {
           const trend = await api('@Url.Action("GetRedMonthlyTrend", "Home")');
@@ -719,8 +842,8 @@
       chip.classList.add('active');
     }); *@
 
-      // ===== Role summary (unchanged logic) =====
-      const roleCard = byId('roleSummaryCard');
+        // ===== Role summary (unchanged logic) =====
+        const roleCard = byId('roleSummaryCard');
     const roleBadge = byId('roleSummaryBadge');
     const roleRows = byId('roleSummaryRows');
 
@@ -986,12 +1109,12 @@
         for (const r of rows) {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-                                        <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
-                                        <td>${r.startDate ?? '—'}</td>
-                                        <td>${r.endDate ?? '—'}</td>
-                                        <td>${r.actual ?? '—'}</td>
-                                        <td>${r.target ?? '—'}</td>
-                                        <td>${r.forecast ?? '—'}</td>`;
+                                          <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
+                                          <td>${r.startDate ?? '—'}</td>
+                                          <td>${r.endDate ?? '—'}</td>
+                                          <td>${r.actual ?? '—'}</td>
+                                          <td>${r.target ?? '—'}</td>
+                                          <td>${r.forecast ?? '—'}</td>`;
           tableBody.appendChild(tr);
         }
       }
@@ -1027,8 +1150,8 @@
       return 'green';
     } *@
 
-      // Augment loadKpiSummary to toggle the admin button (monkey-patch style)
-      const _loadKpiSummary_orig = loadKpiSummary;
+        // Augment loadKpiSummary to toggle the admin button (monkey-patch style)
+        const _loadKpiSummary_orig = loadKpiSummary;
     loadKpiSummary = async function () {
       await _loadKpiSummary_orig();
 
