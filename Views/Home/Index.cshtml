@@ -560,7 +560,8 @@
             plugins: {
               legend: { display: true, position: 'bottom' },
               tooltip: { enabled: true, callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw}` } },
-              datalabels: { display: false }
+              datalabels: { display: false },
+              smartValueLabels : false
             },
             onClick: (evt, _els, chart) => onPieClick(evt, chart, 'kpi')
           }
@@ -578,7 +579,8 @@
             plugins: {
               legend: { display: true, position: 'bottom' },
               tooltip: { enabled: true, callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw}` } },
-              datalabels: { display: false }
+              datalabels: { display: false },
+              smartValueLabels : false
             },
             onClick: (evt, _els, chart) => onPieClick(evt, chart, 'action')
           }
