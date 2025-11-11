@@ -83,12 +83,9 @@
   /* Make left/right headers stop colliding when the pies became 4-col */
   #summaryPies .d-flex.gap-3 {
     flex-wrap: wrap;
-    /* allow the counters to wrap neatly */
     gap: 6px 12px;
-    /* tighter gap so title has room */
     justify-content: flex-end;
     max-width: 60%;
-    /* don't let counters steal the whole row */
   }
 
   #summaryPies .kpi .lbl {
@@ -104,10 +101,18 @@
     min-height: 220px;
   }
 
-  /* same as pies */
   #summaryPies .bar-share .card-title {
     margin-bottom: .25rem;
   }
+
+  /* Bullets + summary under Red Share by Pillar */
+  #barShareBullets { line-height: 1.25; }
+  #barShareBullets ul { margin: 0; padding-left: 1.1rem; }
+
+  /* Stack the Action Plans counters vertically on the right card */
+  #summaryPies .summary-counts-vertical .kpi { justify-content: flex-end; gap: 6px; }
+  #summaryPies .summary-counts-vertical .kpi .lbl { font-size: 0.85rem; }
+  #summaryPies .summary-counts-vertical .kpi .n   { font-size: 1.25rem; }
 </style>
 
 <div class="container py-4">
@@ -136,12 +141,10 @@
           <div class="col-lg-4">
             <div class="border rounded-3 p-3 h-100">
               <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="fw-bold text-secondary">Indicators by Status</div>
+                <div class="fw-bold text-secondary">Indicators (<span id="cntTotal">—</span>)</div>
                 <div class="d-flex gap-3">
-                  <div class="kpi"><span class="lbl">Target Achieved</span><span class="n ms-1" id="cntGreen">0</span>
-                  </div>
-                  <div class="kpi"><span class="lbl">On Forecast</span><span class="n ms-1" id="cntOrange">0</span>
-                  </div>
+                  <div class="kpi"><span class="lbl">Target Achieved</span><span class="n ms-1" id="cntGreen">0</span></div>
+                  <div class="kpi"><span class="lbl">On Forecast</span><span class="n ms-1" id="cntOrange">0</span></div>
                   <div class="kpi"><span class="lbl">Target Missed</span><span class="n ms-1" id="cntRed">0</span></div>
                   <div class="kpi"><span class="lbl">Data Missing</span><span class="n ms-1" id="cntBlue">0</span></div>
                 </div>
@@ -152,7 +155,7 @@
             </div>
           </div>
 
-          <!-- MIDDLE: Red Share by Pillar (NEW) -->
+          <!-- MIDDLE: Red Share by Pillar -->
           <div class="col-lg-4">
             <div class="border rounded-3 p-3 h-100 bar-share">
               <div class="d-flex justify-content-between align-items-center mb-2">
@@ -161,6 +164,8 @@
               </div>
               <div class="pie">
                 <canvas id="barRedShare" aria-label="Red Share by Pillar" role="img"></canvas>
+                <div id="barShareBullets" class="small text-muted mt-2"></div>
+                <div id="barShareSummary" class="small text-muted mt-1"></div>
               </div>
             </div>
           </div>
@@ -170,10 +175,9 @@
             <div class="border rounded-3 p-3 h-100">
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <div class="fw-bold text-secondary">Action Plans by Status</div>
-                <div class="d-flex gap-3">
+                <div class="d-flex flex-column align-items-end gap-1 summary-counts-vertical">
                   <div class="kpi"><span class="lbl">To&nbsp;Do</span><span class="n ms-1" id="cntTodo">0</span></div>
-                  <div class="kpi"><span class="lbl">In&nbsp;Progress</span><span class="n ms-1" id="cntProg">0</span>
-                  </div>
+                  <div class="kpi"><span class="lbl">In&nbsp;Progress</span><span class="n ms-1" id="cntProg">0</span></div>
                   <div class="kpi"><span class="lbl">Done</span><span class="n ms-1" id="cntDone">0</span></div>
                 </div>
               </div>
@@ -192,7 +196,8 @@
           </div>
           <div class="role-list" id="segmentKpiRows"></div>
         </div>
-        <!-- Red monthly trend (same card under pies) -->
+
+        <!-- Red monthly trend (under pies) -->
         <div class="mt-3">
           <div class="d-flex justify-content-between align-items-center mb-2">
             <div class="fw-bold text-secondary">Red KPIs this Year</div>
@@ -205,7 +210,7 @@
       </div>
     </div>
 
-    <!-- ======= Roles summary card (second) ======= -->
+    <!-- ======= Roles summary card ======= -->
     <div class="card shadow-sm rounded-4 mb-4" id="roleSummaryCard">
       <div class="card-body">
         <div class="d-flex align-items-center justify-content-between mb-1">
@@ -258,14 +263,10 @@
           <div class="card-body d-flex flex-column justify-content-between h-100">
             <div>
               <h6 class="card-title text-secondary fw-bold mb-3">KPI Details</h6>
-              <p class="mb-2" style="font-size: larger;"><strong>👁️ Owner:</strong> <span id="metaOwner"
-                  class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>✍️ Editor:</strong> <span id="metaEditor"
-                  class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>📅 Frequency:</strong> <span id="metaFrequency"
-                  class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>🔢 Unit:</strong> <span id="metaUnit"
-                  class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>👁️ Owner:</strong> <span id="metaOwner" class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>✍️ Editor:</strong> <span id="metaEditor" class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>📅 Frequency:</strong> <span id="metaFrequency" class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>🔢 Unit:</strong> <span id="metaUnit" class="text-dark">—</span></p>
             </div>
             <div class="mt-auto">
               <div class="mb-4 text-center">
@@ -275,9 +276,7 @@
               <div class="text-center">
                 <div class="text-muted mb-1">Status</div>
                 <span id="metaStatus" class="status-pill">—</span>
-                <!-- Admin/SuperAdmin-only manual set button -->
                 <div class="mt-2">
-                  <!-- Admin/SuperAdmin-only manual set button (server-side visibility) -->
                   <button asp-admin-only id="btnAdminSetStatus" type="button" class="btn btn-outline-secondary btn-sm">
                     ⚙️ Set Status
                   </button>
@@ -320,10 +319,9 @@
       </tbody>
     </table>
   </div>
-  @* </div> *@
 </div>
 
-<!-- Bulk Edit Modal (content loaded via AJAX) -->
+<!-- Bulk Edit Modal -->
 <div class="modal fade" id="editKpiModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content"></div>
@@ -355,14 +353,14 @@
     </div>
   </div>
 </div>
-@section Scripts {
-  <!-- Tajawal (if not already in layout) -->
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;800&display=swap" rel="stylesheet">
 
+@section Scripts {
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
   <script>
-    // ---- number formatter FIRST (used by defaults + chart) ----
+    // ---- number formatter ----
     function _fmtShort(v) {
       const n = Number(v);
       if (!isFinite(n)) return '';
@@ -373,10 +371,11 @@
       return n.toString();
     }
 
-    // Global chart font -> Tajawal
+    // Chart defaults
     Chart.defaults.font.family = 'Tajawal, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
     Chart.defaults.font.size = 12;
-    // smooth scroll target + flag
+
+    // Smooth scroll target + flag
     let _pendingScrollToChart = false;
     function _scrollToChart() {
       const el = document.getElementById('chartSection');
@@ -384,7 +383,7 @@
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    // === SmartValueLabels plugin ===
+    // SmartValueLabels plugin (unchanged)
     const SmartValueLabels = {
       id: 'smartValueLabels',
       afterDatasetsDraw(chart, _args, opts) {
@@ -484,12 +483,12 @@
             if (!changed) break;
           }
 
-          items.sort((a, b) => a.priority - b.priority);
-          items.forEach(it => {
-            ctx.fillStyle = it.color;
-            if (o.outline) { ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.strokeText(it.text, it.x, it.y); }
-            ctx.fillText(it.text, it.x, it.y);
-          });
+        items.sort((a, b) => a.priority - b.priority);
+        items.forEach(it => {
+          ctx.fillStyle = it.color;
+          if (o.outline) { ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.strokeText(it.text, it.x, it.y); }
+          ctx.fillText(it.text, it.x, it.y);
+        });
         });
 
         ctx.restore();
@@ -497,17 +496,15 @@
     };
     Chart.register(SmartValueLabels);
 
-    // ---- ChartDataLabels defaults ----
+    // ChartDataLabels defaults OFF
     Chart.register(ChartDataLabels);
-    // Turn OFF globally; we'll turn it ON per-chart where needed.
     Chart.defaults.set('plugins.datalabels', {
       display: false,
       color: '#111',
       font: { family: Chart.defaults.font.family, weight: 'bold' }
     });
 
-
-    // ---------- tiny helpers ----------
+    // ---------- helpers ----------
     const byId = id => document.getElementById(id);
     function uiStatus(codeOrLabel) {
       const s = String(codeOrLabel || '').trim().toLowerCase();
@@ -519,6 +516,16 @@
         default: return '—';
       }
     }
+    // THIS was referenced later; keep it defined to avoid runtime errors
+    function canonStatusForUi(raw) {
+      const s = String(raw || '').trim().toLowerCase();
+      if (['green', 'conforme', 'ok'].includes(s)) return 'green';
+      if (['orange', 'rattrapage', 'catching up'].includes(s)) return 'orange';
+      if (['red', 'ecart', 'needs attention'].includes(s)) return 'red';
+      if (['blue', 'attente', 'data missing'].includes(s)) return 'blue';
+      return 'green';
+    }
+
     const api = (path) => {
       const u = new URL(path, window.location.origin);
       u.searchParams.set('_ts', Date.now().toString());
@@ -541,7 +548,7 @@
     const tableBody = byId('factsTbody');
     const btnEditKpi = byId('openEditKpiBtn');
 
-    // NEW: segment chips nodes
+    // Segment chips nodes
     const segWrap = byId('segmentKpiList');
     const segRows = byId('segmentKpiRows');
     const segTitle = byId('segmentTitle');
@@ -585,13 +592,14 @@
         // pies
         const kpiVals = [k.green ?? 0, k.orange ?? 0, k.red ?? 0, k.blue ?? 0];
         const actVals = [a.todo ?? 0, a.inprogress ?? 0, a.done ?? 0];
+        byId('cntTotal').textContent = kpiVals.reduce((s, v) => s + (Number(v) || 0), 0);
 
         const kpiCtx = document.getElementById('pieKpiStatus').getContext('2d');
         const actCtx = document.getElementById('pieActionStatus').getContext('2d');
         if (pieKpis) pieKpis.destroy();
         if (pieActs) pieActs.destroy();
 
-        // KPI Status pie with new labels
+        // KPI Status pie
         pieKpis = new Chart(kpiCtx, {
           type: 'doughnut',
           data: {
@@ -628,7 +636,8 @@
             onClick: (evt, _els, chart) => onPieClick(evt, chart, 'action')
           }
         });
-        // ---- Reds share by pillar (middle chart) ----
+
+        // ---- Reds share by pillar ----
         try {
           const shareCtx = document.getElementById('barRedShare').getContext('2d');
           const loading = document.getElementById('redShareLoading');
@@ -637,28 +646,28 @@
           const resp = await api('@Url.Action("GetRedShareByPillar", "Home")');
           const items = Array.isArray(resp?.items) ? resp.items : [];
 
-          // Sort by percentage desc
+          // Sort by percentage desc (server gives pct as 0..1)
           items.sort((a, b) => (b.pct || 0) - (a.pct || 0));
 
           const labels = items.map(x => x.pillarName);
-          const pctData = items.map(x => Math.round((x.pct || 0) * 100));
           const redCounts = items.map(x => x.red);
           const totals = items.map(x => x.total);
           const pillarIds = items.map(x => x.pillarId);
           const short = (s) => (String(s).length > 26 ? String(s).slice(0, 23) + '…' : s);
           const yLabels = labels.map(short);
+          const maxTotal = Math.max(1, ...totals);
 
           window._barRedShare = new Chart(shareCtx, {
             type: 'bar',
             data: {
-              labels: yLabels,          // <— use shortened labels on the axis
+              labels: yLabels,
               datasets: [{
-                label: '% Red',
-                data: pctData,
+                label: 'Red / Total',
+                data: redCounts,
                 backgroundColor: '#dc3545',
                 borderColor: '#dc3545',
                 borderWidth: 1,
-                maxBarThickness: 16,    // <— keep bars slim
+                maxBarThickness: 16,
                 categoryPercentage: 0.7,
                 barPercentage: 0.8
               }]
@@ -666,15 +675,14 @@
             options: {
               responsive: true,
               maintainAspectRatio: false,
-              layout: { padding: { top: 6, right: 6, bottom: 0, left: 0 } },  // tighter frame
+              layout: { padding: { top: 6, right: 6, bottom: 0, left: 0 } },
               indexAxis: 'y',
               scales: {
                 x: {
                   beginAtZero: true,
-                  max: 100,
+                  max: maxTotal,
                   ticks: {
                     padding: 4,
-                    callback: (v) => v + '%',
                     font: { size: 11 }
                   },
                   grid: { color: 'rgba(0,0,0,.06)' }
@@ -691,18 +699,29 @@
                   callbacks: {
                     label: (ctx) => {
                       const i = ctx.dataIndex;
-                      return `${pctData[i]}%  (${redCounts[i]} / ${totals[i]} red)`;
+                      const red = redCounts[i];
+                      const tot = totals[i] || 0;
+                      const p = tot ? Math.round((red / tot) * 100) : 0;
+                      return `${red} of ${tot} (${p}%)`;
                     }
                   }
                 },
                 datalabels: {
                   display: true,
-                  formatter: (v) => `${v}%`,
+                  formatter: (_v, ctx) => {
+                    const i = ctx.dataIndex;
+                    return `${redCounts[i]}/${totals[i]}`;
+                  },
                   anchor: 'end',
-                  align: 'right',   // keep to the right end of the bar
-                  offset: 2,        // closer to the bar end
+                  align: 'right',
+                  offset: -4,   // inside bar tip
                   clamp: true,
-                  color: '#111',
+                  color: (ctx) => {
+                    const i = ctx.dataIndex;
+                    const tot = totals[i] || 0;
+                    const p = tot ? (redCounts[i] / tot) : 0;
+                    return p >= 0.4 ? '#fff' : '#111';
+                  },
                   font: { family: Chart.defaults.font.family, size: 11, weight: '700' }
                 },
                 smartValueLabels: false
@@ -714,7 +733,7 @@
                 const pillarId = pillarIds[idx];
                 const pillarName = labels[idx];
 
-                // Reuse your chips UI
+                // Chips UI
                 segRows.innerHTML = '<span class="text-muted small ms-1">Loading…</span>';
                 segWrap.classList.remove('d-none');
                 segTitle.textContent = `Red KPIs — ${pillarName}`;
@@ -744,24 +763,64 @@
             }
           });
 
+          // ---- bullets under the chart ----
+          const bulletsEl = document.getElementById('barShareBullets');
+          if (bulletsEl) {
+            const sum = (arr) => arr.reduce((a, b) => a + (Number(b) || 0), 0);
+            const totalRed = sum(redCounts);
+            const totalKpis = sum(totals);
+            const overallPct = totalKpis ? Math.round((totalRed / totalKpis) * 100) : 0;
+
+            const top = items[0];
+            const topName = top ? top.pillarName : '';
+            const topFrac = top ? `${top.red}/${top.total}` : '—';
+
+            const zeroCount = items.filter(x => (x.red || 0) === 0).length;
+
+            bulletsEl.innerHTML = `
+              <ul>
+                <li><strong>Total red:</strong> ${totalRed} of ${totalKpis} (${overallPct}%)</li>
+                <li><strong>Highest share:</strong> ${topName ? topName + ' — ' + topFrac : '—'}</li>
+                <li><strong>Pillars with 0 red:</strong> ${zeroCount}</li>
+              </ul>`;
+          }
+
+          // ---- quick change summary (latest vs previous) ----
+          try {
+            const ch = await api('@Url.Action("GetLatestStatusChanges", "Home")');
+            const line = [];
+            const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+            if (typeof ch?.toGreen  === 'number' && ch.toGreen  > 0) line.push(plural(ch.toGreen,  'turned green'));
+            if (typeof ch?.toRed    === 'number' && ch.toRed    > 0) line.push(plural(ch.toRed,    'turned red'));
+            if (typeof ch?.toOrange === 'number' && ch.toOrange > 0) line.push(plural(ch.toOrange, 'turned orange'));
+            if (typeof ch?.toBlue   === 'number' && ch.toBlue   > 0) line.push(plural(ch.toBlue,   'turned blue'));
+
+            const el = document.getElementById('barShareSummary');
+            if (el) {
+              el.textContent = (line.length && (ch.changed > 0))
+                ? `Latest vs previous: ${line.join(', ')}.`
+                : 'No status changes in the latest period.';
+            }
+          } catch { /* ignore */ }
+
           if (loading) loading.textContent = '';
         } catch {
           const loading = document.getElementById('redShareLoading');
           if (loading) loading.textContent = 'Could not load.';
         }
 
-        // ---- Red monthly trend line (12 months) ----
+        // ---- Red monthly trend line ----
         try {
           const trend = await api('@Url.Action("GetRedMonthlyTrend", "Home")');
           const trendCtx = document.getElementById('lineRedTrend').getContext('2d');
           if (lineTrend) lineTrend.destroy();
-          const labels = Array.isArray(trend?.labels) ? trend.labels : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          const labels = Array.isArray(trend?.labels) ? trend.labels : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
           const dataVals = Array.isArray(trend?.redCounts) ? trend.redCounts : new Array(12).fill(0);
-          // ADD this trim:
+
           const now = new Date();
-          const trendYear = Number(trend?.year) || now.getFullYear(); // if API doesn't return year, assume current
+          const trendYear = Number(trend?.year) || now.getFullYear();
           const isThisYear = trendYear === now.getFullYear();
-          const maxMonth = isThisYear ? (now.getMonth() + 1) : 12;    // slice to current month if this year
+          const maxMonth = isThisYear ? (now.getMonth() + 1) : 12;
 
           const labelsTrimmed = labels.slice(0, maxMonth);
           const dataTrimmed = dataVals.slice(0, maxMonth);
@@ -784,7 +843,7 @@
             },
             options: {
               responsive: true, maintainAspectRatio: false,
-              layout: { padding: { top: 18, bottom: 0 } }, // give datalabels some headroom
+              layout: { padding: { top: 18, bottom: 0 } },
               scales: {
                 x: { grid: { display: false } },
                 y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,.06)' } }
@@ -804,9 +863,7 @@
                   font: { family: Chart.defaults.font.family, size: 14, weight: '700' }
                 }
               }
-
             }
-
           });
           const tl = document.getElementById('trendLoading');
           if (tl) tl.textContent = '';
@@ -837,7 +894,7 @@
       }
     }
 
-    // Handle pie clicks -> fetch KPIs for that segment -> render chips -> click to select
+    // Handle pie clicks -> fetch KPIs -> chips
     async function onPieClick(evt, chart, kind) {
       const points = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
       if (!points || !points.length) return;
@@ -874,18 +931,19 @@
       }
     }
 
-    // Clicking segment chips behaves like role chips
-    @* document.getElementById('segmentKpiRows').addEventListener('click', async (e) => {
+    // Click on segment chips -> select KPI
+    document.getElementById('segmentKpiRows').addEventListener('click', async (e) => {
       const chip = e.target.closest('.role-chip'); if (!chip) return;
       const pillarId = chip.dataset.pillarId, objectiveId = chip.dataset.objectiveId, kpiId = chip.dataset.kpiId;
-      if (!kpiId) return; await selectKpiByIds(pillarId, objectiveId, kpiId);
-      // highlight selection
+      if (!kpiId) return;
+      _pendingScrollToChart = true;
+      await selectKpiByIds(pillarId, objectiveId, kpiId);
       document.querySelectorAll('#segmentKpiRows .role-chip').forEach(x => x.classList.remove('active'));
       chip.classList.add('active');
-    }); *@
+    });
 
-          // ===== Role summary (unchanged logic) =====
-          const roleCard = byId('roleSummaryCard');
+    // ===== Role summary =====
+    const roleCard = byId('roleSummaryCard');
     const roleBadge = byId('roleSummaryBadge');
     const roleRows = byId('roleSummaryRows');
 
@@ -924,24 +982,14 @@
         const ph = document.getElementById('roleSummaryPlaceholder'); if (ph) ph.textContent = 'Could not load your indicators.'; roleBadge.textContent = '—';
       }
     }
-    document.getElementById('segmentKpiRows').addEventListener('click', async (e) => {
-      const chip = e.target.closest('.role-chip'); if (!chip) return;
-      const pillarId = chip.dataset.pillarId, objectiveId = chip.dataset.objectiveId, kpiId = chip.dataset.kpiId;
-      if (!kpiId) return;
-      _pendingScrollToChart = true;                 // <-- add this line
-      await selectKpiByIds(pillarId, objectiveId, kpiId);
-      document.querySelectorAll('#segmentKpiRows .role-chip').forEach(x => x.classList.remove('active'));
-      chip.classList.add('active');
-    });
     roleRows.addEventListener('click', async (e) => {
       const chip = e.target.closest('.role-chip'); if (!chip) return;
       const pillarId = chip.dataset.pillarId, objectiveId = chip.dataset.objectiveId, kpiId = chip.dataset.kpiId;
       if (!kpiId) return;
-      _pendingScrollToChart = true;                 // <-- add this line
+      _pendingScrollToChart = true;
       await selectKpiByIds(pillarId, objectiveId, kpiId);
       markActiveRoleChip(kpiId);
     });
-
 
     function waitForOption(selectEl, value, timeout = 4000) {
       return new Promise((resolve, reject) => {
@@ -953,26 +1001,22 @@
         }, 80);
       });
     }
-    @* roleRows.addEventListener('click', async (e) => {
-      const chip = e.target.closest('.role-chip'); if (!chip) return;
-      const pillarId = chip.dataset.pillarId, objectiveId = chip.dataset.objectiveId, kpiId = chip.dataset.kpiId;
-      if (!kpiId) return; await selectKpiByIds(pillarId, objectiveId, kpiId); markActiveRoleChip(kpiId);
-    }); *@
-      async function selectKpiByIds(pillarId, objectiveId, kpiId) {
-        if (pillarId) {
-          if (!selPillar.options.length || selPillar.disabled) { await loadPillars(); }
-          await waitForOption(selPillar, pillarId);
-          if (selPillar.value !== String(pillarId)) { selPillar.value = String(pillarId); selPillar.dispatchEvent(new Event('change')); }
-        }
-        if (objectiveId) {
-          await waitForOption(selObjective, objectiveId);
-          if (selObjective.value !== String(objectiveId)) { selObjective.value = String(objectiveId); selObjective.dispatchEvent(new Event('change')); }
-        }
-        if (kpiId) {
-          await waitForOption(selKpi, kpiId);
-          if (selKpi.value !== String(kpiId)) { selKpi.value = String(kpiId); selKpi.dispatchEvent(new Event('change')); }
-        }
+
+    async function selectKpiByIds(pillarId, objectiveId, kpiId) {
+      if (pillarId) {
+        if (!selPillar.options.length || selPillar.disabled) { await loadPillars(); }
+        await waitForOption(selPillar, pillarId);
+        if (selPillar.value !== String(pillarId)) { selPillar.value = String(pillarId); selPillar.dispatchEvent(new Event('change')); }
       }
+      if (objectiveId) {
+        await waitForOption(selObjective, objectiveId);
+        if (selObjective.value !== String(objectiveId)) { selObjective.value = String(objectiveId); selObjective.dispatchEvent(new Event('change')); }
+      }
+      if (kpiId) {
+        await waitForOption(selKpi, kpiId);
+        if (selKpi.value !== String(kpiId)) { selKpi.value = String(kpiId); selKpi.dispatchEvent(new Event('change')); }
+      }
+    }
     function markActiveRoleChip(currentKpiId) {
       document.querySelectorAll('#roleSummaryRows .role-chip').forEach(el => {
         el.classList.toggle('active', currentKpiId && (el.dataset.kpiId === String(currentKpiId)));
@@ -1040,7 +1084,7 @@
             formatter: _fmtShort, fontSize: 12, fontWeight: '700', minGap: 14, padTop: 12, padBottom: 4, outline: true,
             perDataset: [
               { dy: -12, dx: 0, color: '#800080' }, // Actual
-              { dy: 12, dx: -8, color: '#7a7a7a' }, // Target
+              { dy: 12,  dx: -8, color: '#7a7a7a' }, // Target
               { dy: -16, dx: 8, color: '#fd7e14' }, // Forecast
               { dy: -12, dx: 0, color: '#7a7a7a' }  // Year Target
             ]
@@ -1052,7 +1096,9 @@
     });
 
     function clearChartAndTable() {
-      kpiChart.data.labels = []; for (const ds of kpiChart.data.datasets) ds.data = []; kpiChart.update();
+      kpiChart.data.labels = [];
+      for (const ds of kpiChart.data.datasets) ds.data = [];
+      kpiChart.update();
       tableBody.innerHTML = '<tr class="placeholder-row"><td colspan="6" class="text-center text-muted">—</td></tr>';
     }
     function clearMeta() {
@@ -1151,12 +1197,12 @@
         for (const r of rows) {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-                                            <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
-                                            <td>${r.startDate ?? '—'}</td>
-                                            <td>${r.endDate ?? '—'}</td>
-                                            <td>${r.actual ?? '—'}</td>
-                                            <td>${r.target ?? '—'}</td>
-                                            <td>${r.forecast ?? '—'}</td>`;
+            <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
+            <td>${r.startDate ?? '—'}</td>
+            <td>${r.endDate ?? '—'}</td>
+            <td>${r.actual ?? '—'}</td>
+            <td>${r.target ?? '—'}</td>
+            <td>${r.forecast ?? '—'}</td>`;
           tableBody.appendChild(tr);
         }
       }
@@ -1169,35 +1215,21 @@
       else { btnEditKpi.disabled = false; btnEditKpi.textContent = '✏️ Edit KPI (Actual & Forecast)'; }
 
       markActiveRoleChip(selKpi.value);
-      // KPI fully loaded -> if a chip triggered this load, scroll now
       if (_pendingScrollToChart) {
         _pendingScrollToChart = false;
         _scrollToChart();
       }
-
     }
-    // --- Admin status button helpers ---
+
+    // Admin status helpers
     const btnAdminSetStatus = byId('btnAdminSetStatus');
     const adminStatusModalEl = document.getElementById('adminStatusModal');
     const adminStatusForm = document.getElementById('adminStatusForm');
     const adminStatusSelect = document.getElementById('adminStatusSelect');
 
-    @* function canonStatusForUi(raw) {
-      // Map UI/raw -> canonical option values for the select
-      const s = String(raw || '').trim().toLowerCase();
-      if (['green', 'conforme', 'ok'].includes(s)) return 'green';
-      if (['orange', 'rattrapage', 'catching up'].includes(s)) return 'orange';
-      if (['red', 'ecart', 'needs attention'].includes(s)) return 'red';
-      if (['blue', 'attente', 'data missing'].includes(s)) return 'blue';
-      return 'green';
-    } *@
-
-          // Augment loadKpiSummary to toggle the admin button (monkey-patch style)
-          const _loadKpiSummary_orig = loadKpiSummary;
+    const _loadKpiSummary_orig = loadKpiSummary;
     loadKpiSummary = async function () {
       await _loadKpiSummary_orig();
-
-      // Use the DOM state (metaStatus text) & API meta to decide visibility
       try {
         const kpiId = selKpi.value;
         const url = '@Url.Action("GetKpiSummary", "Home")' + '?kpiId=' + encodeURIComponent(kpiId);
@@ -1207,17 +1239,14 @@
         if (btnAdminSetStatus) {
           btnAdminSetStatus.classList.toggle('d-none', !canAdmin);
           btnAdminSetStatus.dataset.kpiId = kpiId || '';
-          // Preselect the current status when opening later
           btnAdminSetStatus.dataset.status = canonStatusForUi(res?.meta?.statusRaw ?? res?.meta?.statusLabel);
         }
       } catch { /* ignore */ }
     };
 
-    // Open the small admin modal on click (preselect from the current pill)
     if (btnAdminSetStatus) {
       btnAdminSetStatus.addEventListener('click', () => {
         const kpiId = selKpi.value;
-        // read current human label from the pill and map
         const pillText = (document.getElementById('metaStatus')?.textContent || '').trim().toLowerCase();
         const map = { 'target achieved': 'green', 'on forecast': 'orange', 'target missed': 'red', 'data missing': 'blue' };
         adminStatusSelect.value = map[pillText] || 'green';
@@ -1225,22 +1254,7 @@
         bootstrap.Modal.getOrCreateInstance(adminStatusModalEl).show();
       });
     }
-    // Open the bulk-edit modal
-    document.getElementById('openEditKpiBtn').addEventListener('click', async () => {
-      const kpiId = selKpi.value; if (!kpiId) return;
-      const url = '@Url.Action("EditKpiFactsModal", "Home")' + '?kpiId=' + encodeURIComponent(kpiId);
-      const modalContent = document.querySelector('#editKpiModal .modal-content');
-      modalContent.innerHTML = '<div class="p-4 text-center text-muted">Loading…</div>';
-      try {
-        const r = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-        const text = await r.text();
-        if (r.status === 403) throw new Error('You do not have access to edit this KPI.');
-        if (!r.ok) { console.error('EditKpiFactsModal failed', r.status, text); throw new Error('Failed to load edit modal. (' + r.status + ')'); }
-        modalContent.innerHTML = text; wireKpiModalAjax();
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).show();
-      } catch (e) { alert(e.message || 'Could not open edit modal.'); }
-    });
-    // Save admin-set status
+
     if (adminStatusForm) {
       adminStatusForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1248,7 +1262,6 @@
         const status = adminStatusSelect.value;
 
         try {
-          // Form-encoded (matches your action signature)
           const res = await fetch('@Url.Action("AdminSetKpiStatus", "Home")', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1260,11 +1273,8 @@
             throw new Error(data?.error || `Failed (${res.status})`);
           }
 
-          // Update the pill instantly
           metaStatus.textContent = uiStatus(data.raw || status);
           metaStatus.style.background = data.color || '';
-
-          // Refresh top summary pies too
           loadSummary();
 
           bootstrap.Modal.getOrCreateInstance(adminStatusModalEl).hide();
@@ -1273,7 +1283,20 @@
         }
       });
     }
-    // kick things off
+
+    // kick off
+    async function initPage() {
+      loadSummary();
+      loadRoleSummary();
+      await loadPillars();
+
+      const qP = new URLSearchParams(location.search).get('pillarId');
+      const qO = new URLSearchParams(location.search).get('objectiveId');
+      const qK = new URLSearchParams(location.search).get('kpiId');
+      if (qP) { selPillar.value = qP; selPillar.dispatchEvent(new Event('change')); }
+      if (qO) { await new Promise(r => setTimeout(r, 150)); selObjective.value = qO; selObjective.dispatchEvent(new Event('change')); }
+      if (qK) { await new Promise(r => setTimeout(r, 150)); selKpi.value = qK; selKpi.dispatchEvent(new Event('change')); }
+    }
     initPage().catch(console.error);
   </script>
 }

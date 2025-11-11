@@ -1437,6 +1437,96 @@ namespace KPIMonitor.Controllers
 
             return Json(new { items });
         }
+[HttpGet]
+public async Task<IActionResult> GetLatestStatusChanges(CancellationToken ct = default)
+{
+    // Latest active plan per KPI
+    var latestPlanIds = await _db.KpiYearPlans
+        .AsNoTracking()
+        .Where(p => p.IsActive == 1 && p.PeriodId != null)
+        .GroupBy(p => p.KpiId)
+        .Select(g => g.Max(p => p.KpiYearPlanId))
+        .ToListAsync(ct);
+
+    if (latestPlanIds.Count == 0)
+        return Json(new { toGreen = 0, toOrange = 0, toRed = 0, toBlue = 0, changed = 0, checkedCount = 0 });
+
+    // Plan -> Year (restrict facts to plan's year)
+    var plans = await _db.KpiYearPlans
+        .AsNoTracking()
+        .Where(p => latestPlanIds.Contains(p.KpiYearPlanId))
+        .Select(p => new { p.KpiId, p.KpiYearPlanId, Year = p.Period!.Year })
+        .ToListAsync(ct);
+
+    var planYearById = plans.ToDictionary(x => x.KpiYearPlanId, x => x.Year);
+    var planIdSet = latestPlanIds.ToHashSet();
+
+    // Minimal facts sample
+    var facts = await _db.KpiFacts
+        .AsNoTracking()
+        .Where(f => f.IsActive == 1
+                 && f.StatusCode != null
+                 && planIdSet.Contains(f.KpiYearPlanId))
+        .Select(f => new
+        {
+            f.KpiId,
+            f.KpiYearPlanId,
+            f.StatusCode,
+            PeriodYear = f.Period!.Year,
+            Start = f.Period!.StartDate
+        })
+        .ToListAsync(ct);
+
+    // Only same-year as the plan
+    var sameYear = facts.Where(f => planYearById.TryGetValue(f.KpiYearPlanId, out var y) && f.PeriodYear == y);
+
+    // Latest two per KPI (order: plan desc, start desc)
+    var pairs = sameYear
+        .GroupBy(f => f.KpiId)
+        .Select(g => g.OrderByDescending(x => x.KpiYearPlanId)
+                      .ThenByDescending(x => x.Start)
+                      .Take(2)
+                      .ToList())
+        .ToList();
+
+    static string Canon(string? code)
+    {
+        var s = (code ?? "").Trim().ToLowerInvariant();
+        return s switch
+        {
+            "green" or "conforme" or "ok" => "green",
+            "red" or "ecart" or "needs attention" => "red",
+            "orange" or "rattrapage" or "catching up" => "orange",
+            "blue" or "attente" or "data missing" => "blue",
+            _ => "unknown"
+        };
+    }
+
+    int toGreen = 0, toOrange = 0, toRed = 0, toBlue = 0, changed = 0, checkedCount = 0;
+
+    foreach (var list in pairs)
+    {
+        if (list.Count == 0) continue;
+        checkedCount++;
+        var curr = Canon(list[0].StatusCode);
+        string? prev = null;
+        if (list.Count >= 2) prev = Canon(list[1].StatusCode);
+
+        if (!string.IsNullOrEmpty(prev) && prev != "unknown" && curr != "unknown" && prev != curr)
+        {
+            changed++;
+            switch (curr)
+            {
+                case "green":  toGreen++;  break;
+                case "orange": toOrange++; break;
+                case "red":    toRed++;    break;
+                case "blue":   toBlue++;   break;
+            }
+        }
+    }
+
+    return Json(new { toGreen, toOrange, toRed, toBlue, changed, checkedCount });
+}
 
     }
 }
