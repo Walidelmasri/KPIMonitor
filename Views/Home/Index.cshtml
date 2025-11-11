@@ -96,10 +96,12 @@
     font-size: 1.25rem;
   }
 
-  /* Middle card (bar chart) visual balance with pies */
-  #summaryPies .bar-share .pie {
-    min-height: 220px;
-  }
+#summaryPies .bar-share .pie {
+  height: 220px;
+  min-height: 220px;
+  position: relative;
+}
+
 
   #summaryPies .bar-share .card-title {
     margin-bottom: .25rem;
@@ -162,11 +164,12 @@
                 <div class="fw-bold text-secondary">Red Share by Pillar</div>
                 <span class="text-muted small" id="redShareLoading">Loading…</span>
               </div>
-              <div class="pie">
-                <canvas id="barRedShare" aria-label="Red Share by Pillar" role="img"></canvas>
-                <div id="barShareBullets" class="small text-muted mt-2"></div>
-                <div id="barShareSummary" class="small text-muted mt-1"></div>
-              </div>
+<div class="pie">
+  <canvas id="barRedShare" aria-label="Red Share by Pillar" role="img"></canvas>
+</div>
+<div id="barShareBullets" class="small text-muted mt-2"></div>
+<div id="barShareSummary" class="small text-muted mt-1"></div>
+
             </div>
           </div>
 
