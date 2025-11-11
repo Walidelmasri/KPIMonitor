@@ -23,7 +23,7 @@
   #summaryCard .kpi {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
   }
 
   #summaryCard .kpi .n {
@@ -96,11 +96,11 @@
     font-size: 1.25rem;
   }
 
-#summaryPies .bar-share .pie {
-  height: 220px;
-  min-height: 220px;
-  position: relative;
-}
+  #summaryPies .bar-share .pie {
+    height: 220px;
+    min-height: 220px;
+    position: relative;
+  }
 
 
   #summaryPies .bar-share .card-title {
@@ -108,13 +108,28 @@
   }
 
   /* Bullets + summary under Red Share by Pillar */
-  #barShareBullets { line-height: 1.25; }
-  #barShareBullets ul { margin: 0; padding-left: 1.1rem; }
+  #barShareBullets {
+    line-height: 1.25;
+  }
+
+  #barShareBullets ul {
+    margin: 0;
+    padding-left: 1.1rem;
+  }
 
   /* Stack the Action Plans counters vertically on the right card */
-  #summaryPies .summary-counts-vertical .kpi { justify-content: flex-end; gap: 6px; }
-  #summaryPies .summary-counts-vertical .kpi .lbl { font-size: 0.85rem; }
-  #summaryPies .summary-counts-vertical .kpi .n   { font-size: 1.25rem; }
+  #summaryPies .summary-counts-vertical .kpi {
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  #summaryPies .summary-counts-vertical .kpi .lbl {
+    font-size: 0.85rem;
+  }
+
+  #summaryPies .summary-counts-vertical .kpi .n {
+    font-size: 1.25rem;
+  }
 </style>
 
 <div class="container py-4">
@@ -143,10 +158,13 @@
           <div class="col-lg-4">
             <div class="border rounded-3 p-3 h-100">
               <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="fw-bold text-secondary">Indicators (<span id="cntTotal">—</span>)</div>
+                <div class="fw-bold text-secondary">Indicators (<span id="cntTotal" class="fw-bold">—</span>)
+                </div>
                 <div class="d-flex gap-3">
-                  <div class="kpi"><span class="lbl">Target Achieved</span><span class="n ms-1" id="cntGreen">0</span></div>
-                  <div class="kpi"><span class="lbl">On Forecast</span><span class="n ms-1" id="cntOrange">0</span></div>
+                  <div class="kpi"><span class="lbl">Target Achieved</span><span class="n ms-1" id="cntGreen">0</span>
+                  </div>
+                  <div class="kpi"><span class="lbl">On Forecast</span><span class="n ms-1" id="cntOrange">0</span>
+                  </div>
                   <div class="kpi"><span class="lbl">Target Missed</span><span class="n ms-1" id="cntRed">0</span></div>
                   <div class="kpi"><span class="lbl">Data Missing</span><span class="n ms-1" id="cntBlue">0</span></div>
                 </div>
@@ -164,11 +182,11 @@
                 <div class="fw-bold text-secondary">Red Share by Pillar</div>
                 <span class="text-muted small" id="redShareLoading">Loading…</span>
               </div>
-<div class="pie">
-  <canvas id="barRedShare" aria-label="Red Share by Pillar" role="img"></canvas>
-</div>
-<div id="barShareBullets" class="small text-muted mt-2"></div>
-<div id="barShareSummary" class="small text-muted mt-1"></div>
+              <div class="pie">
+                <canvas id="barRedShare" aria-label="Red Share by Pillar" role="img"></canvas>
+              </div>
+              <div id="barShareBullets" class="small text-muted mt-2"></div>
+              <div id="barShareSummary" class="small text-muted mt-1"></div>
 
             </div>
           </div>
@@ -180,7 +198,8 @@
                 <div class="fw-bold text-secondary">Action Plans by Status</div>
                 <div class="d-flex flex-column align-items-end gap-1 summary-counts-vertical">
                   <div class="kpi"><span class="lbl">To&nbsp;Do</span><span class="n ms-1" id="cntTodo">0</span></div>
-                  <div class="kpi"><span class="lbl">In&nbsp;Progress</span><span class="n ms-1" id="cntProg">0</span></div>
+                  <div class="kpi"><span class="lbl">In&nbsp;Progress</span><span class="n ms-1" id="cntProg">0</span>
+                  </div>
                   <div class="kpi"><span class="lbl">Done</span><span class="n ms-1" id="cntDone">0</span></div>
                 </div>
               </div>
@@ -266,10 +285,14 @@
           <div class="card-body d-flex flex-column justify-content-between h-100">
             <div>
               <h6 class="card-title text-secondary fw-bold mb-3">KPI Details</h6>
-              <p class="mb-2" style="font-size: larger;"><strong>Owner:</strong> <span id="metaOwner" class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>Editor:</strong> <span id="metaEditor" class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>Frequency:</strong> <span id="metaFrequency" class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>Unit:</strong> <span id="metaUnit" class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>Owner:</strong> <span id="metaOwner"
+                  class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>Editor:</strong> <span id="metaEditor"
+                  class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>Frequency:</strong> <span id="metaFrequency"
+                  class="text-dark">—</span></p>
+              <p class="mb-2" style="font-size: larger;"><strong>Unit:</strong> <span id="metaUnit"
+                  class="text-dark">—</span></p>
             </div>
             <div class="mt-auto">
               <div class="mb-4 text-center">
@@ -486,12 +509,12 @@
             if (!changed) break;
           }
 
-        items.sort((a, b) => a.priority - b.priority);
-        items.forEach(it => {
-          ctx.fillStyle = it.color;
-          if (o.outline) { ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.strokeText(it.text, it.x, it.y); }
-          ctx.fillText(it.text, it.x, it.y);
-        });
+          items.sort((a, b) => a.priority - b.priority);
+          items.forEach(it => {
+            ctx.fillStyle = it.color;
+            if (o.outline) { ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.strokeText(it.text, it.x, it.y); }
+            ctx.fillText(it.text, it.x, it.y);
+          });
         });
 
         ctx.restore();
@@ -650,7 +673,34 @@
           const items = Array.isArray(resp?.items) ? resp.items : [];
 
           // Sort by percentage desc (server gives pct as 0..1)
-          items.sort((a, b) => (b.pct || 0) - (a.pct || 0));
+          // Order alphabetically by pillar name
+          // Order by pillar code/number if present; fallback sensibly to id/name
+          function pillarSortKey(x) {
+            // 1) explicit numeric order field if backend provides it
+            if (Number.isFinite(+x.pillarOrder)) return +x.pillarOrder;
+
+            // 2) codes like "1", "1.2", "P1", "Pillar 1" -> extract first number
+            const code = (x.pillarCode ?? '').toString().trim();
+            const mCode = code.match(/\d+(\.\d+)?/);
+            if (mCode) return parseFloat(mCode[0]);
+
+            // 3) explicit pillarNumber if present
+            if (Number.isFinite(+x.pillarNumber)) return +x.pillarNumber;
+
+            // 4) numeric id fallback
+            if (Number.isFinite(+x.pillarId)) return +x.pillarId;
+
+            // 5) last resort: pull leading number from name; else return name for stable sort
+            const name = (x.pillarName ?? '').toString();
+            const mName = name.match(/^\s*(\d+(\.\d+)?)/);
+            if (mName) return parseFloat(mName[1]);
+            return name.toLowerCase();
+          }
+          items.sort((a, b) => {
+            const ka = pillarSortKey(a), kb = pillarSortKey(b);
+            if (typeof ka === 'number' && typeof kb === 'number') return ka - kb;
+            return String(ka).localeCompare(String(kb), 'en', { numeric: true, sensitivity: 'base' });
+          });
 
           const labels = items.map(x => x.pillarName);
           const redCounts = items.map(x => x.red);
@@ -658,9 +708,9 @@
           const pillarIds = items.map(x => x.pillarId);
           const short = (s) => (String(s).length > 26 ? String(s).slice(0, 23) + '…' : s);
           const yLabels = labels.map(short);
-// Ensure totals are numeric to avoid NaN scale blowups
-const cleanTotals = totals.map(t => Number.isFinite(+t) ? +t : 0);
-const maxTotal = Math.max(1, ...cleanTotals);
+          // Ensure totals are numeric to avoid NaN scale blowups
+          const cleanTotals = totals.map(t => Number.isFinite(+t) ? +t : 0);
+          const maxTotal = Math.max(1, ...cleanTotals);
 
           window._barRedShare = new Chart(shareCtx, {
             type: 'bar',
@@ -713,12 +763,12 @@ const maxTotal = Math.max(1, ...cleanTotals);
                 },
                 datalabels: {
                   display: true,
-formatter: (_v, ctx) => {
-  const i = ctx.dataIndex;
-  const red = Number(redCounts[i] ?? 0);
-  const tot = Number(totals[i] ?? 0);
-  return `${red}/${tot || '-'}`;
-},
+                  formatter: (_v, ctx) => {
+                    const i = ctx.dataIndex;
+                    const red = Number(redCounts[i] ?? 0);
+                    const tot = Number(totals[i] ?? 0);
+                    return `${red}/${tot || '-'}`;
+                  },
 
                   anchor: 'end',
                   align: 'right',
@@ -774,42 +824,59 @@ formatter: (_v, ctx) => {
           // ---- bullets under the chart ----
           const bulletsEl = document.getElementById('barShareBullets');
           if (bulletsEl) {
-            const sum = (arr) => arr.reduce((a, b) => a + (Number(b) || 0), 0);
-            const totalRed = sum(redCounts);
-            const totalKpis = sum(totals);
-            const overallPct = totalKpis ? Math.round((totalRed / totalKpis) * 100) : 0;
-
-            const top = items[0];
-            const topName = top ? top.pillarName : '';
-            const topFrac = top ? `${top.red}/${top.total}` : '—';
-
-            const zeroCount = items.filter(x => (x.red || 0) === 0).length;
-
-            bulletsEl.innerHTML = `
-              <ul>
-                <li><strong>Total red:</strong> ${totalRed} of ${totalKpis} (${overallPct}%)</li>
-                <li><strong>Highest share:</strong> ${topName ? topName + ' — ' + topFrac : '—'}</li>
-                <li><strong>Pillars with 0 red:</strong> ${zeroCount}</li>
-              </ul>`;
+            // No bullets anymore — requirement: only “turned Target Achieved” below
+            bulletsEl.innerHTML = '';
           }
 
-          // ---- quick change summary (latest vs previous) ----
+
+          // ---- quick change summary (all statuses, clickable) ----
+          // ---- quick change summary: show all 4 statuses ----
           try {
             const ch = await api('@Url.Action("GetLatestStatusChanges", "Home")');
-            const line = [];
-            const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
-            if (typeof ch?.toGreen  === 'number' && ch.toGreen  > 0) line.push(plural(ch.toGreen,  'turned green'));
-            if (typeof ch?.toRed    === 'number' && ch.toRed    > 0) line.push(plural(ch.toRed,    'turned red'));
-            if (typeof ch?.toOrange === 'number' && ch.toOrange > 0) line.push(plural(ch.toOrange, 'turned orange'));
-            if (typeof ch?.toBlue   === 'number' && ch.toBlue   > 0) line.push(plural(ch.toBlue,   'turned blue'));
-
             const el = document.getElementById('barShareSummary');
             if (el) {
-              el.textContent = (line.length && (ch.changed > 0))
-                ? `Latest vs previous: ${line.join(', ')}.`
-                : 'No status changes in the latest period.';
+              const labels = {
+                green: 'Target Achieved',
+                orange: 'On Forecast',
+                red: 'Target Missed',
+                blue: 'Data Missing'
+              };
+              const data = [
+                { code: 'green', count: ch?.toGreen || 0 },
+                { code: 'orange', count: ch?.toOrange || 0 },
+                { code: 'red', count: ch?.toRed || 0 },
+                { code: 'blue', count: ch?.toBlue || 0 }
+              ];
+              el.innerHTML = data.map(x => `
+        <button class="btn btn-sm btn-light me-2 mb-1" data-turn="${x.code}" ${x.count ? '' : 'disabled'}>
+          ${labels[x.code]}: <strong>${x.count}</strong>
+        </button>
+      `).join('');
+
+              el.querySelectorAll('button[data-turn]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                  const code = btn.getAttribute('data-turn');
+                  segRows.innerHTML = '<span class="text-muted small ms-1">Loading…</span>';
+                  segWrap.classList.remove('d-none');
+                  segTitle.textContent = `Turned to: ${labels[code]}`;
+                  try {
+                    const data = await api('@Url.Action("GetKpisTurned", "Home")' + `?to=${encodeURIComponent(code)}`);
+                    const list = Array.isArray(data?.items) ? data.items : [];
+                    segRows.innerHTML = list.length
+                      ? list.map(it => `<span class="role-chip" title="${it.text}">${it.text}</span>`).join('')
+                      : '<span class="text-muted small ms-1">No KPIs found.</span>';
+                  } catch {
+                    segRows.innerHTML = '<span class="text-danger small ms-1">Failed to load KPIs.</span>';
+                  }
+                });
+              });
             }
-          } catch { /* ignore */ }
+          } catch {
+            const el = document.getElementById('barShareSummary');
+            if (el) el.textContent = 'Could not load status changes.';
+          }
+
+
 
           if (loading) loading.textContent = '';
         } catch {
@@ -822,7 +889,7 @@ formatter: (_v, ctx) => {
           const trend = await api('@Url.Action("GetRedMonthlyTrend", "Home")');
           const trendCtx = document.getElementById('lineRedTrend').getContext('2d');
           if (lineTrend) lineTrend.destroy();
-          const labels = Array.isArray(trend?.labels) ? trend.labels : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          const labels = Array.isArray(trend?.labels) ? trend.labels : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
           const dataVals = Array.isArray(trend?.redCounts) ? trend.redCounts : new Array(12).fill(0);
 
           const now = new Date();
@@ -1092,7 +1159,7 @@ formatter: (_v, ctx) => {
             formatter: _fmtShort, fontSize: 12, fontWeight: '700', minGap: 14, padTop: 12, padBottom: 4, outline: true,
             perDataset: [
               { dy: -12, dx: 0, color: '#800080' }, // Actual
-              { dy: 12,  dx: -8, color: '#7a7a7a' }, // Target
+              { dy: 12, dx: -8, color: '#7a7a7a' }, // Target
               { dy: -16, dx: 8, color: '#fd7e14' }, // Forecast
               { dy: -12, dx: 0, color: '#7a7a7a' }  // Year Target
             ]
@@ -1205,12 +1272,12 @@ formatter: (_v, ctx) => {
         for (const r of rows) {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
-            <td>${r.startDate ?? '—'}</td>
-            <td>${r.endDate ?? '—'}</td>
-            <td>${r.actual ?? '—'}</td>
-            <td>${r.target ?? '—'}</td>
-            <td>${r.forecast ?? '—'}</td>`;
+              <td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td>
+              <td>${r.startDate ?? '—'}</td>
+              <td>${r.endDate ?? '—'}</td>
+              <td>${r.actual ?? '—'}</td>
+              <td>${r.target ?? '—'}</td>
+              <td>${r.forecast ?? '—'}</td>`;
           tableBody.appendChild(tr);
         }
       }
