@@ -655,7 +655,9 @@
           const pillarIds = items.map(x => x.pillarId);
           const short = (s) => (String(s).length > 26 ? String(s).slice(0, 23) + '…' : s);
           const yLabels = labels.map(short);
-          const maxTotal = Math.max(1, ...totals);
+// Ensure totals are numeric to avoid NaN scale blowups
+const cleanTotals = totals.map(t => Number.isFinite(+t) ? +t : 0);
+const maxTotal = Math.max(1, ...cleanTotals);
 
           window._barRedShare = new Chart(shareCtx, {
             type: 'bar',
@@ -708,10 +710,13 @@
                 },
                 datalabels: {
                   display: true,
-                  formatter: (_v, ctx) => {
-                    const i = ctx.dataIndex;
-                    return `${redCounts[i]}/${totals[i]}`;
-                  },
+formatter: (_v, ctx) => {
+  const i = ctx.dataIndex;
+  const red = Number(redCounts[i] ?? 0);
+  const tot = Number(totals[i] ?? 0);
+  return `${red}/${tot || '-'}`;
+},
+
                   anchor: 'end',
                   align: 'right',
                   offset: -4,   // inside bar tip
