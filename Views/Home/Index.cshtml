@@ -195,6 +195,43 @@
   align-items: center;
   justify-content: center;
 }
+/* ===== Summary pies: unified layout + fixed size ===== */
+
+/* Make the three summary cards use a column layout so the header stays at the top */
+#summaryPies > [class*="col-"] > .border {
+  display: flex;
+  flex-direction: column;
+  padding-top: .6rem;             /* pulls header closer to top edge */
+}
+
+/* Header row inside each card: keep it snug and top-aligned */
+#summaryPies > [class*="col-"] > .border
+  .d-flex.justify-content-between.align-items-center.mb-2 {
+  margin-bottom: .25rem;          /* tighter gap under the title */
+  align-items: flex-start;        /* title sits at top like the bar card */
+}
+
+/* The chart area fills the rest of the card; centers the canvas vertically */
+#summaryPies > [class*="col-"] > .border .pie {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Force BOTH pies to identical height (Chart.js will scale inside) */
+#pieKpiStatus,
+#pieActionStatus {
+  height: 260px !important;
+  min-height: 260px !important;
+}
+
+/* (Optional) If you also want the bar chart to match this exact height,
+   uncomment the next rule. Otherwise leave the bar free to grow/shrink
+   with the number of pillar rows. */
+/*
+#barRedShare { height: 260px !important; min-height: 260px !important; }
+*/
 
 </style>
 
