@@ -519,7 +519,10 @@
               legend: { display: false },
               tooltip: { enabled: true, callbacks: { label: (ctx) => { const i = ctx.dataIndex; const r = redCounts[i]; const t = totals[i]; const p = t ? Math.round((r / t) * 100) : 0; return `${r} of ${t} (${p}%)`; } } },
               datalabels: {
-                display: true,
+                display: (ctx) => {
+                  const red = Number(ctx.dataset.data[ctx.dataIndex] ?? 0); // redCounts[i]
+                  return red > 0;  // hide label when 0
+                },
                 formatter: (_v, ctx) => {
                   const i = ctx.dataIndex;
                   const red = Number(redCounts[i] ?? 0);
