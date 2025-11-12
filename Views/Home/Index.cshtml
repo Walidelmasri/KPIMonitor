@@ -34,9 +34,9 @@
     font-weight: 600;
   }
 
-  #summaryPies .pie {
+  @* #summaryPies .pie {
     min-height: 220px;
-  }
+  } *@
 
   .role-chip {
     display: inline-block;
@@ -89,11 +89,11 @@
     font-size: 1.25rem;
   }
 
-  #summaryPies .bar-share .pie {
+  @* #summaryPies .bar-share .pie {
     height: 220px;
     min-height: 220px;
     position: relative;
-  }
+  } *@
 
   #summaryPies .bar-share .card-title {
     margin-bottom: .25rem;
@@ -220,11 +220,11 @@
 }
 
 /* Force BOTH pies to identical height (Chart.js will scale inside) */
-#pieKpiStatus,
+@* #pieKpiStatus,
 #pieActionStatus {
   height: 260px !important;
   min-height: 260px !important;
-}
+} *@
 
 /* (Optional) If you also want the bar chart to match this exact height,
    uncomment the next rule. Otherwise leave the bar free to grow/shrink
@@ -232,6 +232,41 @@
 /*
 #barRedShare { height: 260px !important; min-height: 260px !important; }
 */
+/* Summary cards: title pinned to top; chart fills the rest */
+#summaryPies > [class*="col-"] > .border {
+  display: flex;
+  flex-direction: column;
+  padding-top: .6rem;
+}
+
+/* Header row snug & top-aligned like the bar card */
+#summaryPies > [class*="col-"] > .border
+  .d-flex.justify-content-between.align-items-center.mb-2 {
+  margin-bottom: .35rem;
+  align-items: flex-start;
+}
+
+/* Chart area (container) – same height for BOTH pies; canvas will stretch inside */
+#summaryPies > [class*="col-"] > .border .pie {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 260px;        /* tweak this single number to resize both pies */
+  min-height: 260px;
+}
+
+/* Let Chart.js fill the container cleanly (don’t set fixed px on the canvas itself) */
+#summaryPies .pie > canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Bar card: don’t force its height (it grows with number of rows) */
+#summaryPies .bar-share .pie {
+  height: auto;
+  min-height: 0;
+}
 
 </style>
 
