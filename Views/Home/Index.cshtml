@@ -16,9 +16,10 @@
     --font-summary-label: 0.9rem;
     --font-chip: 0.95rem;
 
-    /* Charts (keep both pies same & slightly bigger) */
+    /* Charts (same size pies, a bit bigger) */
     --pie-height: 220px;
-    --bar-panel-height: 220px; /* middle card matches pie height for perfect alignment */
+    --pie-legend-h: 28px;     /* fixed space for DOM legend */
+    --bar-panel-height: 220px; /* match pie height for alignment */
   }
 
   /* =========================
@@ -33,8 +34,6 @@
   #summaryCard .kpi { display: flex; align-items: center; gap: 6px; }
   #summaryCard .kpi .n { font-size: var(--font-summary-number); font-weight: 800; line-height: 1; }
   #summaryCard .kpi .lbl { color: #6c757d; font-weight: 600; font-size: var(--font-summary-label); }
-
-  /* “Indicators (Total)” number (left pie title) */
   #cntTotal { font-size: var(--font-indicators-total); font-weight: 800 !important; }
 
   /* =========================
@@ -52,7 +51,7 @@
   #segmentKpiList .role-list{ max-height:132px; overflow:auto; }
 
   /* =========================
-     Turned-to bullets (under bar card)
+     Turned-to bullets
   ========================= */
   #turnedBullets{ font-size:var(--font-turned-bullets); line-height:1.3; margin-top:.25rem; }
   #turnedBullets ul{ margin:0; padding-left:1.1rem; }
@@ -61,35 +60,45 @@
   #turnedBullets strong{ font-size:var(--font-turned-number); font-weight:600; }
 
   /* =========================
-     Summary row (three cards)
-     - titles pinned to top
-     - pies fixed height
-     - bar card fixed height (matches pies)
+     Summary row
   ========================= */
   #summaryPies > [class*="col-"] > .border{
     display:flex; flex-direction:column;
-    padding-top:.6rem;
-    min-height:0;
+    padding-top:.6rem; min-height:0;
   }
   #summaryPies > [class*="col-"] > .border > .d-flex{
-    align-items:flex-start;
-    margin-bottom:.35rem;
+    align-items:flex-start; margin-bottom:.35rem;
   }
+
+  /* --- DOM legend (fixed height, top of each card) --- */
+  .pie-legend {
+    flex: 0 0 var(--pie-legend-h);
+    display:flex; align-items:center; gap:12px; padding:0 2px; margin-bottom:4px;
+    line-height:1; font-size:.9rem; color:#495057; user-select:none;
+  }
+  .pie-legend .leg {
+    display:flex; align-items:center; gap:6px; white-space:nowrap;
+  }
+  .pie-legend .sw { width:10px; height:10px; border-radius:2px; display:inline-block; }
+
+  /* --- chart box --- */
   #summaryPies > [class*="col-"] > .border > .pie{
-    flex:1; display:flex; align-items:center; justify-content:center;
+    display:flex; align-items:center; justify-content:center;
   }
-  /* PIES: fixed container height (canvas is responsive inside) */
+  /* PIES: fixed, non-stretching area => identical radius */
   #summaryPies > [class*="col-"] > .border:not(.bar-share) > .pie{
     height: var(--pie-height);
     min-height: var(--pie-height);
     max-height: var(--pie-height);
+    flex: 0 0 var(--pie-height);   /* <- key line */
     overflow: hidden;
   }
-  /* BAR CARD: same height as pies for alignment (scroll if overflow) */
+  /* BAR CARD: same height as pies (scroll if content taller) */
   #summaryPies .bar-share > .pie{
     height: var(--bar-panel-height);
     min-height: var(--bar-panel-height);
     max-height: var(--bar-panel-height);
+    flex: 0 0 var(--bar-panel-height);
     overflow: auto;
   }
   #summaryPies .bar-share .card-title{ margin-bottom:.25rem; }
@@ -353,150 +362,103 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
   <script>
-    /* ===== Utilities ===== */
-    function _fmtShort(v) {
-      const n = Number(v);
-      if (!isFinite(n)) return '';
+    /* ========= Utilities ========= */
+    function _fmtShort(v){
+      const n = Number(v); if(!isFinite(n)) return '';
       const a = Math.abs(n);
-      if (a >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
-      if (a >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
-      if (a >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+      if(a>=1e9) return (n/1e9).toFixed(1).replace(/\.0$/,'')+'B';
+      if(a>=1e6) return (n/1e6).toFixed(1).replace(/\.0$/,'')+'M';
+      if(a>=1e3) return (n/1e3).toFixed(1).replace(/\.0$/,'')+'K';
       return n.toString();
     }
-
     Chart.defaults.font.family = 'Tajawal, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
     Chart.defaults.font.size = 12;
 
     let _pendingScrollToChart = false;
-    function _scrollToChart() {
-      document.getElementById('scrollHere')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const byId = (id) => document.getElementById(id);
+
+    function _scrollToChart(){
+      document.getElementById('scrollHere')?.scrollIntoView({behavior:'smooth', block:'start'});
     }
 
-    /* Smart labels plugin (unchanged) */
+    /* ========= Smart value labels (unchanged) ========= */
     const SmartValueLabels = {
-      id: 'smartValueLabels',
-      afterDatasetsDraw(chart, _args, opts) {
+      id:'smartValueLabels',
+      afterDatasetsDraw(chart,_args,opts){
         const { ctx, data, chartArea } = chart;
-        const o = opts || {};
-        const fmt = typeof o.formatter === 'function' ? o.formatter : (v) => String(v);
-        const fontSize = o.fontSize || 12;
-        const fontWeight = o.fontWeight || '700';
-        const minGap = o.minGap || 14;
-        const padTop = o.padTop || 4;
-        const padBottom = o.padBottom || 4;
-        const maxShift = o.maxShift || 40;
-        const barDY = (o.barDY != null ? o.barDY : -12);
-        const barDYNeg = (o.barDYNeg != null ? o.barDYNeg : 14);
-        const lineDY = (o.lineDY != null ? o.lineDY : -12);
-        const perDataset = o.perDataset || [];
-        const lineStepDefault = o.lineStep || 1;
-        const onlyLastForLinesDefault = !!o.onlyLastForLines;
+        const o = opts||{};
+        const fmt = typeof o.formatter==='function'?o.formatter:(v)=>String(v);
+        const fontSize = o.fontSize||12, fontWeight=o.fontWeight||'700';
+        const minGap=o.minGap||14, padTop=o.padTop||4, padBottom=o.padBottom||4, maxShift=o.maxShift||40;
+        const barDY=(o.barDY!=null?o.barDY:-12), barDYNeg=(o.barDYNeg!=null?o.barDYNeg:14), lineDY=(o.lineDY!=null?o.lineDY:-12);
+        const perDataset=o.perDataset||[], lineStepDefault=o.lineStep||1, onlyLastForLinesDefault=!!o.onlyLastForLines;
 
-        ctx.save();
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
-        ctx.font = `${fontWeight} ${fontSize}px Tajawal, system-ui,-apple-system,Segoe UI,Roboto,Arial`;
+        ctx.save(); ctx.textAlign='center'; ctx.textBaseline='bottom';
+        ctx.font=`${fontWeight} ${fontSize}px Tajawal, system-ui,-apple-system,Segoe UI,Roboto,Arial`;
+        const byIndex=new Map();
 
-        const byIndex = new Map();
-
-        data.datasets.forEach((ds, di) => {
-          if (!chart.isDatasetVisible(di)) return;
-          const meta = chart.getDatasetMeta(di);
-          const type = ds.type || meta.type;
-          const isBar = type === 'bar';
-          const isLine = type === 'line';
-          const per = perDataset[di] || {};
-          const step = Number.isInteger(per.step) ? Math.max(1, per.step) : lineStepDefault;
-
-          let lastIdx = null;
-          if (isLine && (onlyLastForLinesDefault || per.onlyLast)) {
-            for (let i = ds.data.length - 1; i >= 0; i--) {
-              const v = ds.data[i];
-              if (v != null && !Number.isNaN(+v)) { lastIdx = i; break; }
-            }
+        data.datasets.forEach((ds,di)=>{
+          if(!chart.isDatasetVisible(di)) return;
+          const meta=chart.getDatasetMeta(di);
+          const type=ds.type||meta.type, isBar=(type==='bar'), isLine=(type==='line');
+          const per=perDataset[di]||{}, step=Number.isInteger(per.step)?Math.max(1,per.step):lineStepDefault;
+          let lastIdx=null;
+          if(isLine && (onlyLastForLinesDefault||per.onlyLast)){
+            for(let i=ds.data.length-1;i>=0;i--){ const v=ds.data[i]; if(v!=null && !Number.isNaN(+v)){ lastIdx=i; break; } }
           }
-
-          meta.data.forEach((el, i) => {
-            const raw = ds.data[i], val = Number(raw);
-            if (raw == null || Number.isNaN(val)) return;
-            if (isLine) {
-              if ((onlyLastForLinesDefault || per.onlyLast) && i !== lastIdx) return;
-              if ((i % step) !== 0) return;
-            }
-            const { x, y } = el.getProps(['x', 'y'], true);
-            let dy = isBar ? (val < 0 ? barDYNeg : barDY) : lineDY;
-            if (typeof per.dy === 'number') dy = per.dy;
-            const dx = (typeof per.dx === 'number') ? per.dx : 0;
-            const text = fmt(val);
-            const w = ctx.measureText(text).width;
-            const h = fontSize * 1.2;
-            const item = { x: x + dx, y: y + dy, baseY: y + dy, val, text, color: per.color || o.color || '#111', w, h, priority: isBar ? 0 : 1 };
-            const arr = byIndex.get(i);
-            if (arr) arr.push(item); else byIndex.set(i, [item]);
+          meta.data.forEach((el,i)=>{
+            const raw=ds.data[i], val=Number(raw); if(raw==null || Number.isNaN(val)) return;
+            if(isLine){ if((onlyLastForLinesDefault||per.onlyLast) && i!==lastIdx) return; if((i%step)!==0) return; }
+            const {x,y}=el.getProps(['x','y'],true);
+            let dy=isBar?(val<0?barDYNeg:barDY):lineDY; if(typeof per.dy==='number') dy=per.dy;
+            const dx=(typeof per.dx==='number')?per.dx:0;
+            const text=fmt(val), w=ctx.measureText(text).width, h=fontSize*1.2;
+            const item={x:x+dx, y:y+dy, baseY:y+dy, val, text, color:per.color||o.color||'#111', w, h, priority:isBar?0:1};
+            const arr=byIndex.get(i); if(arr) arr.push(item); else byIndex.set(i,[item]);
           });
         });
 
-        const topLimitBase = chartArea.top + padTop;
-        const botLimit = chartArea.bottom - padBottom;
-
-        byIndex.forEach((items) => {
-          const clamp = (it) => {
-            const topLimit = topLimitBase + it.h;
-            if (it.y < topLimit) it.y = topLimit;
-            const low = it.baseY - maxShift, high = it.baseY + maxShift;
-            if (it.y < low) it.y = low;
-            if (it.y > high) it.y = high;
-            if (it.y > botLimit) it.y = botLimit;
-          };
-          items.forEach(it => { it.y = it.baseY; clamp(it); });
-          let guard = 0;
-          while (guard++ < 10) {
-            let changed = false;
-            for (let i = 0; i < items.length; i++) {
-              for (let j = i + 1; j < items.length; j++) {
-                const a = items[i], b = items[j];
-                const aL = a.x - a.w / 2, aR = a.x + a.w / 2, aT = a.y - a.h, aB = a.y;
-                const bL = b.x - b.w / 2, bR = b.x + b.w / 2, bT = b.y - b.h, bB = b.y;
-                const overlap = !(aR < bL || aL > bR || aB < bT || aT > bB);
-                if (overlap) {
-                  const hi = (a.val >= b.val) ? a : b, lo = (hi === a) ? b : a;
-                  hi.y -= minGap;
-                  lo.y += Math.min(4, minGap / 2);
-                  clamp(hi); clamp(lo);
-                  changed = true;
+        const topLimitBase=chartArea.top+padTop, botLimit=chartArea.bottom-padBottom;
+        byIndex.forEach(items=>{
+          const clamp=(it)=>{ const topLimit=topLimitBase+it.h;
+            if(it.y<topLimit) it.y=topLimit;
+            const low=it.baseY-maxShift, high=it.baseY+maxShift;
+            if(it.y<low) it.y=low; if(it.y>high) it.y=high; if(it.y>botLimit) it.y=botLimit; };
+          items.forEach(it=>{ it.y=it.baseY; clamp(it); });
+          let guard=0; while(guard++<10){
+            let changed=false;
+            for(let i=0;i<items.length;i++){
+              for(let j=i+1;j<items.length;j++){
+                const a=items[i], b=items[j];
+                const aL=a.x-a.w/2, aR=a.x+a.w/2, aT=a.y-a.h, aB=a.y;
+                const bL=b.x-b.w/2, bR=b.x+b.w/2, bT=b.y-b.h, bB=b.y;
+                const overlap=!(aR<bL||aL>bR||aB<bT||aT>bB);
+                if(overlap){
+                  const hi=(a.val>=b.val)?a:b, lo=(hi===a)?b:a;
+                  hi.y-=minGap; lo.y+=Math.min(4,minGap/2); clamp(hi); clamp(lo); changed=true;
                 }
               }
             }
-            if (!changed) break;
+            if(!changed) break;
           }
-          items.sort((a, b) => a.priority - b.priority);
-          items.forEach(it => {
-            ctx.fillStyle = it.color;
-            if (o.outline) {
-              ctx.lineWidth = 3;
-              ctx.strokeStyle = 'rgba(255,255,255,.95)';
-              ctx.strokeText(it.text, it.x, it.y);
-            }
-            ctx.fillText(it.text, it.x, it.y);
+          items.sort((a,b)=>a.priority-b.priority);
+          items.forEach(it=>{
+            ctx.fillStyle=it.color;
+            if(o.outline){ ctx.lineWidth=3; ctx.strokeStyle='rgba(255,255,255,.95)'; ctx.strokeText(it.text,it.x,it.y); }
+            ctx.fillText(it.text,it.x,it.y);
           });
         });
-
         ctx.restore();
       }
     };
-
     Chart.register(SmartValueLabels);
     Chart.register(ChartDataLabels);
-    Chart.defaults.set('plugins.datalabels', {
-      display: false,
-      color: '#111',
-      font: { family: Chart.defaults.font.family, weight: 'bold' }
-    });
+    Chart.defaults.set('plugins.datalabels', { display:false, color:'#111', font:{ family:Chart.defaults.font.family, weight:'bold' } });
 
-    const byId = id => document.getElementById(id);
-    function uiStatus(code) {
-      const s = String(code || '').trim().toLowerCase();
-      switch (s) {
+    /* ========= Small helpers ========= */
+    function uiStatus(code){
+      const s=String(code||'').trim().toLowerCase();
+      switch(s){
         case 'green': case 'conforme': case 'ok': return 'Target Achieved';
         case 'orange': case 'rattrapage': case 'catching up': return 'On Forecast';
         case 'red': case 'ecart': case 'needs attention': return 'Target Missed';
@@ -504,40 +466,62 @@
         default: return '—';
       }
     }
-    function canonStatusForUi(raw) {
-      const s = String(raw || '').trim().toLowerCase();
-      if (['green', 'conforme', 'ok'].includes(s)) return 'green';
-      if (['orange', 'rattrapage', 'catching up'].includes(s)) return 'orange';
-      if (['red', 'ecart', 'needs attention'].includes(s)) return 'red';
-      if (['blue', 'attente', 'data missing'].includes(s)) return 'blue';
+    function canonStatusForUi(raw){
+      const s=String(raw||'').trim().toLowerCase();
+      if(['green','conforme','ok'].includes(s)) return 'green';
+      if(['orange','rattrapage','catching up'].includes(s)) return 'orange';
+      if(['red','ecart','needs attention'].includes(s)) return 'red';
+      if(['blue','attente','data missing'].includes(s)) return 'blue';
       return 'green';
     }
-
-    const api = (path) => {
-      const u = new URL(path, window.location.origin);
-      u.searchParams.set('_ts', Date.now().toString());
-      return fetch(u.toString(), { headers: { 'Accept': 'application/json' }, cache: 'no-store' })
-        .then(r => { if (!r.ok) throw new Error('Network error'); return r.json(); });
+    const api=(path)=>{
+      const u=new URL(path, window.location.origin); u.searchParams.set('_ts', Date.now().toString());
+      return fetch(u.toString(), { headers:{'Accept':'application/json'}, cache:'no-store' })
+        .then(r=>{ if(!r.ok) throw new Error('Network error'); return r.json(); });
     };
+
+    /* ========= Build fixed DOM legends ========= */
+    function ensureLegendHost(canvasEl, id){
+      // insert a .pie-legend div just before the .pie wrapper (top of card body section)
+      const pie = canvasEl.closest('.pie');
+      const card = canvasEl.closest('.border');
+      if(!pie || !card) return null;
+      let host = card.querySelector('.pie-legend[data-for="'+id+'"]');
+      if(host) return host;
+      host = document.createElement('div');
+      host.className = 'pie-legend';
+      host.dataset.for = id;
+      card.insertBefore(host, pie);  // place ABOVE the pie, fixed height
+      return host;
+    }
+    function renderLegend(host, labels, colors){
+      if(!host) return;
+      host.innerHTML = '';
+      labels.forEach((lbl, i)=>{
+        const item = document.createElement('div'); item.className='leg';
+        item.innerHTML = `<span class="sw" style="background:${colors[i]}"></span><span>${lbl}</span>`;
+        host.appendChild(item);
+      });
+    }
 
     /* ===== Elements ===== */
     const selPillar = byId('pillarSelector'), selObjective = byId('objectiveSelector'), selKpi = byId('kpiSelector');
     const metaOwner = byId('metaOwner'), metaEditor = byId('metaEditor'), metaFrequency = byId('metaFrequency'), metaUnit = byId('metaUnit'), metaPriority = byId('metaPriority'), metaStatus = byId('metaStatus');
     const tableBody = byId('factsTbody'); const btnEditKpi = byId('openEditKpiBtn');
     const segWrap = byId('segmentKpiList'), segRows = byId('segmentKpiRows'), segTitle = byId('segmentTitle');
-    byId('clearSegmentBtn').addEventListener('click', () => { segRows.innerHTML = ''; segWrap.classList.add('d-none'); });
+    byId('clearSegmentBtn').addEventListener('click', ()=>{ segRows.innerHTML=''; segWrap.classList.add('d-none'); });
 
-    let currentPlanId = null, canEditFacts = false;
+    let currentPlanId=null, canEditFacts=false;
 
     /* ===== Summary Card ===== */
     let pieKpis, pieActs, lineTrend, _barRedShare;
 
-    async function loadSummary() {
+    async function loadSummary(){
       await (document.fonts?.ready ?? Promise.resolve());
-      await new Promise(r => requestAnimationFrame(r));
-
+      await new Promise(r=>requestAnimationFrame(r));
       const loadingEl = byId('summaryLoading');
-      try {
+
+      try{
         const data = await api('@Url.Action("GetDashboardSummary", "Home")');
         const k = data?.kpiStatus ?? {}; const a = data?.actionStatus ?? {};
 
@@ -551,582 +535,498 @@
         byId('cntDone').textContent = a.done ?? 0;
 
         byId('summaryUpdated').textContent = data?.updatedAt ? ('Updated ' + data.updatedAt) : '—';
-        if (loadingEl) loadingEl.textContent = '';
+        if(loadingEl) loadingEl.textContent = '';
 
-        const kpiVals = [k.green ?? 0, k.orange ?? 0, k.red ?? 0, k.blue ?? 0];
-        const actVals = [a.todo ?? 0, a.inprogress ?? 0, a.done ?? 0];
-        byId('cntTotal').textContent = kpiVals.reduce((s, v) => s + (+v || 0), 0);
+        const kpiVals = [k.green??0, k.orange??0, k.red??0, k.blue??0];
+        const actVals = [a.todo??0, a.inprogress??0, a.done??0];
+        byId('cntTotal').textContent = kpiVals.reduce((s,v)=>s+(+v||0),0);
 
         const kpiCtx = byId('pieKpiStatus').getContext('2d');
         const actCtx = byId('pieActionStatus').getContext('2d');
-        if (pieKpis) pieKpis.destroy(); if (pieActs) pieActs.destroy();
+        if(pieKpis) pieKpis.destroy(); if(pieActs) pieActs.destroy();
 
-        /* Doughnuts: legends moved to TOP and same cutout */
-        pieKpis = new Chart(kpiCtx, {
-          type: 'doughnut',
-          data: {
-            labels: ['Target Achieved', 'On Forecast', 'Target Missed', 'Data Missing'],
-            datasets: [{ data: kpiVals, backgroundColor: ['#28a745', '#fd7e14', '#dc3545', '#0d6efd'], borderColor: '#fff', borderWidth: 2 }]
-          },
-          options: {
-            responsive: true, maintainAspectRatio: false, resizeDelay: 0, cutout: '62%',
-            animation: { duration: 0 },
-            plugins: {
-              legend: { display: true, position: 'top' }, /* moved from bottom -> top */
-              tooltip: { enabled: true, callbacks: { label: (c) => `${c.label}: ${c.raw}` } },
-              datalabels: false, smartValueLabels: false
-            },
-            onClick: (evt, _els, chart) => onPieClick(evt, chart, 'kpi')
+        /* --- create fixed DOM legends (outside canvas) --- */
+        const kpiLegendHost = ensureLegendHost(byId('pieKpiStatus'), 'kpi');
+        const actLegendHost = ensureLegendHost(byId('pieActionStatus'), 'act');
+        const kpiLabels = ['Target Achieved','On Forecast','Target Missed','Data Missing'];
+        const kpiColors = ['#28a745','#fd7e14','#dc3545','#0d6efd'];
+        const actLabels = ['To Do','In Progress','Done'];
+        const actColors = ['#6c757d','#ffc107','#198754'];
+        renderLegend(kpiLegendHost, kpiLabels, kpiColors);
+        renderLegend(actLegendHost, actLabels, actColors);
+
+        /* --- Doughnuts: NO internal legend, identical cutout --- */
+        const doughnutOpts = {
+          responsive:true, maintainAspectRatio:false, resizeDelay:0, cutout:'62%',
+          animation:{ duration:0 },
+          plugins:{
+            legend:{ display:false },   // <— critical
+            tooltip:{ enabled:true, callbacks:{ label:(c)=>`${c.label}: ${c.raw}` } },
+            datalabels:false, smartValueLabels:false
           }
+        };
+
+        pieKpis = new Chart(kpiCtx, {
+          type:'doughnut',
+          data:{ labels:kpiLabels, datasets:[{ data:kpiVals, backgroundColor:kpiColors, borderColor:'#fff', borderWidth:2 }] },
+          options: doughnutOpts,
+          plugins:[]
         });
 
         pieActs = new Chart(actCtx, {
-          type: 'doughnut',
-          data: {
-            labels: ['To Do', 'In Progress', 'Done'],
-            datasets: [{ data: actVals, backgroundColor: ['#6c757d', '#ffc107', '#198754'], borderColor: '#fff', borderWidth: 2 }]
-          },
-          options: {
-            responsive: true, maintainAspectRatio: false, resizeDelay: 0, cutout: '62%',
-            animation: { duration: 0 },
-            plugins: {
-              legend: { display: true, position: 'top' }, /* moved from bottom -> top */
-              tooltip: { enabled: true, callbacks: { label: (c) => `${c.label}: ${c.raw}` } },
-              datalabels: false, smartValueLabels: false
-            },
-            onClick: (evt, _els, chart) => onPieClick(evt, chart, 'action')
-          }
+          type:'doughnut',
+          data:{ labels:actLabels, datasets:[{ data:actVals, backgroundColor:actColors, borderColor:'#fff', borderWidth:2 }] },
+          options: doughnutOpts,
+          plugins:[]
         });
 
         /* ----- Red Share by Pillar (bars) ----- */
         const shareCtx = byId('barRedShare').getContext('2d');
         const loading = byId('redShareLoading');
-        if (_barRedShare) _barRedShare.destroy();
+        if(_barRedShare) _barRedShare.destroy();
 
         const resp = await api('@Url.Action("GetRedShareByPillar", "Home")');
         const items = Array.isArray(resp?.items) ? resp.items : [];
-        items.sort((a, b) => {
-          const parse = (x) => {
-            const code = (x?.pillarCode || '').toString();
-            const d = (code.match(/\d+(\.\d+)?/) || [])[0];
-            return d ? parseFloat(d) : Number.MAX_SAFE_INTEGER;
-          };
-          const da = parse(a), db = parse(b);
-          if (da !== db) return da - db;
-          return String(a?.pillarName || '').localeCompare(String(b?.pillarName || ''), 'en', { numeric: true });
+        items.sort((a,b)=>{
+          const parse=(x)=>{ const code=(x?.pillarCode||'').toString(); const d=(code.match(/\d+(\.\d+)?/)||[])[0]; return d?parseFloat(d):Number.MAX_SAFE_INTEGER; };
+          const da=parse(a), db=parse(b); if(da!==db) return da-db;
+          return String(a?.pillarName||'').localeCompare(String(b?.pillarName||''),'en',{numeric:true});
         });
 
-        const labels = items.map(x => x.pillarName);
-        const redCounts = items.map(x => +x.red || 0);
-        const totals = items.map(x => +x.total || 0);
-        const pillarIds = items.map(x => x.pillarId);
+        const labels = items.map(x=>x.pillarName);
+        const redCounts = items.map(x=>+x.red||0);
+        const totals = items.map(x=>+x.total||0);
+        const pillarIds = items.map(x=>x.pillarId);
 
-        // wrapper already fixed by CSS; keep canvas responsive
-        const short = (s) => (String(s).length > 26 ? String(s).slice(0, 23) + '…' : s);
+        const short=(s)=> (String(s).length>26? String(s).slice(0,23)+'…' : s);
         const yLabels = labels.map(short);
         const maxTotal = Math.max(1, ...totals);
 
         _barRedShare = new Chart(shareCtx, {
-          type: 'bar',
-          data: {
-            labels: yLabels,
-            datasets: [{
-              label: 'Red / Total',
-              data: redCounts,
-              backgroundColor: '#dc3545',
-              borderColor: '#dc3545',
-              borderWidth: 1,
-              barThickness: 12,
-              maxBarThickness: 14,
-              categoryPercentage: 0.9,
-              barPercentage: 0.8
+          type:'bar',
+          data:{
+            labels:yLabels,
+            datasets:[{
+              label:'Red / Total',
+              data:redCounts,
+              backgroundColor:'#dc3545', borderColor:'#dc3545', borderWidth:1,
+              barThickness:12, maxBarThickness:14, categoryPercentage:.9, barPercentage:.8
             }]
           },
-          options: {
-            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
-            animation: { duration: 0 }, resizeDelay: 0,
-            layout: { padding: { top: 6, right: 6, bottom: 0, left: 0 } },
-            scales: {
-              x: { beginAtZero: true, max: maxTotal, ticks: { padding: 4, font: { size: 11 } }, grid: { color: 'rgba(0,0,0,.06)' } },
-              y: { ticks: { padding: 6, font: { size: 12 } }, grid: { display: false } } /* ↑ slightly bigger y labels */
+          options:{
+            responsive:true, maintainAspectRatio:false, indexAxis:'y',
+            animation:{duration:0}, resizeDelay:0,
+            layout:{ padding:{ top:6, right:6, bottom:0, left:0 } },
+            scales:{
+              x:{ beginAtZero:true, max:maxTotal, ticks:{ padding:4, font:{ size:11 } }, grid:{ color:'rgba(0,0,0,.06)' } },
+              y:{ ticks:{ padding:6, font:{ size:12 } }, grid:{ display:false } } /* ↑ slightly bigger */
             },
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                enabled: true,
-                callbacks: {
-                  label: (ctx) => {
-                    const i = ctx.dataIndex;
-                    const r = redCounts[i];
-                    const t = totals[i];
-                    const p = t ? Math.round((r / t) * 100) : 0;
-                    return `${r} of ${t} (${p}%)`;
-                  }
-                }
+            plugins:{
+              legend:{ display:false },
+              tooltip:{ enabled:true, callbacks:{ label:(ctx)=>{
+                const i=ctx.dataIndex, r=redCounts[i], t=totals[i], p=t?Math.round((r/t)*100):0;
+                return `${r} of ${t} (${p}%)`;
+              }}},
+              datalabels:{
+                display:(ctx)=> Number(ctx.dataset.data[ctx.dataIndex]??0)>0,
+                formatter:(_v,ctx)=>{ const i=ctx.dataIndex; const r=+redCounts[i]||0, t=+totals[i]||0; return `${r}/${t||'-'}`; },
+                anchor:'end', align:'right', offset:6, clamp:false, clip:false,
+                color:'#111', font:{ family:Chart.defaults.font.family, size:12, weight:'700' } /* ↑ slightly bigger */
               },
-              datalabels: {
-                display: (ctx) => Number(ctx.dataset.data[ctx.dataIndex] ?? 0) > 0,
-                formatter: (_v, ctx) => {
-                  const i = ctx.dataIndex;
-                  const red = Number(redCounts[i] ?? 0);
-                  const tot = Number(totals[i] ?? 0);
-                  return `${red}/${Number.isFinite(tot) ? tot : '-'}`;
-                },
-                anchor: 'end',
-                align: 'right',
-                offset: 6,
-                clamp: false,
-                clip: false,
-                color: '#111',
-                font: { family: Chart.defaults.font.family, size: 12, weight: '700' } /* ↑ slightly bigger */
-              },
-              smartValueLabels: false
+              smartValueLabels:false
             },
-            onClick: async (evt, _els, chart) => {
-              const pts = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
-              if (!pts?.length) return;
-              const idx = pts[0].index;
-              const pillarId = pillarIds[idx], pillarName = labels[idx];
-              segRows.innerHTML = '<span class="text-muted small ms-1">Loading…</span>';
-              segWrap.classList.remove('d-none');
-              segTitle.textContent = `Red KPIs — ${pillarName}`;
-              try {
-                const data = await api('@Url.Action("GetRedKpisForPillar", "Home")' + `?pillarId=${encodeURIComponent(pillarId)}`);
-                const list = Array.isArray(data?.items) ? data.items : [];
+            onClick: async (evt,_els,chart)=>{
+              const pts=chart.getElementsAtEventForMode(evt,'nearest',{intersect:true},true);
+              if(!pts?.length) return;
+              const idx=pts[0].index, pillarId=pillarIds[idx], pillarName=labels[idx];
+              segRows.innerHTML='<span class="text-muted small ms-1">Loading…</span>';
+              segWrap.classList.remove('d-none'); segTitle.textContent=`Red KPIs — ${pillarName}`;
+              try{
+                const data = await api('@Url.Action("GetRedKpisForPillar", "Home")'+`?pillarId=${encodeURIComponent(pillarId)}`);
+                const list = Array.isArray(data?.items)?data.items:[];
                 segRows.innerHTML = list.length
-                  ? list.map(it => `<span class="role-chip" data-kpi-id="${it.id}" data-pillar-id="${it.pillarId}" data-objective-id="${it.objectiveId}" title="${it.text}">${it.text}</span>`).join('')
+                  ? list.map(it=>`<span class="role-chip" data-kpi-id="${it.id}" data-pillar-id="${it.pillarId}" data-objective-id="${it.objectiveId}" title="${it.text}">${it.text}</span>`).join('')
                   : '<span class="text-muted small ms-1">No red KPIs.</span>';
-              } catch {
-                segRows.innerHTML = '<span class="text-danger small ms-1">Failed to load KPIs.</span>';
+              }catch{
+                segRows.innerHTML='<span class="text-danger small ms-1">Failed to load KPIs.</span>';
               }
             }
           }
         });
 
         /* ----- Turned-to bullets ----- */
-        try {
+        try{
           const ch = await api('@Url.Action("GetLatestStatusChanges", "Home")');
           const list = [
-            { code: 'green', label: 'Indicators Turned To Target Achieved', count: ch?.toGreen || 0 },
-            { code: 'orange', label: 'Indicators Turned To On Forecast', count: ch?.toOrange || 0 },
-            { code: 'red', label: 'Indicators Turned To Target Missed', count: ch?.toRed || 0 },
-            { code: 'blue', label: 'Indicators Turned To Data Missing', count: ch?.toBlue || 0 },
+            { code:'green',  label:'Indicators Turned To Target Achieved', count: ch?.toGreen || 0 },
+            { code:'orange', label:'Indicators Turned To On Forecast',     count: ch?.toOrange || 0 },
+            { code:'red',    label:'Indicators Turned To Target Missed',    count: ch?.toRed || 0 },
+            { code:'blue',   label:'Indicators Turned To Data Missing',     count: ch?.toBlue || 0 },
           ];
-          const ul = byId('turnedList'); ul.innerHTML = '';
-          for (const x of list) {
-            const li = document.createElement('li');
-            li.dataset.code = x.code;
-            li.innerHTML = `${x.label}: <strong>${x.count}</strong>`;
+          const ul = byId('turnedList'); ul.innerHTML='';
+          for(const x of list){
+            const li=document.createElement('li'); li.dataset.code=x.code; li.innerHTML = `${x.label}: <strong>${x.count}</strong>`;
             ul.appendChild(li);
           }
-        } catch {
-          byId('turnedList').innerHTML = '<li class="text-danger">Could not load latest changes.</li>';
-        }
-        byId('redShareLoading').textContent = '';
+        }catch{ byId('turnedList').innerHTML = '<li class="text-danger">Could not load latest changes.</li>'; }
+        byId('redShareLoading').textContent='';
 
-        /* ----- Red monthly trend (stays at bottom of summary card) ----- */
-        try {
+        /* ----- Red monthly trend ----- */
+        try{
           const trend = await api('@Url.Action("GetRedMonthlyTrend", "Home")');
           const trendCtx = byId('lineRedTrend').getContext('2d');
-          if (lineTrend) lineTrend.destroy();
-          const labelsT = Array.isArray(trend?.labels) ? trend.labels : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          const vals = Array.isArray(trend?.redCounts) ? trend.redCounts : new Array(12).fill(0);
-          const now = new Date(); const yr = Number(trend?.year) || now.getFullYear(); const isThisYear = yr === now.getFullYear(); const maxMonth = isThisYear ? (now.getMonth() + 1) : 12;
-          lineTrend = new Chart(trendCtx, {
-            type: 'line',
-            data: { labels: labelsT.slice(0, maxMonth), datasets: [{ label: 'Red KPIs', data: vals.slice(0, maxMonth), borderWidth: 2, tension: .3, pointRadius: 3, pointHoverRadius: 4, borderColor: '#dc3545', pointBackgroundColor: '#dc3545', pointBorderColor: '#dc3545', fill: false }] },
-            options: {
-              responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18, bottom: 0 } },
-              animation: { duration: 0 },
-              scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,.06)' } } },
-              plugins: {
-                legend: { display: false }, tooltip: { enabled: true },
-                datalabels: { display: (ctx) => Number.isFinite(ctx.raw), formatter: (v) => v, anchor: 'end', align: 'top', offset: 6, clamp: true, color: '#111', font: { family: Chart.defaults.font.family, size: 14, weight: '700' } }
-              }
+          if(lineTrend) lineTrend.destroy();
+          const labelsT = Array.isArray(trend?.labels)?trend.labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          const vals    = Array.isArray(trend?.redCounts)?trend.redCounts:new Array(12).fill(0);
+          const now=new Date(); const yr=Number(trend?.year)||now.getFullYear(); const maxMonth=(yr===now.getFullYear())?(now.getMonth()+1):12;
+          lineTrend = new Chart(trendCtx,{
+            type:'line',
+            data:{ labels: labelsT.slice(0,maxMonth), datasets:[{ label:'Red KPIs', data: vals.slice(0,maxMonth), borderWidth:2, tension:.3, pointRadius:3, pointHoverRadius:4, borderColor:'#dc3545', pointBackgroundColor:'#dc3545', pointBorderColor:'#dc3545', fill:false }] },
+            options:{
+              responsive:true, maintainAspectRatio:false, layout:{ padding:{ top:18, bottom:0 } },
+              animation:{ duration:0 },
+              scales:{ x:{ grid:{ display:false } }, y:{ beginAtZero:true, grid:{ color:'rgba(0,0,0,.06)' } } },
+              plugins:{ legend:{ display:false }, tooltip:{ enabled:true },
+                datalabels:{ display:(ctx)=>Number.isFinite(ctx.raw), formatter:(v)=>v, anchor:'end', align:'top', offset:6, clamp:true, color:'#111', font:{ family:Chart.defaults.font.family, size:14, weight:'700' } } }
             }
           });
-          byId('trendLoading').textContent = '';
-        } catch { byId('trendLoading').textContent = 'Could not load trend.'; }
+          byId('trendLoading').textContent='';
+        }catch{ byId('trendLoading').textContent='Could not load trend.'; }
 
-      } catch { if (loadingEl) loadingEl.textContent = 'Could not load summary.'; }
+      }catch{ if(loadingEl) loadingEl.textContent='Could not load summary.'; }
     }
 
-    /* Pie clicks -> chips */
-    function mapLabel(kind, label) {
-      const s = String(label || '').trim().toLowerCase();
-      if (kind === 'kpi') {
-        if (s === 'target achieved') return 'green';
-        if (s === 'on forecast') return 'orange';
-        if (s === 'target missed') return 'red';
-        if (s === 'data missing') return 'blue';
+    /* ===== Pie clicks -> chips ===== */
+    function mapLabel(kind,label){
+      const s=String(label||'').trim().toLowerCase();
+      if(kind==='kpi'){
+        if(s==='target achieved') return 'green';
+        if(s==='on forecast')     return 'orange';
+        if(s==='target missed')   return 'red';
+        if(s==='data missing')    return 'blue';
         return 'unknown';
-      } else {
-        if (s === 'to do') return 'todo';
-        if (s === 'in progress') return 'inprogress';
-        if (s === 'done') return 'done';
+      }else{
+        if(s==='to do') return 'todo';
+        if(s==='in progress') return 'inprogress';
+        if(s==='done') return 'done';
         return 'other';
       }
     }
-    async function onPieClick(evt, chart, kind) {
-      const pts = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
-      if (!pts?.length) return;
-      const idx = pts[0].index, label = chart.data.labels[idx], code = mapLabel(kind, label);
-      const segRows = byId('segmentKpiRows'), segWrap = byId('segmentKpiList'), segTitle = byId('segmentTitle');
-      segRows.innerHTML = '<span class="text-muted small ms-1">Loading…</span>';
+    async function onPieClick(evt, chart, kind){
+      const pts=chart.getElementsAtEventForMode(evt,'nearest',{intersect:true},true);
+      if(!pts?.length) return;
+      const idx=pts[0].index, label=chart.data.labels[idx], code=mapLabel(kind,label);
+      segRows.innerHTML='<span class="text-muted small ms-1">Loading…</span>';
       segWrap.classList.remove('d-none');
-      segTitle.textContent = (kind === 'kpi' ? 'KPIs with status: ' : 'KPIs with actions: ') + label;
-      try {
-        const data = await api('@Url.Action("GetKpisForSummarySegment", "Home")' + `?kind=${encodeURIComponent(kind)}&code=${encodeURIComponent(code)}`);
-        const items = Array.isArray(data?.items) ? data.items : [];
+      segTitle.textContent=(kind==='kpi'?'KPIs with status: ':'KPIs with actions: ')+label;
+      try{
+        const data = await api('@Url.Action("GetKpisForSummarySegment", "Home")'+`?kind=${encodeURIComponent(kind)}&code=${encodeURIComponent(code)}`);
+        const items = Array.isArray(data?.items)?data.items:[];
         segRows.innerHTML = items.length
-          ? items.map(it => `<span class="role-chip" data-kpi-id="${it.id}" data-pillar-id="${it.pillarId}" data-objective-id="${it.objectiveId}" title="${it.text}">${it.text}</span>`).join('')
+          ? items.map(it=>`<span class="role-chip" data-kpi-id="${it.id}" data-pillar-id="${it.pillarId}" data-objective-id="${it.objectiveId}" title="${it.text}">${it.text}</span>`).join('')
           : '<span class="text-muted small ms-1">No KPIs found.</span>';
-      } catch {
-        segRows.innerHTML = '<span class="text-danger small ms-1">Failed to load KPIs.</span>';
-      }
+      }catch{ segRows.innerHTML='<span class="text-danger small ms-1">Failed to load KPIs.</span>'; }
     }
 
-    /* Turned bullets click -> chips */
-    byId('turnedBullets').addEventListener('click', async (e) => {
-      const li = e.target.closest('li[data-code]'); if (!li) return;
-      const code = li.dataset.code;
-      const labelMap = { green: 'Target Achieved', orange: 'On Forecast', red: 'Target Missed', blue: 'Data Missing' };
-      const segRows = byId('segmentKpiRows'), segWrap = byId('segmentKpiList'), segTitle = byId('segmentTitle');
-      segRows.innerHTML = '<span class="text-muted small ms-1">Loading…</span>';
-      segWrap.classList.remove('d-none');
-      segTitle.textContent = `Turned to: ${labelMap[code]}`;
-      try {
-        const resp = await api('@Url.Action("GetKpisTurned", "Home")' + `?to=${encodeURIComponent(code)}`);
-        const list = Array.isArray(resp?.items) ? resp.items : [];
+    /* ===== Turned bullets click -> chips ===== */
+    byId('turnedBullets').addEventListener('click', async (e)=>{
+      const li=e.target.closest('li[data-code]'); if(!li) return;
+      const code=li.dataset.code, labelMap={ green:'Target Achieved', orange:'On Forecast', red:'Target Missed', blue:'Data Missing' };
+      segRows.innerHTML='<span class="text-muted small ms-1">Loading…</span>';
+      segWrap.classList.remove('d-none'); segTitle.textContent=`Turned to: ${labelMap[code]}`;
+      try{
+        const resp = await api('@Url.Action("GetKpisTurned", "Home")'+`?to=${encodeURIComponent(code)}`);
+        const list = Array.isArray(resp?.items)?resp.items:[];
         segRows.innerHTML = list.length
-          ? list.map(it => `<span class="role-chip" data-kpi-id="${it.id}" data-pillar-id="${it.pillarId}" data-objective-id="${it.objectiveId}" title="${it.text}">${it.text}</span>`).join('')
+          ? list.map(it=>`<span class="role-chip" data-kpi-id="${it.id}" data-pillar-id="${it.pillarId}" data-objective-id="${it.objectiveId}" title="${it.text}">${it.text}</span>`).join('')
           : '<span class="text-muted small ms-1">No KPIs found.</span>';
-      } catch { segRows.innerHTML = '<span class="text-danger small ms-1">Failed to load KPIs.</span>'; }
+      }catch{ segRows.innerHTML='<span class="text-danger small ms-1">Failed to load KPIs.</span>'; }
     });
 
-    /* Click chip -> navigate to KPI */
-    byId('segmentKpiRows').addEventListener('click', async (e) => {
-      const chip = e.target.closest('.role-chip'); if (!chip) return;
-      const { kpiId, pillarId, objectiveId } = chip.dataset; if (!kpiId) return;
-      _pendingScrollToChart = true; await selectKpiByIds(pillarId, objectiveId, kpiId);
-      document.querySelectorAll('#segmentKpiRows .role-chip').forEach(x => x.classList.remove('active'));
+    /* ===== Click chip -> navigate to KPI ===== */
+    byId('segmentKpiRows').addEventListener('click', async (e)=>{
+      const chip=e.target.closest('.role-chip'); if(!chip) return;
+      const { kpiId, pillarId, objectiveId } = chip.dataset; if(!kpiId) return;
+      _pendingScrollToChart=true; await selectKpiByIds(pillarId, objectiveId, kpiId);
+      document.querySelectorAll('#segmentKpiRows .role-chip').forEach(x=>x.classList.remove('active'));
       chip.classList.add('active');
     });
 
     /* ===== Role summary ===== */
-    const roleCard = byId('roleSummaryCard'), roleBadge = byId('roleSummaryBadge'), roleRows = byId('roleSummaryRows');
-    function _mkChip(item) {
-      const s = document.createElement('span');
-      s.className = 'role-chip';
-      s.title = item.text || String(item.id);
-      s.textContent = item.text || String(item.id);
-      if (item.id != null) s.dataset.kpiId = item.id;
-      if (item.pillarId != null) s.dataset.pillarId = item.pillarId;
-      if (item.objectiveId != null) s.dataset.objectiveId = item.objectiveId;
+    const roleCard=byId('roleSummaryCard'), roleBadge=byId('roleSummaryBadge'), roleRows=byId('roleSummaryRows');
+    function _mkChip(item){
+      const s=document.createElement('span'); s.className='role-chip';
+      s.title=item.text||String(item.id); s.textContent=item.text||String(item.id);
+      if(item.id!=null) s.dataset.kpiId=item.id; if(item.pillarId!=null) s.dataset.pillarId=item.pillarId; if(item.objectiveId!=null) s.dataset.objectiveId=item.objectiveId;
       return s;
     }
-    function renderRoleSummary(data) {
-      const ed = Array.isArray(data?.editor) ? data.editor : [], ow = Array.isArray(data?.owner) ? data.owner : [];
-      const ph = byId('roleSummaryPlaceholder'); if (ph) ph.remove();
-      if (!ed.length && !ow.length) { roleRows.innerHTML = '<div class="col-12 text-muted small">No indicators available.</div>'; roleBadge.textContent = '—'; return; }
-      roleRows.innerHTML = '';
-      const makeCol = (title, items) => {
-        const col = document.createElement('div'); col.className = 'col-md-6';
-        const h = document.createElement('div'); h.className = 'fw-bold mb-1'; h.textContent = title;
-        const list = document.createElement('div'); list.className = 'role-list';
-        const MAX = 12;
-        items.slice(0, MAX).forEach(it => list.appendChild(_mkChip(it)));
-        if (items.length > MAX) list.appendChild(_mkChip({ text: `+${items.length - MAX} more` }));
+    function renderRoleSummary(data){
+      const ed=Array.isArray(data?.editor)?data.editor:[], ow=Array.isArray(data?.owner)?data.owner:[];
+      const ph=byId('roleSummaryPlaceholder'); if(ph) ph.remove();
+      if(!ed.length && !ow.length){ roleRows.innerHTML='<div class="col-12 text-muted small">No indicators available.</div>'; roleBadge.textContent='—'; return; }
+      roleRows.innerHTML='';
+      const makeCol=(title,items)=>{
+        const col=document.createElement('div'); col.className='col-md-6';
+        const h=document.createElement('div'); h.className='fw-bold mb-1'; h.textContent=title;
+        const list=document.createElement('div'); list.className='role-list';
+        const MAX=12; items.slice(0,MAX).forEach(it=>list.appendChild(_mkChip(it)));
+        if(items.length>MAX) list.appendChild(_mkChip({text:`+${items.length-MAX} more`}));
         col.appendChild(h); col.appendChild(list); return col;
       };
-      if (ed.length) roleRows.appendChild(makeCol('Editor for', ed));
-      if (ow.length) roleRows.appendChild(makeCol('Owner for', ow));
-      roleBadge.textContent = (ed.length && ow.length) ? 'Editor for • Owner for' : (ed.length ? 'Editor for' : 'Owner for');
-      roleCard.classList.remove('d-none');
-      markActiveRoleChip(selKpi.value);
+      if(ed.length) roleRows.appendChild(makeCol('Editor for', ed));
+      if(ow.length) roleRows.appendChild(makeCol('Owner for', ow));
+      roleBadge.textContent=(ed.length&&ow.length)?'Editor for • Owner for':(ed.length?'Editor for':'Owner for');
+      roleCard.classList.remove('d-none'); markActiveRoleChip(selKpi.value);
     }
-    async function loadRoleSummary() {
-      try {
-        const r = await fetch('@Url.Action("MyKpiRoles", "Home")', { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
-        if (!r.ok) throw 0; renderRoleSummary(await r.json());
-      } catch {
-        const ph = byId('roleSummaryPlaceholder'); if (ph) ph.textContent = 'Could not load your indicators.'; roleBadge.textContent = '—';
+    async function loadRoleSummary(){
+      try{
+        const r=await fetch('@Url.Action("MyKpiRoles", "Home")',{ headers:{'Accept':'application/json'}, cache:'no-store' });
+        if(!r.ok) throw 0; renderRoleSummary(await r.json());
+      }catch{
+        const ph=byId('roleSummaryPlaceholder'); if(ph) ph.textContent='Could not load your indicators.'; roleBadge.textContent='—';
       }
     }
-    roleRows.addEventListener('click', async (e) => {
-      const chip = e.target.closest('.role-chip'); if (!chip) return;
-      const { pillarId, objectiveId, kpiId } = chip.dataset; if (!kpiId) return;
-      _pendingScrollToChart = true; await selectKpiByIds(pillarId, objectiveId, kpiId); markActiveRoleChip(kpiId);
+    roleRows.addEventListener('click', async (e)=>{
+      const chip=e.target.closest('.role-chip'); if(!chip) return;
+      const { pillarId, objectiveId, kpiId } = chip.dataset; if(!kpiId) return;
+      _pendingScrollToChart=true; await selectKpiByIds(pillarId, objectiveId, kpiId); markActiveRoleChip(kpiId);
     });
-    function markActiveRoleChip(currentKpiId) {
-      document.querySelectorAll('#roleSummaryRows .role-chip').forEach(el => {
-        el.classList.toggle('active', currentKpiId && (el.dataset.kpiId === String(currentKpiId)));
+    function markActiveRoleChip(currentKpiId){
+      document.querySelectorAll('#roleSummaryRows .role-chip').forEach(el=>{
+        el.classList.toggle('active', currentKpiId && (el.dataset.kpiId===String(currentKpiId)));
       });
     }
 
     /* ===== Cascading dropdowns ===== */
-    function resetSelect(sel, placeholder) {
-      sel.innerHTML = '';
-      const opt = document.createElement('option'); opt.value = ''; opt.textContent = placeholder;
-      sel.appendChild(opt); sel.disabled = true;
+    function resetSelect(sel, ph){ sel.innerHTML=''; const o=document.createElement('option'); o.value=''; o.textContent=ph; sel.appendChild(o); sel.disabled=true; }
+    async function loadPillars(){
+      resetSelect(selPillar,'-- Pillar --'); resetSelect(selObjective,'-- Objective --'); resetSelect(selKpi,'-- KPI --');
+      const items=await api('@Url.Action("GetPillars", "Home")'); for(const it of items){ const o=document.createElement('option'); o.value=it.id; o.textContent=it.name; selPillar.appendChild(o); }
+      selPillar.disabled=false;
     }
-    async function loadPillars() {
-      resetSelect(selPillar, '-- Pillar --'); resetSelect(selObjective, '-- Objective --'); resetSelect(selKpi, '-- KPI --');
-      const items = await api('@Url.Action("GetPillars", "Home")');
-      for (const it of items) { const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; selPillar.appendChild(o); }
-      selPillar.disabled = false;
-    }
-    selPillar.addEventListener('change', async () => {
-      resetSelect(selObjective, '-- Objective --'); resetSelect(selKpi, '-- KPI --'); clearMeta(); clearChartAndTable();
-      const pid = selPillar.value; if (!pid) return;
-      const items = await api('@Url.Action("GetObjectives", "Home")?pillarId=' + encodeURIComponent(pid));
-      for (const it of items) { const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; selObjective.appendChild(o); }
-      selObjective.disabled = items.length === 0;
+    selPillar.addEventListener('change', async ()=>{
+      resetSelect(selObjective,'-- Objective --'); resetSelect(selKpi,'-- KPI --'); clearMeta(); clearChartAndTable();
+      const pid=selPillar.value; if(!pid) return;
+      const items=await api('@Url.Action("GetObjectives", "Home")?pillarId='+encodeURIComponent(pid));
+      for(const it of items){ const o=document.createElement('option'); o.value=it.id; o.textContent=it.name; selObjective.appendChild(o); }
+      selObjective.disabled=items.length===0;
     });
-    selObjective.addEventListener('change', async () => {
-      resetSelect(selKpi, '-- KPI --'); clearMeta(); clearChartAndTable();
-      const oid = selObjective.value; if (!oid) return;
-      const items = await api('@Url.Action("GetKpis", "Home")?objectiveId=' + encodeURIComponent(oid));
-      for (const it of items) { const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; selKpi.appendChild(o); }
-      selKpi.disabled = items.length === 0;
+    selObjective.addEventListener('change', async ()=>{
+      resetSelect(selKpi,'-- KPI --'); clearMeta(); clearChartAndTable();
+      const oid=selObjective.value; if(!oid) return;
+      const items=await api('@Url.Action("GetKpis", "Home")?objectiveId='+encodeURIComponent(oid));
+      for(const it of items){ const o=document.createElement('option'); o.value=it.id; o.textContent=it.name; selKpi.appendChild(o); }
+      selKpi.disabled=items.length===0;
     });
-    selKpi.addEventListener('change', () => { loadKpiSummary().catch(console.error); });
+    selKpi.addEventListener('change', ()=>{ loadKpiSummary().catch(console.error); });
 
-    function waitForOption(selectEl, value, timeout = 4000) {
-      return new Promise((resolve, reject) => {
-        const target = String(value);
-        const t0 = performance.now();
-        const i = setInterval(() => {
-          const has = Array.from(selectEl.options).some(o => String(o.value) === target);
-          if (has) { clearInterval(i); resolve(); }
-          if (performance.now() - t0 > timeout) { clearInterval(i); reject(new Error('Option not found: ' + target)); }
-        }, 80);
+    function waitForOption(selectEl, value, timeout=4000){
+      return new Promise((resolve,reject)=>{
+        const target=String(value); const t0=performance.now();
+        const i=setInterval(()=>{
+          const has=Array.from(selectEl.options).some(o=>String(o.value)===target);
+          if(has){ clearInterval(i); resolve(); }
+          if(performance.now()-t0>timeout){ clearInterval(i); reject(new Error('Option not found: '+target)); }
+        },80);
       });
     }
-    async function selectKpiByIds(pillarId, objectiveId, kpiId) {
-      if (pillarId) {
-        if (!selPillar.options.length || selPillar.disabled) { await loadPillars(); }
+    async function selectKpiByIds(pillarId, objectiveId, kpiId){
+      if(pillarId){
+        if(!selPillar.options.length || selPillar.disabled){ await loadPillars(); }
         await waitForOption(selPillar, pillarId);
-        if (selPillar.value !== String(pillarId)) { selPillar.value = String(pillarId); selPillar.dispatchEvent(new Event('change')); }
+        if(selPillar.value!==String(pillarId)){ selPillar.value=String(pillarId); selPillar.dispatchEvent(new Event('change')); }
       }
-      if (objectiveId) {
+      if(objectiveId){
         await waitForOption(selObjective, objectiveId);
-        if (selObjective.value !== String(objectiveId)) { selObjective.value = String(objectiveId); selObjective.dispatchEvent(new Event('change')); }
+        if(selObjective.value!==String(objectiveId)){ selObjective.value=String(objectiveId); selObjective.dispatchEvent(new Event('change')); }
       }
-      if (kpiId) {
+      if(kpiId){
         await waitForOption(selKpi, kpiId);
-        if (selKpi.value !== String(kpiId)) { selKpi.value = String(kpiId); selKpi.dispatchEvent(new Event('change')); }
+        if(selKpi.value!==String(kpiId)){ selKpi.value=String(kpiId); selKpi.dispatchEvent(new Event('change')); }
       }
     }
-    function clearChartAndTable() {
-      kpiChart.data.labels = [];
-      for (const ds of kpiChart.data.datasets) ds.data = [];
-      kpiChart.update();
-      tableBody.innerHTML = '<tr class="placeholder-row"><td colspan="6" class="text-center text-muted">—</td></tr>';
+    function clearChartAndTable(){
+      kpiChart.data.labels=[]; for(const ds of kpiChart.data.datasets) ds.data=[]; kpiChart.update();
+      tableBody.innerHTML='<tr class="placeholder-row"><td colspan="6" class="text-center text-muted">—</td></tr>';
     }
-    function clearMeta() {
-      metaOwner.textContent = '—'; metaEditor.textContent = '—'; metaFrequency.textContent = '—';
-      metaUnit.textContent = '—'; metaPriority.textContent = '—';
-      metaStatus.textContent = '—'; metaStatus.className = 'status-pill'; metaStatus.style.background = '';
-      btnEditKpi.disabled = true; btnEditKpi.textContent = 'Edit KPI (Actual & Forecast)';
+    function clearMeta(){
+      metaOwner.textContent='—'; metaEditor.textContent='—'; metaFrequency.textContent='—';
+      metaUnit.textContent='—'; metaPriority.textContent='—'; metaStatus.textContent='—';
+      metaStatus.className='status-pill'; metaStatus.style.background='';
+      btnEditKpi.disabled=true; btnEditKpi.textContent='Edit KPI (Actual & Forecast)';
     }
 
     /* ===== KPI main chart ===== */
-    const ctx = document.getElementById('kpiChart').getContext('2d');
-    let kpiChart = new Chart(ctx, {
-      data: {
-        labels: [],
-        datasets: [
-          { type: 'bar', label: 'Actual', data: [], backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
-          { type: 'line', label: 'Target', data: [], borderWidth: 2, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', tension: .3, fill: false },
-          { type: 'line', label: 'Forecast', data: [], borderWidth: 2, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], tension: .3, fill: false },
-          { type: 'bar', label: 'Year Target', data: [], backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
+    const ctx=document.getElementById('kpiChart').getContext('2d');
+    let kpiChart=new Chart(ctx,{
+      data:{
+        labels:[],
+        datasets:[
+          { type:'bar',  label:'Actual',   data:[], backgroundColor:'#800080', borderColor:'#800080', borderWidth:2, borderSkipped:'bottom' },
+          { type:'line', label:'Target',   data:[], borderWidth:2, borderColor:'#7a7a7a', pointBackgroundColor:'#7a7a7a', pointBorderColor:'#7a7a7a', tension:.3, fill:false },
+          { type:'line', label:'Forecast', data:[], borderWidth:2, borderColor:'#fd7e14', pointBackgroundColor:'#fd7e14', pointBorderColor:'#fd7e14', borderDash:[5,5], tension:.3, fill:false },
+          { type:'bar',  label:'Year Target', data:[], backgroundColor:'#7a7a7a', borderColor:'#7a7a7a', borderWidth:1 }
         ]
       },
-      options: {
-        responsive: true, maintainAspectRatio: false, layout: { padding: { top: 28, bottom: 8 } },
-        animation: { duration: 0 },
-        scales: {
-          x: {
-            grid: { display: false },
-            ticks: {
-              padding: 8,
-              callback: function (v) { const l = this.getLabelForValue(v); return String(l).replace(/^\s*\d{4}\s*[\-–—]\s*/, ''); }
-            }
-          },
-          y: { display: false, grid: { display: false }, beginAtZero: true }
+      options:{
+        responsive:true, maintainAspectRatio:false, layout:{ padding:{ top:28, bottom:8 } },
+        animation:{ duration:0 },
+        scales:{
+          x:{ grid:{ display:false }, ticks:{ padding:8, callback:function(v){ const l=this.getLabelForValue(v); return String(l).replace(/^\s*\d{4}\s*[\-–—]\s*/,''); } } },
+          y:{ display:false, grid:{ display:false }, beginAtZero:true }
         },
-        plugins: {
-          datalabels: false,
-          smartValueLabels: {
-            formatter: _fmtShort, fontSize: 12, fontWeight: '700', minGap: 14, padTop: 12, padBottom: 4, outline: true,
-            perDataset: [{ dy: -12, dx: 0, color: '#800080' }, { dy: 12, dx: -8, color: '#7a7a7a' }, { dy: -16, dx: 8, color: '#fd7e14' }, { dy: -12, dx: 0, color: '#7a7a7a' }]
+        plugins:{
+          datalabels:false,
+          smartValueLabels:{
+            formatter:_fmtShort, fontSize:12, fontWeight:'700', minGap:14, padTop:12, padBottom:4, outline:true,
+            perDataset:[ {dy:-12,dx:0,color:'#800080'}, {dy:12,dx:-8,color:'#7a7a7a'}, {dy:-16,dx:8,color:'#fd7e14'}, {dy:-12,dx:0,color:'#7a7a7a'} ]
           },
-          tooltip: { enabled: true },
-          legend: { position: 'top', labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 8, weight: '700', family: Chart.defaults.font.family } } }
+          tooltip:{ enabled:true },
+          legend:{ position:'top', labels:{ boxWidth:12, boxHeight:10, padding:12, font:{ size:8, weight:'700', family:Chart.defaults.font.family } } }
         }
       }
     });
 
-    /* Edit modal wiring (unchanged) */
-    function wireKpiModalAjax() {
-      const modal = document.getElementById('editKpiModal');
-      const form = modal ? modal.querySelector('#kpi-edit-form') : null;
-      if (!form || form.dataset.wired === '1') return;
-      form.dataset.wired = '1';
-      form.addEventListener('submit', async (e) => {
+    /* ===== Edit modal wiring (unchanged) ===== */
+    function wireKpiModalAjax(){
+      const modal=document.getElementById('editKpiModal');
+      const form=modal?modal.querySelector('#kpi-edit-form'):null;
+      if(!form || form.dataset.wired==='1') return;
+      form.dataset.wired='1';
+      form.addEventListener('submit', async (e)=>{
         e.preventDefault();
-        const url = form.getAttribute('action'); const fd = new FormData(form);
-        try {
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-            body: fd
-          });
-          const text = await res.text();
-          let data = null; try { data = JSON.parse(text); } catch { }
-          if (!res.ok) {
-            const msg = (data && data.error) ? data.error : ('Save failed (' + res.status + ')');
-            throw new Error(msg);
-          }
-          if (data && typeof data === 'object') {
-            const created = (typeof data.created === 'number') ? data.created : data.createdCount;
-            const skipped = (typeof data.skipped === 'number') ? data.skipped : data.skippedCount;
-            if (typeof created === 'number') {
-              alert(`Submitted: ${created} change(s)` + (skipped ? `, skipped: ${skipped}` : ''));
-            } else if (data.status) {
-              alert(data.status === 'approved' ? 'Saved & auto-approved.' : 'Submitted for approval.');
-            }
+        const url=form.getAttribute('action'); const fd=new FormData(form);
+        try{
+          const res=await fetch(url,{ method:'POST', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}, body:fd });
+          const text=await res.text(); let data=null; try{ data=JSON.parse(text); }catch{}
+          if(!res.ok){ const msg=(data&&data.error)?data.error:('Save failed ('+res.status+')'); throw new Error(msg); }
+          if(data && typeof data==='object'){
+            const created=(typeof data.created==='number')?data.created:data.createdCount;
+            const skipped=(typeof data.skipped==='number')?data.skipped:data.skippedCount;
+            if(typeof created==='number'){ alert(`Submitted: ${created} change(s)` + (skipped?`, skipped: ${skipped}`:'')); }
+            else if(data.status){ alert(data.status==='approved'?'Saved & auto-approved.':'Submitted for approval.'); }
           }
           bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).hide();
-          if (btnEditKpi) { btnEditKpi.disabled = true; btnEditKpi.textContent = '⏳ Pending approval'; }
-          await new Promise(r => setTimeout(r, 350)); await loadKpiSummary();
-        } catch (err) { alert(err?.message || 'Save failed'); }
+          if(btnEditKpi){ btnEditKpi.disabled=true; btnEditKpi.textContent='⏳ Pending approval'; }
+          await new Promise(r=>setTimeout(r,350)); await loadKpiSummary();
+        }catch(err){ alert(err?.message||'Save failed'); }
       });
     }
 
-    async function loadKpiSummary() {
+    async function loadKpiSummary(){
       clearMeta(); clearChartAndTable();
-      const kpiId = selKpi.value; if (!kpiId) return;
-      const res = await api('@Url.Action("GetKpiSummary", "Home")?kpiId=' + encodeURIComponent(kpiId));
-      currentPlanId = res?.meta?.planId ?? null; canEditFacts = !!res?.meta?.canEdit;
+      const kpiId=selKpi.value; if(!kpiId) return;
+      const res=await api('@Url.Action("GetKpiSummary", "Home")?kpiId='+encodeURIComponent(kpiId));
+      currentPlanId=res?.meta?.planId??null; canEditFacts=!!res?.meta?.canEdit;
 
-      const leftParts = [];
-      if (res?.meta?.pillarCode) leftParts.push(res.meta.pillarCode);
-      if (res?.meta?.objectiveCode) leftParts.push(res.meta.objectiveCode);
-      let left = leftParts.join('.');
-      if (res?.meta?.code) left = left ? `${left} ${res.meta.code}` : res.meta.code;
-      byId('kpiTitle').textContent = (left ? `${left} — ` : '') + (res?.meta?.title || '—');
+      const leftParts=[]; if(res?.meta?.pillarCode) leftParts.push(res.meta.pillarCode); if(res?.meta?.objectiveCode) leftParts.push(res.meta.objectiveCode);
+      let left=leftParts.join('.'); if(res?.meta?.code) left = left? `${left} ${res.meta.code}` : res.meta.code;
+      byId('kpiTitle').textContent=(left?`${left} — `:'')+(res?.meta?.title||'—');
 
-      metaOwner.textContent = res?.meta?.owner || '—';
-      metaEditor.textContent = res?.meta?.editor || '—';
-      metaFrequency.textContent = res?.meta?.valueType || '—';
-      metaUnit.textContent = res?.meta?.unit || '—';
-      metaPriority.textContent = (res?.meta?.priority ?? '—');
-      const raw = res?.meta?.statusRaw ?? res?.meta?.statusLabel;
-      const color = (res?.meta?.statusColor || '');
-      metaStatus.textContent = uiStatus(raw); metaStatus.className = 'status-pill';
-      if (color) metaStatus.style.background = color;
+      metaOwner.textContent=res?.meta?.owner||'—';
+      metaEditor.textContent=res?.meta?.editor||'—';
+      metaFrequency.textContent=res?.meta?.valueType||'—';
+      metaUnit.textContent=res?.meta?.unit||'—';
+      metaPriority.textContent=(res?.meta?.priority??'—');
+      const raw=res?.meta?.statusRaw ?? res?.meta?.statusLabel;
+      const color=(res?.meta?.statusColor||'');
+      metaStatus.textContent=uiStatus(raw); metaStatus.className='status-pill'; if(color) metaStatus.style.background=color;
 
-      const baseLabels = res?.chart?.labels || [];
-      const actual = res?.chart?.actual || [];
-      const target = res?.chart?.target || [];
-      const forecast = res?.chart?.forecast || [];
-      const yrArr = Array.isArray(res?.chart?.yearTargets) ? res.chart.yearTargets : [];
-      const yearLabels = yrArr.map(y => String(y.year));
-      const yearBarVals = yrArr.map(y => y.value ?? null);
-      const allLabels = baseLabels.concat(yearLabels);
-      const pad = new Array(yearLabels.length).fill(null);
-      const leftNulls = new Array(baseLabels.length).fill(null);
-      kpiChart.data.labels = allLabels;
-      kpiChart.data.datasets[0].data = actual.concat(pad);
-      kpiChart.data.datasets[1].data = target.concat(pad);
-      kpiChart.data.datasets[2].data = forecast.concat(pad);
-      kpiChart.data.datasets[3].data = leftNulls.concat(yearBarVals);
+      const baseLabels=res?.chart?.labels||[];
+      const actual=res?.chart?.actual||[];
+      const target=res?.chart?.target||[];
+      const forecast=res?.chart?.forecast||[];
+      const yrArr=Array.isArray(res?.chart?.yearTargets)?res.chart.yearTargets:[];
+      const yearLabels=yrArr.map(y=>String(y.year));
+      const yearBarVals=yrArr.map(y=>y.value??null);
+      const allLabels=baseLabels.concat(yearLabels);
+      const pad=new Array(yearLabels.length).fill(null);
+      const leftNulls=new Array(baseLabels.length).fill(null);
+      kpiChart.data.labels=allLabels;
+      kpiChart.data.datasets[0].data=actual.concat(pad);
+      kpiChart.data.datasets[1].data=target.concat(pad);
+      kpiChart.data.datasets[2].data=forecast.concat(pad);
+      kpiChart.data.datasets[3].data=leftNulls.concat(yearBarVals);
       kpiChart.update();
 
-      const rows = res?.table || [];
-      if (!rows.length) {
-        tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No facts for this plan/year.</td></tr>';
-      } else {
-        tableBody.innerHTML = '';
-        for (const r of rows) {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td><td>${r.startDate ?? '—'}</td><td>${r.endDate ?? '—'}</td><td>${r.actual ?? '—'}</td><td>${r.target ?? '—'}</td><td>${r.forecast ?? '—'}</td>`;
+      const rows=res?.table||[];
+      if(!rows.length){
+        tableBody.innerHTML='<tr><td colspan="6" class="text-center text-muted">No facts for this plan/year.</td></tr>';
+      }else{
+        tableBody.innerHTML='';
+        for(const r of rows){
+          const tr=document.createElement('tr');
+          tr.innerHTML=`<td>${r.period??'—'} ${r.hasPending?'<span class="badge text-bg-warning ms-1">Pending</span>':''}</td><td>${r.startDate??'—'}</td><td>${r.endDate??'—'}</td><td>${r.actual??'—'}</td><td>${r.target??'—'}</td><td>${r.forecast??'—'}</td>`;
           tableBody.appendChild(tr);
         }
       }
 
-      const anyPending = Array.isArray(res?.table) && res.table.some(r => r.hasPending);
-      if (!selKpi.value) { btnEditKpi.disabled = true; btnEditKpi.textContent = 'Edit KPI (Actual & Forecast)'; }
-      else if (!canEditFacts) { btnEditKpi.disabled = true; btnEditKpi.textContent = 'Edit KPI (no access)'; }
-      else if (anyPending) { btnEditKpi.disabled = true; btnEditKpi.textContent = 'Pending approval'; }
-      else { btnEditKpi.disabled = false; btnEditKpi.textContent = 'Edit KPI (Actual & Forecast)'; }
+      const anyPending=Array.isArray(res?.table)&&res.table.some(r=>r.hasPending);
+      if(!selKpi.value){ btnEditKpi.disabled=true; btnEditKpi.textContent='Edit KPI (Actual & Forecast)'; }
+      else if(!canEditFacts){ btnEditKpi.disabled=true; btnEditKpi.textContent='Edit KPI (no access)'; }
+      else if(anyPending){ btnEditKpi.disabled=true; btnEditKpi.textContent='Pending approval'; }
+      else{ btnEditKpi.disabled=false; btnEditKpi.textContent='Edit KPI (Actual & Forecast)'; }
 
       markActiveRoleChip(selKpi.value);
-      if (_pendingScrollToChart) { _pendingScrollToChart = false; _scrollToChart(); }
+      if(_pendingScrollToChart){ _pendingScrollToChart=false; _scrollToChart(); }
     }
 
-    /* Admin Set Status (unchanged) */
+    /* ===== Admin Set Status (unchanged) ===== */
     const btnAdminSetStatus = byId('btnAdminSetStatus'),
           adminStatusModalEl = document.getElementById('adminStatusModal'),
           adminStatusForm = document.getElementById('adminStatusForm'),
           adminStatusSelect = document.getElementById('adminStatusSelect');
     const _loadKpiSummary_orig = loadKpiSummary;
-    loadKpiSummary = async function () {
+    loadKpiSummary = async function(){
       await _loadKpiSummary_orig();
-      try {
-        const kpiId = selKpi.value;
-        const res = await api('@Url.Action("GetKpiSummary", "Home")' + '?kpiId=' + encodeURIComponent(kpiId));
-        const canAdmin = !!res?.meta?.canAdminSetStatus;
-        if (btnAdminSetStatus) {
+      try{
+        const kpiId=selKpi.value;
+        const res=await api('@Url.Action("GetKpiSummary", "Home")'+'?kpiId='+encodeURIComponent(kpiId));
+        const canAdmin=!!res?.meta?.canAdminSetStatus;
+        if(btnAdminSetStatus){
           btnAdminSetStatus.classList.toggle('d-none', !canAdmin);
           btnAdminSetStatus.dataset.kpiId = kpiId || '';
           btnAdminSetStatus.dataset.status = canonStatusForUi(res?.meta?.statusRaw ?? res?.meta?.statusLabel);
         }
-      } catch { }
+      }catch{}
     };
-    if (btnAdminSetStatus) {
-      btnAdminSetStatus.addEventListener('click', () => {
-        const kpiId = selKpi.value;
-        const pillText = (byId('metaStatus')?.textContent || '').trim().toLowerCase();
-        const map = { 'target achieved': 'green', 'on forecast': 'orange', 'target missed': 'red', 'data missing': 'blue' };
+    if(btnAdminSetStatus){
+      btnAdminSetStatus.addEventListener('click', ()=>{
+        const kpiId=selKpi.value;
+        const pillText=(byId('metaStatus')?.textContent||'').trim().toLowerCase();
+        const map={ 'target achieved':'green','on forecast':'orange','target missed':'red','data missing':'blue' };
         adminStatusSelect.value = map[pillText] || 'green';
         adminStatusForm.dataset.kpiId = kpiId || '';
         bootstrap.Modal.getOrCreateInstance(adminStatusModalEl).show();
       });
     }
-    if (adminStatusForm) {
-      adminStatusForm.addEventListener('submit', async (e) => {
+    if(adminStatusForm){
+      adminStatusForm.addEventListener('submit', async (e)=>{
         e.preventDefault();
-        const kpiId = adminStatusForm.dataset.kpiId || selKpi.value;
-        const status = adminStatusSelect.value;
-        try {
-          const res = await fetch('@Url.Action("AdminSetKpiStatus", "Home")', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ kpiId, status }).toString()
-          });
-          const data = await res.json();
-          if (!res.ok || !data.ok) throw new Error(data?.error || `Failed (${res.status})`);
-          metaStatus.textContent = uiStatus(data.raw || status);
-          metaStatus.style.background = data.color || '';
+        const kpiId=adminStatusForm.dataset.kpiId||selKpi.value; const status=adminStatusSelect.value;
+        try{
+          const res=await fetch('@Url.Action("AdminSetKpiStatus", "Home")',{ method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:new URLSearchParams({kpiId,status}).toString() });
+          const data=await res.json();
+          if(!res.ok || !data.ok) throw new Error(data?.error||`Failed (${res.status})`);
+          byId('metaStatus').textContent=uiStatus(data.raw||status);
+          byId('metaStatus').style.background=data.color||'';
           loadSummary();
           bootstrap.Modal.getOrCreateInstance(adminStatusModalEl).hide();
-        } catch (err) { alert(err?.message || 'Failed to update status'); }
+        }catch(err){ alert(err?.message||'Failed to update status'); }
       });
     }
 
-    /* Init */
-    function getQS(name) { const u = new URL(window.location.href); return u.searchParams.get(name); }
-    async function initPage() {
+    /* ===== Init ===== */
+    function getQS(name){ const u=new URL(window.location.href); return u.searchParams.get(name); }
+    async function initPage(){
       loadSummary(); loadRoleSummary(); await loadPillars();
-      const qP = getQS('pillarId'), qO = getQS('objectiveId'), qK = getQS('kpiId');
-      if (qP) { selPillar.value = qP; selPillar.dispatchEvent(new Event('change')); }
-      if (qO) { await new Promise(r => setTimeout(r, 150)); selObjective.value = qO; selObjective.dispatchEvent(new Event('change')); }
-      if (qK) { await new Promise(r => setTimeout(r, 150)); selKpi.value = qK; selKpi.dispatchEvent(new Event('change')); }
+      const qP=getQS('pillarId'), qO=getQS('objectiveId'), qK=getQS('kpiId');
+      if(qP){ selPillar.value=qP; selPillar.dispatchEvent(new Event('change')); }
+      if(qO){ await new Promise(r=>setTimeout(r,150)); selObjective.value=qO; selObjective.dispatchEvent(new Event('change')); }
+      if(qK){ await new Promise(r=>setTimeout(r,150)); selKpi.value=qK; selKpi.dispatchEvent(new Event('change')); }
     }
     initPage().catch(console.error);
   </script>
 }
+
 
