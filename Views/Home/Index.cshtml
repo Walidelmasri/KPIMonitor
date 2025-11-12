@@ -131,6 +131,71 @@
   #summaryPies .summary-counts-vertical .kpi .n {
     font-size: 1.25rem;
   }
+  /* ===== Unified Typography Controls ===== */
+:root {
+  --font-turned-bullets: 1rem;
+  --font-turned-number: 1.1em;
+  --font-indicators-total: 1.6rem;
+  --font-summary-number: 1.6rem;
+  --font-summary-label: 0.9rem;
+  --font-chip: 0.95rem;
+}
+
+/* “Turned to …” list under Red Share by Pillar */
+#turnedBullets {
+  font-size: var(--font-turned-bullets);
+  line-height: 1.3;
+  margin-top: 0.25rem;
+}
+#turnedBullets li {
+  cursor: pointer;
+}
+#turnedBullets li:hover {
+  text-decoration: underline;
+}
+#turnedBullets strong {
+  font-size: var(--font-turned-number);
+  font-weight: 800;
+}
+
+/* Indicators total number (left chart) */
+#cntTotal {
+  font-size: var(--font-indicators-total);
+  font-weight: 800 !important;
+}
+
+/* Small counters next to the pies */
+#summaryCard .kpi .n {
+  font-size: var(--font-summary-number);
+  font-weight: 800;
+}
+#summaryCard .kpi .lbl {
+  font-size: var(--font-summary-label);
+}
+
+/* KPI chips */
+.role-chip {
+  font-size: var(--font-chip);
+}
+
+/* ===== Layout Fixes for Pie Chart Titles ===== */
+#summaryPies .col-lg-4 > .border {
+  display: flex;
+  flex-direction: column;
+}
+
+#summaryPies .col-lg-4 > .border .d-flex.justify-content-between.align-items-center.mb-2 {
+  margin-bottom: 0.25rem;
+  align-items: flex-start; /* Align title to top like bar card */
+}
+
+#summaryPies .col-lg-4 > .border .pie {
+  flex: 1; /* Ensures pie expands below title */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 </style>
 
 <div class="container py-4">
@@ -192,7 +257,7 @@
               </div>
 
               <!-- Turned-to bullets -->
-              <div id="turnedBullets" class="small text-muted">
+              <div id="turnedBullets" class="text-muted">
                 <ul id="turnedList"></ul>
               </div>
             </div>
