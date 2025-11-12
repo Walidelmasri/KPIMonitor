@@ -2,271 +2,88 @@
   ViewData["Title"] = "Dashboard";
 }
 <style>
-  :root {
-    --app-font: 'Tajawal', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  }
-
-  body,
-  .card,
-  .form-select,
-  .btn {
-    font-family: var(--app-font);
-  }
-
-  #factsTbody td {
-    background-color: inherit !important;
-  }
-
-  #summaryCard .kpi {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  #summaryCard .kpi .n {
-    font-size: 1.6rem;
-    font-weight: 800;
-    line-height: 1;
-  }
-
-  #summaryCard .kpi .lbl {
-    color: #6c757d;
-    font-weight: 600;
-  }
-
-  @* #summaryPies .pie {
-    min-height: 220px;
-  } *@
-
-  .role-chip {
-    display: inline-block;
-    margin: 2px 6px 2px 0;
-    padding: 4px 8px;
-    border-radius: 999px;
-    background: #f1f3f5;
-    border: 1px solid #e3e7eb;
-    white-space: nowrap;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    cursor: pointer;
-    user-select: none;
-  }
-
-  .role-chip:hover {
-    background: #e9ecef;
-  }
-
-  .role-chip.active {
-    background: #dbeafe;
-    border-color: #93c5fd;
-    color: #0b5ed7;
-    font-weight: 600;
-  }
-
-  #roleSummaryCard .role-list {
-    max-height: 84px;
-    overflow: auto;
-  }
-
-  #segmentKpiList .role-list {
-    max-height: 132px;
-    overflow: auto;
-  }
-
-  #summaryPies .d-flex.gap-3 {
-    flex-wrap: wrap;
-    gap: 6px 12px;
-    justify-content: flex-end;
-    max-width: 60%;
-  }
-
-  #summaryPies .kpi .lbl {
-    font-size: .85rem;
-  }
-
-  #summaryPies .kpi .n {
-    font-size: 1.25rem;
-  }
-
-  @* #summaryPies .bar-share .pie {
-    height: 220px;
-    min-height: 220px;
-    position: relative;
-  } *@
-
-  #summaryPies .bar-share .card-title {
-    margin-bottom: .25rem;
-  }
-
-  /* “Turned to …” bullets under the middle card */
-  #turnedBullets {
-    line-height: 1.25;
-    margin-top: .25rem;
-  }
-
-  #turnedBullets ul {
-    margin: 0;
-    padding-left: 1.1rem;
-  }
-
-  #turnedBullets li {
-    cursor: pointer;
-  }
-
-  #turnedBullets li:hover {
-    text-decoration: underline;
-  }
-
-  /* Right card, counts stacked on the side */
-  #summaryPies .summary-counts-vertical .kpi {
-    justify-content: flex-end;
-    gap: 6px;
-  }
-
-  #summaryPies .summary-counts-vertical .kpi .lbl {
-    font-size: .85rem;
-  }
-
-  #summaryPies .summary-counts-vertical .kpi .n {
-    font-size: 1.25rem;
-  }
-  /* ===== Unified Typography Controls ===== */
+/* ========= Core tokens ========= */
 :root {
+  --app-font: 'Tajawal', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+
+  /* Type scale knobs */
   --font-turned-bullets: 1rem;
   --font-turned-number: 1.1em;
   --font-indicators-total: 1.6rem;
   --font-summary-number: 1.6rem;
   --font-summary-label: 0.9rem;
   --font-chip: 0.95rem;
+
+  /* Charts */
+  --pie-height: 260px; /* change this once to resize both pies */
 }
 
-/* “Turned to …” list under Red Share by Pillar */
-#turnedBullets {
-  font-size: var(--font-turned-bullets);
-  line-height: 1.3;
-  margin-top: 0.25rem;
-}
-#turnedBullets li {
-  cursor: pointer;
-}
-#turnedBullets li:hover {
-  text-decoration: underline;
-}
-#turnedBullets strong {
-  font-size: var(--font-turned-number);
-  font-weight: 800;
-}
+/* ========= Base ========= */
+body, .card, .form-select, .btn { font-family: var(--app-font); }
+#factsTbody td { background-color: inherit !important; }
 
-/* Indicators total number (left chart) */
-#cntTotal {
-  font-size: var(--font-indicators-total);
-  font-weight: 800 !important;
-}
+/* ========= Summary counters (left/right of pies) ========= */
+#summaryCard .kpi { display: flex; align-items: center; gap: 6px; }
+#summaryCard .kpi .n { font-size: var(--font-summary-number); font-weight: 800; line-height: 1; }
+#summaryCard .kpi .lbl { color: #6c757d; font-weight: 600; font-size: var(--font-summary-label); }
 
-/* Small counters next to the pies */
-#summaryCard .kpi .n {
-  font-size: var(--font-summary-number);
-  font-weight: 800;
-}
-#summaryCard .kpi .lbl {
-  font-size: var(--font-summary-label);
-}
+/* “Indicators (Total)” number (left pie title) */
+#cntTotal { font-size: var(--font-indicators-total); font-weight: 800 !important; }
 
-/* KPI chips */
+/* ========= Role chips ========= */
 .role-chip {
-  font-size: var(--font-chip);
+  display: inline-block; margin: 2px 6px 2px 0; padding: 4px 8px;
+  border-radius: 999px; background: #f1f3f5; border: 1px solid #e3e7eb;
+  white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+  cursor: pointer; user-select: none; font-size: var(--font-chip);
 }
+.role-chip:hover { background: #e9ecef; }
+.role-chip.active { background: #dbeafe; border-color: #93c5fd; color: #0b5ed7; font-weight: 600; }
+#roleSummaryCard .role-list { max-height: 84px; overflow: auto; }
+#segmentKpiList .role-list { max-height: 132px; overflow: auto; }
 
-/* ===== Layout Fixes for Pie Chart Titles ===== */
-#summaryPies .col-lg-4 > .border {
-  display: flex;
-  flex-direction: column;
-}
+/* ========= Turned-to bullets (under bar card) ========= */
+#turnedBullets { font-size: var(--font-turned-bullets); line-height: 1.3; margin-top: .25rem; }
+#turnedBullets ul { margin: 0; padding-left: 1.1rem; }
+#turnedBullets li { cursor: pointer; }
+#turnedBullets li:hover { text-decoration: underline; }
+#turnedBullets strong { font-size: var(--font-turned-number); font-weight: 800; }
 
-#summaryPies .col-lg-4 > .border .d-flex.justify-content-between.align-items-center.mb-2 {
-  margin-bottom: 0.25rem;
-  align-items: flex-start; /* Align title to top like bar card */
-}
+/* ========= Summary cards row (three cards) ========= */
+#summaryPies .summary-counts-vertical .kpi { justify-content: flex-end; gap: 6px; }
+#summaryPies .summary-counts-vertical .kpi .lbl { font-size: .85rem; }
+#summaryPies .summary-counts-vertical .kpi .n { font-size: 1.25rem; }
 
-#summaryPies .col-lg-4 > .border .pie {
-  flex: 1; /* Ensures pie expands below title */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-/* ===== Summary pies: unified layout + fixed size ===== */
-
-/* Make the three summary cards use a column layout so the header stays at the top */
+/* Make each summary card a column so titles sit at the top */
 #summaryPies > [class*="col-"] > .border {
-  display: flex;
-  flex-direction: column;
-  padding-top: .6rem;             /* pulls header closer to top edge */
+  display: flex; flex-direction: column; padding-top: .6rem; min-height: 0;
 }
 
-/* Header row inside each card: keep it snug and top-aligned */
+/* Header row snug & top-aligned (matches bar card look) */
 #summaryPies > [class*="col-"] > .border
   .d-flex.justify-content-between.align-items-center.mb-2 {
-  margin-bottom: .25rem;          /* tighter gap under the title */
-  align-items: flex-start;        /* title sits at top like the bar card */
+  margin-bottom: .35rem; align-items: flex-start;
 }
 
-/* The chart area fills the rest of the card; centers the canvas vertically */
+/* Chart container: center canvas; unify pie heights here (not on canvas) */
 #summaryPies > [class*="col-"] > .border .pie {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  flex: 1; display: flex; align-items: center; justify-content: center;
 }
 
-/* Force BOTH pies to identical height (Chart.js will scale inside) */
-@* #pieKpiStatus,
-#pieActionStatus {
-  height: 260px !important;
-  min-height: 260px !important;
-} *@
-
-/* (Optional) If you also want the bar chart to match this exact height,
-   uncomment the next rule. Otherwise leave the bar free to grow/shrink
-   with the number of pillar rows. */
-/*
-#barRedShare { height: 260px !important; min-height: 260px !important; }
-*/
-/* Summary cards: title pinned to top; chart fills the rest */
-#summaryPies > [class*="col-"] > .border {
-  display: flex;
-  flex-direction: column;
-  padding-top: .6rem;
+/* Both pies use the same fixed container height for visual symmetry */
+#pieKpiStatus, #pieActionStatus { /* canvas elements */
+  /* no explicit width/height here to avoid ResizeObserver loops */
+}
+#summaryPies .col-lg-4:not(.bar-share) .pie {
+  height: var(--pie-height); min-height: var(--pie-height); overflow: hidden;
 }
 
-/* Header row snug & top-aligned like the bar card */
-#summaryPies > [class*="col-"] > .border
-  .d-flex.justify-content-between.align-items-center.mb-2 {
-  margin-bottom: .35rem;
-  align-items: flex-start;
-}
+/* Bar card: grows with pillar rows, no fixed height */
+#summaryPies .bar-share .pie { height: auto; min-height: 0; }
+#summaryPies .bar-share .card-title { margin-bottom: .25rem; }
 
-/* Chart area (container) – same height for BOTH pies; canvas will stretch inside */
-#summaryPies > [class*="col-"] > .border .pie {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 260px;        /* tweak this single number to resize both pies */
-  min-height: 260px;
-}
-
-/* Let Chart.js fill the container cleanly (don’t set fixed px on the canvas itself) */
-#summaryPies .pie > canvas {
-  width: 100% !important;
-  height: 100% !important;
-}
-
-/* Bar card: don’t force its height (it grows with number of rows) */
-#summaryPies .bar-share .pie {
-  height: auto;
-  min-height: 0;
-}
+/* General canvas fix so it doesn't act like inline text */
+#summaryPies canvas { display: block; }
 
 </style>
 
