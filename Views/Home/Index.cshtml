@@ -184,7 +184,7 @@
           <div class="col-lg-4">
             <div class="border rounded-3 p-3 h-100 bar-share">
               <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="fw-bold text-secondary">Red Share by Pillar</div>
+                <div class="fw-bold text-secondary">Pillars With Red Indicators</div>
                 <span class="text-muted small" id="redShareLoading">Loading…</span>
               </div>
               <div class="pie">
@@ -687,7 +687,7 @@
       if (kpiId) { await waitForOption(selKpi, kpiId); if (selKpi.value !== String(kpiId)) { selKpi.value = String(kpiId); selKpi.dispatchEvent(new Event('change')); } }
     }
     function clearChartAndTable() { kpiChart.data.labels = []; for (const ds of kpiChart.data.datasets) ds.data = []; kpiChart.update(); tableBody.innerHTML = '<tr class="placeholder-row"><td colspan="6" class="text-center text-muted">—</td></tr>'; }
-    function clearMeta() { metaOwner.textContent = '—'; metaEditor.textContent = '—'; metaFrequency.textContent = '—'; metaUnit.textContent = '—'; metaPriority.textContent = '—'; metaStatus.textContent = '—'; metaStatus.className = 'status-pill'; metaStatus.style.background = ''; btnEditKpi.disabled = true; btnEditKpi.textContent = '✏️ Edit KPI (Actual & Forecast)'; }
+    function clearMeta() { metaOwner.textContent = '—'; metaEditor.textContent = '—'; metaFrequency.textContent = '—'; metaUnit.textContent = '—'; metaPriority.textContent = '—'; metaStatus.textContent = '—'; metaStatus.className = 'status-pill'; metaStatus.style.background = ''; btnEditKpi.disabled = true; btnEditKpi.textContent = 'Edit KPI (Actual & Forecast)'; }
 
     /* ===== KPI main chart ===== */
     const ctx = document.getElementById('kpiChart').getContext('2d');
@@ -753,10 +753,10 @@
       else { tableBody.innerHTML = ''; for (const r of rows) { const tr = document.createElement('tr'); tr.innerHTML = `<td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td><td>${r.startDate ?? '—'}</td><td>${r.endDate ?? '—'}</td><td>${r.actual ?? '—'}</td><td>${r.target ?? '—'}</td><td>${r.forecast ?? '—'}</td>`; tableBody.appendChild(tr); } }
 
       const anyPending = Array.isArray(res?.table) && res.table.some(r => r.hasPending);
-      if (!selKpi.value) { btnEditKpi.disabled = true; btnEditKpi.textContent = '✏️ Edit KPI (Actual & Forecast)'; }
-      else if (!canEditFacts) { btnEditKpi.disabled = true; btnEditKpi.textContent = '✏️ Edit KPI (no access)'; }
-      else if (anyPending) { btnEditKpi.disabled = true; btnEditKpi.textContent = '⏳ Pending approval'; }
-      else { btnEditKpi.disabled = false; btnEditKpi.textContent = '✏️ Edit KPI (Actual & Forecast)'; }
+      if (!selKpi.value) { btnEditKpi.disabled = true; btnEditKpi.textContent = 'Edit KPI (Actual & Forecast)'; }
+      else if (!canEditFacts) { btnEditKpi.disabled = true; btnEditKpi.textContent = 'Edit KPI (no access)'; }
+      else if (anyPending) { btnEditKpi.disabled = true; btnEditKpi.textContent = 'Pending approval'; }
+      else { btnEditKpi.disabled = false; btnEditKpi.textContent = 'Edit KPI (Actual & Forecast)'; }
 
       markActiveRoleChip(selKpi.value);
       if (_pendingScrollToChart) { _pendingScrollToChart = false; _scrollToChart(); }
