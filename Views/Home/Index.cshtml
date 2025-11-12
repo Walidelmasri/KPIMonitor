@@ -16,9 +16,9 @@
     --font-summary-label: 0.9rem;
     --font-chip: 0.95rem;
 
-    /* Charts */
-    --pie-height: 200px; /* Both pies stay this size, fixed */
-    --bar-panel-height: 160px; /* Bar card kept compact */
+    /* Charts (keep both pies same & slightly bigger) */
+    --pie-height: 220px;
+    --bar-panel-height: 220px; /* middle card matches pie height for perfect alignment */
   }
 
   /* =========================
@@ -63,37 +63,29 @@
   /* =========================
      Summary row (three cards)
      - titles pinned to top
-     - pies same height (fixed)
-     - bar card fixed height w/ scroll
-  ======================== */
-
-  /* Make each summary card a column so title stays at the top */
+     - pies fixed height
+     - bar card fixed height (matches pies)
+  ========================= */
   #summaryPies > [class*="col-"] > .border{
     display:flex; flex-direction:column;
-    padding-top:.6rem;  /* pulls title closer to top edge */
+    padding-top:.6rem;
     min-height:0;
   }
-
-  /* Header row snug & top-aligned (matches bar card) */
   #summaryPies > [class*="col-"] > .border > .d-flex{
-    align-items:flex-start;         /* override any .align-items-center */
+    align-items:flex-start;
     margin-bottom:.35rem;
   }
-
-  /* Chart container (shared) – the canvas sits inside this box */
   #summaryPies > [class*="col-"] > .border > .pie{
     flex:1; display:flex; align-items:center; justify-content:center;
   }
-
-  /* PIES ONLY: fix container height (do NOT touch canvas) */
+  /* PIES: fixed container height (canvas is responsive inside) */
   #summaryPies > [class*="col-"] > .border:not(.bar-share) > .pie{
     height: var(--pie-height);
     min-height: var(--pie-height);
     max-height: var(--pie-height);
     overflow: hidden;
   }
-
-  /* BAR CARD: fixed compact height + scroll */
+  /* BAR CARD: same height as pies for alignment (scroll if overflow) */
   #summaryPies .bar-share > .pie{
     height: var(--bar-panel-height);
     min-height: var(--bar-panel-height);
@@ -102,14 +94,15 @@
   }
   #summaryPies .bar-share .card-title{ margin-bottom:.25rem; }
 
-  /* Right card small stack next to pie */
+  /* Little counts to the right of pies */
   #summaryPies .summary-counts-vertical .kpi{ justify-content:flex-end; gap:6px; }
   #summaryPies .summary-counts-vertical .kpi .lbl{ font-size:.85rem; }
   #summaryPies .summary-counts-vertical .kpi .n{ font-size:1.25rem; }
 
-  /* General canvas fix so it doesn’t behave like inline text */
+  /* Canvas should not behave like inline text */
   #summaryPies canvas{ display:block; }
 </style>
+
 
 <div class="container py-4">
   @section PageHeader {
@@ -379,6 +372,7 @@
       document.getElementById('scrollHere')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
+    /* Smart labels plugin (unchanged) */
     const SmartValueLabels = {
       id: 'smartValueLabels',
       afterDatasetsDraw(chart, _args, opts) {
@@ -539,7 +533,6 @@
     let pieKpis, pieActs, lineTrend, _barRedShare;
 
     async function loadSummary() {
-      // Stabilize layout (fonts + one frame) before drawing
       await (document.fonts?.ready ?? Promise.resolve());
       await new Promise(r => requestAnimationFrame(r));
 
@@ -568,6 +561,7 @@
         const actCtx = byId('pieActionStatus').getContext('2d');
         if (pieKpis) pieKpis.destroy(); if (pieActs) pieActs.destroy();
 
+        /* Doughnuts: legends moved to TOP and same cutout */
         pieKpis = new Chart(kpiCtx, {
           type: 'doughnut',
           data: {
@@ -578,7 +572,7 @@
             responsive: true, maintainAspectRatio: false, resizeDelay: 0, cutout: '62%',
             animation: { duration: 0 },
             plugins: {
-              legend: { display: true, position: 'bottom' },
+              legend: { display: true, position: 'top' }, /* moved from bottom -> top */
               tooltip: { enabled: true, callbacks: { label: (c) => `${c.label}: ${c.raw}` } },
               datalabels: false, smartValueLabels: false
             },
@@ -596,7 +590,7 @@
             responsive: true, maintainAspectRatio: false, resizeDelay: 0, cutout: '62%',
             animation: { duration: 0 },
             plugins: {
-              legend: { display: true, position: 'bottom' },
+              legend: { display: true, position: 'top' }, /* moved from bottom -> top */
               tooltip: { enabled: true, callbacks: { label: (c) => `${c.label}: ${c.raw}` } },
               datalabels: false, smartValueLabels: false
             },
@@ -627,10 +621,7 @@
         const totals = items.map(x => +x.total || 0);
         const pillarIds = items.map(x => x.pillarId);
 
-        // Fixed-height bar panel – size the WRAPPER, not the canvas
-        const barWrap = byId('barRedShare').parentElement; // ".pie"
-        barWrap.style.height = getComputedStyle(barWrap).height || 'var(--bar-panel-height)'; // CSS already pins it
-
+        // wrapper already fixed by CSS; keep canvas responsive
         const short = (s) => (String(s).length > 26 ? String(s).slice(0, 23) + '…' : s);
         const yLabels = labels.map(short);
         const maxTotal = Math.max(1, ...totals);
@@ -645,21 +636,19 @@
               backgroundColor: '#dc3545',
               borderColor: '#dc3545',
               borderWidth: 1,
-              /* tighter bars + less gap */
-              barThickness: 10,
-              maxBarThickness: 12,
+              barThickness: 12,
+              maxBarThickness: 14,
               categoryPercentage: 0.9,
               barPercentage: 0.8
             }]
           },
           options: {
             responsive: true, maintainAspectRatio: false, indexAxis: 'y',
-            animation: { duration: 0 },
-            resizeDelay: 0,
+            animation: { duration: 0 }, resizeDelay: 0,
             layout: { padding: { top: 6, right: 6, bottom: 0, left: 0 } },
             scales: {
-              x: { beginAtZero: true, max: maxTotal, ticks: { padding: 2, font: { size: 10 } }, grid: { color: 'rgba(0,0,0,.06)' } },
-              y: { ticks: { padding: 4, font: { size: 10 } }, grid: { display: false } }
+              x: { beginAtZero: true, max: maxTotal, ticks: { padding: 4, font: { size: 11 } }, grid: { color: 'rgba(0,0,0,.06)' } },
+              y: { ticks: { padding: 6, font: { size: 12 } }, grid: { display: false } } /* ↑ slightly bigger y labels */
             },
             plugins: {
               legend: { display: false },
@@ -676,7 +665,7 @@
                 }
               },
               datalabels: {
-                display: (ctx) => Number(ctx.dataset.data[ctx.dataIndex] ?? 0) > 0, // hide when 0
+                display: (ctx) => Number(ctx.dataset.data[ctx.dataIndex] ?? 0) > 0,
                 formatter: (_v, ctx) => {
                   const i = ctx.dataIndex;
                   const red = Number(redCounts[i] ?? 0);
@@ -685,11 +674,11 @@
                 },
                 anchor: 'end',
                 align: 'right',
-                offset: 4,
+                offset: 6,
                 clamp: false,
                 clip: false,
                 color: '#111',
-                font: { family: Chart.defaults.font.family, size: 10, weight: '700' }
+                font: { family: Chart.defaults.font.family, size: 12, weight: '700' } /* ↑ slightly bigger */
               },
               smartValueLabels: false
             },
@@ -714,7 +703,7 @@
           }
         });
 
-        /* ----- Turned-to bullets (always show all four) ----- */
+        /* ----- Turned-to bullets ----- */
         try {
           const ch = await api('@Url.Action("GetLatestStatusChanges", "Home")');
           const list = [
@@ -735,7 +724,7 @@
         }
         byId('redShareLoading').textContent = '';
 
-        /* ----- Red monthly trend ----- */
+        /* ----- Red monthly trend (stays at bottom of summary card) ----- */
         try {
           const trend = await api('@Url.Action("GetRedMonthlyTrend", "Home")');
           const trendCtx = byId('lineRedTrend').getContext('2d');
@@ -782,6 +771,7 @@
       const pts = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
       if (!pts?.length) return;
       const idx = pts[0].index, label = chart.data.labels[idx], code = mapLabel(kind, label);
+      const segRows = byId('segmentKpiRows'), segWrap = byId('segmentKpiList'), segTitle = byId('segmentTitle');
       segRows.innerHTML = '<span class="text-muted small ms-1">Loading…</span>';
       segWrap.classList.remove('d-none');
       segTitle.textContent = (kind === 'kpi' ? 'KPIs with status: ' : 'KPIs with actions: ') + label;
@@ -801,6 +791,7 @@
       const li = e.target.closest('li[data-code]'); if (!li) return;
       const code = li.dataset.code;
       const labelMap = { green: 'Target Achieved', orange: 'On Forecast', red: 'Target Missed', blue: 'Data Missing' };
+      const segRows = byId('segmentKpiRows'), segWrap = byId('segmentKpiList'), segTitle = byId('segmentTitle');
       segRows.innerHTML = '<span class="text-muted small ms-1">Loading…</span>';
       segWrap.classList.remove('d-none');
       segTitle.textContent = `Turned to: ${labelMap[code]}`;
@@ -977,6 +968,7 @@
       }
     });
 
+    /* Edit modal wiring (unchanged) */
     function wireKpiModalAjax() {
       const modal = document.getElementById('editKpiModal');
       const form = modal ? modal.querySelector('#kpi-edit-form') : null;
@@ -1075,7 +1067,7 @@
       if (_pendingScrollToChart) { _pendingScrollToChart = false; _scrollToChart(); }
     }
 
-    /* Admin Set Status */
+    /* Admin Set Status (unchanged) */
     const btnAdminSetStatus = byId('btnAdminSetStatus'),
           adminStatusModalEl = document.getElementById('adminStatusModal'),
           adminStatusForm = document.getElementById('adminStatusForm'),
@@ -1137,3 +1129,4 @@
     initPage().catch(console.error);
   </script>
 }
+
