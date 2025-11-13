@@ -42,7 +42,7 @@
 
   /* =========================
      Summary counters (left/right of pies)
-        ========================= */
+                ========================= */
   #summaryCard .kpi {
     display: flex;
     align-items: center;
@@ -1041,31 +1041,49 @@
         } catch (err) { alert(err?.message || 'Save failed'); }
       });
     }
-    // Wire the "Edit Data (Actual & Forecast)" button to open the modal
-    if (btnEditKpi) {
+    // Wire the "Edit Data (Actual & Forecast)" button to open the modal (restored with no-access handling)
+    const editModalEl = document.getElementById('editKpiModal');
+    const editModalContentEl = editModalEl ? editModalEl.querySelector('.modal-content') : null;
+
+    if (btnEditKpi && editModalEl && editModalContentEl) {
       btnEditKpi.addEventListener('click', async () => {
         const kpiId = selKpi.value;
         if (!kpiId) return; // nothing selected
 
-        const url = '@Url.Action("EditFacts", "Home")'
-          + `?kpiId=${encodeURIComponent(kpiId)}`
-          + `&planId=${encodeURIComponent(currentPlanId)}`;
+        // If your controller uses EditFacts, keep EditFacts.
+        // If it uses EditKpiFactsModal, change the action name below.
+        const qs = new URLSearchParams({ kpiId: kpiId });
+        if (currentPlanId) {
+          qs.append('planId', currentPlanId);
+        }
 
-        const modalEl = document.getElementById('editKpiModal');
-        const contentEl = modalEl.querySelector('.modal-content');
+        const url = '@Url.Action("EditFacts", "Home")' + '?' + qs.toString();
 
-        contentEl.innerHTML = '<div class="p-3 text-center text-muted">Loading…</div>';
+        editModalContentEl.innerHTML = '<div class="p-3 text-center text-muted">Loading…</div>';
 
         try {
-          const html = await fetch(url, {
+          const res = await fetch(url, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
-          }).then(r => r.text());
+          });
 
-          contentEl.innerHTML = html;
+          // permission logic: if backend returns 403, show "no access"
+          if (res.status === 403) {
+            editModalContentEl.innerHTML = '<div class="p-3 text-danger">You do not have access to edit this KPI.</div>';
+            bootstrap.Modal.getOrCreateInstance(editModalEl).show();
+            return;
+          }
+
+          const html = await res.text();
+
+          if (!res.ok) {
+            throw new Error('Failed to load editor (' + res.status + ')');
+          }
+
+          editModalContentEl.innerHTML = html;
           wireKpiModalAjax();
-          bootstrap.Modal.getOrCreateInstance(modalEl).show();
+          bootstrap.Modal.getOrCreateInstance(editModalEl).show();
         } catch (err) {
-          contentEl.innerHTML = '<div class="p-3 text-danger">Failed to load editor.</div>';
+          alert(err?.message || 'Failed to load editor.');
         }
       });
     }
