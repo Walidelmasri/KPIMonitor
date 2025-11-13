@@ -1045,7 +1045,7 @@
     if (btnEditKpi) {
       btnEditKpi.addEventListener('click', async () => {
         const kpiId = selKpi.value;
-        if (!kpiId || !currentPlanId) return; // nothing selected
+        if (!kpiId) return; // nothing selected
 
         const url = '@Url.Action("EditFacts", "Home")'
           + `?kpiId=${encodeURIComponent(kpiId)}`
