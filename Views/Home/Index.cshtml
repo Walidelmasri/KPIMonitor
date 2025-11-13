@@ -1057,7 +1057,7 @@
           qs.append('planId', currentPlanId);
         }
 
-        const url = '@Url.Action("EditFacts", "Home")' + '?' + qs.toString();
+        const url = '@Url.Action("EditKpiFactsModal", "Home")' + '?' + qs.toString();
 
         editModalContentEl.innerHTML = '<div class="p-3 text-center text-muted">Loading…</div>';
 
