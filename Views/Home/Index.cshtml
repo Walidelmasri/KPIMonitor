@@ -911,7 +911,7 @@
         const col = document.createElement('div'); col.className = 'col-md-6';
         const h = document.createElement('div'); h.className = 'fw-bold mb-1'; h.textContent = title;
         const list = document.createElement('div'); list.className = 'role-list';
-        const MAX = 12; items.slice(0, MAX).forEach(it => list.appendChild(_mkChip(it)));
+        const MAX = 20; items.slice(0, MAX).forEach(it => list.appendChild(_mkChip(it)));
         if (items.length > MAX) list.appendChild(_mkChip({ text: `+${items.length - MAX} more` }));
         col.appendChild(h); col.appendChild(list); return col;
       };
