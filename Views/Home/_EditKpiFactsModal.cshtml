@@ -40,10 +40,7 @@
             <th>Month</th>
             <th>Actual</th>
             <th>Forecast</th>
-            @if (Model.IsSuperAdmin)
-            {
-              <th>Target</th>
-            }
+            <th>Target</th>
           </tr>
         </thead>
         <tbody>
@@ -70,14 +67,13 @@
         @if (!canF) { <span class="ro-badge">🔒</span> }
       </td>
 
-      @if (Model.IsSuperAdmin)
-      {
-        <td>
-          <input class="form-control form-control-sm"
-                 type="number" step="any" name="Targets[@m]"
-                 value="@(Model.Targets.ContainsKey(m) ? Model.Targets[m] : null)" />
-        </td>
-      }
+      <td class="@(Model.IsSuperAdmin ? "" : "readonly-cell")">
+        <input class="form-control form-control-sm"
+               type="number" step="any" name="Targets[@m]"
+               value="@(Model.Targets.ContainsKey(m) ? Model.Targets[m] : null)"
+               @(Model.IsSuperAdmin ? "" : "readonly aria-readonly=\"true\" title=\"Targets are only editable for Super Admin\"") />
+        @if (!Model.IsSuperAdmin) { <span class="ro-badge">🔒</span> }
+      </td>
     </tr>
 }
         </tbody>
@@ -91,10 +87,7 @@
             <th>Quarter</th>
             <th>Actual</th>
             <th>Forecast</th>
-            @* @if (Model.IsSuperAdmin)
-            { *@
-              <th>Target</th>
-            @* } *@
+            <th>Target</th>
           </tr>
         </thead>
         <tbody>
@@ -121,14 +114,13 @@
         @if (!canF) { <span class="ro-badge">🔒</span> }
       </td>
 
-      @* @if (Model.IsSuperAdmin) *@
-      @* { *@
-        <td>
-          <input class="form-control form-control-sm"
-                 type="number" step="any" name="TargetQuarters[@q]"
-                 value="@(Model.Targets.ContainsKey(q) ? Model.Targets[q] : null)" />
-        </td>
-      @* } *@
+      <td class="@(Model.IsSuperAdmin ? "" : "readonly-cell")">
+        <input class="form-control form-control-sm"
+               type="number" step="any" name="TargetQuarters[@q]"
+               value="@(Model.Targets.ContainsKey(q) ? Model.Targets[q] : null)"
+               @(Model.IsSuperAdmin ? "" : "readonly aria-readonly=\"true\" title=\"Targets are only editable for Super Admin\"") />
+        @if (!Model.IsSuperAdmin) { <span class="ro-badge">🔒</span> }
+      </td>
     </tr>
 }
         </tbody>
@@ -137,7 +129,7 @@
 
     <small class="text-muted d-block">
       Actuals: current period + last closed period within +1 month grace. Forecasts: current &amp; future periods of the year.
-      Targets are not editable.
+      Targets are visible to all users, but only editable for Super Admin.
     </small>
   </div>
 

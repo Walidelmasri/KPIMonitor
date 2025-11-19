@@ -39,6 +39,18 @@
   #factsTbody td {
     background-color: inherit !important;
   }
+  /* Match table header titles with chart colors */
+  th.th-actual {
+    color: #800080;   /* Actual (purple bars) */
+  }
+
+  th.th-target {
+    color: #7a7a7a;   /* Target (grey line / year target) */
+  }
+
+  th.th-forecast {
+    color: #fd7e14;   /* Forecast (orange line) */
+  }
 
   /* =========================
      Summary counters (left/right of pies)
@@ -435,9 +447,9 @@
           <th>Period</th>
           <th>Start</th>
           <th>End</th>
-          <th>Actual</th>
-          <th>Target</th>
-          <th>Forecast</th>
+          <th class="th-actual">Actual</th>
+          <th class="th-target">Target</th>
+          <th class="th-forecast">Forecast</th>
         </tr>
       </thead>
       <tbody id="factsTbody">
