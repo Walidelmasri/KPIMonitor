@@ -3,7 +3,7 @@
 @inject IEmployeeDirectory EmpDir
 @{
   ViewData["Title"] = "Action Plans";
-var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User);
+  var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User);
 
   // Pull ALL employees once at render (no filtering or preselection)
   // EmployeePickDto => EmpId, Label
@@ -35,6 +35,17 @@ var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User
     <form id="af" method="post" class="d-none">
       @Html.AntiForgeryToken()
     </form>
+
+    @if (isAdmin)
+    {
+      <div class="d-flex justify-content-end mb-3">
+        <button type="button"
+                class="btn btn-sm btn-primary"
+                id="apAddBtn">
+          + Add action plan
+        </button>
+      </div>
+    }
 
     <div id="apBody" class="bg-white border rounded-3 p-3">
       <div class="text-muted small">Loading…</div>
@@ -136,6 +147,100 @@ var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User
   </div>
 </div>
 
+<!-- Add Action Plan Modal -->
+<div class="modal fade" id="addPlanModal" tabindex="-1" aria-labelledby="addPlanLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content rounded-3">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addPlanLabel">Add Action Plan</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <form id="addPlanForm" method="post">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" id="ap_isGeneral" checked>
+            <label class="form-check-label" for="ap_isGeneral">
+              General action (not tied to a KPI)
+            </label>
+          </div>
+
+          <div class="mb-3" id="ap_kpiBlock">
+            <label class="form-label">Link to KPI</label>
+            <div class="row g-2">
+              <div class="col-md-4">
+                <select class="form-select" id="ap_pillar">
+                  <option value="">— Pillar —</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <select class="form-select" id="ap_objective" disabled>
+                  <option value="">— Objective —</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <!-- name="KpiId" so it binds to KpiAction.KpiId in Create(...) -->
+                <select class="form-select" id="ap_kpi" name="KpiId" disabled>
+                  <option value="">— KPI —</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-text">
+              Leave as <em>General</em> above if this action is not for a specific KPI.
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Owner</label>
+            <!-- name="Owner" so it binds to KpiAction.Owner in Create/CreateGeneral -->
+            <select class="form-select" name="Owner" id="ap_owner" required>
+              <option value="">— Select —</option>
+              @foreach (var e in employees ?? Enumerable.Empty<KPIMonitor.ViewModels.EmployeePickDto>())
+              {
+                <option value="@e.Label">@e.Label</option>
+              }
+            </select>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Assigned at</label>
+              <input type="datetime-local" class="form-control" name="AssignedAt" id="ap_assignedAt" />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Due date</label>
+              <input type="datetime-local" class="form-control" name="DueDate" id="ap_due" />
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Status</label>
+            <!-- name="StatusCode" so it binds directly to KpiAction.StatusCode -->
+            <select class="form-select" name="StatusCode" id="ap_status">
+              <option value="todo">To Do</option>
+              <option value="inprogress">In Progress</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea class="form-control" name="Description" id="ap_desc" rows="3" required></textarea>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 @section Scripts {
   <script>
     const IS_ADMIN = @(isAdmin ? "true" : "false");
@@ -226,7 +331,7 @@ var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User
       }
     });
 
-    // Edit Plan — open (now uses the pre-rendered full Owner dropdown; we DO NOT filter or preselect)
+    // Edit Plan — open (uses the pre-rendered full Owner dropdown)
     document.addEventListener('click', async (e) => {
       const btn = e.target.closest('[data-action="edit-plan"]');
       if (!btn || !IS_ADMIN) return;
@@ -241,7 +346,7 @@ var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User
         $('ep_assignedAt').value = data.assignedAtLocal || '';
         $('ep_due').value        = data.dueDateLocal || '';
 
-        // IMPORTANT: Do NOT auto-select the current owner (user asked to disregard).
+        // keep current behaviour: owner dropdown starts empty
         const ownerSel = $('ep_owner');
         ownerSel.value = '';
 
@@ -270,6 +375,198 @@ var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User
       } catch (err) {
         console.error('[AP] UpdateAction failed:', err);
         alert('Save failed.');
+      }
+    });
+
+    // -------------------------
+    // Add Action Plan helpers
+    // -------------------------
+    function apApplyGeneralMode(isGeneral) {
+      const block = document.getElementById('ap_kpiBlock');
+      const kpiSel = document.getElementById('ap_kpi');
+      if (!block || !kpiSel) return;
+
+      if (isGeneral) {
+        block.classList.add('d-none');
+        kpiSel.disabled = true;
+        kpiSel.required = false;
+      } else {
+        block.classList.remove('d-none');
+        kpiSel.disabled = false;
+        kpiSel.required = true;
+      }
+    }
+
+    async function apLoadPillars() {
+      const sel = document.getElementById('ap_pillar');
+      const obj = document.getElementById('ap_objective');
+      const kpi = document.getElementById('ap_kpi');
+      if (!sel || !obj || !kpi) return;
+
+      sel.innerHTML = '<option value="">— Pillar —</option>';
+      obj.innerHTML = '<option value="">— Objective —</option>';
+      obj.disabled = true;
+      kpi.innerHTML = '<option value="">— KPI —</option>';
+      kpi.disabled = true;
+
+      try {
+        const data = await getJSON('@Url.Action("GetPillars", "Home")');
+        (data || []).forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = p.name;
+          sel.appendChild(opt);
+        });
+      } catch (err) {
+        console.error('[AP] GetPillars failed:', err);
+      }
+    }
+
+    async function apLoadObjectives(pillarId) {
+      const obj = document.getElementById('ap_objective');
+      const kpi = document.getElementById('ap_kpi');
+      if (!obj || !kpi) return;
+
+      obj.innerHTML = '<option value="">— Objective —</option>';
+      kpi.innerHTML = '<option value="">— KPI —</option>';
+      kpi.disabled = true;
+
+      if (!pillarId) {
+        obj.disabled = true;
+        return;
+      }
+
+      try {
+        const data = await getJSON('@Url.Action("GetObjectives", "Home")?pillarId=' + encodeURIComponent(pillarId));
+        obj.disabled = false;
+        (data || []).forEach(o => {
+          const opt = document.createElement('option');
+          opt.value = o.id;
+          opt.textContent = o.name;
+          obj.appendChild(opt);
+        });
+      } catch (err) {
+        console.error('[AP] GetObjectives failed:', err);
+        obj.disabled = true;
+      }
+    }
+
+    async function apLoadKpis(objectiveId) {
+      const kpi = document.getElementById('ap_kpi');
+      if (!kpi) return;
+
+      kpi.innerHTML = '<option value="">— KPI —</option>';
+
+      if (!objectiveId) {
+        kpi.disabled = true;
+        return;
+      }
+
+      try {
+        const data = await getJSON('@Url.Action("GetKpis", "Home")?objectiveId=' + encodeURIComponent(objectiveId));
+        kpi.disabled = false;
+        (data || []).forEach(k => {
+          const opt = document.createElement('option');
+          opt.value = k.id;
+          opt.textContent = k.name;
+          kpi.appendChild(opt);
+        });
+      } catch (err) {
+        console.error('[AP] GetKpis failed:', err);
+        kpi.disabled = true;
+      }
+    }
+
+    // Wire up Add button + modal
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!IS_ADMIN) return;
+
+      const addBtn = document.getElementById('apAddBtn');
+      const form = document.getElementById('addPlanForm');
+      const chkGeneral = document.getElementById('ap_isGeneral');
+      const selPillar = document.getElementById('ap_pillar');
+      const selObjective = document.getElementById('ap_objective');
+
+      if (addBtn) {
+        addBtn.addEventListener('click', async () => {
+          if (!form) return;
+          form.reset();
+
+          if (chkGeneral) chkGeneral.checked = true;
+          apApplyGeneralMode(true);
+          await apLoadPillars();
+
+          const now = new Date();
+          const iso = now.toISOString().slice(0, 16); // yyyy-MM-ddTHH:mm
+          const assigned = document.getElementById('ap_assignedAt');
+          if (assigned && !assigned.value) assigned.value = iso;
+
+          const statusSel = document.getElementById('ap_status');
+          if (statusSel) statusSel.value = 'todo';
+
+          new bootstrap.Modal(document.getElementById('addPlanModal')).show();
+        });
+      }
+
+      if (chkGeneral) {
+        chkGeneral.addEventListener('change', () => {
+          apApplyGeneralMode(chkGeneral.checked);
+        });
+      }
+
+      if (selPillar) {
+        selPillar.addEventListener('change', () => {
+          apLoadObjectives(selPillar.value);
+        });
+      }
+
+      if (selObjective) {
+        selObjective.addEventListener('change', () => {
+          apLoadKpis(selObjective.value);
+        });
+      }
+
+      if (form) {
+        form.addEventListener('submit', async (ev) => {
+          ev.preventDefault();
+          if (!IS_ADMIN) return;
+
+          const isGeneral = chkGeneral && chkGeneral.checked;
+          const kpiSel = document.getElementById('ap_kpi');
+
+          if (!isGeneral && kpiSel && !kpiSel.value) {
+            alert('Please select a KPI, or mark the action as General.');
+            return;
+          }
+
+          try {
+            const fd = new FormData(form);
+            if (!fd.get('__RequestVerificationToken')) {
+              fd.append('__RequestVerificationToken', anti());
+            }
+
+            const url = isGeneral
+              ? '@Url.Action("CreateGeneral", "KpiActions")'
+              : '@Url.Action("Create", "KpiActions")';
+
+            const res = await fetch(url, {
+              method: 'POST',
+              body: fd,
+              headers: {
+                'Accept': 'text/html',
+                'X-Requested-With': 'XMLHttpRequest'
+              }
+            });
+
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+
+            bootstrap.Modal.getInstance(document.getElementById('addPlanModal')).hide();
+            await refreshBoard();
+          } catch (err) {
+            console.error('[AP] Create action failed:', err);
+            alert('Failed to create action plan.');
+          }
+        });
       }
     });
   </script>
