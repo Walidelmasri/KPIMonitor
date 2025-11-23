@@ -29,7 +29,7 @@ namespace KPIMonitor.Controllers
 
         // keep http so images render in intranet mail clients (not used by approvals page)
         private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFactChanges/Inbox";
-        private const string LogoUrl  = "http://kpimonitor.badea.local/kpimonitor/images/logo-en.png";
+        private const string LogoUrl = "http://kpimonitor.badea.local/kpimonitor/images/logo-en.png";
 
         public KpiFactChangesController(
             IKpiFactChangeService svc,
@@ -76,7 +76,7 @@ namespace KPIMonitor.Controllers
         private static string PeriodLabel(DimPeriod? p)
         {
             if (p == null) return "—";
-            if (p.MonthNum.HasValue)   return $"{p.Year} — {new DateTime(p.Year, p.MonthNum.Value, 1):MMM}";
+            if (p.MonthNum.HasValue) return $"{p.Year} — {new DateTime(p.Year, p.MonthNum.Value, 1):MMM}";
             if (p.QuarterNum.HasValue) return $"{p.Year} — Q{p.QuarterNum.Value}";
             return p.Year.ToString();
         }
@@ -359,13 +359,13 @@ namespace KPIMonitor.Controllers
                     f.TargetValue,
                     f.ForecastValue,
                     f.StatusCode,
-                    PerYear    = f.Period != null ? (int?)f.Period.Year : null,
-                    PerMonth   = f.Period != null ? f.Period.MonthNum : null,
+                    PerYear = f.Period != null ? (int?)f.Period.Year : null,
+                    PerMonth = f.Period != null ? f.Period.MonthNum : null,
                     PerQuarter = f.Period != null ? f.Period.QuarterNum : null,
-                    PillarCode    = f.Kpi != null && f.Kpi.Pillar    != null ? f.Kpi.Pillar.PillarCode : null,
+                    PillarCode = f.Kpi != null && f.Kpi.Pillar != null ? f.Kpi.Pillar.PillarCode : null,
                     ObjectiveCode = f.Kpi != null && f.Kpi.Objective != null ? f.Kpi.Objective.ObjectiveCode : null,
-                    KpiCode    = f.Kpi != null ? f.Kpi.KpiCode : null,
-                    KpiName    = f.Kpi != null ? f.Kpi.KpiName : null
+                    KpiCode = f.Kpi != null ? f.Kpi.KpiCode : null,
+                    KpiName = f.Kpi != null ? f.Kpi.KpiName : null
                 })
                 .ToDictionaryAsync(x => x.KpiFactId, x => x, ct);
 
@@ -373,12 +373,12 @@ namespace KPIMonitor.Controllers
             static string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
             static string LabelStatus(string code) => (code ?? "").Trim().ToLowerInvariant() switch
             {
-                "conforme"    => "Ok",
-                "ecart"       => "Needs Attention",
-                "rattrapage"  => "Catching Up",
-                "attente"     => "Data Missing",
-                ""            => "—",
-                _             => code!
+                "conforme" => "Ok",
+                "ecart" => "Needs Attention",
+                "rattrapage" => "Catching Up",
+                "attente" => "Data Missing",
+                "" => "—",
+                _ => code!
             };
 
             string DiffNum(string title, decimal? curV, decimal? newV)
@@ -544,11 +544,11 @@ namespace KPIMonitor.Controllers
 
                 bool monthly = facts.Any(f => f.Period!.MonthNum.HasValue) || (!facts.Any() && isMonthly);
 
-                var postedActuals  = monthly ? (Actuals ?? new Dictionary<int, decimal?>())
+                var postedActuals = monthly ? (Actuals ?? new Dictionary<int, decimal?>())
                                              : (ActualQuarters ?? new Dictionary<int, decimal?>());
                 var postedForecast = monthly ? (Forecasts ?? new Dictionary<int, decimal?>())
                                              : (ForecastQuarters ?? new Dictionary<int, decimal?>());
-                var postedTargets  = monthly ? (Targets ?? new Dictionary<int, decimal?>())
+                var postedTargets = monthly ? (Targets ?? new Dictionary<int, decimal?>())
                                              : (TargetQuarters ?? new Dictionary<int, decimal?>());
 
                 var nowUtc = DateTime.UtcNow;
@@ -880,7 +880,7 @@ namespace KPIMonitor.Controllers
                     k.KpiId,
                     k.KpiCode,
                     k.KpiName,
-                    PillarCode    = k.Pillar != null ? k.Pillar.PillarCode : null,
+                    PillarCode = k.Pillar != null ? k.Pillar.PillarCode : null,
                     ObjectiveCode = k.Objective != null ? k.Objective.ObjectiveCode : null
                 })
                 .ToDictionaryAsync(x => x.KpiId, x => x, ct);
@@ -1170,7 +1170,7 @@ namespace KPIMonitor.Controllers
                          x.KpiId,
                          x.KpiCode,
                          x.KpiName,
-                         PillarCode    = x.Pillar != null ? x.Pillar.PillarCode : null,
+                         PillarCode = x.Pillar != null ? x.Pillar.PillarCode : null,
                          ObjectiveCode = x.Objective != null ? x.Objective.ObjectiveCode : null
                      })
                      .FirstOrDefaultAsync(ct);
@@ -1219,5 +1219,110 @@ namespace KPIMonitor.Controllers
                 items
             });
         }
+        // ------------------------
+        // Editors stats (admin only)
+        // ------------------------
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditorStatsHtml(CancellationToken ct = default)
+        {
+            // Hard guard: only Admin / SuperAdmin
+            if (!(_admin.IsAdmin(User) || _admin.IsSuperAdmin(User)))
+            {
+                return StatusCode(403, "Not allowed.");
+            }
+
+            // 1) Collect distinct editor EmpIds from active plans
+            var editorEmpIds = await _db.KpiYearPlans
+                .AsNoTracking()
+                .Where(p => p.EditorEmpId != null && p.IsActive != 0)
+                .Select(p => p.EditorEmpId!)
+                .Distinct()
+                .ToListAsync(ct);
+
+            if (editorEmpIds.Count == 0)
+            {
+                return Content("<div class='text-muted small'>No editors configured.</div>", "text/html; charset=utf-8");
+            }
+
+            // 2) Resolve names + logins + last submission date
+            var stats = new List<(string EmpId, string Name, string? Login, DateTime? LastSubmittedAt)>();
+
+            foreach (var empId in editorEmpIds)
+            {
+                if (string.IsNullOrWhiteSpace(empId))
+                    continue;
+
+                var rec = await _dir.TryGetByEmpIdAsync(empId, ct);
+                var login = await _dir.TryGetLoginByEmpIdAsync(empId, ct);
+                var sam = Sam(login); // normalize DOMAIN\user / email → bare SAM
+
+                DateTime? lastSubmitted = null;
+
+                if (!string.IsNullOrWhiteSpace(sam))
+                {
+                    var samUp = sam.ToUpperInvariant();
+
+                    lastSubmitted = await _db.KpiFactChanges
+                        .AsNoTracking()
+                        .Where(c =>
+                            c.SubmittedBy != null &&
+                            c.SubmittedBy.ToUpper() == samUp)
+                        .OrderByDescending(c => c.SubmittedAt)
+                        .Select(c => (DateTime?)c.SubmittedAt)
+                        .FirstOrDefaultAsync(ct);
+                }
+
+                stats.Add((
+                    EmpId: empId,
+                    Name: rec?.NameEng ?? empId,
+                    Login: login,
+                    LastSubmittedAt: lastSubmitted
+                ));
+            }
+
+            if (stats.Count == 0)
+            {
+                return Content("<div class='text-muted small'>No editors found.</div>", "text/html; charset=utf-8");
+            }
+
+            // 3) Sort: most recent first, then by name
+            stats.Sort((a, b) =>
+            {
+                var da = a.LastSubmittedAt ?? DateTime.MinValue;
+                var db = b.LastSubmittedAt ?? DateTime.MinValue;
+                var cmp = db.CompareTo(da); // descending by date
+                if (cmp != 0) return cmp;
+                return string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
+            });
+
+            // 4) Render small table
+            static string H(string? s) => WebUtility.HtmlEncode(s ?? "");
+            static string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
+
+            var sb = new StringBuilder();
+            sb.AppendLine("<div class='table-responsive'>");
+            sb.AppendLine("<table class='table table-sm table-hover align-middle mb-0'>");
+            sb.AppendLine("<thead><tr>");
+            sb.AppendLine("<th>Editor</th><th>Emp&nbsp;ID</th><th>Login</th><th>Last submission</th>");
+            sb.AppendLine("</tr></thead><tbody>");
+
+            foreach (var s in stats)
+            {
+                var sam = Sam(s.Login);
+
+                sb.Append("<tr>");
+                sb.Append("<td>").Append(H(s.Name)).Append("</td>");
+                sb.Append("<td>").Append(H(s.EmpId)).Append("</td>");
+                sb.Append("<td>").Append(H(sam)).Append("</td>");
+                sb.Append("<td>").Append(H(F(s.LastSubmittedAt))).Append("</td>");
+                sb.AppendLine("</tr>");
+            }
+
+            sb.AppendLine("</tbody></table></div>");
+
+            return Content(sb.ToString(), "text/html; charset=utf-8");
+        }
+
     }
 }

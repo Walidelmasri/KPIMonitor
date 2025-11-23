@@ -28,6 +28,8 @@
       <button class="btn btn-sm btn-primary" data-tab="pending">Pending</button>
       <button class="btn btn-sm btn-outline-secondary" data-tab="approved">Approved</button>
       <button class="btn btn-sm btn-outline-secondary" data-tab="rejected">Rejected</button>
+
+      <button asp-admin-only class="btn btn-sm btn-outline-secondary" data-tab="editors">Editors</button>
       <button class="btn btn-sm btn-outline-secondary ms-auto" id="refreshBtn">↻ Refresh</button>
     </div>
 
@@ -132,6 +134,32 @@
         body.innerHTML = "<div class='text-danger small'>Failed to load.</div>";
       }
     }
+    // ---------- editor stats loader ----------
+    async function loadEditors() {
+      currentTab = 'editors';
+      const body = $('apprBody');
+      body.innerHTML = "<div class='text-muted small'>Loading…</div>";
+
+      try {
+        const url = '@Url.Action("EditorStatsHtml", "KpiFactChanges")' + (window.location.search || '');
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Accept': 'text/html',
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'RequestVerificationToken': anti()
+          },
+          body: '' // no extra payload
+        });
+
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        body.innerHTML = await res.text();
+      } catch (err) {
+        console.error(err);
+        body.innerHTML = "<div class='text-danger small'>Failed to load.</div>";
+      }
+    }
+
 
     // If server tiles lack a unified details button, add it
     function decorateBatchCards() {
@@ -157,15 +185,28 @@
     // ---------- click handlers ----------
     document.addEventListener('click', async (e) => {
       // tabs
+      // tabs
       const tabBtn = e.target.closest('[data-tab]');
       if (tabBtn) {
         e.preventDefault();
-        qsa('[data-tab]').forEach(b => b.classList.remove('btn-primary'));
-        qsa('[data-tab]').forEach(b => b.classList.add('btn-outline-secondary'));
-        tabBtn.classList.add('btn-primary'); tabBtn.classList.remove('btn-outline-secondary');
-        await loadList(tabBtn.getAttribute('data-tab'));
+
+        qsa('[data-tab]').forEach(b => {
+          b.classList.remove('btn-primary');
+          b.classList.add('btn-outline-secondary');
+        }); 
+
+        tabBtn.classList.add('btn-primary');
+        tabBtn.classList.remove('btn-outline-secondary');
+
+        const tab = tabBtn.getAttribute('data-tab');
+        if (tab === 'editors') {
+          await loadEditors();
+        } else {
+          await loadList(tab);
+        }
         return;
       }
+
 
       const btn = e.target.closest('.appr-btn, .appr-batch-details, .appr-details');
       if (!btn) return;
@@ -288,7 +329,14 @@
       } catch (err) { alert(err.message); }
     });
 
-    $('refreshBtn').addEventListener('click', (e) => { e.preventDefault(); loadList(currentTab); });
+    $('refreshBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      if (currentTab === 'editors') {
+        loadEditors();
+      } else {
+        loadList(currentTab);
+      }
+    });
     document.addEventListener('DOMContentLoaded', () => loadList('pending'));
 
     // ---------- details modal helpers ----------
