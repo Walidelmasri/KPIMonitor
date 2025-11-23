@@ -1304,20 +1304,25 @@ namespace KPIMonitor.Controllers
             sb.AppendLine("<div class='table-responsive'>");
             sb.AppendLine("<table class='table table-sm table-hover align-middle mb-0'>");
             sb.AppendLine("<thead><tr>");
-            sb.AppendLine("<th>Editor</th><th>Emp&nbsp;ID</th><th>Login</th><th>Last submission</th>");
+            sb.AppendLine("<th>Editor</th>");
+            // sb.AppendLine("<th>Emp&nbsp;ID</th>");
+            // sb.AppendLine("<th>Login</th>");
+            sb.AppendLine("<th>Last submission</th>");
             sb.AppendLine("</tr></thead><tbody>");
+
 
             foreach (var s in stats)
             {
-                var sam = Sam(s.Login);
+                // var sam = Sam(s.Login); // no longer needed if you don't use login
 
                 sb.Append("<tr>");
                 sb.Append("<td>").Append(H(s.Name)).Append("</td>");
-                sb.Append("<td>").Append(H(s.EmpId)).Append("</td>");
-                sb.Append("<td>").Append(H(sam)).Append("</td>");
+                // sb.Append("<td>").Append(H(s.EmpId)).Append("</td>");
+                // sb.Append("<td>").Append(H(sam)).Append("</td>");
                 sb.Append("<td>").Append(H(F(s.LastSubmittedAt))).Append("</td>");
                 sb.AppendLine("</tr>");
             }
+
 
             sb.AppendLine("</tbody></table></div>");
 
