@@ -10,7 +10,13 @@
   var employees = await EmpDir.GetAllForPickAsync();
 }
 <style>
-  .ap-action-btn { min-width: 140px; }
+  .ap-action-btn {
+    min-width: 90px;
+    padding: .20rem .45rem;
+    font-size: 0.75rem;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
   .ap-colbadge { font-size: 0.95rem; padding: .5rem .75rem; letter-spacing: .1px; }
   .ap-col { display: flex; flex-direction: column; gap: .75rem; }
   .ap-col-header { width: 100%; border-radius: .75rem; padding: .45rem .75rem; font-weight: 700; line-height: 1.2; }
@@ -21,6 +27,7 @@
   .ap-scroll { max-height: calc(100vh - 220px); overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
   @@media (min-width: 992px) { .ap-col-header { position: sticky; top: 0; z-index: 5; } }
 </style>
+
 
 <div class="container py-4">
   @section PageHeader {
