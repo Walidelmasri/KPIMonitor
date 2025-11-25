@@ -63,7 +63,7 @@ namespace KPIMonitor.Controllers
           .Where(a => string.Equals(a.StatusCode, "done", StringComparison.OrdinalIgnoreCase))
           .ToList();
 
-      // Local helpers
+      // Local helpers: compact card layout, keep behaviour
       string Tile(KpiAction a, string title, string badgeClass)
       {
         string H(string? s) => WebUtility.HtmlEncode(s ?? "");
@@ -83,11 +83,11 @@ namespace KPIMonitor.Controllers
 
         string statusLabel = status switch
         {
-          "todo" => "To Do",
-          "inprogress" => "In Progress",
-          "done" => "Done",
-          "archived" => "Archived",
-          _ => status
+          "todo"      => "To Do",
+          "inprogress"=> "In Progress",
+          "done"      => "Done",
+          "archived"  => "Archived",
+          _           => status
         };
 
         var statusBadge = string.IsNullOrWhiteSpace(statusLabel)
@@ -98,7 +98,7 @@ namespace KPIMonitor.Controllers
         string info;
         if (a.KpiId == null || a.IsGeneral)
         {
-          info = "<div class='small text-muted mt-1'>" +
+          info = "<div class='small text-muted mb-2'>" +
                  "<span class='badge text-bg-info me-1'>General</span>General Action" +
                  "</div>";
         }
@@ -110,7 +110,7 @@ namespace KPIMonitor.Controllers
           string obj = H(a.Kpi?.Objective?.ObjectiveName ?? "");
 
           info = $@"
-<div class='small text-muted mt-1'>
+<div class='small text-muted mb-2'>
   KPI: <strong>{code}</strong> — {name}
   {(string.IsNullOrWhiteSpace(pillar) ? "" : $"<div>Pillar: {pillar}</div>")}
   {(string.IsNullOrWhiteSpace(obj) ? "" : $"<div>Objective: {obj}</div>")}
@@ -123,42 +123,44 @@ namespace KPIMonitor.Controllers
           : "";
 
         return $@"
-<div class='border rounded-3 p-2 bg-white'>
-  <div class='d-flex justify-content-between align-items-start'>
-    <div>
-      <strong>{H(ownerDisplay)}</strong>
-      {statusBadge}
+<div class='card border-0'>
+  <div class='card-body p-2'>
+    <div class='d-flex justify-content-between align-items-center mb-1'>
+      <div>
+        <strong>{H(ownerDisplay)}</strong>
+        {statusBadge}
+      </div>
+      <div class='btn-group btn-group-sm' role='group'>
+        <button type='button'
+                class='btn btn-outline-secondary'
+                data-action='edit-plan'
+                data-id='{a.ActionId}'
+                asp-admin-only>
+          Edit
+        </button>
+        <button type='button'
+                class='btn btn-outline-secondary'
+                data-action='move-deadline'
+                data-id='{a.ActionId}'
+                asp-admin-only>
+          Move deadline
+        </button>
+        <button type='button'
+                class='btn btn-outline-secondary'
+                data-action='archive-action'
+                data-id='{a.ActionId}'
+                asp-admin-only>
+          Archive
+        </button>
+      </div>
     </div>
-    <div class='d-flex gap-1'>
-      <button type='button'
-              class='btn btn-sm btn-outline-secondary ap-action-btn'
-              data-action='edit-plan'
-              data-id='{a.ActionId}'
-              asp-admin-only>
-        Edit
-      </button>
-      <button type='button'
-              class='btn btn-sm btn-outline-secondary ap-action-btn'
-              data-action='move-deadline'
-              data-id='{a.ActionId}'
-              asp-admin-only>
-        Move deadline
-      </button>
-      <button type='button'
-              class='btn btn-sm btn-outline-secondary ap-action-btn'
-              data-action='archive-action'
-              data-id='{a.ActionId}'
-              asp-admin-only>
-        Archive
-      </button>
+
+    {info}
+
+    <div class='small'>
+      <div><strong>Due:</strong> {F(a.DueDate)}{ext}</div>
+      <div><strong>Assigned:</strong> {F(a.AssignedAt)}</div>
     </div>
-  </div>
-
-  {info}
-
-  <div class='small mt-2'>
-    <div><strong>Due:</strong> {F(a.DueDate)}{ext}</div>
-    <div><strong>Assigned:</strong> {F(a.AssignedAt)}</div>
   </div>
 </div>";
       }
@@ -174,33 +176,32 @@ namespace KPIMonitor.Controllers
 
         var sb = new StringBuilder();
         sb.Append("<div class='col-md-4'>");
-        sb.Append("<div class='ap-col'>");                                // column wrapper
+        sb.Append("<div class='ap-col'>");
 
-        // full-width colored header bar
         sb.Append($"<div class='{headerClass}'>{WebUtility.HtmlEncode(title)}</div>");
 
-        // tiles
-        sb.Append("<div class='d-grid gap-2'>");
         if (!items.Any())
         {
-          sb.Append("<div class='text-muted small'>No items.</div>");
+          sb.Append("<div class='text-muted small mt-2'>No items.</div>");
         }
         else
         {
           foreach (var a in items)
           {
+            sb.Append("<div class='mt-2'>");
             sb.Append(Tile(a, title,
               key == "todo" ? "text-bg-secondary" :
               key == "prog" ? "text-bg-warning"  :
                               "text-bg-success"));
+            sb.Append("</div>");
           }
         }
-        sb.Append("</div>");   // tiles
 
         sb.Append("</div>");   // ap-col
         sb.Append("</div>");   // col
         return sb.ToString();
       }
+
 
       var html =
           "<div class='row g-3'>" +
