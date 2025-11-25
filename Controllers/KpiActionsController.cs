@@ -209,37 +209,59 @@ public async Task<IActionResult> GetAction(decimal actionId)
     });
 }
 
-[HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> UpdateAction(
-    decimal actionId,
-    string? owner,
-    string? description,
-    string? statusCode,
-    DateTime? assignedAt,
-    DateTime? dueDate)
-{
-    var act = await _db.KpiActions.FirstOrDefaultAsync(x => x.ActionId == actionId);
-    if (act == null) return NotFound();
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateAction(
+            decimal actionId,
+            string? owner,
+            string? description,
+            string? statusCode,
+            DateTime? assignedAt,
+            DateTime? dueDate)
+        {
+            var act = await _db.KpiActions.FirstOrDefaultAsync(x => x.ActionId == actionId);
+            if (act == null) return NotFound();
 
-    act.Owner = (owner ?? "").Trim();
-    act.Description = (description ?? "").Trim();
-    if (!string.IsNullOrWhiteSpace(statusCode))
-        act.StatusCode = statusCode.Trim().ToLowerInvariant();
-    act.AssignedAt = assignedAt;
-    act.DueDate = dueDate;
+            act.Owner = (owner ?? "").Trim();
+            act.Description = (description ?? "").Trim();
+            if (!string.IsNullOrWhiteSpace(statusCode))
+                act.StatusCode = statusCode.Trim().ToLowerInvariant();
+            act.AssignedAt = assignedAt;
+            act.DueDate = dueDate;
 
-    act.LastChangedBy = User?.Identity?.Name ?? "system";
-    act.LastChangedDate = DateTime.UtcNow;
+            act.LastChangedBy = User?.Identity?.Name ?? "system";
+            act.LastChangedDate = DateTime.UtcNow;
 
-    await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync();
 
-    // AJAX-friendly
-    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-        return Content("OK");
+            // AJAX-friendly
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                return Content("OK");
 
-    TempData["Msg"] = "Action updated.";
-    return RedirectToAction(nameof(Index), new { kpiId = act.KpiId });
-}
+            TempData["Msg"] = "Action updated.";
+            return RedirectToAction(nameof(Index), new { kpiId = act.KpiId });
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ArchiveAction(decimal actionId)
+        {
+            var act = await _db.KpiActions.FirstOrDefaultAsync(x => x.ActionId == actionId);
+            if (act == null) return NotFound();
+
+            // Mark as archived
+            act.StatusCode = "archived";
+            act.LastChangedBy = User?.Identity?.Name ?? "system";
+            act.LastChangedDate = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+
+            // AJAX-friendly
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                return Content("OK");
+
+            TempData["Msg"] = "Action archived.";
+            return RedirectToAction(nameof(Index), new { kpiId = act.KpiId });
+        }
+
     }
 }

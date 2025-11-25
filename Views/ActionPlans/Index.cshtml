@@ -105,9 +105,16 @@
               <option value="">— Select —</option>
               @foreach (var e in employees ?? Enumerable.Empty<KPIMonitor.ViewModels.EmployeePickDto>())
               {
-                  // post the human-friendly label (UpdateAction expects a string name)
-                  <option value="@e.Label">@e.Label</option>
+                  var display = e.Label ?? "";
+                  var idx = display.IndexOf('(');
+                  if (idx > 0)
+                  {
+                      display = display.Substring(0, idx).Trim();
+                  }
+                  // value = full label (includes ID), text = name only
+                  <option value="@e.Label">@display</option>
               }
+
             </select>
             <div class="form-text">Pick a person.</div>
           </div>
@@ -143,6 +150,28 @@
         </div>
       </form>
 
+    </div>
+  </div>
+</div>
+<!-- Archive Action Plan Modal -->
+<div class="modal fade" id="archiveModal" tabindex="-1" aria-labelledby="archiveLabel" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content rounded-3">
+      <div class="modal-header">
+        <h5 class="modal-title" id="archiveLabel">Archive action plan</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="archiveForm" method="post">
+        @Html.AntiForgeryToken()
+        <div class="modal-body">
+          <input type="hidden" name="actionId" id="arc_actionId" />
+          <p class="mb-0">Are you sure you want to archive this action plan?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger">Archive</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
@@ -199,8 +228,15 @@
               <option value="">— Select —</option>
               @foreach (var e in employees ?? Enumerable.Empty<KPIMonitor.ViewModels.EmployeePickDto>())
               {
-                <option value="@e.Label">@e.Label</option>
+                  var display = e.Label ?? "";
+                  var idx = display.IndexOf('(');
+                  if (idx > 0)
+                  {
+                      display = display.Substring(0, idx).Trim();
+                  }
+                  <option value="@e.Label">@display</option>
               }
+
             </select>
           </div>
 
@@ -274,13 +310,9 @@
         if (!hasVisibleChild || group.children.length === 0) group.remove();
       });
     }
-
     async function refreshBoard() {
       try {
-        if (!apKpiIds.length) {
-          const reds = await getJSON('@Url.Action("GetRedKpiIds", "RedBoard")');
-          apKpiIds = (Array.isArray(reds) ? reds.map(x => x.kpiId) : []);
-        }
+        // No KPI filter on this page: show all KPI-linked actions.
         const res = await fetch('@Url.Action("BoardHtml", "ActionPlans")', {
           method: 'POST',
           headers: {
@@ -288,8 +320,9 @@
             'Content-Type': 'application/json',
             'RequestVerificationToken': anti()
           },
-          body: JSON.stringify(apKpiIds)
+          body: JSON.stringify(apKpiIds) // will be an empty array, meaning "no filter"
         });
+
         if (!res.ok) throw new Error('HTTP ' + res.status);
         $('apBody').innerHTML = "<div class='ap-scroll'>" + (await res.text()) + "</div>";
         stripAdminControls();
@@ -346,9 +379,18 @@
         $('ep_assignedAt').value = data.assignedAtLocal || '';
         $('ep_due').value        = data.dueDateLocal || '';
 
-        // keep current behaviour: owner dropdown starts empty
         const ownerSel = $('ep_owner');
-        ownerSel.value = '';
+        if (ownerSel) {
+          // Pre-select existing owner if we have one and it matches an option
+          ownerSel.value = data.owner || '';
+          if (!ownerSel.value && data.owner) {
+            // Fallback: if label changed, try to find option whose value starts with the same name prefix
+            const opts = Array.from(ownerSel.options);
+            const match = opts.find(o => (o.value || '').startsWith(data.owner));
+            if (match) ownerSel.value = match.value;
+          }
+        }
+
 
         new bootstrap.Modal(document.getElementById('editPlanModal')).show();
       } catch (err) {
@@ -377,6 +419,46 @@
         alert('Save failed.');
       }
     });
+    // Archive Action Plan — open confirm modal
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action="archive-action"]');
+      if (!btn || !IS_ADMIN) return;
+
+      const id = btn.getAttribute('data-id');
+      if (!id) return;
+
+      $('arc_actionId').value = id;
+      new bootstrap.Modal(document.getElementById('archiveModal')).show();
+    });
+    // Archive Action Plan — submit
+    const archiveForm = document.getElementById('archiveForm');
+    if (archiveForm) {
+      archiveForm.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        if (!IS_ADMIN) return;
+
+        try {
+          const fd = new FormData(archiveForm);
+          if (!fd.get('__RequestVerificationToken')) {
+            fd.append('__RequestVerificationToken', anti());
+          }
+
+          const res = await fetch('@Url.Action("ArchiveAction", "KpiActions")', {
+            method: 'POST',
+            body: fd,
+            headers: { 'Accept': 'text/html', 'X-Requested-With': 'XMLHttpRequest' }
+          });
+
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+
+          bootstrap.Modal.getInstance(document.getElementById('archiveModal')).hide();
+          await refreshBoard();
+        } catch (err) {
+          console.error('[AP] ArchiveAction failed:', err);
+          alert('Failed to archive action plan.');
+        }
+      });
+    }
 
     // -------------------------
     // Add Action Plan helpers
