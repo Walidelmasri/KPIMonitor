@@ -63,7 +63,7 @@ namespace KPIMonitor.Controllers
           .Where(a => string.Equals(a.StatusCode, "done", StringComparison.OrdinalIgnoreCase))
           .ToList();
 
-      // Local helpers: compact card layout, keep behaviour
+      // ----- CARD RENDERING (back to original layout, but with archive + cleaned owner) -----
       string Tile(KpiAction a, string title, string badgeClass)
       {
         string H(string? s) => WebUtility.HtmlEncode(s ?? "");
@@ -79,88 +79,71 @@ namespace KPIMonitor.Controllers
         }
 
         var ownerDisplay = CleanOwner(a.Owner);
-        var status = (a.StatusCode ?? "").ToLowerInvariant();
 
-        string statusLabel = status switch
-        {
-          "todo"      => "To Do",
-          "inprogress"=> "In Progress",
-          "done"      => "Done",
-          "archived"  => "Archived",
-          _           => status
-        };
-
-        var statusBadge = string.IsNullOrWhiteSpace(statusLabel)
-          ? ""
-          : $"<span class='badge {badgeClass} ms-2'>{H(statusLabel)}</span>";
-
-        // info block: general vs KPI-linked
+        // KPI vs General info block
         string info;
         if (a.KpiId == null || a.IsGeneral)
         {
-          info = "<div class='small text-muted mb-2'>" +
-                 "<span class='badge text-bg-info me-1'>General</span>General Action" +
-                 "</div>";
+          info = "<div class='small text-muted mt-1'><span class='badge text-bg-info me-1'>General</span>General Action</div>";
         }
         else
         {
-          string code = $"{H(a.Kpi?.Pillar?.PillarCode ?? "")} {H(a.Kpi?.Objective?.ObjectiveCode ?? "")} {H(a.Kpi?.KpiCode ?? "")}";
-          string name = H(a.Kpi?.KpiName ?? "-");
+          string code   = $"{H(a.Kpi?.Pillar?.PillarCode ?? "")} {H(a.Kpi?.Objective?.ObjectiveCode ?? "")} {H(a.Kpi?.KpiCode ?? "")}";
+          string name   = H(a.Kpi?.KpiName ?? "-");
           string pillar = H(a.Kpi?.Pillar?.PillarName ?? "");
-          string obj = H(a.Kpi?.Objective?.ObjectiveName ?? "");
+          string obj    = H(a.Kpi?.Objective?.ObjectiveName ?? "");
 
           info = $@"
-<div class='small text-muted mb-2'>
+<div class='small text-muted mt-1'>
   KPI: <strong>{code}</strong> — {name}
   {(string.IsNullOrWhiteSpace(pillar) ? "" : $"<div>Pillar: {pillar}</div>")}
   {(string.IsNullOrWhiteSpace(obj) ? "" : $"<div>Objective: {obj}</div>")}
 </div>";
         }
 
-        var ext =
-          a.ExtensionCount > 0
-          ? $"<span class='badge text-bg-light ms-1'>+{a.ExtensionCount} ext</span>"
+        // Extension label only if > 0
+        var extPart = a.ExtensionCount > 0
+          ? $" • Ext: {a.ExtensionCount}"
           : "";
 
         return $@"
-<div class='card border-0'>
-  <div class='card-body p-2'>
-    <div class='d-flex justify-content-between align-items-center mb-1'>
-      <div>
-        <strong>{H(ownerDisplay)}</strong>
-        {statusBadge}
-      </div>
-      <div class='btn-group btn-group-sm' role='group'>
-        <button type='button'
-                class='btn btn-outline-secondary'
-                data-action='edit-plan'
-                data-id='{a.ActionId}'
-                asp-admin-only>
-          Edit
-        </button>
-        <button type='button'
-                class='btn btn-outline-secondary'
-                data-action='move-deadline'
-                data-id='{a.ActionId}'
-                asp-admin-only>
-          Move deadline
-        </button>
-        <button type='button'
-                class='btn btn-outline-secondary'
-                data-action='archive-action'
-                data-id='{a.ActionId}'
-                asp-admin-only>
-          Archive
-        </button>
-      </div>
-    </div>
+<div class='border rounded-3 p-2 bg-white'>
+  <div class='d-flex justify-content-between align-items-center'>
+    <strong>{H(ownerDisplay)}</strong>
+    <span class='badge rounded-pill {badgeClass}'>{H(title)}</span>
+  </div>
 
-    {info}
+  {info}
 
-    <div class='small'>
-      <div><strong>Due:</strong> {F(a.DueDate)}{ext}</div>
-      <div><strong>Assigned:</strong> {F(a.AssignedAt)}</div>
-    </div>
+  <div class='mt-1'>{H(a.Description)}</div>
+
+  <div class='text-muted small mt-1'>
+    Due: {F(a.DueDate)}{extPart}
+  </div>
+
+  <!-- buttons row at the bottom -->
+  <div class='d-flex justify-content-end gap-2 mt-2'>
+    <button type='button'
+            class='btn btn-sm btn-outline-secondary ap-action-btn'
+            data-action='edit-plan'
+            data-id='{a.ActionId}'
+            asp-admin-only>
+      Edit
+    </button>
+    <button type='button'
+            class='btn btn-sm btn-outline-secondary ap-action-btn'
+            data-action='move-deadline'
+            data-id='{a.ActionId}'
+            asp-admin-only>
+      Move deadline
+    </button>
+    <button type='button'
+            class='btn btn-sm btn-outline-secondary ap-action-btn'
+            data-action='archive-action'
+            data-id='{a.ActionId}'
+            asp-admin-only>
+      Archive
+    </button>
   </div>
 </div>";
       }
@@ -178,6 +161,7 @@ namespace KPIMonitor.Controllers
         sb.Append("<div class='col-md-4'>");
         sb.Append("<div class='ap-col'>");
 
+        // the coloured bar at the top of each column
         sb.Append($"<div class='{headerClass}'>{WebUtility.HtmlEncode(title)}</div>");
 
         if (!items.Any())
@@ -189,16 +173,20 @@ namespace KPIMonitor.Controllers
           foreach (var a in items)
           {
             sb.Append("<div class='mt-2'>");
-            sb.Append(Tile(a, title,
-              key == "todo" ? "text-bg-secondary" :
-              key == "prog" ? "text-bg-warning"  :
-                              "text-bg-success"));
+            sb.Append(Tile(
+              a,
+              title,
+              key == "todo"
+                ? "text-bg-secondary"
+                : key == "prog"
+                  ? "text-bg-warning"
+                  : "text-bg-success"));
             sb.Append("</div>");
           }
         }
 
-        sb.Append("</div>");   // ap-col
-        sb.Append("</div>");   // col
+        sb.Append("</div>");   // .ap-col
+        sb.Append("</div>");   // .col-md-4
         return sb.ToString();
       }
 
