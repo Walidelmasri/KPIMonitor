@@ -1357,9 +1357,9 @@ namespace KPIMonitor.Controllers
             sb.AppendLine("<table class='table table-sm table-hover align-middle mb-0'>");
             sb.AppendLine("<thead><tr>");
             sb.AppendLine("<th>Editor</th>");
-            sb.AppendLine("<th>Last indicator</th>");
-            sb.AppendLine("<th>Approver</th>");
-            sb.AppendLine("<th>Last submission</th>");
+            sb.AppendLine("<th>Most Recent Indicator</th>");
+            sb.AppendLine("<th>Owner</th>");
+            sb.AppendLine("<th>Last Submission</th>");
             sb.AppendLine("</tr></thead><tbody>");
 
             foreach (var s in stats)
