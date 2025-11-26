@@ -1245,39 +1245,90 @@ namespace KPIMonitor.Controllers
                 return Content("<div class='text-muted small'>No editors configured.</div>", "text/html; charset=utf-8");
             }
 
-            // 2) Resolve names + logins + last submission date
-            var stats = new List<(string EmpId, string Name, string? Login, DateTime? LastSubmittedAt)>();
+            // 2) Resolve names + logins + last submission date + last indicator + approver
+            var stats = new List<
+                (string EmpId,
+                 string Name,
+                 string? Login,
+                 DateTime? LastSubmittedAt,
+                 string? LastIndicator,
+                 string? ApproverName)>();
 
             foreach (var empId in editorEmpIds)
             {
                 if (string.IsNullOrWhiteSpace(empId))
                     continue;
 
+                // Editor info
                 var rec = await _dir.TryGetByEmpIdAsync(empId, ct);
                 var login = await _dir.TryGetLoginByEmpIdAsync(empId, ct);
                 var sam = Sam(login); // normalize DOMAIN\user / email → bare SAM
 
                 DateTime? lastSubmitted = null;
+                string? lastIndicator = null;
+                string? approverName = null;
 
                 if (!string.IsNullOrWhiteSpace(sam))
                 {
                     var samUp = sam.ToUpperInvariant();
 
-                    lastSubmitted = await _db.KpiFactChanges
+                    // Get the most recent *change* for this editor (with KPI + Plan loaded)
+                    var lastChange = await _db.KpiFactChanges
                         .AsNoTracking()
+                        .Include(c => c.KpiFact)
+                            .ThenInclude(f => f.Kpi)
+                                .ThenInclude(k => k.Pillar)
+                        .Include(c => c.KpiFact)
+                            .ThenInclude(f => f.Kpi)
+                                .ThenInclude(k => k.Objective)
+                        .Include(c => c.KpiFact)
+                            .ThenInclude(f => f.KpiYearPlan)
                         .Where(c =>
                             c.SubmittedBy != null &&
                             c.SubmittedBy.ToUpper() == samUp)
                         .OrderByDescending(c => c.SubmittedAt)
-                        .Select(c => (DateTime?)c.SubmittedAt)
                         .FirstOrDefaultAsync(ct);
+
+                    if (lastChange != null)
+                    {
+                        lastSubmitted = lastChange.SubmittedAt;
+
+                        var fact = lastChange.KpiFact;
+                        var kpi = fact?.Kpi;
+
+                        // Build a compact indicator label: e.g. "1.1 v – KPI Name"
+                        if (kpi != null)
+                        {
+                            var pillCode = kpi.Pillar?.PillarCode ?? "";
+                            var objCode = kpi.Objective?.ObjectiveCode ?? "";
+                            var codePart = $"{pillCode}.{objCode} {kpi.KpiCode}".Trim();
+                            var namePart = kpi.KpiName ?? "";
+
+                            if (!string.IsNullOrWhiteSpace(codePart) && !string.IsNullOrWhiteSpace(namePart))
+                                lastIndicator = $"{codePart} — {namePart}";
+                            else if (!string.IsNullOrWhiteSpace(namePart))
+                                lastIndicator = namePart;
+                            else
+                                lastIndicator = codePart;
+                        }
+
+                        // Owner / approver = KPI owner's name from the active plan
+                        var ownerEmpId = fact?.KpiYearPlan?.OwnerEmpId;
+                        if (!string.IsNullOrWhiteSpace(ownerEmpId))
+                        {
+                            var ownerRec = await _dir.TryGetByEmpIdAsync(ownerEmpId, ct);
+                            approverName = ownerRec?.NameEng ?? ownerEmpId;
+                        }
+                    }
                 }
 
                 stats.Add((
                     EmpId: empId,
                     Name: rec?.NameEng ?? empId,
                     Login: login,
-                    LastSubmittedAt: lastSubmitted
+                    LastSubmittedAt: lastSubmitted,
+                    LastIndicator: lastIndicator,
+                    ApproverName: approverName
                 ));
             }
 
@@ -1285,6 +1336,7 @@ namespace KPIMonitor.Controllers
             {
                 return Content("<div class='text-muted small'>No editors found.</div>", "text/html; charset=utf-8");
             }
+
 
             // 3) Sort: most recent first, then by name
             stats.Sort((a, b) =>
@@ -1305,26 +1357,23 @@ namespace KPIMonitor.Controllers
             sb.AppendLine("<table class='table table-sm table-hover align-middle mb-0'>");
             sb.AppendLine("<thead><tr>");
             sb.AppendLine("<th>Editor</th>");
-            // sb.AppendLine("<th>Emp&nbsp;ID</th>");
-            // sb.AppendLine("<th>Login</th>");
+            sb.AppendLine("<th>Last indicator</th>");
+            sb.AppendLine("<th>Approver</th>");
             sb.AppendLine("<th>Last submission</th>");
             sb.AppendLine("</tr></thead><tbody>");
 
-
             foreach (var s in stats)
             {
-                // var sam = Sam(s.Login); // no longer needed if you don't use login
-
                 sb.Append("<tr>");
                 sb.Append("<td>").Append(H(s.Name)).Append("</td>");
-                // sb.Append("<td>").Append(H(s.EmpId)).Append("</td>");
-                // sb.Append("<td>").Append(H(sam)).Append("</td>");
+                sb.Append("<td>").Append(H(s.LastIndicator ?? "—")).Append("</td>");
+                sb.Append("<td>").Append(H(s.ApproverName ?? "—")).Append("</td>");
                 sb.Append("<td>").Append(H(F(s.LastSubmittedAt))).Append("</td>");
                 sb.AppendLine("</tr>");
             }
 
-
             sb.AppendLine("</tbody></table></div>");
+
 
             return Content(sb.ToString(), "text/html; charset=utf-8");
         }
