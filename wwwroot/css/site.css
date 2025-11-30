@@ -27,7 +27,6 @@
   font-family: inherit;
 }
 
-/* Form controls on some browsers don’t inherit by default */
 input,
 button,
 select,
@@ -35,17 +34,13 @@ textarea {
   font: inherit;
 }
 
+/* Global fluid font size */
 html {
-  font-size: 14px;
+  font-size: clamp(14px, 0.9vw, 20px);
   position: relative;
   min-height: 100%;
 }
 
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
 
 /* Top padding so content isn't hidden behind fixed navbar (≈72px bar + breathing) */
 body {
@@ -68,6 +63,7 @@ body {
 /* =========================
    01) TYPOGRAPHY
    ========================= */
+
 .page-title {
   font-weight: 700;
   font-size: clamp(1.6rem, 2.2vw + 1rem, 2.2rem);
@@ -77,8 +73,17 @@ body {
   margin: 0 0 1.25rem 0;
 }
 
+/* Fluid display sizes for title + big numbers */
 .display-4 {
-  font-size: 2.5rem;
+  /* "Priority" label text */
+  font-size: clamp(2.4rem, 3vw, 3.5rem);
+  line-height: 1.1;
+}
+
+.display-1 {
+  /* Big priority number on the boards */
+  font-size: clamp(3.2rem, 6vw, 6rem);
+  line-height: 1.05;
 }
 
 
