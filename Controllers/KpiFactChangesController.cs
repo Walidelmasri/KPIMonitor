@@ -1222,161 +1222,204 @@ namespace KPIMonitor.Controllers
         // ------------------------
         // Editors stats (admin only)
         // ------------------------
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditorStatsHtml(CancellationToken ct = default)
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> EditorStatsHtml(CancellationToken ct = default)
+{
+    // Hard guard: only Admin / SuperAdmin
+    if (!(_admin.IsAdmin(User) || _admin.IsSuperAdmin(User)))
+    {
+        return StatusCode(403, "Not allowed.");
+    }
+
+    // 1) Collect distinct editor EmpIds from active plans
+    var editorEmpIds = await _db.KpiYearPlans
+        .AsNoTracking()
+        .Where(p => p.EditorEmpId != null && p.IsActive != 0)
+        .Select(p => p.EditorEmpId!)
+        .Distinct()
+        .ToListAsync(ct);
+
+    if (editorEmpIds.Count == 0)
+    {
+        return Content("<div class='text-muted small'>No editors configured.</div>", "text/html; charset=utf-8");
+    }
+
+    // One row per (Editor, Indicator)
+    var rows = new List<(
+        string EmpId,
+        string Name,
+        string? Login,
+        string IndicatorLabel,
+        string? OwnerName,
+        DateTime? LastSubmittedAt,
+        string? ApprovalStatus
+    )>();
+
+    foreach (var empId in editorEmpIds)
+    {
+        if (string.IsNullOrWhiteSpace(empId))
+            continue;
+
+        // Editor info (name + login)
+        var rec = await _dir.TryGetByEmpIdAsync(empId, ct);
+        var login = await _dir.TryGetLoginByEmpIdAsync(empId, ct);
+        var sam = Sam(login); // normalize DOMAIN\user / user@mail → bare SAM
+
+        if (string.IsNullOrWhiteSpace(sam))
+            continue;
+
+        var samUp = sam.ToUpperInvariant();
+
+        // 2) All active indicators (plans) for this editor
+        var plans = await _db.KpiYearPlans
+            .AsNoTracking()
+            .Include(p => p.Kpi)
+                .ThenInclude(k => k.Pillar)
+            .Include(p => p.Kpi)
+                .ThenInclude(k => k.Objective)
+            .Where(p => p.EditorEmpId == empId && p.IsActive != 0)
+            .ToListAsync(ct);
+
+        foreach (var plan in plans)
         {
-            // Hard guard: only Admin / SuperAdmin
-            if (!(_admin.IsAdmin(User) || _admin.IsSuperAdmin(User)))
+            // Build indicator label: e.g. "1.1 v — KPI Name"
+            string indicatorLabel;
+            var kpi = plan.Kpi;
+
+            if (kpi != null)
             {
-                return StatusCode(403, "Not allowed.");
+                var pillCode = kpi.Pillar?.PillarCode ?? "";
+                var objCode = kpi.Objective?.ObjectiveCode ?? "";
+                var codePart = $"{pillCode}.{objCode} {kpi.KpiCode}".Trim();
+                var namePart = kpi.KpiName ?? "";
+
+                if (!string.IsNullOrWhiteSpace(codePart) && !string.IsNullOrWhiteSpace(namePart))
+                    indicatorLabel = $"{codePart} — {namePart}";
+                else if (!string.IsNullOrWhiteSpace(namePart))
+                    indicatorLabel = namePart;
+                else
+                    indicatorLabel = codePart;
+            }
+            else
+            {
+                indicatorLabel = "(no KPI)";
             }
 
-            // 1) Collect distinct editor EmpIds from active plans
-            var editorEmpIds = await _db.KpiYearPlans
+            // Owner name (from OwnerEmpId where possible)
+            string? ownerName = null;
+            if (!string.IsNullOrWhiteSpace(plan.OwnerEmpId))
+            {
+                var ownerRec = await _dir.TryGetByEmpIdAsync(plan.OwnerEmpId, ct);
+                ownerName = ownerRec?.NameEng ?? plan.OwnerEmpId;
+            }
+            else if (!string.IsNullOrWhiteSpace(plan.Owner))
+            {
+                ownerName = plan.Owner;
+            }
+
+            // 3) Latest submission for this indicator by this editor (by date)
+            var latestChange = await _db.KpiFactChanges
                 .AsNoTracking()
-                .Where(p => p.EditorEmpId != null && p.IsActive != 0)
-                .Select(p => p.EditorEmpId!)
-                .Distinct()
-                .ToListAsync(ct);
+                .Include(c => c.KpiFact)
+                .Where(c =>
+                    c.KpiFact.KpiYearPlanId == plan.KpiYearPlanId &&
+                    c.SubmittedBy != null &&
+                    c.SubmittedBy.ToUpper() == samUp)
+                .OrderByDescending(c => c.SubmittedAt)
+                .FirstOrDefaultAsync(ct);
 
-            if (editorEmpIds.Count == 0)
-            {
-                return Content("<div class='text-muted small'>No editors configured.</div>", "text/html; charset=utf-8");
-            }
+            DateTime? lastSubmittedAt = latestChange?.SubmittedAt;
+            string? approvalStatus = latestChange?.ApprovalStatus;
 
-            // 2) Resolve names + logins + last submission date + last indicator + approver
-            var stats = new List<
-                (string EmpId,
-                 string Name,
-                 string? Login,
-                 DateTime? LastSubmittedAt,
-                 string? LastIndicator,
-                 string? ApproverName)>();
-
-            foreach (var empId in editorEmpIds)
-            {
-                if (string.IsNullOrWhiteSpace(empId))
-                    continue;
-
-                // Editor info
-                var rec = await _dir.TryGetByEmpIdAsync(empId, ct);
-                var login = await _dir.TryGetLoginByEmpIdAsync(empId, ct);
-                var sam = Sam(login); // normalize DOMAIN\user / email → bare SAM
-
-                DateTime? lastSubmitted = null;
-                string? lastIndicator = null;
-                string? approverName = null;
-
-                if (!string.IsNullOrWhiteSpace(sam))
-                {
-                    var samUp = sam.ToUpperInvariant();
-
-                    // Get the most recent *change* for this editor (with KPI + Plan loaded)
-                    var lastChange = await _db.KpiFactChanges
-                        .AsNoTracking()
-                        .Include(c => c.KpiFact)
-                            .ThenInclude(f => f.Kpi)
-                                .ThenInclude(k => k.Pillar)
-                        .Include(c => c.KpiFact)
-                            .ThenInclude(f => f.Kpi)
-                                .ThenInclude(k => k.Objective)
-                        .Include(c => c.KpiFact)
-                            .ThenInclude(f => f.KpiYearPlan)
-                        .Where(c =>
-                            c.SubmittedBy != null &&
-                            c.SubmittedBy.ToUpper() == samUp)
-                        .OrderByDescending(c => c.SubmittedAt)
-                        .FirstOrDefaultAsync(ct);
-
-                    if (lastChange != null)
-                    {
-                        lastSubmitted = lastChange.SubmittedAt;
-
-                        var fact = lastChange.KpiFact;
-                        var kpi = fact?.Kpi;
-
-                        // Build a compact indicator label: e.g. "1.1 v – KPI Name"
-                        if (kpi != null)
-                        {
-                            var pillCode = kpi.Pillar?.PillarCode ?? "";
-                            var objCode = kpi.Objective?.ObjectiveCode ?? "";
-                            var codePart = $"{pillCode}.{objCode} {kpi.KpiCode}".Trim();
-                            var namePart = kpi.KpiName ?? "";
-
-                            if (!string.IsNullOrWhiteSpace(codePart) && !string.IsNullOrWhiteSpace(namePart))
-                                lastIndicator = $"{codePart} — {namePart}";
-                            else if (!string.IsNullOrWhiteSpace(namePart))
-                                lastIndicator = namePart;
-                            else
-                                lastIndicator = codePart;
-                        }
-
-                        // Owner / approver = KPI owner's name from the active plan
-                        var ownerEmpId = fact?.KpiYearPlan?.OwnerEmpId;
-                        if (!string.IsNullOrWhiteSpace(ownerEmpId))
-                        {
-                            var ownerRec = await _dir.TryGetByEmpIdAsync(ownerEmpId, ct);
-                            approverName = ownerRec?.NameEng ?? ownerEmpId;
-                        }
-                    }
-                }
-
-                stats.Add((
-                    EmpId: empId,
-                    Name: rec?.NameEng ?? empId,
-                    Login: login,
-                    LastSubmittedAt: lastSubmitted,
-                    LastIndicator: lastIndicator,
-                    ApproverName: approverName
-                ));
-            }
-
-            if (stats.Count == 0)
-            {
-                return Content("<div class='text-muted small'>No editors found.</div>", "text/html; charset=utf-8");
-            }
-
-
-            // 3) Sort: most recent first, then by name
-            stats.Sort((a, b) =>
-            {
-                var da = a.LastSubmittedAt ?? DateTime.MinValue;
-                var db = b.LastSubmittedAt ?? DateTime.MinValue;
-                var cmp = db.CompareTo(da); // descending by date
-                if (cmp != 0) return cmp;
-                return string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
-            });
-
-            // 4) Render small table
-            static string H(string? s) => WebUtility.HtmlEncode(s ?? "");
-            static string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
-
-            var sb = new StringBuilder();
-            sb.AppendLine("<div class='table-responsive'>");
-            sb.AppendLine("<table class='table table-sm table-hover align-middle mb-0'>");
-            sb.AppendLine("<thead><tr>");
-            sb.AppendLine("<th>Editor</th>");
-            sb.AppendLine("<th>Most Recent Indicator</th>");
-            sb.AppendLine("<th>Owner</th>");
-            sb.AppendLine("<th>Last Submission</th>");
-            sb.AppendLine("</tr></thead><tbody>");
-
-            foreach (var s in stats)
-            {
-                sb.Append("<tr>");
-                sb.Append("<td>").Append(H(s.Name)).Append("</td>");
-                sb.Append("<td>").Append(H(s.LastIndicator ?? "—")).Append("</td>");
-                sb.Append("<td>").Append(H(s.ApproverName ?? "—")).Append("</td>");
-                sb.Append("<td>").Append(H(F(s.LastSubmittedAt))).Append("</td>");
-                sb.AppendLine("</tr>");
-            }
-
-            sb.AppendLine("</tbody></table></div>");
-
-
-            return Content(sb.ToString(), "text/html; charset=utf-8");
+            rows.Add((
+                EmpId: empId,
+                Name: rec?.NameEng ?? empId,
+                Login: login,
+                IndicatorLabel: indicatorLabel,
+                OwnerName: ownerName,
+                LastSubmittedAt: lastSubmittedAt,
+                ApprovalStatus: approvalStatus
+            ));
         }
+    }
+
+    if (rows.Count == 0)
+    {
+        return Content("<div class='text-muted small'>No editor indicators found.</div>", "text/html; charset=utf-8");
+    }
+
+    // 4) Sort & group by editor so we only show the editor once
+    var grouped = rows
+        .OrderBy(r => r.Name)
+        .ThenBy(r => r.IndicatorLabel)
+        .GroupBy(r => new { r.EmpId, r.Name, r.Login });
+
+    static string H(string? s) => WebUtility.HtmlEncode(s ?? "");
+    static string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd") : "—"; // DATE ONLY
+    static string StatusLabel(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return "Pending";
+        s = s.Trim().ToLowerInvariant();
+        return s switch
+        {
+            "approved" => "Approved",
+            "rejected" => "Rejected",
+            "pending" => "Pending",
+            _ => s
+        };
+    }
+
+    // 5) Render table: editor once, then all their indicators
+    var sb = new StringBuilder();
+    sb.AppendLine("<div class='table-responsive'>");
+    sb.AppendLine("<table class='table table-sm table-hover align-middle mb-0'>");
+    sb.AppendLine("<thead><tr>");
+    sb.AppendLine("<th>Indicator</th>");
+    sb.AppendLine("<th>Owner</th>");
+    sb.AppendLine("<th>Approval Status</th>");
+    sb.AppendLine("<th>Last Submission</th>");
+    sb.AppendLine("</tr></thead><tbody>");
+
+    foreach (var group in grouped)
+    {
+        var displayName = group.Key.Name;
+        var login = group.Key.Login;
+
+        // Editor header row (editor shown once)
+        sb.Append("<tr class='table-light'>");
+        sb.Append("<td colspan='4'><strong>")
+          .Append(H(displayName));
+
+        if (!string.IsNullOrWhiteSpace(login))
+        {
+            sb.Append("</strong> <span class='text-muted small'>(")
+              .Append(H(login))
+              .Append(")</span>");
+        }
+        else
+        {
+            sb.Append("</strong>");
+        }
+
+        sb.Append("</td></tr>");
+
+        // Indicator rows for this editor
+        foreach (var r in group)
+        {
+            sb.Append("<tr>");
+            sb.Append("<td>").Append(H(r.IndicatorLabel)).Append("</td>");
+            sb.Append("<td>").Append(H(r.OwnerName ?? "—")).Append("</td>");
+            sb.Append("<td>").Append(H(StatusLabel(r.ApprovalStatus))).Append("</td>");
+            sb.Append("<td>").Append(H(F(r.LastSubmittedAt))).Append("</td>");
+            sb.AppendLine("</tr>");
+        }
+    }
+
+    sb.AppendLine("</tbody></table></div>");
+
+    return Content(sb.ToString(), "text/html; charset=utf-8");
+}
 
     }
 }
