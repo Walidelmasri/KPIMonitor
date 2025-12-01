@@ -19,6 +19,7 @@ namespace KPIMonitor.Data
         public DbSet<AuditLog> AuditLogs { get; set; } = default!;
         public DbSet<KpiFactChange> KpiFactChanges { get; set; } = null!;
         public DbSet<KPIMonitor.Models.KpiFactChangeBatch> KpiFactChangeBatches { get; set; } = null!;
+        public DbSet<RedBoardOrder> RedBoardOrders { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -359,6 +360,21 @@ namespace KPIMonitor.Data
                 e.Property(x => x.ReviewedAt).HasColumnName("REVIEWEDAT").HasColumnType("TIMESTAMP(0)");
                 e.Property(x => x.RejectReason).HasColumnName("REJECTREASON");
             });
+            modelBuilder.Entity<RedBoardOrder>(e =>
+            {
+                e.ToTable("REDBOARDORDER");
+
+                e.HasKey(x => x.Id);
+
+                e.Property(x => x.Id)
+                    .HasColumnName("ID");
+
+                e.Property(x => x.KpiId)
+                    .HasColumnName("KPIID");
+
+                e.Property(x => x.SortOrder)
+                    .HasColumnName("SORTORDER");
+            });
 
         }
 
@@ -459,4 +475,12 @@ namespace KPIMonitor.Data
             return result;
         }
     }
+    // Simple entity for manual RedBoard ordering
+    public class RedBoardOrder
+    {
+        public int Id { get; set; }
+        public decimal KpiId { get; set; }   // same type as DimKpi.KpiId
+        public int SortOrder { get; set; }
+    }
+
 }

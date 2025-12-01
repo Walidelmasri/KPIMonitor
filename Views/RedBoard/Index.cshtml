@@ -35,6 +35,7 @@
         const qs = (sel, root = document) => root.querySelector(sel);
         const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
         const ENABLE_DECISIONS = false; // <- turn off the last slide safely
+
         // === UI status name mapper (code or label in, pretty label out) ===
         function uiStatus(codeOrLabel) {
             const s = String(codeOrLabel || '').trim().toLowerCase();
@@ -115,7 +116,7 @@
         // Slide deck state
         // ---------------------------
         let redList = [];   // [{kpiId, name, code, priority}]
-        let deck = [];      // title + kpi slides (+ decisions if enabled)
+        let deck = [];      // sequence of slides: kpi slides (+ decisions if enabled)
         let idx = 0;
         let kpiChart;
         let currentKpiId = null;
@@ -130,8 +131,8 @@
             return n.toString();
         }
 
-        // === SmartValueLabels (same as Home) ===
-        const SmartValueLabels = { /* unchanged plugin body from your code */
+        // === SmartValueLabels plugin ===
+        const SmartValueLabels = {
             id: 'smartValueLabels',
             afterDatasetsDraw(chart, _args, opts) {
                 const { ctx, data, chartArea } = chart;
@@ -255,10 +256,11 @@
         Chart.register(ChartDataLabels); // keep datalabels OFF per chart options
 
         // ---------------------------
-        // Load red list + build deck (UNCHANGED logic)
+        // Load red list + build deck (ORDER COMES FROM BACKEND)
         // ---------------------------
         async function loadRedList() {
             redList = await getJSON('@Url.Action("GetRedKpiIds", "RedBoard")');
+
             const badge = $('redCountBadge');
             if (badge) {
                 const n = Array.isArray(redList) ? redList.length : 0;
@@ -266,34 +268,32 @@
                 badge.classList.toggle('d-none', n === 0);
             }
 
-
             if (!redList || redList.length === 0) {
                 $('emptyMsg').classList.remove('d-none');
                 $('slideWrap').classList.add('d-none');
+                deck = [];
+                runKpiIds = [];
+                idx = 0;
                 return;
             }
+
             $('emptyMsg').classList.add('d-none');
             $('slideWrap').classList.remove('d-none');
 
-            const groups = new Map();
-            for (const k of redList) {
-                const key = k.priority ?? 999999;
-                if (!groups.has(key)) groups.set(key, []);
-                groups.get(key).push(k);
-            }
-            const orderedPriorities = Array.from(groups.keys()).sort((a, b) => a - b);
-
+            // 🚨 IMPORTANT PART:
+            // The order of deck is EXACTLY the order from GetRedKpiIds (which now uses RedBoardOrders / priority).
             deck = [];
             runKpiIds = [];
-            for (const p of orderedPriorities) {
-                const items = groups.get(p);
-                deck.push({ type: 'title', priority: p === 999999 ? '—' : p, count: items.length });
-                for (const k of items) {
-                    deck.push({ type: 'kpi', ...k });
-                    runKpiIds.push(k.kpiId);
-                }
+
+            for (const k of redList) {
+                deck.push({ type: 'kpi', ...k });
+                runKpiIds.push(k.kpiId);
             }
-            if (ENABLE_DECISIONS) deck.push({ type: 'decisions' });
+
+            if (ENABLE_DECISIONS && runKpiIds.length > 0) {
+                deck.push({ type: 'decisions' });
+            }
+
             idx = 0;
             await showCurrent();
         }
@@ -302,6 +302,15 @@
         // Show current slide 
         // ---------------------------
         async function showCurrent() {
+            if (!deck.length) {
+                $('slideCounter').innerText = '0 / 0';
+                $('titleSlide').classList.add('d-none');
+                $('kpiSlide').classList.add('d-none');
+                $('actionsBlock').classList.add('d-none');
+                $('decisionsWrap').classList.add('d-none');
+                return;
+            }
+
             const slide = deck[idx];
             $('slideCounter').innerText = `${idx + 1} / ${deck.length}`;
             $('decisionsWrap').classList.add('d-none');
@@ -319,18 +328,7 @@
                 return;
             }
 
-            if (slide.type === 'title') {
-                $('kpiHeading').innerText = `Priority ${slide.priority}`;
-                $('kpiSub').innerText = `${slide.count} KPI${slide.count === 1 ? '' : 's'} Need Attention`;
-                $('titlePriority').textContent = slide.priority;
-
-                $('titleSlide').classList.remove('d-none');
-                $('kpiSlide').classList.add('d-none');
-                $('actionsBlock').classList.add('d-none');
-                return;
-            }
-
-            // KPI slide
+            // KPI slide only (no title slides by priority any more)
             $('titleSlide').classList.add('d-none');
             $('kpiSlide').classList.remove('d-none');
             $('actionsBlock').classList.remove('d-none');
@@ -359,8 +357,7 @@
             status.style.background = data?.meta?.statusColor ?? '';
             status.className = 'status-pill';
 
-
-            // chart (unchanged except data refs)
+            // chart
             const baseLabels = data?.chart?.labels || [];
             const act = data?.chart?.actual || [];
             const tgt = data?.chart?.target || [];
@@ -375,10 +372,46 @@
             const chartData = {
                 labels: allLabels,
                 datasets: [
-                    { type: 'bar', label: 'Actual', data: act.concat(pad), backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
-                    { type: 'line', label: 'Target', data: tgt.concat(pad), borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
-                    { type: 'line', label: 'Forecast', data: fct.concat(pad), borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
-                    { type: 'bar', label: 'Year Target', data: leftNulls.concat(yearVals), backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
+                    {
+                        type: 'bar',
+                        label: 'Actual',
+                        data: act.concat(pad),
+                        backgroundColor: '#800080',
+                        borderColor: '#800080',
+                        borderWidth: 2,
+                        borderSkipped: 'bottom'
+                    },
+                    {
+                        type: 'line',
+                        label: 'Target',
+                        data: tgt.concat(pad),
+                        borderColor: '#7a7a7a',
+                        pointBackgroundColor: '#7a7a7a',
+                        pointBorderColor: '#7a7a7a',
+                        borderWidth: 2,
+                        tension: .3,
+                        fill: false
+                    },
+                    {
+                        type: 'line',
+                        label: 'Forecast',
+                        data: fct.concat(pad),
+                        borderColor: '#fd7e14',
+                        pointBackgroundColor: '#fd7e14',
+                        pointBorderColor: '#fd7e14',
+                        borderDash: [5, 5],
+                        borderWidth: 2,
+                        tension: .3,
+                        fill: false
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Year Target',
+                        data: leftNulls.concat(yearVals),
+                        backgroundColor: '#7a7a7a',
+                        borderColor: '#7a7a7a',
+                        borderWidth: 1
+                    }
                 ]
             };
 
@@ -386,19 +419,48 @@
                 kpiChart = new Chart($('rbChart').getContext('2d'), {
                     data: chartData,
                     options: {
-                        responsive: true, maintainAspectRatio: false, layout: { padding: { top: 28, bottom: 8 } },
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        layout: { padding: { top: 28, bottom: 8 } },
                         scales: {
-                            x: { grid: { display: false }, ticks: { padding: 8, callback: function (v) { return String(this.getLabelForValue(v)).replace(/^\s*\d{4}\s*[\-–—]\s*/, ''); } } },
+                            x: {
+                                grid: { display: false },
+                                ticks: {
+                                    padding: 8,
+                                    callback: function (v) {
+                                        return String(this.getLabelForValue(v)).replace(/^\s*\d{4}\s*[\-–—]\s*/, '');
+                                    }
+                                }
+                            },
                             y: { display: false, grid: { display: false }, beginAtZero: true }
                         },
                         plugins: {
                             datalabels: false,
                             smartValueLabels: {
-                                formatter: _fmtShort, fontSize: 12, fontWeight: '700', minGap: 14, padTop: 12, padBottom: 4, outline: true,
-                                perDataset: [{ dy: -12, dx: 0, color: '#800080' }, { dy: 12, dx: -8, color: '#7a7a7a' }, { dy: -16, dx: 8, color: '#fd7e14' }, { dy: -12, dx: 0, color: '#7a7a7a' }]
+                                formatter: _fmtShort,
+                                fontSize: 12,
+                                fontWeight: '700',
+                                minGap: 14,
+                                padTop: 12,
+                                padBottom: 4,
+                                outline: true,
+                                perDataset: [
+                                    { dy: -12, dx: 0, color: '#800080' },
+                                    { dy: 12, dx: -8, color: '#7a7a7a' },
+                                    { dy: -16, dx: 8, color: '#fd7e14' },
+                                    { dy: -12, dx: 0, color: '#7a7a7a' }
+                                ]
                             },
                             tooltip: { enabled: true },
-                            legend: { position: 'top', labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 8, weight: '700' } } }
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    boxWidth: 12,
+                                    boxHeight: 10,
+                                    padding: 12,
+                                    font: { size: 8, weight: '700' }
+                                }
+                            }
                         }
                     }
                 });
@@ -411,10 +473,26 @@
             await loadActionsHtml(slide.kpiId);
         }
 
-        window.prevSlide = async () => { if (!deck.length) return; idx = (idx - 1 + deck.length) % deck.length; await showCurrent(); }
-        window.nextSlide = async () => { if (!deck.length) return; idx = (idx + 1) % deck.length; await showCurrent(); }
-        window.firstSlide = async () => { if (!deck.length) return; idx = 0; await showCurrent(); }
-        window.lastSlide = async () => { if (!deck.length) return; idx = deck.length - 1; await showCurrent(); }
+        window.prevSlide = async () => {
+            if (!deck.length) return;
+            idx = (idx - 1 + deck.length) % deck.length;
+            await showCurrent();
+        };
+        window.nextSlide = async () => {
+            if (!deck.length) return;
+            idx = (idx + 1) % deck.length;
+            await showCurrent();
+        };
+        window.firstSlide = async () => {
+            if (!deck.length) return;
+            idx = 0;
+            await showCurrent();
+        };
+        window.lastSlide = async () => {
+            if (!deck.length) return;
+            idx = deck.length - 1;
+            await showCurrent();
+        };
 
         // ---------------------------
         // Actions Block (HTML fetch)
@@ -448,7 +526,10 @@
         document.addEventListener('change', async (e) => {
             const sel = e.target.closest('select[data-action="set-status"]');
             if (!sel) return;
-            if (!IS_ADMIN) { sel.value = sel.getAttribute('data-current') || sel.value; return; }
+            if (!IS_ADMIN) {
+                sel.value = sel.getAttribute('data-current') || sel.value;
+                return;
+            }
             const id = sel.getAttribute('data-id');
             const val = sel.value;
             try {
@@ -579,8 +660,6 @@
                 });
             }
         });
-
-        // (Your legacy jQuery block below remains untouched if you rely on it elsewhere)
     </script>
 }
 
@@ -613,22 +692,22 @@
                 <div class="d-flex align-items-center gap-2">
                     <span class="text-muted" id="slideCounter">0 / 0</span>
                     <span id="redCountBadge" class="badge rounded-pill text-bg-danger d-none px-3 py-2"
-                        title="Red KPIs">0 KPIs need attention</span>
+                          title="Red KPIs">0 KPIs need attention</span>
                     <button id="btnFirst" class="btn btn-outline-secondary" type="button" onclick="firstSlide()"
-                        title="Go to first slide">⏮</button>
+                            title="Go to first slide">⏮</button>
                     <button class="btn btn-outline-secondary" type="button" onclick="prevSlide()">◀</button>
                     <button class="btn btn-outline-secondary" type="button" onclick="nextSlide()">▶</button>
                     <button id="btnLast" class="btn btn-outline-secondary" type="button" onclick="lastSlide()"
-                        title="Go to decisions">⏭</button>
+                            title="Go to last slide">⏭</button>
                 </div>
             </div>
 
-            <!-- Title slide -->
+            <!-- Title slide (kept but never used now) -->
             <div id="titleSlide" class="text-center py-5 d-none">
                 <div class="bg-white border rounded shadow-sm p-5">
                     <div class="display-4 fw-bold mb-3">Priority</div>
                     <div class="display-1 fw-bolder" id="titlePriority"></div>
-                    <div class="lead text-muted mt-3">Use the arrows to view KPIs in this priority.</div>
+                    <div class="lead text-muted mt-3">Use the arrows to view KPIs.</div>
                 </div>
             </div>
 
@@ -668,8 +747,11 @@
                                         <span id="m_status" class="status-pill">—</span>
                                     </div>
                                     <div class="text-center mt-3">
-                                        <button id="btnAddAction" class="btn btn-primary@(isAdmin ? "" : " d-none")"
-                                            type="button" onclick="openAddAction()" disabled>
+                                        <button id="btnAddAction"
+                                                class="btn btn-primary@(isAdmin ? "" : " d-none")"
+                                                type="button"
+                                                onclick="openAddAction()"
+                                                disabled>
                                             ➕ Add Action
                                         </button>
                                     </div>
@@ -696,7 +778,7 @@
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <h5 class="mb-0">Decisions</h5>
                         <button id="btnAddGeneralAction" type="button"
-                            class="btn btn-primary btn-sm@(isAdmin ? "" : " d-none")">
+                                class="btn btn-primary btn-sm@(isAdmin ? "" : " d-none")">
                             Add General Action
                         </button>
                     </div>
@@ -731,7 +813,7 @@
                         <div class="mb-3">
                             <label class="form-label">Action</label>
                             <textarea class="form-control" name="Description" id="af_description" rows="3"
-                                required></textarea>
+                                      required></textarea>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Due Date</label>

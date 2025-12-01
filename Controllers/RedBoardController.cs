@@ -99,15 +99,56 @@ namespace KPIMonitor.Controllers
                     ObjectiveName = o != null ? o.ObjectiveName : ""
                 };
 
-            var list = await redLatest
+            // 1) Load all current red KPIs (no ordering yet)
+            var redList = await redLatest
                 .AsNoTracking()
-                .OrderBy(x => x.Priority)
+                .ToListAsync();
+
+            // 2) Load any saved manual order
+            var orders = await _db.RedBoardOrders
+                .AsNoTracking()
+                .ToListAsync();
+
+            // Build a map: KPIID -> SortOrder (1..N)
+            var orderMap = orders
+                .OrderBy(o => o.SortOrder)
+                .ToDictionary(o => o.KpiId, o => o.SortOrder);
+
+            // 3) Attach a SortKey per KPI:
+            //    - If in manual order: use SortOrder
+            //    - Else: push to the end with int.MaxValue
+            var withKeys = redList.Select(x =>
+            {
+                // adjust property names to whatever your redLatest actually projects
+                var kpiId = x.KpiId;
+                int sortKey = orderMap.TryGetValue(kpiId, out var s) ? s : int.MaxValue;
+
+                return new
+                {
+                    x.KpiId,
+                    x.KpiName,
+                    x.KpiCode,
+                    x.Priority,
+                    x.PillarCode,
+                    x.PillarName,
+                    x.ObjectiveCode,
+                    x.ObjectiveName,
+                    SortKey = sortKey
+                };
+            });
+
+            // 4) Final order:
+            //    - primary: SortKey (manual order if present)
+            //    - secondary: your existing fallback order
+            var list = withKeys
+                .OrderBy(x => x.SortKey)
+                .ThenBy(x => x.Priority)
                 .ThenBy(x => x.PillarCode)
                 .ThenBy(x => x.ObjectiveCode)
                 .ThenBy(x => x.KpiCode)
-                .ToListAsync();
+                .ToList();
 
-            // Build the payload your view expects
+            // 5) Shape JSON exactly as before
             var result = list
                 .Select(x =>
                 {
@@ -121,6 +162,7 @@ namespace KPIMonitor.Controllers
                     var line1 = $"KPI Code: {pillCode}.{objCode} {kpiCode}";
                     var line2 = string.IsNullOrEmpty(pillName) ? "" : $"Pillar: {pillName}";
                     var line3 = string.IsNullOrEmpty(objName) ? "" : $"Objective: {objName}";
+
                     var subtitle = string.Join("\n", new[] { line1, line2, line3 }
                         .Where(s => !string.IsNullOrWhiteSpace(s)));
 
@@ -134,8 +176,8 @@ namespace KPIMonitor.Controllers
                 })
                 .ToList();
 
-
             return Json(result);
+
         }
 
         // Single KPI payload (same shape as Dashboard’s summary)
