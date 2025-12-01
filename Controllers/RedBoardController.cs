@@ -555,6 +555,33 @@ namespace KPIMonitor.Controllers
             return Content(html, "text/html");
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveOrder([FromForm] List<decimal> orderedKpiIds)
+        {
+
+            orderedKpiIds ??= new List<decimal>();
+
+            // Clear existing manual order
+            var existing = await _db.RedBoardOrders.ToListAsync();
+            _db.RedBoardOrders.RemoveRange(existing);
+
+            // Insert new order (unique, in given sequence)
+            int order = 1;
+            foreach (var kpiId in orderedKpiIds.Distinct())
+            {
+                _db.RedBoardOrders.Add(new RedBoardOrder
+                {
+                    KpiId = kpiId,
+                    SortOrder = order++
+                });
+            }
+
+            await _db.SaveChangesAsync();
+
+            // Simple OK – frontend ignores body and reloads GetRedKpiIds()
+            return Content("OK");
+        }
 
 
     }

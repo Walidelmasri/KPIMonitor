@@ -280,8 +280,7 @@
             $('emptyMsg').classList.add('d-none');
             $('slideWrap').classList.remove('d-none');
 
-            // 🚨 IMPORTANT PART:
-            // The order of deck is EXACTLY the order from GetRedKpiIds (which now uses RedBoardOrders / priority).
+            // The order of deck is EXACTLY the order from GetRedKpiIds
             deck = [];
             runKpiIds = [];
 
@@ -328,7 +327,7 @@
                 return;
             }
 
-            // KPI slide only (no title slides by priority any more)
+            // KPI slide only
             $('titleSlide').classList.add('d-none');
             $('kpiSlide').classList.remove('d-none');
             $('actionsBlock').classList.remove('d-none');
@@ -632,6 +631,170 @@
         }
 
         // ---------------------------
+        // ARRANGE INDICATORS MODAL (ADMIN)
+        // ---------------------------
+        let arrangeModalInstance = null;
+
+        function findKpiById(id) {
+            const numId = Number(id);
+            return redList.find(k => Number(k.kpiId) === numId);
+        }
+
+        function createSelectedLi(kpi) {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+            li.dataset.kpiId = kpi.kpiId;
+
+            const info = document.createElement('div');
+            info.className = 'me-2';
+            const title = document.createElement('div');
+            title.className = 'fw-semibold';
+            title.textContent = kpi.name || '—';
+            const sub = document.createElement('div');
+            sub.className = 'small text-muted';
+            sub.textContent = kpi.code || '';
+            info.appendChild(title);
+            info.appendChild(sub);
+
+            const btns = document.createElement('div');
+            btns.className = 'btn-group btn-group-sm';
+            btns.innerHTML = `
+                <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeUp(this)">↑</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeDown(this)">↓</button>
+                <button type="button" class="btn btn-outline-danger" onclick="removeFromSelected(this)">✕</button>
+            `;
+
+            li.appendChild(info);
+            li.appendChild(btns);
+            return li;
+        }
+
+        function createAvailableLi(kpi) {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+            li.dataset.kpiId = kpi.kpiId;
+
+            const info = document.createElement('div');
+            info.className = 'me-2';
+            const title = document.createElement('div');
+            title.className = 'fw-semibold';
+            title.textContent = kpi.name || '—';
+            const sub = document.createElement('div');
+            sub.className = 'small text-muted';
+            sub.textContent = kpi.code || '';
+            info.appendChild(title);
+            info.appendChild(sub);
+
+            const btns = document.createElement('div');
+            btns.className = 'btn-group btn-group-sm';
+            btns.innerHTML = `
+                <button type="button" class="btn btn-outline-primary" onclick="addToSelected(this)">Add</button>
+            `;
+
+            li.appendChild(info);
+            li.appendChild(btns);
+            return li;
+        }
+
+        function moveArrangeUp(btn) {
+            const li = btn.closest('li');
+            const list = li.parentElement;
+            const prev = li.previousElementSibling;
+            if (prev) list.insertBefore(li, prev);
+        }
+
+        function moveArrangeDown(btn) {
+            const li = btn.closest('li');
+            const list = li.parentElement;
+            const next = li.nextElementSibling;
+            if (next) list.insertBefore(next, li);
+        }
+
+        function removeFromSelected(btn) {
+            const li = btn.closest('li');
+            const kpi = findKpiById(li.dataset.kpiId);
+            if (!kpi) { li.remove(); return; }
+            const avail = $('arrangeAvailableList');
+            avail.appendChild(createAvailableLi(kpi));
+            li.remove();
+        }
+
+        function addToSelected(btn) {
+            const li = btn.closest('li');
+            const kpi = findKpiById(li.dataset.kpiId);
+            if (!kpi) { li.remove(); return; }
+            const selected = $('arrangeSelectedList');
+            selected.appendChild(createSelectedLi(kpi));
+            li.remove();
+        }
+
+        function openArrangeModal() {
+            if (!IS_ADMIN) return;
+            if (!redList || redList.length === 0) {
+                alert('No red KPIs to arrange.');
+                return;
+            }
+
+            const modalEl = $('arrangeModal');
+            arrangeModalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+            const selectedList = $('arrangeSelectedList');
+            const availableList = $('arrangeAvailableList');
+            selectedList.innerHTML = '';
+            availableList.innerHTML = '';
+
+            // Current slideshow order = deck's KPI order
+            const currentOrderIds = deck.filter(s => s.type === 'kpi').map(s => s.kpiId);
+            const selectedSet = new Set(currentOrderIds.map(Number));
+
+            // Fill selected (in deck order)
+            for (const id of currentOrderIds) {
+                const k = findKpiById(id);
+                if (k) selectedList.appendChild(createSelectedLi(k));
+            }
+
+            // Fill available = redList but not in selected
+            for (const k of redList) {
+                if (!selectedSet.has(Number(k.kpiId))) {
+                    availableList.appendChild(createAvailableLi(k));
+                }
+            }
+
+            arrangeModalInstance.show();
+        }
+
+        async function saveArrangeOrder(ev) {
+            ev.preventDefault();
+            if (!IS_ADMIN) return;
+
+            const selectedList = $('arrangeSelectedList');
+            const lis = qsa('li[data-kpi-id]', selectedList);
+            if (!lis.length) {
+                if (!confirm('You have no KPIs selected for the slideshow. Continue?')) return;
+            }
+
+            const fd = new FormData();
+            fd.append('__RequestVerificationToken', anti());
+            lis.forEach(li => {
+                fd.append('orderedKpiIds', li.dataset.kpiId);
+            });
+
+            try {
+                const res = await fetch('@Url.Action("SaveOrder", "RedBoard")', {
+                    method: 'POST',
+                    body: fd,
+                    headers: { 'Accept': 'text/plain', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!res.ok) throw 0;
+                await res.text(); // ignore body
+                if (arrangeModalInstance) arrangeModalInstance.hide();
+                await loadRedList(); // reload deck with new order from backend
+            } catch {
+                alert('Failed to save arrangement.');
+            }
+        }
+
+        // ---------------------------
         // Boot
         // ---------------------------
         document.addEventListener('DOMContentLoaded', () => loadRedList());
@@ -640,6 +803,8 @@
         window.openAddAction = openAddAction;
         window.openMoveDeadline = openMoveDeadline;
         window.showDecisions = showDecisions;
+        window.openArrangeModal = openArrangeModal;
+        window.saveArrangeOrder = saveArrangeOrder;
 
         let isGeneralCreate = false;
 
@@ -702,7 +867,18 @@
                 </div>
             </div>
 
-            <!-- Title slide (kept but never used now) -->
+            @if (isAdmin)
+            {
+                <div class="d-flex justify-content-end mb-3">
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm"
+                            onclick="openArrangeModal()">
+                        Arrange indicators
+                    </button>
+                </div>
+            }
+
+            <!-- Title slide (kept but not used for now) -->
             <div id="titleSlide" class="text-center py-5 d-none">
                 <div class="bg-white border rounded shadow-sm p-5">
                     <div class="display-4 fw-bold mb-3">Priority</div>
@@ -863,6 +1039,44 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-primary">Move</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Arrange Indicators Modal -->
+    <div class="modal fade" id="arrangeModal" tabindex="-1" aria-labelledby="arrangeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content rounded-3">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="arrangeModalLabel">Arrange Red Indicators</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="arrangeForm" onsubmit="saveArrangeOrder(event)">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-body">
+                        <p class="text-muted small">
+                            Drag using the arrows (↑/↓) to reorder the slideshow. Remove KPIs from the slideshow to move
+                            them to the available list. Only <strong>red</strong> KPIs are shown.
+                        </p>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Available red KPIs (not in slideshow)</h6>
+                                <ul id="arrangeAvailableList" class="list-group small"
+                                    style="max-height: 360px; overflow-y: auto;"></ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Slideshow order</h6>
+                                <ul id="arrangeSelectedList" class="list-group small"
+                                    style="max-height: 360px; overflow-y: auto;"></ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <span class="text-muted small me-auto">Changes affect only the RedBoard slideshow.</span>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save arrangement</button>
                     </div>
                 </form>
             </div>
