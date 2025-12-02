@@ -104,24 +104,31 @@ namespace KPIMonitor.Controllers
                 .AsNoTracking()
                 .ToListAsync();
 
-            // 2) Load any saved manual order
+            // 2) Load any saved manual order (with hidden flag)
             var orders = await _db.RedBoardOrders
                 .AsNoTracking()
                 .ToListAsync();
 
-            // Build a map: KPIID -> SortOrder (1..N)
-            var orderMap = orders
-                .OrderBy(o => o.SortOrder)
-                .ToDictionary(o => o.KpiId, o => o.SortOrder);
+            // Map: KPIID -> entire order row (SortOrder + IsHidden)
+            var orderLookup = orders.ToDictionary(o => o.KpiId, o => o);
 
-            // 3) Attach a SortKey per KPI:
-            //    - If in manual order: use SortOrder
-            //    - Else: push to the end with int.MaxValue
-            var withKeys = redList.Select(x =>
+            // 3) Attach SortKey + IsHidden per KPI
+            var withFlags = redList.Select(x =>
             {
-                // adjust property names to whatever your redLatest actually projects
-                var kpiId = x.KpiId;
-                int sortKey = orderMap.TryGetValue(kpiId, out var s) ? s : int.MaxValue;
+                orderLookup.TryGetValue(x.KpiId, out var rbo);
+
+                // Hidden KPIs: always pushed to the end for deck ordering
+                bool isHidden = rbo?.IsHidden ?? false;
+                int sortKey;
+
+                if (rbo != null && !isHidden && rbo.SortOrder > 0)
+                {
+                    sortKey = rbo.SortOrder;
+                }
+                else
+                {
+                    sortKey = int.MaxValue;
+                }
 
                 return new
                 {
@@ -133,22 +140,24 @@ namespace KPIMonitor.Controllers
                     x.PillarName,
                     x.ObjectiveCode,
                     x.ObjectiveName,
-                    SortKey = sortKey
+                    SortKey = sortKey,
+                    IsHidden = isHidden
                 };
             });
 
             // 4) Final order:
-            //    - primary: SortKey (manual order if present)
-            //    - secondary: your existing fallback order
-            var list = withKeys
-                .OrderBy(x => x.SortKey)
+            //    - visible first (IsHidden = false), hidden at the end
+            //    - within visible: SortKey (manual order), then your existing fallback order
+            var list = withFlags
+                .OrderBy(x => x.IsHidden ? 1 : 0)
+                .ThenBy(x => x.SortKey)
                 .ThenBy(x => x.Priority)
                 .ThenBy(x => x.PillarCode)
                 .ThenBy(x => x.ObjectiveCode)
                 .ThenBy(x => x.KpiCode)
                 .ToList();
 
-            // 5) Shape JSON exactly as before
+            // 5) Shape JSON (same as before, but now also returns isHidden)
             var result = list
                 .Select(x =>
                 {
@@ -171,13 +180,13 @@ namespace KPIMonitor.Controllers
                         kpiId = x.KpiId,
                         name = x.KpiName ?? "-",
                         code = subtitle,
-                        priority = x.Priority
+                        priority = x.Priority,
+                        isHidden = x.IsHidden    // 👈 NEW: used by the arrange modal / deck
                     };
                 })
                 .ToList();
 
             return Json(result);
-
         }
 
         // Single KPI payload (same shape as Dashboard’s summary)
@@ -557,31 +566,46 @@ namespace KPIMonitor.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveOrder([FromForm] List<decimal> orderedKpiIds)
+        public async Task<IActionResult> SaveOrder(
+            [FromForm] List<decimal> orderedKpiIds,
+            [FromForm] List<decimal> hiddenKpiIds)
         {
 
-            orderedKpiIds ??= new List<decimal>();
 
-            // Clear existing manual order
+            orderedKpiIds ??= new List<decimal>();
+            hiddenKpiIds ??= new List<decimal>();
+
+            // Remove all existing rows
             var existing = await _db.RedBoardOrders.ToListAsync();
             _db.RedBoardOrders.RemoveRange(existing);
 
-            // Insert new order (unique, in given sequence)
+            // Insert slideshow order (visible)
             int order = 1;
             foreach (var kpiId in orderedKpiIds.Distinct())
             {
                 _db.RedBoardOrders.Add(new RedBoardOrder
                 {
                     KpiId = kpiId,
-                    SortOrder = order++
+                    SortOrder = order++,
+                    IsHidden = false
+                });
+            }
+
+            // Insert hidden KPIs
+            foreach (var kpiId in hiddenKpiIds.Distinct())
+            {
+                _db.RedBoardOrders.Add(new RedBoardOrder
+                {
+                    KpiId = kpiId,
+                    SortOrder = 0,
+                    IsHidden = true
                 });
             }
 
             await _db.SaveChangesAsync();
-
-            // Simple OK – frontend ignores body and reloads GetRedKpiIds()
             return Content("OK");
         }
+
 
 
     }

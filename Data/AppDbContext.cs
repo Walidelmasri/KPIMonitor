@@ -374,6 +374,8 @@ namespace KPIMonitor.Data
 
                 e.Property(x => x.SortOrder)
                     .HasColumnName("SORTORDER");
+                e.Property(x => x.IsHidden)
+                .HasColumnName("IS_HIDDEN");
             });
 
         }
@@ -481,6 +483,8 @@ namespace KPIMonitor.Data
         public int Id { get; set; }
         public decimal KpiId { get; set; }   // same type as DimKpi.KpiId
         public int SortOrder { get; set; }
+            public bool IsHidden { get; set; }  // maps to IS_HIDDEN
+
     }
 
 }

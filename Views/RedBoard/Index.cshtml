@@ -89,7 +89,6 @@
             const root = $('actionsList');
             if (!root) return;
 
-            // Hide buttons/links the server may render
             ['[data-action="move-deadline"]',
                 '[data-action="delete-action"]',
                 '[data-action="close-action"]',
@@ -99,14 +98,12 @@
                     root.querySelectorAll(sel).forEach(n => n.remove());
                 });
 
-            // Disable status dropdowns (keep label visible)
             root.querySelectorAll('select[data-action="set-status"]').forEach(sel => {
                 sel.disabled = true;
                 sel.classList.add('disabled');
                 sel.title = 'Admins only';
             });
 
-            // Clean empty action containers
             root.querySelectorAll('.btn-group, .ap-actions, .card-actions').forEach(group => {
                 if (!group.querySelector('button, a, select')) group.remove();
             });
@@ -115,7 +112,7 @@
         // ---------------------------
         // Slide deck state
         // ---------------------------
-        let redList = [];   // [{kpiId, name, code, priority}]
+        let redList = [];   // [{kpiId, name, code, priority, sortOrder, isHidden}]
         let deck = [];      // sequence of slides: kpi slides (+ decisions if enabled)
         let idx = 0;
         let kpiChart;
@@ -253,10 +250,10 @@
             }
         };
         Chart.register(SmartValueLabels);
-        Chart.register(ChartDataLabels); // keep datalabels OFF per chart options
+        Chart.register(ChartDataLabels);
 
         // ---------------------------
-        // Load red list + build deck (ORDER COMES FROM BACKEND)
+        // Load red list + build deck (ORDER + HIDDEN COME FROM BACKEND)
         // ---------------------------
         async function loadRedList() {
             redList = await getJSON('@Url.Action("GetRedKpiIds", "RedBoard")');
@@ -280,11 +277,12 @@
             $('emptyMsg').classList.add('d-none');
             $('slideWrap').classList.remove('d-none');
 
-            // The order of deck is EXACTLY the order from GetRedKpiIds
             deck = [];
             runKpiIds = [];
 
+            // Only non-hidden KPIs go into slideshow deck
             for (const k of redList) {
+                if (k.isHidden) continue;
                 deck.push({ type: 'kpi', ...k });
                 runKpiIds.push(k.kpiId);
             }
@@ -327,7 +325,6 @@
                 return;
             }
 
-            // KPI slide only
             $('titleSlide').classList.add('d-none');
             $('kpiSlide').classList.remove('d-none');
             $('actionsBlock').classList.remove('d-none');
@@ -336,7 +333,6 @@
             $('kpiHeading').innerText = `KPI Name: ${slide.name}`;
             $('kpiSub').innerText = `${slide.code}`;
 
-            // Add Action visibility (admin only)
             const addBtn = $('btnAddAction');
             if (addBtn) {
                 addBtn.disabled = !IS_ADMIN;
@@ -345,7 +341,6 @@
 
             const data = await getJSON('@Url.Action("GetKpiPresentation", "RedBoard")?kpiId=' + slide.kpiId);
 
-            // meta
             $('m_owner').innerText = data?.meta?.owner ?? '—';
             $('m_editor').innerText = data?.meta?.editor ?? '—';
             $('m_frequency').innerText = data?.meta?.valueType ?? '—';
@@ -356,7 +351,6 @@
             status.style.background = data?.meta?.statusColor ?? '';
             status.className = 'status-pill';
 
-            // chart
             const baseLabels = data?.chart?.labels || [];
             const act = data?.chart?.actual || [];
             const tgt = data?.chart?.target || [];
@@ -468,7 +462,6 @@
                 kpiChart.update();
             }
 
-            // Load actions list (HTML) for this KPI
             await loadActionsHtml(slide.kpiId);
         }
 
@@ -501,27 +494,24 @@
             try {
                 const html = await getHTML('@Url.Action("ActionsListHtml", "RedBoard")?kpiId=' + encodeURIComponent(kpiId));
                 $('actionsList').innerHTML = html;
-                // Hide/disable admin controls in the injected HTML if not admin
                 stripAdminControlsInActions();
             } catch {
                 $('actionsList').innerHTML = "<div class='text-danger small'>Failed to load actions.</div>";
             }
         }
 
-        // Delegate clicks inside actionsList for Move Deadline (admin only)
         document.addEventListener('click', async (e) => {
             const btn = e.target.closest('[data-action]');
             if (!btn) return;
 
             const act = btn.getAttribute('data-action');
             if (act === 'move-deadline') {
-                if (!IS_ADMIN) return; // guard
+                if (!IS_ADMIN) return;
                 const id = btn.getAttribute('data-id');
                 openMoveDeadline(id);
             }
         });
 
-        // Delegate change for status dropdowns (admin only)
         document.addEventListener('change', async (e) => {
             const sel = e.target.closest('select[data-action="set-status"]');
             if (!sel) return;
@@ -622,8 +612,6 @@
                 if (!res.ok) throw 0;
                 $('decisionsBody').innerHTML = await res.text();
                 $('decisionsWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-                // Hide admin controls that may appear in the decisions HTML
                 stripAdminControlsInActions();
             } catch {
                 $('decisionsBody').innerHTML = "<div class='text-danger small'>Failed to load decisions.</div>";
@@ -631,7 +619,7 @@
         }
 
         // ---------------------------
-        // ARRANGE INDICATORS MODAL (ADMIN)
+        // ARRANGE INDICATORS (3 lists: Hidden, Available, Slideshow)
         // ---------------------------
         let arrangeModalInstance = null;
 
@@ -662,6 +650,7 @@
                 <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeUp(this)">↑</button>
                 <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeDown(this)">↓</button>
                 <button type="button" class="btn btn-outline-danger" onclick="removeFromSelected(this)">✕</button>
+                <button type="button" class="btn btn-outline-warning" onclick="hideFromSelected(this)">Hide</button>
             `;
 
             li.appendChild(info);
@@ -689,6 +678,34 @@
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
                 <button type="button" class="btn btn-outline-primary" onclick="addToSelected(this)">Add</button>
+                <button type="button" class="btn btn-outline-warning" onclick="hideFromAvailable(this)">Hide</button>
+            `;
+
+            li.appendChild(info);
+            li.appendChild(btns);
+            return li;
+        }
+
+        function createHiddenLi(kpi) {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+            li.dataset.kpiId = kpi.kpiId;
+
+            const info = document.createElement('div');
+            info.className = 'me-2';
+            const title = document.createElement('div');
+            title.className = 'fw-semibold text-muted';
+            title.textContent = kpi.name || '—';
+            const sub = document.createElement('div');
+            sub.className = 'small text-muted';
+            sub.textContent = kpi.code || '';
+            info.appendChild(title);
+            info.appendChild(sub);
+
+            const btns = document.createElement('div');
+            btns.className = 'btn-group btn-group-sm';
+            btns.innerHTML = `
+                <button type="button" class="btn btn-outline-success" onclick="unhideIndicator(this)">Unhide</button>
             `;
 
             li.appendChild(info);
@@ -728,6 +745,46 @@
             li.remove();
         }
 
+        function hideFromSelected(btn) {
+            const li = btn.closest('li');
+            const kpi = findKpiById(li.dataset.kpiId);
+            if (!kpi) { li.remove(); return; }
+            const hidden = $('arrangeHiddenList');
+            hidden.appendChild(createHiddenLi(kpi));
+            li.remove();
+        }
+
+        function hideFromAvailable(btn) {
+            const li = btn.closest('li');
+            const kpi = findKpiById(li.dataset.kpiId);
+            if (!kpi) { li.remove(); return; }
+            const hidden = $('arrangeHiddenList');
+            hidden.appendChild(createHiddenLi(kpi));
+            li.remove();
+        }
+
+        function unhideIndicator(btn) {
+            const li = btn.closest('li');
+            const kpi = findKpiById(li.dataset.kpiId);
+            if (!kpi) { li.remove(); return; }
+            const available = $('arrangeAvailableList');
+            available.appendChild(createAvailableLi(kpi));
+            li.remove();
+        }
+
+        function clearAllOrder() {
+            const selectedList = $('arrangeSelectedList');
+            const availableList = $('arrangeAvailableList');
+
+            const items = qsa('li[data-kpi-id]', selectedList);
+            for (const li of items) {
+                const kpi = findKpiById(li.dataset.kpiId);
+                if (!kpi) continue;
+                availableList.appendChild(createAvailableLi(kpi));
+            }
+            selectedList.innerHTML = '';
+        }
+
         function openArrangeModal() {
             if (!IS_ADMIN) return;
             if (!redList || redList.length === 0) {
@@ -738,24 +795,41 @@
             const modalEl = $('arrangeModal');
             arrangeModalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
 
+            const hiddenList = $('arrangeHiddenList');
             const selectedList = $('arrangeSelectedList');
             const availableList = $('arrangeAvailableList');
+
+            hiddenList.innerHTML = '';
             selectedList.innerHTML = '';
             availableList.innerHTML = '';
 
-            // Current slideshow order = deck's KPI order
-            const currentOrderIds = deck.filter(s => s.type === 'kpi').map(s => s.kpiId);
-            const selectedSet = new Set(currentOrderIds.map(Number));
+            const currentOrderIds = deck
+                .filter(s => s.type === 'kpi')
+                .map(s => Number(s.kpiId));
+            const orderedSet = new Set(currentOrderIds);
+            const hiddenSet = new Set(
+                redList.filter(k => k.isHidden).map(k => Number(k.kpiId))
+            );
 
-            // Fill selected (in deck order)
-            for (const id of currentOrderIds) {
-                const k = findKpiById(id);
-                if (k) selectedList.appendChild(createSelectedLi(k));
+            // Hidden
+            for (const k of redList) {
+                if (hiddenSet.has(Number(k.kpiId))) {
+                    hiddenList.appendChild(createHiddenLi(k));
+                }
             }
 
-            // Fill available = redList but not in selected
+            // Selected (slideshow order)
+            for (const id of currentOrderIds) {
+                const k = findKpiById(id);
+                if (k && !hiddenSet.has(Number(k.kpiId))) {
+                    selectedList.appendChild(createSelectedLi(k));
+                }
+            }
+
+            // Available
             for (const k of redList) {
-                if (!selectedSet.has(Number(k.kpiId))) {
+                const numId = Number(k.kpiId);
+                if (!hiddenSet.has(numId) && !orderedSet.has(numId)) {
                     availableList.appendChild(createAvailableLi(k));
                 }
             }
@@ -768,15 +842,24 @@
             if (!IS_ADMIN) return;
 
             const selectedList = $('arrangeSelectedList');
-            const lis = qsa('li[data-kpi-id]', selectedList);
-            if (!lis.length) {
-                if (!confirm('You have no KPIs selected for the slideshow. Continue?')) return;
+            const hiddenList = $('arrangeHiddenList');
+
+            const selectedLis = qsa('li[data-kpi-id]', selectedList);
+            const hiddenLis = qsa('li[data-kpi-id]', hiddenList);
+
+            if (!selectedLis.length && !hiddenLis.length) {
+                if (!confirm('You have no KPIs in the slideshow or hidden. Continue?')) return;
             }
 
             const fd = new FormData();
             fd.append('__RequestVerificationToken', anti());
-            lis.forEach(li => {
+
+            selectedLis.forEach(li => {
                 fd.append('orderedKpiIds', li.dataset.kpiId);
+            });
+
+            hiddenLis.forEach(li => {
+                fd.append('hiddenKpiIds', li.dataset.kpiId);
             });
 
             try {
@@ -786,9 +869,9 @@
                     headers: { 'Accept': 'text/plain', 'X-Requested-With': 'XMLHttpRequest' }
                 });
                 if (!res.ok) throw 0;
-                await res.text(); // ignore body
+                await res.text();
                 if (arrangeModalInstance) arrangeModalInstance.hide();
-                await loadRedList(); // reload deck with new order from backend
+                await loadRedList();
             } catch {
                 alert('Failed to save arrangement.');
             }
@@ -811,11 +894,10 @@
         document.addEventListener('DOMContentLoaded', () => {
             const btnGeneral = document.getElementById('btnAddGeneralAction');
             if (btnGeneral) {
-                // Only wire for admins; hide for others (class is set server-side too)
                 if (!IS_ADMIN) { btnGeneral.classList.add('d-none'); return; }
                 btnGeneral.addEventListener('click', () => {
                     isGeneralCreate = true;
-                    $('af_kpiId').value = ''; // ensure no KPI id goes up
+                    $('af_kpiId').value = '';
                     $('af_owner').value = '';
                     $('af_description').value = '';
                     $('af_due').value = '';
@@ -837,7 +919,6 @@
         </div>
     }
     <div class="with-rails">
-        <!-- hidden antiforgery to reuse in JS -->
         <form id="af" method="post" class="d-none">
             @Html.AntiForgeryToken()
         </form>
@@ -847,7 +928,6 @@
         </div>
 
         <div id="slideWrap" class="d-none">
-            <!-- Slide header: title + nav + Add Action + Decisions -->
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div class="me-2">
                     <div class="h4 mb-0 fw-bold" id="kpiHeading">—</div>
@@ -878,7 +958,6 @@
                 </div>
             }
 
-            <!-- Title slide (kept but not used for now) -->
             <div id="titleSlide" class="text-center py-5 d-none">
                 <div class="bg-white border rounded shadow-sm p-5">
                     <div class="display-4 fw-bold mb-3">Priority</div>
@@ -887,7 +966,6 @@
                 </div>
             </div>
 
-            <!-- KPI slide -->
             <div id="kpiSlide">
                 <div class="row g-4 mb-4">
                     <div class="col-md-9">
@@ -934,11 +1012,10 @@
                                 </div>
                             </div>
                         </div>
-                    </div> <!-- /col -->
-                </div> <!-- /row -->
-            </div> <!-- /kpiSlide -->
+                    </div> 
+                </div> 
+            </div>
 
-            <!-- Actions block (HTML injected) -->
             <div id="actionsBlock" class="mt-3 d-none">
                 <div class="bg-white border rounded-3 p-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -948,7 +1025,6 @@
                 </div>
             </div>
 
-            <!-- Decisions board (HTML injected when requested) -->
             <div id="decisionsWrap" class="mt-4 d-none">
                 <div class="bg-white border rounded-3 p-3">
                     <div class="d-flex align-items-center justify-content-between mb-3">
@@ -966,7 +1042,6 @@
 
     </div>
 
-    <!-- Add Action Modal -->
     <div class="modal fade" id="addActionModal" tabindex="-1" aria-labelledby="addActionLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content rounded-3">
@@ -1014,7 +1089,6 @@
         </div>
     </div>
 
-    <!-- Move Deadline Modal -->
     <div class="modal fade" id="moveDeadlineModal" tabindex="-1" aria-labelledby="moveDeadlineLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content rounded-3">
@@ -1057,16 +1131,28 @@
                     @Html.AntiForgeryToken()
                     <div class="modal-body">
                         <p class="text-muted small">
-                            Drag using the arrows (↑/↓) to reorder the slideshow. Remove KPIs from the slideshow to move
-                            them to the available list. Only <strong>red</strong> KPIs are shown.
+                            Use <strong>Hide</strong> to exclude indicators from the slideshow completely.
+                            Use <strong>Clear order</strong> to move everything from the slideshow back to Available.
                         </p>
                         <div class="row">
-                            <div class="col-md-6">
-                                <h6>Available red KPIs (not in slideshow)</h6>
+                            <div class="col-md-4">
+                                <h6>Hidden (won’t appear)</h6>
+                                <ul id="arrangeHiddenList" class="list-group small"
+                                    style="max-height: 360px; overflow-y: auto;"></ul>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">Available red KPIs</h6>
+                                    <button type="button"
+                                            class="btn btn-outline-secondary btn-sm"
+                                            onclick="clearAllOrder()">
+                                        Clear order
+                                    </button>
+                                </div>
                                 <ul id="arrangeAvailableList" class="list-group small"
                                     style="max-height: 360px; overflow-y: auto;"></ul>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <h6>Slideshow order</h6>
                                 <ul id="arrangeSelectedList" class="list-group small"
                                     style="max-height: 360px; overflow-y: auto;"></ul>
