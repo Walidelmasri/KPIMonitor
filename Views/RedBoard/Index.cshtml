@@ -345,6 +345,8 @@
             }
 
             const data = await getJSON('@Url.Action("GetKpiPresentation", "RedBoard")?kpiId=' + slide.kpiId);
+            $('m_title').innerText = data?.meta?.title ?? '—';
+            $('m_code').innerText = data?.meta?.code ?? '—';
 
             $('m_owner').innerText = data?.meta?.owner ?? '—';
             $('m_editor').innerText = data?.meta?.editor ?? '—';
@@ -652,11 +654,11 @@
             const btns = document.createElement('div');
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
-                        <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeUp(this)">↑</button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeDown(this)">↓</button>
-                        <button type="button" class="btn btn-outline-danger" onclick="removeFromSelected(this)">✕</button>
-                        <button type="button" class="btn btn-outline-warning" onclick="hideFromSelected(this)">Hide</button>
-                    `;
+                                <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeUp(this)">↑</button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeDown(this)">↓</button>
+                                <button type="button" class="btn btn-outline-danger" onclick="removeFromSelected(this)">✕</button>
+                                <button type="button" class="btn btn-outline-warning" onclick="hideFromSelected(this)">Hide</button>
+                            `;
 
             li.appendChild(info);
             li.appendChild(btns);
@@ -682,9 +684,9 @@
             const btns = document.createElement('div');
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
-                        <button type="button" class="btn btn-outline-primary" onclick="addToSelected(this)">Add</button>
-                        <button type="button" class="btn btn-outline-warning" onclick="hideFromAvailable(this)">Hide</button>
-                    `;
+                                <button type="button" class="btn btn-outline-primary" onclick="addToSelected(this)">Add</button>
+                                <button type="button" class="btn btn-outline-warning" onclick="hideFromAvailable(this)">Hide</button>
+                            `;
 
             li.appendChild(info);
             li.appendChild(btns);
@@ -710,8 +712,8 @@
             const btns = document.createElement('div');
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
-                        <button type="button" class="btn btn-outline-success" onclick="unhideIndicator(this)">Unhide</button>
-                    `;
+                                <button type="button" class="btn btn-outline-success" onclick="unhideIndicator(this)">Unhide</button>
+                            `;
 
             li.appendChild(info);
             li.appendChild(btns);
@@ -981,6 +983,12 @@
                             <div class="card-body d-flex flex-column justify-content-between h-100">
                                 <div>
                                     <h6 class="card-title text-secondary fw-bold mb-3">KPI Details</h6>
+                                    <p class="mb-2" style="font-size: larger;">
+                                        <strong>KPI:</strong> <span id="m_title" class="text-dark">—</span>
+                                    </p>
+                                    <p class="mb-2" style="font-size: larger;">
+                                        <strong>Code:</strong> <span id="m_code" class="text-dark">—</span>
+                                    </p>
                                     <p class="mb-2" style="font-size: larger;">
                                         <strong>Owner:</strong> <span id="m_owner" class="text-dark">—</span>
                                     </p>
