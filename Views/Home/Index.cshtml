@@ -39,22 +39,26 @@
   #factsTbody td {
     background-color: inherit !important;
   }
+
   /* Match table header titles with chart colors */
   th.th-actual {
-    color: #800080;   /* Actual (purple bars) */
+    color: #800080;
+    /* Actual (purple bars) */
   }
 
   th.th-target {
-    color: #7a7a7a;   /* Target (grey line / year target) */
+    color: #7a7a7a;
+    /* Target (grey line / year target) */
   }
 
   th.th-forecast {
-    color: #fd7e14;   /* Forecast (orange line) */
+    color: #fd7e14;
+    /* Forecast (orange line) */
   }
 
   /* =========================
      Summary counters (left/right of pies)
-                ========================= */
+                                ========================= */
   #summaryCard .kpi {
     display: flex;
     align-items: center;
@@ -820,7 +824,19 @@
           if (lineTrend) lineTrend.destroy();
           const labelsT = Array.isArray(trend?.labels) ? trend.labels : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
           const vals = Array.isArray(trend?.redCounts) ? trend.redCounts : new Array(12).fill(0);
-          const now = new Date(); const yr = Number(trend?.year) || now.getFullYear(); const maxMonth = (yr === now.getFullYear()) ? (now.getMonth() + 1) : 12;
+          const now = new Date();
+          const yr = Number(trend?.year) || now.getFullYear();
+
+          // Show up to the *previous* month if this is the current year
+          let maxMonth;
+          if (yr === now.getFullYear()) {
+            // now.getMonth() is 0-based; this gives you a count of *full* months
+            maxMonth = now.getMonth(); // e.g. December (11) → 11 → Jan–Nov
+            if (maxMonth < 1) maxMonth = 1; // in January, still show January only
+          } else {
+            // for past years, show all 12 months
+            maxMonth = 12;
+          }
           lineTrend = new Chart(trendCtx, {
             type: 'line',
             data: { labels: labelsT.slice(0, maxMonth), datasets: [{ label: 'Red KPIs', data: vals.slice(0, maxMonth), borderWidth: 2, tension: .3, pointRadius: 3, pointHoverRadius: 4, borderColor: '#dc3545', pointBackgroundColor: '#dc3545', pointBorderColor: '#dc3545', fill: false }] },
