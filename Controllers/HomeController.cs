@@ -929,6 +929,22 @@ namespace KPIMonitor.Controllers
                     }
                 }
 
+                // === NEW STEP: carry forward last known status across months ===
+                string lastStatus = null;
+                for (int m = 0; m < 12; m++)
+                {
+                    if (!string.IsNullOrEmpty(monthStatus[m]))
+                    {
+                        // This month has an explicit status: remember it
+                        lastStatus = monthStatus[m];
+                    }
+                    else if (!string.IsNullOrEmpty(lastStatus))
+                    {
+                        // No status for this month → inherit last known status
+                        monthStatus[m] = lastStatus;
+                    }
+                }
+
                 // This KPI contributes +1 to month if that month is "red"
                 for (int i = 0; i < 12; i++)
                 {
@@ -943,6 +959,7 @@ namespace KPIMonitor.Controllers
                 updatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm")
             });
         }
+
 
         // --------------------------
         // NEW: List KPIs for a clicked summary segment (pie)
