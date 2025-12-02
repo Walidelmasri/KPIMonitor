@@ -346,8 +346,14 @@
 
             const data = await getJSON('@Url.Action("GetKpiPresentation", "RedBoard")?kpiId=' + slide.kpiId);
             $('m_title').innerText = data?.meta?.title ?? '—';
-            $('m_code').innerText = data?.meta?.code ?? '—';
+            // Extract only the KPI code from slide.code
+            let cleanCode = "—";
+            if (slide.code) {
+                const match = slide.code.match(/KPI Code:\s*(.*)/);
+                if (match && match[1]) cleanCode = match[1].trim();
+            }
 
+            $('m_code').innerText = cleanCode;
             $('m_owner').innerText = data?.meta?.owner ?? '—';
             $('m_editor').innerText = data?.meta?.editor ?? '—';
             $('m_frequency').innerText = data?.meta?.valueType ?? '—';
@@ -654,11 +660,11 @@
             const btns = document.createElement('div');
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
-                                <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeUp(this)">↑</button>
-                                <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeDown(this)">↓</button>
-                                <button type="button" class="btn btn-outline-danger" onclick="removeFromSelected(this)">✕</button>
-                                <button type="button" class="btn btn-outline-warning" onclick="hideFromSelected(this)">Hide</button>
-                            `;
+                                    <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeUp(this)">↑</button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeDown(this)">↓</button>
+                                    <button type="button" class="btn btn-outline-danger" onclick="removeFromSelected(this)">✕</button>
+                                    <button type="button" class="btn btn-outline-warning" onclick="hideFromSelected(this)">Hide</button>
+                                `;
 
             li.appendChild(info);
             li.appendChild(btns);
@@ -684,9 +690,9 @@
             const btns = document.createElement('div');
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
-                                <button type="button" class="btn btn-outline-primary" onclick="addToSelected(this)">Add</button>
-                                <button type="button" class="btn btn-outline-warning" onclick="hideFromAvailable(this)">Hide</button>
-                            `;
+                                    <button type="button" class="btn btn-outline-primary" onclick="addToSelected(this)">Add</button>
+                                    <button type="button" class="btn btn-outline-warning" onclick="hideFromAvailable(this)">Hide</button>
+                                `;
 
             li.appendChild(info);
             li.appendChild(btns);
@@ -712,8 +718,8 @@
             const btns = document.createElement('div');
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
-                                <button type="button" class="btn btn-outline-success" onclick="unhideIndicator(this)">Unhide</button>
-                            `;
+                                    <button type="button" class="btn btn-outline-success" onclick="unhideIndicator(this)">Unhide</button>
+                                `;
 
             li.appendChild(info);
             li.appendChild(btns);
