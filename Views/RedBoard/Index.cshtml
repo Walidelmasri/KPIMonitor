@@ -125,13 +125,12 @@
         let runKpiIds = [];
 
         function _fmtShort(v) {
-            const n = Number(v); if (!isFinite(n)) return '';
-            const a = Math.abs(n);
-            if (a >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
-            if (a >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
-            if (a >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
-            return n.toString();
+            const n = Number(v);
+            if (!isFinite(n)) return '';
+            // full number, with thousands separators (e.g. 1,234,567)
+            return n.toLocaleString();
         }
+
 
         // === SmartValueLabels plugin ===
         const SmartValueLabels = {
@@ -444,7 +443,7 @@
                             datalabels: false,
                             smartValueLabels: {
                                 formatter: _fmtShort,
-                                fontSize: 12,
+                                fontSize: 16,
                                 fontWeight: '700',
                                 minGap: 14,
                                 padTop: 12,
@@ -660,11 +659,11 @@
             const btns = document.createElement('div');
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
-                                    <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeUp(this)">↑</button>
-                                    <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeDown(this)">↓</button>
-                                    <button type="button" class="btn btn-outline-danger" onclick="removeFromSelected(this)">✕</button>
-                                    <button type="button" class="btn btn-outline-warning" onclick="hideFromSelected(this)">Hide</button>
-                                `;
+                                        <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeUp(this)">↑</button>
+                                        <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeDown(this)">↓</button>
+                                        <button type="button" class="btn btn-outline-danger" onclick="removeFromSelected(this)">✕</button>
+                                        <button type="button" class="btn btn-outline-warning" onclick="hideFromSelected(this)">Hide</button>
+                                    `;
 
             li.appendChild(info);
             li.appendChild(btns);
@@ -690,9 +689,9 @@
             const btns = document.createElement('div');
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
-                                    <button type="button" class="btn btn-outline-primary" onclick="addToSelected(this)">Add</button>
-                                    <button type="button" class="btn btn-outline-warning" onclick="hideFromAvailable(this)">Hide</button>
-                                `;
+                                        <button type="button" class="btn btn-outline-primary" onclick="addToSelected(this)">Add</button>
+                                        <button type="button" class="btn btn-outline-warning" onclick="hideFromAvailable(this)">Hide</button>
+                                    `;
 
             li.appendChild(info);
             li.appendChild(btns);
@@ -718,8 +717,8 @@
             const btns = document.createElement('div');
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
-                                    <button type="button" class="btn btn-outline-success" onclick="unhideIndicator(this)">Unhide</button>
-                                `;
+                                        <button type="button" class="btn btn-outline-success" onclick="unhideIndicator(this)">Unhide</button>
+                                    `;
 
             li.appendChild(info);
             li.appendChild(btns);
