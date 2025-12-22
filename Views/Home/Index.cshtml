@@ -58,7 +58,7 @@
 
   /* =========================
      Summary counters (left/right of pies)
-                                ========================= */
+                                                                                                                                                                                                                                                                ========================= */
   #summaryCard .kpi {
     display: flex;
     align-items: center;
@@ -433,6 +433,26 @@
       </div>
     </div>
   </div>
+  <!-- ======= Comments (Editor-only edit) ======= -->
+  <div class="card shadow-sm rounded-4 mt-3" id="commentsCard">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="m-0 text-secondary">Comments</h6>
+        <div class="d-flex gap-2">
+          <button id="btnEditComment" type="button" class="btn btn-outline-secondary btn-sm d-none">Edit</button>
+          <button id="btnSaveComment" type="button" class="btn btn-primary btn-sm d-none">Save</button>
+          <button id="btnCancelComment" type="button" class="btn btn-light btn-sm d-none">Cancel</button>
+        </div>
+      </div>
+
+      <div id="commentRead" class="text-muted" style="white-space: pre-wrap;">Select a KPI to view comments.</div>
+
+      <div id="commentEditWrap" class="d-none">
+        <textarea id="commentEdit" class="form-control" rows="4" placeholder="Add comment…"></textarea>
+        <div class="form-text text-muted">Only the assigned editor can add/edit this comment.</div>
+      </div>
+    </div>
+  </div>
 
   <!-- KPI-level Edit Button -->
   <div class="d-flex justify-content-between align-items-center mb-2">
@@ -652,6 +672,86 @@
     byId('clearSegmentBtn').addEventListener('click', () => { segRows.innerHTML = ''; segWrap.classList.add('d-none'); });
 
     let currentPlanId = null, canEditFacts = false;
+
+    // ===== Comments (Year Plan) =====
+    const commentRead = byId('commentRead');
+    const commentEditWrap = byId('commentEditWrap');
+    const commentEdit = byId('commentEdit');
+    const btnEditComment = byId('btnEditComment');
+    const btnSaveComment = byId('btnSaveComment');
+    const btnCancelComment = byId('btnCancelComment');
+
+    let _commentCache = '';
+
+    function setCommentUiReadMode() {
+      commentEditWrap.classList.add('d-none');
+      btnSaveComment.classList.add('d-none');
+      btnCancelComment.classList.add('d-none');
+
+      // Only editor sees Edit
+      btnEditComment.classList.toggle('d-none', !canEditFacts);
+    }
+
+    function setCommentUiEditMode() {
+      commentEditWrap.classList.remove('d-none');
+      btnSaveComment.classList.remove('d-none');
+      btnCancelComment.classList.remove('d-none');
+      btnEditComment.classList.add('d-none');
+      commentEdit.value = _commentCache || '';
+      commentEdit.focus();
+    }
+
+    async function loadYearPlanComment() {
+      if (!currentPlanId) {
+        _commentCache = '';
+        commentRead.textContent = 'Select a KPI to view comments.';
+        setCommentUiReadMode();
+        return;
+      }
+
+      try {
+        const res = await api('@Url.Action("GetYearPlanComment", "Home")' + '?planId=' + encodeURIComponent(currentPlanId));
+        _commentCache = (res?.text ?? '').toString();
+        commentRead.textContent = _commentCache.trim() ? _commentCache : '—';
+        setCommentUiReadMode();
+      } catch {
+        commentRead.textContent = 'Failed to load comment.';
+        setCommentUiReadMode();
+      }
+    }
+
+    btnEditComment?.addEventListener('click', () => setCommentUiEditMode());
+
+    btnCancelComment?.addEventListener('click', () => {
+      commentEdit.value = _commentCache || '';
+      setCommentUiReadMode();
+    });
+
+    btnSaveComment?.addEventListener('click', function () {
+      if (!currentPlanId) return;
+
+      $.ajax({
+        url: '@Url.Action("SaveYearPlanComment", "Home")',
+        type: 'POST',
+        data: {
+          planId: currentPlanId,
+          text: commentEdit.value ?? ''
+        },
+        success: function () {
+          _commentCache = commentEdit.value ?? '';
+          commentRead.textContent = _commentCache.trim() ? _commentCache : '—';
+          setCommentUiReadMode(); // instant update
+        },
+        error: function (xhr) {
+          if (xhr.status === 403) {
+            alert('You do not have access to edit this comment.');
+          } else {
+            alert('Failed to save comment.');
+          }
+        }
+      });
+    });
+
 
     /* ===== Summary Card ===== */
     let pieKpis, pieActs, lineTrend, _barRedShare;
@@ -1121,6 +1221,7 @@
       const kpiId = selKpi.value; if (!kpiId) return;
       const res = await api('@Url.Action("GetKpiSummary", "Home")?kpiId=' + encodeURIComponent(kpiId));
       currentPlanId = res?.meta?.planId ?? null; canEditFacts = !!res?.meta?.canEdit;
+      await loadYearPlanComment();
 
       const leftParts = []; if (res?.meta?.pillarCode) leftParts.push(res.meta.pillarCode); if (res?.meta?.objectiveCode) leftParts.push(res.meta.objectiveCode);
       let left = leftParts.join('.'); if (res?.meta?.code) left = left ? `${left} ${res.meta.code}` : res.meta.code;

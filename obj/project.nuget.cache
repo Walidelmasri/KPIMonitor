@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "Eqq/de97uUE=",
+  "dgSpecHash": "K6vQwE/SfFs=",
   "success": true,
   "projectFilePath": "/Users/walidsalem/BADEA/KPIMonitor/KPIMonitor.csproj",
   "expectedPackageFiles": [
@@ -53,7 +53,10 @@
     "/Users/walidsalem/.nuget/packages/system.security.cryptography.pkcs/8.0.1/system.security.cryptography.pkcs.8.0.1.nupkg.sha512",
     "/Users/walidsalem/.nuget/packages/system.security.cryptography.protecteddata/8.0.0/system.security.cryptography.protecteddata.8.0.0.nupkg.sha512",
     "/Users/walidsalem/.nuget/packages/system.text.json/9.0.8/system.text.json.9.0.8.nupkg.sha512",
-    "/Users/walidsalem/.nuget/packages/system.threading.channels/7.0.0/system.threading.channels.7.0.0.nupkg.sha512"
+    "/Users/walidsalem/.nuget/packages/system.threading.channels/7.0.0/system.threading.channels.7.0.0.nupkg.sha512",
+    "/Users/walidsalem/.nuget/packages/microsoft.netcore.app.ref/9.0.11/microsoft.netcore.app.ref.9.0.11.nupkg.sha512",
+    "/Users/walidsalem/.nuget/packages/microsoft.aspnetcore.app.ref/9.0.11/microsoft.aspnetcore.app.ref.9.0.11.nupkg.sha512",
+    "/Users/walidsalem/.nuget/packages/microsoft.netcore.app.host.osx-arm64/9.0.11/microsoft.netcore.app.host.osx-arm64.9.0.11.nupkg.sha512"
   ],
   "logs": []
 }

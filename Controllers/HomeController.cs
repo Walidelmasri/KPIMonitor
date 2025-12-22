@@ -1680,6 +1680,57 @@ namespace KPIMonitor.Controllers
 
             return Json(new { items });
         }
+        // --------------------------
+        // YearPlan Comments (Dashboard)
+        // --------------------------
+
+        [HttpGet]
+        public async Task<IActionResult> GetYearPlanComment(decimal planId)
+        {
+            if (planId <= 0) return BadRequest(new { ok = false, error = "Invalid planId." });
+
+            var row = await _db.KpiYearPlanComments
+                .AsNoTracking()
+                .Where(x => x.KpiYearPlanId == planId)
+                .Select(x => new { x.CommentText })
+                .FirstOrDefaultAsync();
+
+            return Ok(new
+            {
+                ok = true,
+                text = row?.CommentText ?? ""
+            });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SaveYearPlanComment(decimal planId, string? text)
+        {
+            if (planId <= 0) return BadRequest(new { ok = false, error = "Invalid planId." });
+
+            // Editor-only (same rule as facts editing)
+            if (!await _acl.CanEditPlanAsync(planId, User))
+                return StatusCode(403, new { ok = false, error = "You do not have access to edit this comment." });
+
+            var existing = await _db.KpiYearPlanComments
+                .FirstOrDefaultAsync(x => x.KpiYearPlanId == planId);
+
+            if (existing == null)
+            {
+                existing = new KpiYearPlanComment
+                {
+                    KpiYearPlanId = planId,
+                    CommentText = text ?? ""
+                };
+                _db.KpiYearPlanComments.Add(existing);
+            }
+            else
+            {
+                existing.CommentText = text ?? "";
+            }
+
+            await _db.SaveChangesAsync();
+            return Ok(new { ok = true });
+        }
 
 
     }

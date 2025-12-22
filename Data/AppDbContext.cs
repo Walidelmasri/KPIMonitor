@@ -20,6 +20,7 @@ namespace KPIMonitor.Data
         public DbSet<KpiFactChange> KpiFactChanges { get; set; } = null!;
         public DbSet<KPIMonitor.Models.KpiFactChangeBatch> KpiFactChangeBatches { get; set; } = null!;
         public DbSet<RedBoardOrder> RedBoardOrders { get; set; } = default!;
+        public DbSet<KpiYearPlanComment> KpiYearPlanComments { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -377,6 +378,17 @@ namespace KPIMonitor.Data
                 e.Property(x => x.IsHidden)
                 .HasColumnName("IS_HIDDEN");
             });
+            modelBuilder.Entity<KpiYearPlanComment>(e =>
+            {
+                e.ToTable("KPIYEARPLANCOMMENT");
+                e.HasKey(x => x.KpiYearPlanId);
+
+                e.Property(x => x.KpiYearPlanId)
+                    .HasColumnName("KPIYEARPLANID");
+
+                e.Property(x => x.CommentText)
+                    .HasColumnName("COMMENTTEXT");
+            });
 
         }
 
@@ -483,7 +495,7 @@ namespace KPIMonitor.Data
         public int Id { get; set; }
         public decimal KpiId { get; set; }   // same type as DimKpi.KpiId
         public int SortOrder { get; set; }
-            public bool IsHidden { get; set; }  // maps to IS_HIDDEN
+        public bool IsHidden { get; set; }  // maps to IS_HIDDEN
 
     }
 
