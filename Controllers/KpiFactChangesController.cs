@@ -323,6 +323,8 @@ namespace KPIMonitor.Controllers
                          where f.KpiFactId == c.KpiFactId
                                && yp.EditorEmpId != null
                                && yp.EditorEmpId == myEmp
+                               || yp.Editor2EmpId != null 
+                               && yp.Editor2EmpId == myEmp
                          select 1).Any()
                     );
                 }
@@ -843,6 +845,8 @@ namespace KPIMonitor.Controllers
                      where p.KpiYearPlanId == b.KpiYearPlanId
                            && p.EditorEmpId != null
                            && p.EditorEmpId == myEmp
+                           || p.Editor2EmpId != null
+                           && p.Editor2EmpId == myEmp
                      select 1).Any());
             }
 
@@ -1087,7 +1091,8 @@ namespace KPIMonitor.Controllers
                     from f in _db.KpiFacts
                     join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
                     where f.KpiFactId == ch.Fact.KpiFactId
-                          && (yp.OwnerEmpId == myEmp || yp.EditorEmpId == myEmp)
+                          && (yp.OwnerEmpId == myEmp || yp.EditorEmpId == myEmp || yp.Editor2EmpId == myEmp)
+
                     select 1
                 ).AnyAsync(ct);
 
@@ -1141,7 +1146,7 @@ namespace KPIMonitor.Controllers
 
                 var allowed = await _db.KpiYearPlans.AsNoTracking()
                                 .AnyAsync(p => p.KpiYearPlanId == b.KpiYearPlanId &&
-                                               (p.OwnerEmpId == myEmp || p.EditorEmpId == myEmp), ct);
+                                               (p.OwnerEmpId == myEmp || p.EditorEmpId == myEmp || p.Editor2EmpId == myEmp), ct);
                 if (!allowed) return StatusCode(403, new { ok = false, error = "Not allowed." });
             }
 

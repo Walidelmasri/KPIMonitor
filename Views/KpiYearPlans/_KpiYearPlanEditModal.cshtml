@@ -16,33 +16,29 @@
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Frequency</label>
-              <input class="form-control" name="frequency" id="pe_frequency"
-                     value="@(ViewBag.Frequency ?? "")" />
+              <input class="form-control" name="frequency" id="pe_frequency" value="@(ViewBag.Frequency ?? "")" />
             </div>
             <div class="col-md-6">
               <label class="form-label">Unit</label>
-              <input class="form-control" name="unit" id="pe_unit"
-                     value="@(ViewBag.Unit ?? "")" />
+              <input class="form-control" name="unit" id="pe_unit" value="@(ViewBag.Unit ?? "")" />
             </div>
 
             <div class="col-md-6">
               <label class="form-label">Annual Target</label>
-              <input type="number" step="0.001" class="form-control"
-                     name="annualTarget" id="pe_target"
-                     value="@(ViewBag.AnnualTargetText ?? "")" />
+              <input type="number" step="0.001" class="form-control" name="annualTarget" id="pe_target"
+                value="@(ViewBag.AnnualTargetText ?? "")" />
             </div>
             <div class="col-md-6">
               <label class="form-label">Priority</label>
-              <input type="number" class="form-control"
-                     name="priority" id="pe_priority"
-                     value="@(ViewBag.PriorityText ?? "")" />
+              <input type="number" class="form-control" name="priority" id="pe_priority"
+                value="@(ViewBag.PriorityText ?? "")" />
             </div>
 
             <div class="col-md-12">
               <label class="form-label">Target Direction</label>
               <select class="form-select" name="targetDirection" id="pe_targetDirection" required>
                 @{
-                    var td = (int?)ViewBag.TargetDirection ?? 1;
+                  var td = (int?)ViewBag.TargetDirection ?? 1;
                 }
                 <option value="1" selected="@(td == 1 ? "selected" : null)">Higher is better (≥ target)</option>
                 <option value="-1" selected="@(td == -1 ? "selected" : null)">Lower is better (≤ target)</option>
@@ -55,9 +51,9 @@
                 <option value="">— Select —</option>
                 @foreach (var e in Model.Employees)
                 {
-                    var isSelected = Model.OwnerEmpId != null &&
-                                     string.Equals(Model.OwnerEmpId, e.EmpId, System.StringComparison.OrdinalIgnoreCase);
-                    <option value="@e.EmpId" selected="@(isSelected ? "selected" : null)">@e.Label</option>
+                  var isSelected = Model.OwnerEmpId != null &&
+                  string.Equals(Model.OwnerEmpId, e.EmpId, System.StringComparison.OrdinalIgnoreCase);
+                  <option value="@e.EmpId" selected="@(isSelected ? "selected" : null)">@e.Label</option>
                 }
               </select>
               <div class="form-text">Current: @Model.CurrentOwnerName</div>
@@ -69,13 +65,27 @@
                 <option value="">— Select —</option>
                 @foreach (var e in Model.Employees)
                 {
-                    var isSelected = Model.EditorEmpId != null &&
-                                     string.Equals(Model.EditorEmpId, e.EmpId, System.StringComparison.OrdinalIgnoreCase);
-                    <option value="@e.EmpId" selected="@(isSelected ? "selected" : null)">@e.Label</option>
+                  var isSelected = Model.EditorEmpId != null &&
+                  string.Equals(Model.EditorEmpId, e.EmpId, System.StringComparison.OrdinalIgnoreCase);
+                  <option value="@e.EmpId" selected="@(isSelected ? "selected" : null)">@e.Label</option>
                 }
               </select>
               <div class="form-text">Current: @Model.CurrentEditorName</div>
             </div>
+            <div class="col-md-6">
+              <label class="form-label">Secondary Editor (optional)</label>
+              <select class="form-select" name="editor2EmpId" id="pe_editor2">
+                <option value="">— Select —</option>
+                @foreach (var e in Model.Employees)
+                {
+                  var isSelected = Model.Editor2EmpId != null &&
+                  string.Equals(Model.Editor2EmpId, e.EmpId, System.StringComparison.OrdinalIgnoreCase);
+                  <option value="@e.EmpId" selected="@(isSelected ? "selected" : null)">@e.Label</option>
+                }
+              </select>
+              <div class="form-text">Current: @Model.CurrentEditor2Name</div>
+            </div>
+
           </div>
         </div>
 

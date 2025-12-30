@@ -88,7 +88,13 @@
                             <td>@(p.Kpi?.Objective?.ObjectiveCode ?? "—")</td>
 
                             <td><span id="ownerName-@p.KpiYearPlanId">@p.Owner</span></td>
-                            <td><span id="editorName-@p.KpiYearPlanId">@p.Editor</span></td>
+<td>
+  <span id="editorName-@p.KpiYearPlanId">@(
+    string.IsNullOrWhiteSpace(p.Editor2)
+      ? (p.Editor ?? "—")
+      : $"{(p.Editor ?? "—")} / {p.Editor2}"
+  )</span>
+</td>
 
                             <td><span id="target-@p.KpiYearPlanId">@(p.AnnualTarget?.ToString("0.###") ?? "—")</span></td>
                             <td><span id="priority-@p.KpiYearPlanId">@(p.Priority?.ToString() ?? "—")</span></td>
@@ -162,6 +168,13 @@ async function openPlanEdit(id){
       e.preventDefault();
 
       const fd = new FormData(form);
+// Client-side guard: secondary editor cannot match primary editor
+const e1 = (fd.get('editorEmpId') || '').toString().trim();
+const e2 = (fd.get('editor2EmpId') || '').toString().trim();
+if (e1 && e2 && e1.toUpperCase() === e2.toUpperCase()) {
+  alert('Secondary Editor cannot be the same as the primary Editor.');
+  return;
+}
 
       try {
         const postUrl = '@Url.Action("UpdatePlan","KpiYearPlans")';

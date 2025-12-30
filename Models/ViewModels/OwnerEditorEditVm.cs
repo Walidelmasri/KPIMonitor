@@ -6,12 +6,14 @@ namespace KPIMonitor.ViewModels
         public decimal PlanId { get; init; }
 
         // Selected EMP_IDs (VARCHAR2(5))
-        public string? OwnerEmpId  { get; set; }
+        public string? OwnerEmpId { get; set; }
         public string? EditorEmpId { get; set; }
 
         // For context (what the plan currently shows)
-        public string? CurrentOwnerName  { get; init; }
+        public string? CurrentOwnerName { get; init; }
         public string? CurrentEditorName { get; init; }
+        public string? Editor2EmpId { get; set; } // optional
+        public string? CurrentEditor2Name { get; init; }
 
         // Dropdown options
         public IReadOnlyList<EmployeePickDto> Employees { get; init; } = Array.Empty<EmployeePickDto>();

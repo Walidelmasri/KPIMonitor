@@ -39,12 +39,12 @@ namespace KPIMonitor.Services
             var plan = await _db.KpiYearPlans
                 .AsNoTracking()
                 .Where(p => p.KpiYearPlanId == planId)
-                .Select(p => new { p.OwnerEmpId, p.EditorEmpId })
+                .Select(p => new { p.OwnerEmpId, p.EditorEmpId, p.Editor2EmpId })
                 .FirstOrDefaultAsync(ct);
 
             if (plan == null) return false;
 
-            var ok = string.Equals(plan.EditorEmpId, empId);
+            var ok = string.Equals(plan.EditorEmpId, empId) || string.Equals(plan.Editor2EmpId, empId);
             _log.LogDebug("ACL planId={Plan} user={User} empId={Emp} => {Ok}", planId, userId, empId, ok);
             return ok;
         }
@@ -64,7 +64,7 @@ namespace KPIMonitor.Services
             // owner/editor on any plan of this KPI
             var ok = await _db.KpiYearPlans
     .AsNoTracking()
-    .AnyAsync(p => p.KpiId == kpiId && p.EditorEmpId == empId, ct);
+.AnyAsync(p => p.KpiId == kpiId && (p.EditorEmpId == empId || p.Editor2EmpId == empId), ct);
 
             _log.LogDebug("ACL kpiId={Kpi} user={User} empId={Emp} => {Ok}", kpiId, userId, empId, ok);
             return ok;

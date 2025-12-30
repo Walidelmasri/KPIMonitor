@@ -134,6 +134,15 @@ namespace KPIMonitor.Data
                 e.Property(p => p.EditorEmpId)
                  .HasColumnName("EDITOREMPID")
                  .HasMaxLength(5);
+                // Optional secondary editor (same permissions as primary editor)
+                e.Property(p => p.Editor2EmpId)
+                 .HasColumnName("EDITOR2EMPID")
+                 .HasMaxLength(5);
+
+                e.Property(p => p.Editor2)
+                 .HasColumnName("EDITOR2")
+                 .HasMaxLength(255);
+
                 e.HasOne(x => x.Kpi)
                  .WithMany()
                  .HasForeignKey(x => x.KpiId)

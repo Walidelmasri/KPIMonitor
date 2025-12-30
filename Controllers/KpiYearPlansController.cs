@@ -234,6 +234,8 @@ namespace KPIMonitor.Controllers
                 PlanId = plan.KpiYearPlanId,
                 OwnerEmpId = plan.OwnerEmpId,
                 EditorEmpId = plan.EditorEmpId,
+                Editor2EmpId = plan.Editor2EmpId,
+                CurrentEditor2Name = plan.Editor2,
                 CurrentOwnerName = plan.Owner,
                 CurrentEditorName = plan.Editor,
                 Employees = emps
@@ -261,6 +263,7 @@ namespace KPIMonitor.Controllers
             [FromForm] int? priority,
             [FromForm] string? ownerEmpId,
             [FromForm] string? editorEmpId,
+            [FromForm] string? editor2EmpId,
             CancellationToken ct)
         {
             // ad-hoc logger without changing constructor
@@ -336,6 +339,25 @@ namespace KPIMonitor.Controllers
                 plan.EditorEmpId = null;
                 plan.EditorLogin = null;
             }
+            // Optional secondary editor (same permissions as primary editor)
+            if (!string.IsNullOrWhiteSpace(editor2EmpId))
+            {
+                if (!string.IsNullOrWhiteSpace(editorEmpId) &&
+                    string.Equals(editor2EmpId, editorEmpId, StringComparison.OrdinalIgnoreCase))
+                    return BadRequest("Secondary Editor cannot be the same as the primary Editor.");
+
+                var editor2 = await directory.TryGetByEmpIdAsync(editor2EmpId!, ct);
+                if (editor2 == null)
+                    return BadRequest("Invalid Secondary Editor.");
+
+                plan.Editor2EmpId = editor2.Value.EmpId;
+                plan.Editor2 = editor2.Value.NameEng;
+            }
+            else
+            {
+                plan.Editor2EmpId = null;
+                plan.Editor2 = null;
+            }
 
             await _db.SaveChangesAsync(ct);
             log.LogInformation("UpdatePlan SAVED planId={PlanId}", plan.KpiYearPlanId);
@@ -355,7 +377,9 @@ namespace KPIMonitor.Controllers
                 annualTargetText = plan.AnnualTarget?.ToString("0.###") ?? "—",
                 priorityText = plan.Priority?.ToString() ?? "—",
                 owner = plan.Owner ?? "—",   // NAME_ENG
-                editor = plan.Editor ?? "—", // NAME_ENG
+                editor = string.IsNullOrWhiteSpace(plan.Editor2)
+    ? (plan.Editor ?? "—")
+    : $"{(plan.Editor ?? "—")} / {plan.Editor2}",
                 directionText
             });
         }
