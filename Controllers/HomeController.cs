@@ -367,7 +367,9 @@ namespace KPIMonitor.Controllers
                 objectiveCode = kpi?.Objective?.ObjectiveCode ?? "",
 
                 owner = plan.Owner ?? "—",
-                editor = plan.Editor ?? "—",
+                editor = string.IsNullOrWhiteSpace(plan.Editor2)
+    ? (plan.Editor ?? "—")
+    : $"{(plan.Editor ?? "—")} / {plan.Editor2}",
                 valueType = string.IsNullOrWhiteSpace(plan.Frequency) ? "—" : plan.Frequency,
                 unit = string.IsNullOrWhiteSpace(plan.Unit) ? "—" : plan.Unit,
                 priority = plan.Priority,

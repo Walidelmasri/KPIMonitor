@@ -187,27 +187,35 @@ namespace KPIMonitor.Controllers
             return RedirectToAction(nameof(Index), new { kpiId = act.KpiId });
         }
         [HttpGet]
-public async Task<IActionResult> GetAction(decimal actionId)
-{
-    var a = await _db.KpiActions
-        .AsNoTracking()
-        .FirstOrDefaultAsync(x => x.ActionId == actionId);
+        public async Task<IActionResult> GetAction(decimal actionId)
+        {
+            var a = await _db.KpiActions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.ActionId == actionId);
 
-    if (a == null) return NotFound();
+            if (a == null) return NotFound();
 
-    // format to feed <input type="datetime-local">
-    static string AsLocal(DateTime? dt) => dt.HasValue ? dt.Value.ToString("yyyy-MM-ddTHH:mm") : "";
+            // format to feed <input type="datetime-local">
+            static string AsLocal(DateTime? dt) => dt.HasValue ? dt.Value.ToString("yyyy-MM-ddTHH:mm") : "";
+            var ownerEmpIds = await _db.KpiActionOwners
+                .AsNoTracking()
+                .Where(o => o.ActionId == a.ActionId)
+                .OrderBy(o => o.KpiActionOwnerId)
+                .Select(o => o.OwnerEmpId)
+                .ToListAsync();
 
-    return Json(new
-    {
-        actionId = a.ActionId,
-        owner = a.Owner ?? "",
-        description = a.Description ?? "",
-        statusCode = a.StatusCode ?? "todo",
-        assignedAtLocal = AsLocal(a.AssignedAt),
-        dueDateLocal = AsLocal(a.DueDate)
-    });
-}
+            return Json(new
+            {
+                actionId = a.ActionId,
+                owner = a.Owner ?? "",
+                ownerEmpIds, // NEW
+                description = a.Description ?? "",
+                statusCode = a.StatusCode ?? "todo",
+                assignedAtLocal = AsLocal(a.AssignedAt),
+                dueDateLocal = AsLocal(a.DueDate)
+            });
+
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -217,10 +225,37 @@ public async Task<IActionResult> GetAction(decimal actionId)
             string? description,
             string? statusCode,
             DateTime? assignedAt,
-            DateTime? dueDate)
+            DateTime? dueDate,
+            string[] ownerEmpIds)
         {
             var act = await _db.KpiActions.FirstOrDefaultAsync(x => x.ActionId == actionId);
             if (act == null) return NotFound();
+            // -------------------- OWNERS (multi) --------------------
+            var cleanedOwners = (ownerEmpIds ?? Array.Empty<string>())
+                .Select(x => (x ?? "").Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            // Replace existing owner rows for this action (simple + safe)
+            var existing = await _db.KpiActionOwners
+                .Where(x => x.ActionId == actionId)
+                .ToListAsync();
+
+            if (existing.Count > 0)
+                _db.KpiActionOwners.RemoveRange(existing);
+
+            foreach (var empId in cleanedOwners)
+            {
+                _db.KpiActionOwners.Add(new KPIMonitor.Models.KpiActionOwner
+                {
+                    ActionId = actionId,
+                    OwnerEmpId = empId,
+                    // OwnerName is optional; we can fill it later if you want
+                    CreatedBy = User?.Identity?.Name ?? "system",
+                    CreatedDate = DateTime.UtcNow
+                });
+            }
 
             act.Owner = (owner ?? "").Trim();
             act.Description = (description ?? "").Trim();

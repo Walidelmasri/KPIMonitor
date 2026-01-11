@@ -17,15 +17,62 @@
     line-height: 1.1;
     white-space: nowrap;
   }
-  .ap-colbadge { font-size: 0.95rem; padding: .5rem .75rem; letter-spacing: .1px; }
-  .ap-col { display: flex; flex-direction: column; gap: .75rem; }
-  .ap-col-header { width: 100%; border-radius: .75rem; padding: .45rem .75rem; font-weight: 700; line-height: 1.2; }
-  .ap-col-header--todo  { background: #6c757d; color: #fff; }
-  .ap-col-header--prog  { background: #ffc107; color: #000; }
-  .ap-col-header--done  { background: #198754; color: #fff; }
-  #apBody, #apBody .row, #apBody .col-md-4 { overflow: visible; }
-  .ap-scroll { max-height: calc(100vh - 220px); overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
-  @@media (min-width: 992px) { .ap-col-header { position: sticky; top: 0; z-index: 5; } }
+
+  .ap-colbadge {
+    font-size: 0.95rem;
+    padding: .5rem .75rem;
+    letter-spacing: .1px;
+  }
+
+  .ap-col {
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+  }
+
+  .ap-col-header {
+    width: 100%;
+    border-radius: .75rem;
+    padding: .45rem .75rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .ap-col-header--todo {
+    background: #6c757d;
+    color: #fff;
+  }
+
+  .ap-col-header--prog {
+    background: #ffc107;
+    color: #000;
+  }
+
+  .ap-col-header--done {
+    background: #198754;
+    color: #fff;
+  }
+
+  #apBody,
+  #apBody .row,
+  #apBody .col-md-4 {
+    overflow: visible;
+  }
+
+  .ap-scroll {
+    max-height: calc(100vh - 220px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+  }
+
+  @@media (min-width: 992px) {
+    .ap-col-header {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+  }
 </style>
 
 
@@ -46,9 +93,7 @@
     @if (isAdmin)
     {
       <div class="d-flex justify-content-end mb-3">
-        <button type="button"
-                class="btn btn-sm btn-primary"
-                id="apAddBtn">
+        <button type="button" class="btn btn-sm btn-primary" id="apAddBtn">
           + Add action plan
         </button>
       </div>
@@ -106,25 +151,39 @@
           <input type="hidden" name="actionId" id="ep_actionId" />
 
           <div class="mb-3">
-            <label class="form-label">Owner</label>
-            <!-- keep name="owner" so KpiActions.UpdateAction(owner, …) still binds -->
-            <select class="form-select" name="owner" id="ep_owner" required>
-              <option value="">— Select —</option>
-              @foreach (var e in employees ?? Enumerable.Empty<KPIMonitor.ViewModels.EmployeePickDto>())
-              {
+            <label class="form-label">Owners</label>
+
+            <!-- picker: pick an employee by EmpId -->
+            <div class="d-flex gap-2">
+              <select class="form-select" id="ep_ownerPick">
+                <option value="">— Select —</option>
+                @foreach (var e in employees ?? Enumerable.Empty<KPIMonitor.ViewModels.EmployeePickDto>())
+                {
+                  // show name only, keep EmpId as the actual value
                   var display = e.Label ?? "";
                   var idx = display.IndexOf('(');
-                  if (idx > 0)
-                  {
-                      display = display.Substring(0, idx).Trim();
-                  }
-                  // value = full label (includes ID), text = name only
-                  <option value="@e.Label">@display</option>
-              }
+                  if (idx > 0) { display = display.Substring(0, idx).Trim(); }
+                  <option value="@e.EmpId">@display</option>
+                }
+              </select>
 
-            </select>
-            <div class="form-text">Pick a person.</div>
+              <button type="button" class="btn btn-outline-secondary" id="ep_addOwnerBtn">Add</button>
+            </div>
+
+            <div class="form-text">
+              Add one or more owners. The tile will display: <strong>First Owner (+N)</strong>.
+            </div>
+
+            <!-- selected owners list -->
+            <div id="ep_ownerList" class="mt-2 d-flex flex-wrap gap-2"></div>
+
+            <!-- hidden: display string sent to UpdateAction(owner, ...) -->
+            <input type="hidden" name="owner" id="ep_ownerDisplay" />
+
+            <!-- hidden inputs container: repeated ownerEmpIds -->
+            <div id="ep_ownerEmpIds"></div>
           </div>
+
 
           <div class="mb-3">
             <label class="form-label">Assigned At</label>
@@ -235,13 +294,13 @@
               <option value="">— Select —</option>
               @foreach (var e in employees ?? Enumerable.Empty<KPIMonitor.ViewModels.EmployeePickDto>())
               {
-                  var display = e.Label ?? "";
-                  var idx = display.IndexOf('(');
-                  if (idx > 0)
-                  {
-                      display = display.Substring(0, idx).Trim();
-                  }
-                  <option value="@e.Label">@display</option>
+                var display = e.Label ?? "";
+                var idx = display.IndexOf('(');
+                if (idx > 0)
+                {
+                  display = display.Substring(0, idx).Trim();
+                }
+                <option value="@e.Label">@display</option>
               }
 
             </select>
@@ -287,7 +346,7 @@
 @section Scripts {
   <script>
     const IS_ADMIN = @(isAdmin ? "true" : "false");
-    const $  = (id) => document.getElementById(id);
+    const $ = (id) => document.getElementById(id);
     const qs = (sel, root = document) => root.querySelector(sel);
     const anti = () => (qs('input[name="__RequestVerificationToken"]')?.value || '');
     const getJSON = (url) => fetch(url, { headers: { 'Accept': 'application/json' } }).then(r => {
@@ -297,7 +356,7 @@
 
     let apKpiIds = [];
 
-    function stripAdminControls(){
+    function stripAdminControls() {
       if (IS_ADMIN) return;
       const root = $('apBody');
       if (!root) return;
@@ -337,6 +396,70 @@
         console.error('[AP] BoardHtml failed:', err);
         $('apBody').innerHTML = "<div class='text-danger small'>Failed to load actions.</div>";
       }
+    }
+    function epBuildEmpMap() {
+      const sel = document.getElementById('ep_ownerPick');
+      const map = new Map();
+      if (!sel) return map;
+      Array.from(sel.options).forEach(o => {
+        const id = (o.value || '').trim();
+        const name = (o.textContent || '').trim();
+        if (id) map.set(id, name);
+      });
+      return map;
+    }
+
+    function epRenderOwners(ownerEmpIds) {
+      const list = document.getElementById('ep_ownerList');
+      const hidden = document.getElementById('ep_ownerEmpIds');
+      const display = document.getElementById('ep_ownerDisplay');
+      const empMap = epBuildEmpMap();
+
+      if (!list || !hidden || !display) return;
+
+      const ids = Array.from(new Set((ownerEmpIds || []).map(x => (x || '').trim()).filter(Boolean)));
+
+      // clear
+      list.innerHTML = '';
+      hidden.innerHTML = '';
+
+      // render pills + hidden inputs
+      ids.forEach(empId => {
+        const name = empMap.get(empId) || empId;
+
+        const pill = document.createElement('span');
+        pill.className = 'badge rounded-pill text-bg-light border';
+        pill.style.padding = '.5rem .6rem';
+        pill.innerHTML = `
+          <span class="me-2">${name}</span>
+          <button type="button" class="btn btn-sm btn-link p-0 text-danger" data-remove-owner="${empId}" style="text-decoration:none;">✕</button>
+        `;
+        list.appendChild(pill);
+
+        const inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'ownerEmpIds';
+        inp.value = empId;
+        hidden.appendChild(inp);
+      });
+
+      // compute "Name (+N)" display string
+      if (ids.length === 0) {
+        display.value = '';
+      } else {
+        const firstName = empMap.get(ids[0]) || ids[0];
+        display.value = ids.length > 1
+          ? `${firstName} (+${ids.length - 1})`
+          : `${firstName}`;
+      }
+    }
+
+    function epGetCurrentOwners() {
+      const hidden = document.getElementById('ep_ownerEmpIds');
+      if (!hidden) return [];
+      return Array.from(hidden.querySelectorAll('input[name="ownerEmpIds"]'))
+        .map(i => (i.value || '').trim())
+        .filter(Boolean);
     }
 
     document.addEventListener('DOMContentLoaded', refreshBoard);
@@ -380,13 +503,13 @@
       try {
         const data = await getJSON('@Url.Action("GetAction", "KpiActions")?actionId=' + encodeURIComponent(id));
 
-        $('ep_actionId').value   = data.actionId;
-        $('ep_desc').value       = data.description || '';
-        $('ep_status').value     = data.statusCode || 'todo';
+        $('ep_actionId').value = data.actionId;
+        $('ep_desc').value = data.description || '';
+        $('ep_status').value = data.statusCode || 'todo';
         $('ep_assignedAt').value = data.assignedAtLocal || '';
-        $('ep_due').value        = data.dueDateLocal || '';
+        $('ep_due').value = data.dueDateLocal || '';
 
-        const ownerSel = $('ep_owner');
+        @* const ownerSel = $('ep_owner');
         if (ownerSel) {
           // Pre-select existing owner if we have one and it matches an option
           ownerSel.value = data.owner || '';
@@ -396,7 +519,36 @@
             const match = opts.find(o => (o.value || '').startsWith(data.owner));
             if (match) ownerSel.value = match.value;
           }
-        }
+        } *@
+          // owners (multi)
+          epRenderOwners(data.ownerEmpIds || []);
+        document.getElementById('ep_addOwnerBtn')?.addEventListener('click', () => {
+          const pick = document.getElementById('ep_ownerPick');
+          if (!pick) return;
+
+          const empId = (pick.value || '').trim();
+          if (!empId) return;
+
+          const current = epGetCurrentOwners();
+          if (current.some(x => x.toLowerCase() === empId.toLowerCase())) return;
+
+          current.push(empId);
+          epRenderOwners(current);
+
+          pick.value = '';
+        });
+
+        // remove owner (event delegation)
+        document.addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-remove-owner]');
+          if (!btn) return;
+
+          const empId = btn.getAttribute('data-remove-owner');
+          if (!empId) return;
+
+          const current = epGetCurrentOwners().filter(x => x.toLowerCase() !== empId.toLowerCase());
+          epRenderOwners(current);
+        });
 
 
         new bootstrap.Modal(document.getElementById('editPlanModal')).show();

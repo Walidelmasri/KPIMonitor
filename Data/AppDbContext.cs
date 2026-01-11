@@ -21,6 +21,8 @@ namespace KPIMonitor.Data
         public DbSet<KPIMonitor.Models.KpiFactChangeBatch> KpiFactChangeBatches { get; set; } = null!;
         public DbSet<RedBoardOrder> RedBoardOrders { get; set; } = default!;
         public DbSet<KpiYearPlanComment> KpiYearPlanComments { get; set; } = default!;
+        public DbSet<KpiActionOwner> KpiActionOwners { get; set; } = default!;
+        public DbSet<KpiActionComment> KpiActionComments { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -397,6 +399,51 @@ namespace KPIMonitor.Data
 
                 e.Property(x => x.CommentText)
                     .HasColumnName("COMMENTTEXT");
+            });
+            // -------------------- KpiActionOwner --------------------
+            modelBuilder.Entity<KpiActionOwner>(e =>
+            {
+                e.ToTable("KPIACTIONOWNER");
+
+                e.HasKey(x => x.KpiActionOwnerId);
+                e.Property(x => x.KpiActionOwnerId)
+                    .HasColumnName("KPIACTIONOWNERID")
+                    .ValueGeneratedOnAdd();
+
+                e.Property(x => x.ActionId).HasColumnName("ACTIONID").IsRequired();
+                e.Property(x => x.OwnerEmpId).HasColumnName("OWNEREMPID").HasMaxLength(30).IsRequired();
+                e.Property(x => x.OwnerName).HasColumnName("OWNERNAME").HasMaxLength(200);
+
+                e.Property(x => x.CreatedBy).HasColumnName("CREATEDBY").HasMaxLength(100);
+                e.Property(x => x.CreatedDate).HasColumnName("CREATEDDATE");
+
+                e.HasIndex(x => x.ActionId).HasDatabaseName("IX_KPIACTIONOWNER_ACTIONID");
+                e.HasIndex(x => x.OwnerEmpId).HasDatabaseName("IX_KPIACTIONOWNER_OWNEREMPID");
+
+                e.HasIndex(x => new { x.ActionId, x.OwnerEmpId })
+                    .IsUnique()
+                    .HasDatabaseName("UQ_KPIACTIONOWNER_ACTION_OWNER");
+            });
+
+            // -------------------- KpiActionComment --------------------
+            modelBuilder.Entity<KpiActionComment>(e =>
+            {
+                e.ToTable("KPIACTIONCOMMENT");
+
+                e.HasKey(x => x.KpiActionCommentId);
+                e.Property(x => x.KpiActionCommentId)
+                    .HasColumnName("KPIACTIONCOMMENTID")
+                    .ValueGeneratedOnAdd();
+
+                e.Property(x => x.ActionId).HasColumnName("ACTIONID").IsRequired();
+                e.Property(x => x.CommentText).HasColumnName("COMMENTTEXT").IsRequired();
+
+                e.Property(x => x.CreatedByEmpId).HasColumnName("CREATEDBYEMPID").HasMaxLength(30).IsRequired();
+                e.Property(x => x.CreatedByName).HasColumnName("CREATEDBYNAME").HasMaxLength(200);
+                e.Property(x => x.CreatedDate).HasColumnName("CREATEDDATE");
+
+                e.HasIndex(x => x.ActionId).HasDatabaseName("IX_KPIACTIONCOMMENT_ACTIONID");
+                e.HasIndex(x => x.CreatedDate).HasDatabaseName("IX_KPIACTIONCOMMENT_CREATEDDATE");
             });
 
         }
