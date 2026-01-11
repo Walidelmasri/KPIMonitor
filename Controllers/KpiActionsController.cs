@@ -5,6 +5,8 @@ using KPIMonitor.Data;
 using KPIMonitor.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Globalization;
 
 namespace KPIMonitor.Controllers
 {
@@ -363,5 +365,152 @@ namespace KPIMonitor.Controllers
             TempData["Msg"] = "Action archived.";
             return RedirectToAction(nameof(Index), new { kpiId = act.KpiId });
         }
+        // -------------------------
+// Details + Comments (AJAX)
+// -------------------------
+
+[HttpGet]
+public async Task<IActionResult> GetActionDetails(decimal actionId)
+{
+    var act = await _db.KpiActions
+        .AsNoTracking()
+        .FirstOrDefaultAsync(x => x.ActionId == actionId);
+
+    if (act == null) return NotFound();
+
+    // Owners (all)
+    var owners = await _db.KpiActionOwners
+        .AsNoTracking()
+        .Where(x => x.ActionId == actionId)
+        .OrderBy(x => x.KpiActionOwnerId)
+        .ToListAsync();
+
+    // Build "All names" string for the details modal
+    // Prefer OwnerName if stored; fallback to EmpId
+    var ownerNames = owners
+        .Select(o => string.IsNullOrWhiteSpace(o.OwnerName) ? o.OwnerEmpId : o.OwnerName!.Trim())
+        .Where(s => !string.IsNullOrWhiteSpace(s))
+        .ToList();
+
+    var ownersText = ownerNames.Count == 0 ? "—" : string.Join(", ", ownerNames);
+
+    // Permission: admin OR owner can comment
+    var currentEmpId = (User?.Identity?.Name ?? "").Trim();
+    var isOwner = !string.IsNullOrWhiteSpace(currentEmpId) &&
+                  owners.Any(o => string.Equals(o.OwnerEmpId, currentEmpId, StringComparison.OrdinalIgnoreCase));
+
+    // You already use these strings in the page; keep it simple here:
+    // If you want stricter admin detection later, we can wire AdminAuthorizer in.
+    var isAdmin = User?.IsInRole("Admin") == true || User?.IsInRole("SuperAdmin") == true;
+
+    var canComment = isAdmin || isOwner;
+
+    static string F(DateTime? dt) => dt.HasValue ? dt.Value.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) : "—";
+
+    string StatusText(string? code)
+    {
+        var c = (code ?? "").Trim().ToLowerInvariant();
+        return c switch
+        {
+            "todo" => "To Do",
+            "inprogress" => "In Progress",
+            "done" => "Done",
+            "archived" => "Archived",
+            _ => string.IsNullOrWhiteSpace(code) ? "—" : code
+        };
     }
+
+    return Json(new
+    {
+        actionId = act.ActionId,
+        description = act.Description ?? "",
+        statusCode = act.StatusCode ?? "todo",
+        statusText = StatusText(act.StatusCode),
+        dueDateLocal = F(act.DueDate),
+
+        ownersText,
+        canComment
+    });
+}
+
+[HttpGet]
+public async Task<IActionResult> GetActionComments(decimal actionId)
+{
+    // Validate action exists (optional but keeps things clean)
+    var exists = await _db.KpiActions.AsNoTracking().AnyAsync(x => x.ActionId == actionId);
+    if (!exists) return NotFound();
+
+    var comments = await _db.KpiActionComments
+        .AsNoTracking()
+        .Where(x => x.ActionId == actionId)
+        .OrderBy(x => x.CreatedDate) // OLDEST -> NEWEST ✅
+        .ThenBy(x => x.KpiActionCommentId)
+        .ToListAsync();
+
+    static string F(DateTime dt) => dt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+
+    return Json(comments.Select(c => new
+    {
+        id = c.KpiActionCommentId,
+        actionId = c.ActionId,
+        text = c.CommentText ?? "",
+        authorEmpId = c.CreatedByEmpId ?? "",
+        authorName = c.CreatedByName ?? "",
+        createdAtLocal = F(c.CreatedDate)
+    }));
+}
+
+[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> AddActionComment(decimal actionId, string text)
+{
+    var trimmed = (text ?? "").Trim();
+    if (string.IsNullOrWhiteSpace(trimmed))
+        return BadRequest("Comment text is required.");
+
+    var act = await _db.KpiActions.FirstOrDefaultAsync(x => x.ActionId == actionId);
+    if (act == null) return NotFound();
+
+    // Owners
+    var owners = await _db.KpiActionOwners
+        .AsNoTracking()
+        .Where(x => x.ActionId == actionId)
+        .Select(x => x.OwnerEmpId)
+        .ToListAsync();
+
+    var currentEmpId = (User?.Identity?.Name ?? "").Trim();
+
+    var isOwner = !string.IsNullOrWhiteSpace(currentEmpId) &&
+                  owners.Any(o => string.Equals(o, currentEmpId, StringComparison.OrdinalIgnoreCase));
+
+    // Basic admin check (role-based).
+    // If your app does NOT use roles, tell me what your admin claim looks like and I’ll swap it.
+    var isAdmin = User?.IsInRole("Admin") == true || User?.IsInRole("SuperAdmin") == true;
+
+    if (!isOwner && !isAdmin)
+        return Forbid();
+
+    var now = DateTime.UtcNow;
+
+    var comment = new KpiActionComment
+    {
+        ActionId = actionId,
+        CommentText = trimmed,
+        CreatedByEmpId = string.IsNullOrWhiteSpace(currentEmpId) ? "system" : currentEmpId,
+        CreatedByName = string.IsNullOrWhiteSpace(currentEmpId) ? "system" : currentEmpId, // replace later if you want real display names
+        CreatedDate = now
+    };
+
+    _db.KpiActionComments.Add(comment);
+    await _db.SaveChangesAsync();
+
+    // AJAX-friendly
+    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        return Json(new { ok = true });
+
+    return RedirectToAction(nameof(Index), new { kpiId = act.KpiId });
+}
+
+    }
+    
 }

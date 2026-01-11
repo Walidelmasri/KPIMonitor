@@ -9,6 +9,7 @@
   // EmployeePickDto => EmpId, Label
   var employees = await EmpDir.GetAllForPickAsync();
 }
+
 <style>
   .ap-action-btn {
     min-width: 90px;
@@ -75,7 +76,6 @@
   }
 </style>
 
-
 <div class="container py-4">
   @section PageHeader {
     <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
@@ -84,6 +84,7 @@
       </div>
     </div>
   }
+
   <div class="with-rails">
     <!-- hidden antiforgery to reuse in JS -->
     <form id="af" method="post" class="d-none">
@@ -153,13 +154,11 @@
           <div class="mb-3">
             <label class="form-label">Owners</label>
 
-            <!-- picker: pick an employee by EmpId -->
             <div class="d-flex gap-2">
               <select class="form-select" id="ep_ownerPick">
                 <option value="">— Select —</option>
                 @foreach (var e in employees ?? Enumerable.Empty<KPIMonitor.ViewModels.EmployeePickDto>())
                 {
-                  // show name only, keep EmpId as the actual value
                   var display = e.Label ?? "";
                   var idx = display.IndexOf('(');
                   if (idx > 0) { display = display.Substring(0, idx).Trim(); }
@@ -174,16 +173,11 @@
               Add one or more owners. The tile will display: <strong>First Owner (+N)</strong>.
             </div>
 
-            <!-- selected owners list -->
             <div id="ep_ownerList" class="mt-2 d-flex flex-wrap gap-2"></div>
 
-            <!-- hidden: display string sent to UpdateAction(owner, ...) -->
             <input type="hidden" name="owner" id="ep_ownerDisplay" />
-
-            <!-- hidden inputs container: repeated ownerEmpIds -->
             <div id="ep_ownerEmpIds"></div>
           </div>
-
 
           <div class="mb-3">
             <label class="form-label">Assigned At</label>
@@ -215,10 +209,10 @@
           <button type="submit" class="btn btn-primary">Save</button>
         </div>
       </form>
-
     </div>
   </div>
 </div>
+
 <!-- Archive Action Plan Modal -->
 <div class="modal fade" id="archiveModal" tabindex="-1" aria-labelledby="archiveLabel" aria-hidden="true">
   <div class="modal-dialog modal-sm">
@@ -276,7 +270,6 @@
                 </select>
               </div>
               <div class="col-md-4">
-                <!-- name="KpiId" so it binds to KpiAction.KpiId in Create(...) -->
                 <select class="form-select" id="ap_kpi" name="KpiId" disabled>
                   <option value="">— KPI —</option>
                 </select>
@@ -310,14 +303,9 @@
             </div>
 
             <div id="ap_ownerList" class="mt-2 d-flex flex-wrap gap-2"></div>
-
-            <!-- This binds to KpiAction.Owner on Create/CreateGeneral -->
             <input type="hidden" name="Owner" id="ap_ownerDisplay" />
-
-            <!-- Owners EmpIds to insert rows into KPIACTIONOWNER after Create -->
             <div id="ap_ownerEmpIds"></div>
           </div>
-
 
           <div class="row g-2 mb-3">
             <div class="col-md-6">
@@ -332,7 +320,6 @@
 
           <div class="mb-3">
             <label class="form-label">Status</label>
-            <!-- name="StatusCode" so it binds directly to KpiAction.StatusCode -->
             <select class="form-select" name="StatusCode" id="ap_status">
               <option value="todo">To Do</option>
               <option value="inprogress">In Progress</option>
@@ -356,6 +343,70 @@
   </div>
 </div>
 
+<!-- Action Details + Comments Modal (NEW) -->
+<div class="modal fade" id="apDetailsModal" tabindex="-1" aria-labelledby="apDetailsLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content rounded-3">
+      <div class="modal-header">
+        <h5 class="modal-title" id="apDetailsLabel">Action Plan</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="ad_actionId" />
+
+        <div class="mb-2">
+          <div class="text-muted small">Owners</div>
+          <div id="ad_owners" class="fw-semibold">—</div>
+        </div>
+
+        <div class="row g-2 mb-2">
+          <div class="col-md-6">
+            <div class="text-muted small">Status</div>
+            <div id="ad_status" class="fw-semibold">—</div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted small">Due</div>
+            <div id="ad_due" class="fw-semibold">—</div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <div class="text-muted small">Description</div>
+          <div id="ad_desc" class="border rounded-2 p-2 bg-light">—</div>
+        </div>
+
+        <hr class="my-3" />
+
+        <div id="ad_commentsAnchor"></div>
+
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <h6 class="mb-0">Comments</h6>
+          <div class="text-muted small" id="ad_commentHint"></div>
+        </div>
+
+        <div id="ad_commentsList" class="d-flex flex-column gap-2 mb-3">
+          <div class="text-muted small">Loading…</div>
+        </div>
+
+        <div id="ad_addCommentBlock" class="border rounded-3 p-2">
+          <div class="mb-2">
+            <textarea class="form-control" id="ad_commentText" rows="3" placeholder="Write a comment..."></textarea>
+          </div>
+          <div class="d-flex justify-content-end">
+            <button type="button" class="btn btn-primary btn-sm" id="ad_postCommentBtn">Post</button>
+          </div>
+          <div class="text-muted small mt-1">Once posted, comments cannot be edited.</div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 @section Scripts {
   <script>
     const IS_ADMIN = @(isAdmin ? "true" : "false");
@@ -367,6 +418,7 @@
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     });
+
     function setBtnLoading(btn, loading, textOverride) {
       if (!btn) return;
 
@@ -465,8 +517,6 @@
       return Array.from(new Set((arr || []).map(x => (x || '').trim()).filter(Boolean)));
     }
 
-    // Generic owner renderer for a modal
-    // prefix = 'ep' or 'ap' to target different elements
     function renderOwners(prefix, ownerEmpIds) {
       const list = $(`${prefix}_ownerList`);
       const hidden = $(`${prefix}_ownerEmpIds`);
@@ -501,9 +551,8 @@
         hidden.appendChild(inp);
       });
 
-      // Owner display "Name (+N)"
       if (ids.length === 0) {
-        display.value = ''; // server can decide to keep previous Owner if needed
+        display.value = '';
       } else {
         const firstName = empMap.get(ids[0]) || ids[0];
         display.value = ids.length > 1 ? `${firstName} (+${ids.length - 1})` : `${firstName}`;
@@ -534,9 +583,96 @@
     }
 
     /* -------------------------
-       Global event listeners (register ONCE)
+       Details/Comments helpers (NEW)
+    ------------------------- */
+    function escapeHtml(s) {
+      return (s || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function formatLocal(dt) {
+      if (!dt) return '—';
+      return (dt || '').replace('T', ' ');
+    }
+
+    function renderCommentItem(c) {
+      const author = escapeHtml(c.authorName || c.authorEmpId || '—');
+      const when = escapeHtml(c.createdAtLocal || '');
+      const text = escapeHtml(c.text || '');
+
+      return `
+        <div class="border rounded-3 p-2 bg-white">
+          <div class="d-flex justify-content-between">
+            <div class="fw-semibold">${author}</div>
+            <div class="text-muted small">${when}</div>
+          </div>
+          <div class="mt-1">${text}</div>
+        </div>
+      `;
+    }
+
+    async function openActionDetails(actionId, opts) {
+      const focusComments = !!opts?.focusComments;
+
+      $('ad_actionId').value = actionId;
+      $('ad_owners').textContent = '—';
+      $('ad_status').textContent = '—';
+      $('ad_due').textContent = '—';
+      $('ad_desc').textContent = '—';
+      $('ad_commentsList').innerHTML = `<div class="text-muted small">Loading…</div>`;
+      $('ad_commentText').value = '';
+      $('ad_commentHint').textContent = '';
+
+      const modalEl = document.getElementById('apDetailsModal');
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+
+      try {
+        const d = await getJSON('@Url.Action("GetActionDetails", "KpiActions")?actionId=' + encodeURIComponent(actionId));
+
+        $('ad_owners').textContent = (d.ownersText || '—');
+        $('ad_status').textContent = d.statusText || d.statusCode || '—';
+        $('ad_due').textContent = formatLocal(d.dueDateLocal || '');
+        $('ad_desc').textContent = d.description || '—';
+
+        const canComment = !!d.canComment;
+        $('ad_addCommentBlock').style.display = canComment ? '' : 'none';
+        $('ad_commentHint').textContent = canComment ? '' : 'Only owners can post comments.';
+
+        const comments = await getJSON('@Url.Action("GetActionComments", "KpiActions")?actionId=' + encodeURIComponent(actionId));
+        if (!comments || comments.length === 0) {
+          $('ad_commentsList').innerHTML = `<div class="text-muted small">No comments yet.</div>`;
+        } else {
+          $('ad_commentsList').innerHTML = comments.map(renderCommentItem).join('');
+        }
+
+        if (focusComments) {
+          $('ad_commentsAnchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          if ($('ad_addCommentBlock').style.display !== 'none') {
+            setTimeout(() => $('ad_commentText')?.focus(), 200);
+          }
+        }
+      } catch (err) {
+        console.error('[AP] openActionDetails failed:', err);
+        $('ad_commentsList').innerHTML = `<div class="text-danger small">Failed to load details.</div>`;
+      }
+    }
+
+    /* -------------------------
+       Global event listeners
     ------------------------- */
     document.addEventListener('DOMContentLoaded', refreshBoard);
+
+    // IMPORTANT: prevent tile click when clicking buttons inside tiles
+    document.addEventListener('click', (e) => {
+      const stop = e.target.closest('.ap-stop-tile');
+      if (!stop) return;
+      e.stopPropagation();
+    });
 
     // Remove owner pill (both modals)
     document.addEventListener('click', (e) => {
@@ -551,7 +687,73 @@
       renderOwners(prefix, cur);
     });
 
-    // Move Deadline — open
+    // Tile click => open details modal
+    document.addEventListener('click', async (e) => {
+      const tile = e.target.closest('[data-action="open-details"]');
+      if (!tile) return;
+
+      const id = tile.getAttribute('data-id');
+      if (!id) return;
+
+      await openActionDetails(id, { focusComments: false });
+    });
+
+    // Comment button => open details modal and focus comments
+    document.addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-action="comment"]');
+      if (!btn) return;
+
+      const id = btn.getAttribute('data-id');
+      if (!id) return;
+
+      await openActionDetails(id, { focusComments: true });
+    });
+
+    // Post comment button (AJAX)
+    $('ad_postCommentBtn')?.addEventListener('click', async () => {
+      const actionId = $('ad_actionId')?.value;
+      const text = ($('ad_commentText')?.value || '').trim();
+      if (!actionId) return;
+      if (!text) { $('ad_commentText')?.focus(); return; }
+
+      const btn = $('ad_postCommentBtn');
+
+      try {
+        setBtnLoading(btn, true, 'Posting');
+
+        const fd = new FormData();
+        fd.append('__RequestVerificationToken', anti());
+        fd.append('actionId', actionId);
+        fd.append('text', text);
+
+        const res = await fetch('@Url.Action("AddActionComment", "KpiActions")', {
+          method: 'POST',
+          body: fd,
+          headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+
+        $('ad_commentText').value = '';
+
+        const comments = await getJSON('@Url.Action("GetActionComments", "KpiActions")?actionId=' + encodeURIComponent(actionId));
+        if (!comments || comments.length === 0) {
+          $('ad_commentsList').innerHTML = `<div class="text-muted small">No comments yet.</div>`;
+        } else {
+          $('ad_commentsList').innerHTML = comments.map(renderCommentItem).join('');
+          $('ad_commentsList')?.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+      } catch (err) {
+        console.error('[AP] Add comment failed:', err);
+        alert('Failed to post comment.');
+      } finally {
+        setBtnLoading(btn, false);
+      }
+    });
+
+    /* -------------------------
+       Move Deadline
+    ------------------------- */
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-action="move-deadline"]');
       if (!btn || !IS_ADMIN) return;
@@ -561,7 +763,6 @@
       new bootstrap.Modal(document.getElementById('moveDeadlineModal')).show();
     });
 
-    // Move Deadline — submit
     $('moveDeadlineForm')?.addEventListener('submit', async (ev) => {
       ev.preventDefault();
       if (!IS_ADMIN) return;
@@ -583,13 +784,11 @@
       }, 'Saving');
     });
 
-
     /* -------------------------
        Edit Action Plan modal
     ------------------------- */
     $('ep_addOwnerBtn')?.addEventListener('click', () => addOwner('ep'));
 
-    // Edit Plan — open
     document.addEventListener('click', async (e) => {
       const btn = e.target.closest('[data-action="edit-plan"]');
       if (!btn || !IS_ADMIN) return;
@@ -604,7 +803,6 @@
         $('ep_assignedAt').value = data.assignedAtLocal || '';
         $('ep_due').value = data.dueDateLocal || '';
 
-        // owners (multi)
         renderOwners('ep', data.ownerEmpIds || []);
 
         new bootstrap.Modal(document.getElementById('editPlanModal')).show();
@@ -614,7 +812,6 @@
       }
     });
 
-    // Edit Plan — submit
     $('editPlanForm')?.addEventListener('submit', async (ev) => {
       ev.preventDefault();
       if (!IS_ADMIN) return;
@@ -637,7 +834,6 @@
         await refreshBoard();
       }, 'Saving');
     });
-
 
     /* -------------------------
        Archive Action Plan
@@ -676,14 +872,11 @@
       }, 'Archiving');
     });
 
-
     /* -------------------------
-       Add Action Plan modal (NOW supports multi-owners)
+       Add Action Plan modal (multi-owners)
     ------------------------- */
-    // You need to add the matching HTML in the Add modal (see section B below)
     $('ap_addOwnerBtn')?.addEventListener('click', () => addOwner('ap'));
 
-    // Add Action Plan helpers
     function apApplyGeneralMode(isGeneral) {
       const block = $('ap_kpiBlock');
       const kpiSel = $('ap_kpi');
@@ -780,7 +973,6 @@
       }
     }
 
-    // Wire up Add button + modal
     document.addEventListener('DOMContentLoaded', () => {
       if (!IS_ADMIN) return;
 
@@ -794,7 +986,6 @@
         if (!form) return;
         form.reset();
 
-        // clear owners UI
         renderOwners('ap', []);
 
         if (chkGeneral) chkGeneral.checked = true;
@@ -850,8 +1041,6 @@
           await refreshBoard();
         }, 'Adding');
       });
-
     });
-
   </script>
 }

@@ -124,8 +124,13 @@ namespace KPIMonitor.Controllers
           ? $" • Ext: {a.ExtensionCount}"
           : "";
 
-        return $@"
-<div class='border rounded-3 p-2 bg-white'>
+return $@"
+<div class='border rounded-3 p-2 bg-white ap-tile'
+     role='button'
+     tabindex='0'
+     data-action='open-details'
+     data-id='{a.ActionId}'
+     style='cursor:pointer;'>
   <div class='d-flex justify-content-between align-items-center'>
     <strong>{H(ownerDisplay)}</strong>
     <span class='badge rounded-pill {badgeClass}'>{H(title)}</span>
@@ -142,21 +147,30 @@ namespace KPIMonitor.Controllers
   <!-- buttons row at the bottom -->
   <div class='d-flex justify-content-end gap-2 mt-2'>
     <button type='button'
-            class='btn btn-sm btn-outline-secondary ap-action-btn'
+            class='btn btn-sm btn-outline-secondary ap-action-btn ap-stop-tile'
+            data-action='comment'
+            data-id='{a.ActionId}'>
+      Comment
+    </button>
+
+    <button type='button'
+            class='btn btn-sm btn-outline-secondary ap-action-btn ap-stop-tile'
             data-action='edit-plan'
             data-id='{a.ActionId}'
             asp-admin-only>
       Edit
     </button>
+
     <button type='button'
-            class='btn btn-sm btn-outline-secondary ap-action-btn'
+            class='btn btn-sm btn-outline-secondary ap-action-btn ap-stop-tile'
             data-action='move-deadline'
             data-id='{a.ActionId}'
             asp-admin-only>
       Move deadline
     </button>
+
     <button type='button'
-            class='btn btn-sm btn-outline-secondary ap-action-btn'
+            class='btn btn-sm btn-outline-secondary ap-action-btn ap-stop-tile'
             data-action='archive-action'
             data-id='{a.ActionId}'
             asp-admin-only>
@@ -164,6 +178,7 @@ namespace KPIMonitor.Controllers
     </button>
   </div>
 </div>";
+
       }
 
       string Column(string title, string key, IReadOnlyList<KpiAction> items)
