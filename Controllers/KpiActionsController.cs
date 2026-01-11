@@ -47,7 +47,7 @@ namespace KPIMonitor.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(KpiAction vm)
+        public async Task<IActionResult> Create(KpiAction vm, string[] ownerEmpIds)
         {
             if (!ModelState.IsValid) return View(vm);
 
@@ -57,18 +57,48 @@ namespace KPIMonitor.Controllers
             vm.LastChangedDate = vm.CreatedDate;
 
             _db.KpiActions.Add(vm);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(); // must save first to get ActionId
 
-            // NEW: if modal/AJAX, just return 200 OK (no redirect)
+            // -------------------- OWNERS (multi) --------------------
+            var cleanedOwners = (ownerEmpIds ?? Array.Empty<string>())
+                .Select(x => (x ?? "").Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (cleanedOwners.Count > 0)
+            {
+                foreach (var empId in cleanedOwners)
+                {
+                    _db.KpiActionOwners.Add(new KPIMonitor.Models.KpiActionOwner
+                    {
+                        ActionId = vm.ActionId,
+                        OwnerEmpId = empId,
+                        CreatedBy = vm.CreatedBy,
+                        CreatedDate = DateTime.UtcNow
+                    });
+                }
+
+                // UI normally sends "FirstName (+N)" in vm.Owner. If missing, fallback.
+                if (string.IsNullOrWhiteSpace(vm.Owner))
+                    vm.Owner = cleanedOwners[0] + (cleanedOwners.Count > 1 ? $" (+{cleanedOwners.Count - 1})" : "");
+
+                // Ensure OWNER column is saved (in case it was empty)
+                _db.KpiActions.Update(vm);
+                await _db.SaveChangesAsync();
+            }
+
+            // if modal/AJAX, return OK (after owners + owner display are persisted)
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 return Content("OK", "text/html");
 
             TempData["Msg"] = "Action created.";
             return RedirectToAction(nameof(Index), new { kpiId = vm.KpiId });
         }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateGeneral(KpiAction vm)
+        public async Task<IActionResult> CreateGeneral(KpiAction vm, string[] ownerEmpIds)
         {
             if (vm == null || string.IsNullOrWhiteSpace(vm.Description))
                 return BadRequest("Description is required.");
@@ -86,18 +116,46 @@ namespace KPIMonitor.Controllers
             // Reasonable defaults if not posted
             if (vm.AssignedAt == null) vm.AssignedAt = DateTime.UtcNow;
             vm.StatusCode = string.IsNullOrWhiteSpace(vm.StatusCode) ? "todo" : vm.StatusCode.Trim().ToLowerInvariant();
-            // ExtensionCount is already short (0 by default from your GET Create path); if null/0 it's fine.
 
             _db.KpiActions.Add(vm);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(); // must save first to get ActionId
 
-            // Match your AJAX pattern from Create: return a simple OK if this was an XHR
+            // -------------------- OWNERS (multi) --------------------
+            var cleanedOwners = (ownerEmpIds ?? Array.Empty<string>())
+                .Select(x => (x ?? "").Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (cleanedOwners.Count > 0)
+            {
+                foreach (var empId in cleanedOwners)
+                {
+                    _db.KpiActionOwners.Add(new KPIMonitor.Models.KpiActionOwner
+                    {
+                        ActionId = vm.ActionId,
+                        OwnerEmpId = empId,
+                        CreatedBy = vm.CreatedBy,
+                        CreatedDate = DateTime.UtcNow
+                    });
+                }
+
+                // UI normally sends "FirstName (+N)" in vm.Owner. If missing, fallback.
+                if (string.IsNullOrWhiteSpace(vm.Owner))
+                    vm.Owner = cleanedOwners[0] + (cleanedOwners.Count > 1 ? $" (+{cleanedOwners.Count - 1})" : "");
+
+                _db.KpiActions.Update(vm);
+                await _db.SaveChangesAsync();
+            }
+
+            // AJAX-friendly
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 return Content("OK", "text/html");
 
             TempData["Msg"] = "General action created.";
-            return RedirectToAction(nameof(Index)); // no kpiId → shows all (or change to your preferred landing)
+            return RedirectToAction(nameof(Index));
         }
+
         // Edit (basic fields)
         public async Task<IActionResult> Edit(decimal id)
         {
@@ -158,7 +216,6 @@ namespace KPIMonitor.Controllers
 
             await _db.SaveChangesAsync();
 
-            // NEW
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 return Content("OK", "text/html");
 
@@ -179,13 +236,13 @@ namespace KPIMonitor.Controllers
 
             await _db.SaveChangesAsync();
 
-            // NEW
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 return Content("OK");
 
             TempData["Msg"] = "Status updated.";
             return RedirectToAction(nameof(Index), new { kpiId = act.KpiId });
         }
+
         [HttpGet]
         public async Task<IActionResult> GetAction(decimal actionId)
         {
@@ -197,6 +254,7 @@ namespace KPIMonitor.Controllers
 
             // format to feed <input type="datetime-local">
             static string AsLocal(DateTime? dt) => dt.HasValue ? dt.Value.ToString("yyyy-MM-ddTHH:mm") : "";
+
             var ownerEmpIds = await _db.KpiActionOwners
                 .AsNoTracking()
                 .Where(o => o.ActionId == a.ActionId)
@@ -208,13 +266,12 @@ namespace KPIMonitor.Controllers
             {
                 actionId = a.ActionId,
                 owner = a.Owner ?? "",
-                ownerEmpIds, // NEW
+                ownerEmpIds,
                 description = a.Description ?? "",
                 statusCode = a.StatusCode ?? "todo",
                 assignedAtLocal = AsLocal(a.AssignedAt),
                 dueDateLocal = AsLocal(a.DueDate)
             });
-
         }
 
         [HttpPost]
@@ -230,6 +287,7 @@ namespace KPIMonitor.Controllers
         {
             var act = await _db.KpiActions.FirstOrDefaultAsync(x => x.ActionId == actionId);
             if (act == null) return NotFound();
+
             // -------------------- OWNERS (multi) --------------------
             var cleanedOwners = (ownerEmpIds ?? Array.Empty<string>())
                 .Select(x => (x ?? "").Trim())
@@ -237,7 +295,7 @@ namespace KPIMonitor.Controllers
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            // Replace existing owner rows for this action (simple + safe)
+            // Replace owner rows
             var existing = await _db.KpiActionOwners
                 .Where(x => x.ActionId == actionId)
                 .ToListAsync();
@@ -251,16 +309,25 @@ namespace KPIMonitor.Controllers
                 {
                     ActionId = actionId,
                     OwnerEmpId = empId,
-                    // OwnerName is optional; we can fill it later if you want
                     CreatedBy = User?.Identity?.Name ?? "system",
                     CreatedDate = DateTime.UtcNow
                 });
             }
 
-            act.Owner = (owner ?? "").Trim();
+            // IMPORTANT: Update the display string ONLY if owners exist
+            if (cleanedOwners.Count > 0)
+            {
+                act.Owner = (owner ?? "").Trim();
+
+                // fallback if owner was empty for any reason
+                if (string.IsNullOrWhiteSpace(act.Owner))
+                    act.Owner = cleanedOwners[0] + (cleanedOwners.Count > 1 ? $" (+{cleanedOwners.Count - 1})" : "");
+            }
+
             act.Description = (description ?? "").Trim();
             if (!string.IsNullOrWhiteSpace(statusCode))
                 act.StatusCode = statusCode.Trim().ToLowerInvariant();
+
             act.AssignedAt = assignedAt;
             act.DueDate = dueDate;
 
@@ -269,13 +336,13 @@ namespace KPIMonitor.Controllers
 
             await _db.SaveChangesAsync();
 
-            // AJAX-friendly
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 return Content("OK");
 
             TempData["Msg"] = "Action updated.";
             return RedirectToAction(nameof(Index), new { kpiId = act.KpiId });
         }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ArchiveAction(decimal actionId)
@@ -290,13 +357,11 @@ namespace KPIMonitor.Controllers
 
             await _db.SaveChangesAsync();
 
-            // AJAX-friendly
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 return Content("OK");
 
             TempData["Msg"] = "Action archived.";
             return RedirectToAction(nameof(Index), new { kpiId = act.KpiId });
         }
-
     }
 }

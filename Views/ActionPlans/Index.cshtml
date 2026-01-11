@@ -367,6 +367,40 @@
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     });
+    function setBtnLoading(btn, loading, textOverride) {
+      if (!btn) return;
+
+      if (loading) {
+        if (!btn.dataset.origHtml) btn.dataset.origHtml = btn.innerHTML;
+
+        btn.disabled = true;
+        btn.classList.add('disabled');
+        btn.style.opacity = '0.75';
+
+        const label = textOverride || btn.textContent.trim() || 'Saving';
+        btn.innerHTML = `
+          <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+          ${label}...
+        `;
+      } else {
+        btn.disabled = false;
+        btn.classList.remove('disabled');
+        btn.style.opacity = '';
+        if (btn.dataset.origHtml) btn.innerHTML = btn.dataset.origHtml;
+      }
+    }
+
+    function withFormLoading(formEl, asyncFn, label) {
+      const submitBtn = formEl?.querySelector('button[type="submit"]');
+      return (async () => {
+        try {
+          setBtnLoading(submitBtn, true, label);
+          await asyncFn();
+        } finally {
+          setBtnLoading(submitBtn, false);
+        }
+      })();
+    }
 
     let apKpiIds = [];
 
@@ -453,11 +487,11 @@
         pill.className = 'badge rounded-pill text-bg-light border';
         pill.style.padding = '.5rem .6rem';
         pill.innerHTML = `
-        <span class="me-2">${name}</span>
-        <button type="button" class="btn btn-sm btn-link p-0 text-danger"
-                data-remove-owner="${empId}" data-owner-prefix="${prefix}"
-                style="text-decoration:none;">✕</button>
-      `;
+          <span class="me-2">${name}</span>
+          <button type="button" class="btn btn-sm btn-link p-0 text-danger"
+                  data-remove-owner="${empId}" data-owner-prefix="${prefix}"
+                  style="text-decoration:none;">✕</button>
+        `;
         list.appendChild(pill);
 
         const inp = document.createElement('input');
@@ -532,21 +566,23 @@
       ev.preventDefault();
       if (!IS_ADMIN) return;
 
-      try {
-        const fd = new FormData(ev.target);
+      const form = ev.target;
+
+      await withFormLoading(form, async () => {
+        const fd = new FormData(form);
         const res = await fetch('@Url.Action("MoveDeadline", "KpiActions")', {
           method: 'POST',
           body: fd,
           headers: { 'Accept': 'text/html', 'X-Requested-With': 'XMLHttpRequest' }
         });
+
         if (!res.ok) throw new Error('HTTP ' + res.status);
+
         bootstrap.Modal.getInstance(document.getElementById('moveDeadlineModal')).hide();
         await refreshBoard();
-      } catch (err) {
-        console.error('[AP] MoveDeadline failed:', err);
-        alert('Failed to move deadline (check max 3 extensions).');
-      }
+      }, 'Saving');
     });
+
 
     /* -------------------------
        Edit Action Plan modal
@@ -583,8 +619,10 @@
       ev.preventDefault();
       if (!IS_ADMIN) return;
 
-      try {
-        const fd = new FormData(ev.target);
+      const form = ev.target;
+
+      await withFormLoading(form, async () => {
+        const fd = new FormData(form);
         if (!fd.get('__RequestVerificationToken')) fd.append('__RequestVerificationToken', anti());
 
         const res = await fetch('@Url.Action("UpdateAction", "KpiActions")', {
@@ -594,13 +632,12 @@
         });
 
         if (!res.ok) throw new Error('HTTP ' + res.status);
+
         bootstrap.Modal.getInstance(document.getElementById('editPlanModal')).hide();
         await refreshBoard();
-      } catch (err) {
-        console.error('[AP] UpdateAction failed:', err);
-        alert('Save failed.');
-      }
+      }, 'Saving');
     });
+
 
     /* -------------------------
        Archive Action Plan
@@ -620,8 +657,10 @@
       ev.preventDefault();
       if (!IS_ADMIN) return;
 
-      try {
-        const fd = new FormData(ev.target);
+      const form = ev.target;
+
+      await withFormLoading(form, async () => {
+        const fd = new FormData(form);
         if (!fd.get('__RequestVerificationToken')) fd.append('__RequestVerificationToken', anti());
 
         const res = await fetch('@Url.Action("ArchiveAction", "KpiActions")', {
@@ -634,11 +673,9 @@
 
         bootstrap.Modal.getInstance(document.getElementById('archiveModal')).hide();
         await refreshBoard();
-      } catch (err) {
-        console.error('[AP] ArchiveAction failed:', err);
-        alert('Failed to archive action plan.');
-      }
+      }, 'Archiving');
     });
+
 
     /* -------------------------
        Add Action Plan modal (NOW supports multi-owners)
@@ -783,19 +820,18 @@
         ev.preventDefault();
         if (!IS_ADMIN) return;
 
-        const isGeneral = chkGeneral && chkGeneral.checked;
-        const kpiSel = $('ap_kpi');
+        const formEl = ev.target;
 
-        if (!isGeneral && kpiSel && !kpiSel.value) {
-          alert('Please select a KPI, or mark the action as General.');
-          return;
-        }
+        await withFormLoading(formEl, async () => {
+          const isGeneral = chkGeneral && chkGeneral.checked;
+          const kpiSel = $('ap_kpi');
 
-        // Optional: enforce at least 1 owner on create
-        // if (currentOwners('ap').length === 0) { alert('Please add at least one owner.'); return; }
+          if (!isGeneral && kpiSel && !kpiSel.value) {
+            alert('Please select a KPI, or mark the action as General.');
+            return;
+          }
 
-        try {
-          const fd = new FormData(form);
+          const fd = new FormData(formEl);
           if (!fd.get('__RequestVerificationToken')) fd.append('__RequestVerificationToken', anti());
 
           const url = isGeneral
@@ -812,11 +848,9 @@
 
           bootstrap.Modal.getInstance(document.getElementById('addPlanModal')).hide();
           await refreshBoard();
-        } catch (err) {
-          console.error('[AP] Create action failed:', err);
-          alert('Failed to create action plan.');
-        }
+        }, 'Adding');
       });
+
     });
 
   </script>

@@ -72,11 +72,29 @@ namespace KPIMonitor.Controllers
         // Clean owner: strip "(12345)" if present
         string CleanOwner(string? raw)
         {
-          var s = raw ?? "";
+          var s = (raw ?? "").Trim();
+          if (string.IsNullOrWhiteSpace(s)) return "";
+
           var idx = s.IndexOf('(');
-          if (idx > 0) s = s[..idx];
-          return s.Trim();
+          if (idx <= 0) return s;
+
+          // Look at what's inside the parentheses
+          var end = s.IndexOf(')', idx + 1);
+          if (end < 0) return s; // malformed, keep as-is
+
+          var inside = s.Substring(idx + 1, end - idx - 1).Trim();
+
+          // Keep "(+N)" style
+          if (inside.StartsWith("+")) return s;
+
+          // Strip only if it looks like an EmpId "(12345)" (digits only)
+          var digitsOnly = inside.All(char.IsDigit);
+          if (digitsOnly) return s.Substring(0, idx).Trim();
+
+          // Otherwise keep (don’t guess)
+          return s;
         }
+
 
         var ownerDisplay = CleanOwner(a.Owner);
 
@@ -88,10 +106,10 @@ namespace KPIMonitor.Controllers
         }
         else
         {
-          string code   = $"{H(a.Kpi?.Pillar?.PillarCode ?? "")} {H(a.Kpi?.Objective?.ObjectiveCode ?? "")} {H(a.Kpi?.KpiCode ?? "")}";
-          string name   = H(a.Kpi?.KpiName ?? "-");
+          string code = $"{H(a.Kpi?.Pillar?.PillarCode ?? "")} {H(a.Kpi?.Objective?.ObjectiveCode ?? "")} {H(a.Kpi?.KpiCode ?? "")}";
+          string name = H(a.Kpi?.KpiName ?? "-");
           string pillar = H(a.Kpi?.Pillar?.PillarName ?? "");
-          string obj    = H(a.Kpi?.Objective?.ObjectiveName ?? "");
+          string obj = H(a.Kpi?.Objective?.ObjectiveName ?? "");
 
           info = $@"
 <div class='small text-muted mt-1'>
@@ -154,7 +172,7 @@ namespace KPIMonitor.Controllers
         {
           "todo" => "ap-col-header ap-col-header--todo",
           "prog" => "ap-col-header ap-col-header--prog",
-          _      => "ap-col-header ap-col-header--done"
+          _ => "ap-col-header ap-col-header--done"
         };
 
         var sb = new StringBuilder();
@@ -193,9 +211,9 @@ namespace KPIMonitor.Controllers
 
       var html =
           "<div class='row g-3'>" +
-          Column("To Do",       "todo", todo) +
+          Column("To Do", "todo", todo) +
           Column("In Progress", "prog", prog) +
-          Column("Done",        "done", done) +
+          Column("Done", "done", done) +
           "</div>";
 
       return Content(html, "text/html");
