@@ -674,7 +674,6 @@
       if (!stop) return;
 
       e.preventDefault();
-      e.stopImmediatePropagation(); // <-- THIS is the key (stops other document handlers too)
     }, true); // capture phase so it runs before the other document click handlers
 
 
@@ -692,15 +691,19 @@
     });
 
     // Tile click => open details modal
-    document.addEventListener('click', async (e) => {
-      const tile = e.target.closest('[data-action="open-details"]');
-      if (!tile) return;
+document.addEventListener('click', async (e) => {
+  // If click started from a button, do nothing here
+  if (e.target.closest('.ap-stop-tile')) return;
 
-      const id = tile.getAttribute('data-id');
-      if (!id) return;
+  const tile = e.target.closest('[data-action="open-details"]');
+  if (!tile) return;
 
-      await openActionDetails(id, { focusComments: false });
-    });
+  const id = tile.getAttribute('data-id');
+  if (!id) return;
+
+  await openActionDetails(id, { focusComments: false });
+});
+
 
     // Comment button => open details modal and focus comments
     document.addEventListener('click', async (e) => {
