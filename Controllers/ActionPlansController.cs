@@ -95,8 +95,32 @@ namespace KPIMonitor.Controllers
           return s;
         }
 
+        string TileOwnerLastNames(string? raw)
+        {
+          var s = (raw ?? "").Trim();
+          if (string.IsNullOrWhiteSpace(s)) return "";
 
-        var ownerDisplay = CleanOwner(a.Owner);
+          // remove "(+N)" if present
+          var plusIdx = s.IndexOf("(+");
+          if (plusIdx > 0) s = s.Substring(0, plusIdx).Trim();
+
+          // IMPORTANT: your Owner field is typically "First Owner" only,
+          // so this returns ONE last name.
+          // If you later store comma-separated names, this will handle that too.
+          var pieces = s.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+          var lastNames = pieces
+              .Select(p =>
+              {
+                var words = p.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                return words.Length > 0 ? words[^1] : "";
+              })
+              .Where(x => !string.IsNullOrWhiteSpace(x));
+
+          return string.Join(", ", lastNames);
+        }
+
+        var ownerDisplay = TileOwnerLastNames(CleanOwner(a.Owner));
 
         // KPI vs General info block
         string info;
@@ -124,7 +148,7 @@ namespace KPIMonitor.Controllers
           ? $" • Ext: {a.ExtensionCount}"
           : "";
 
-return $@"
+        return $@"
 <div class='border rounded-3 p-2 bg-white ap-tile'
      role='button'
      tabindex='0'
