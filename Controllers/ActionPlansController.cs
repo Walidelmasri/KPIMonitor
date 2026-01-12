@@ -52,6 +52,18 @@ namespace KPIMonitor.Controllers
           .Concat(general)
           .Where(a => !string.Equals(a.StatusCode, "archived", StringComparison.OrdinalIgnoreCase))
           .ToList();
+      // Pull owners for the actions shown on the board (1 query)
+      var actionIds = actions.Select(a => a.ActionId).ToList();
+
+      var ownersByActionId = await _db.KpiActionOwners
+          .AsNoTracking()
+          .Where(o => actionIds.Contains(o.ActionId))
+          .OrderBy(o => o.KpiActionOwnerId)
+          .ToListAsync();
+
+      var ownersLookup = ownersByActionId
+          .GroupBy(o => o.ActionId)
+          .ToDictionary(g => g.Key, g => g.ToList());
 
       var todo = actions
           .Where(a => string.Equals(a.StatusCode, "todo", StringComparison.OrdinalIgnoreCase))
@@ -94,33 +106,79 @@ namespace KPIMonitor.Controllers
           // Otherwise keep (don’t guess)
           return s;
         }
-
-        string TileOwnerLastNames(string? raw)
+        string LastNameFromFullName(string? full)
         {
-          var s = (raw ?? "").Trim();
+          var s = (full ?? "").Trim();
           if (string.IsNullOrWhiteSpace(s)) return "";
 
-          // remove "(+N)" if present
-          var plusIdx = s.IndexOf("(+");
-          if (plusIdx > 0) s = s.Substring(0, plusIdx).Trim();
+          // strip "(12345)" etc if present
+          var idx = s.IndexOf('(');
+          if (idx > 0) s = s.Substring(0, idx).Trim();
 
-          // IMPORTANT: your Owner field is typically "First Owner" only,
-          // so this returns ONE last name.
-          // If you later store comma-separated names, this will handle that too.
-          var pieces = s.Split(',', StringSplitOptions.RemoveEmptyEntries);
-
-          var lastNames = pieces
-              .Select(p =>
-              {
-                var words = p.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                return words.Length > 0 ? words[^1] : "";
-              })
-              .Where(x => !string.IsNullOrWhiteSpace(x));
-
-          return string.Join(", ", lastNames);
+          var parts = s.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+          return parts.Length == 0 ? "" : parts[^1];
         }
 
-        var ownerDisplay = TileOwnerLastNames(CleanOwner(a.Owner));
+        string TileOwnerHeader(decimal actionId, string? fallbackOwner)
+        {
+          // Use the real owners list for this action
+          if (ownersLookup.TryGetValue(actionId, out var owners) && owners != null)
+          {
+            var names = owners
+                .Select(o => string.IsNullOrWhiteSpace(o.OwnerName) ? o.OwnerEmpId : o.OwnerName!.Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList();
+
+            // MULTI OWNER => last names only
+            if (names.Count >= 2)
+            {
+              var lastNames = names
+                  .Select(LastNameFromFullName)
+                  .Where(x => !string.IsNullOrWhiteSpace(x))
+                  .ToList();
+
+              return lastNames.Count == 0 ? CleanOwner(fallbackOwner) : string.Join(", ", lastNames);
+            }
+
+            // SINGLE OWNER => FULL NAME
+            if (names.Count == 1)
+            {
+              return names[0];
+            }
+          }
+
+          // fallback if owners table has nothing
+          return CleanOwner(fallbackOwner);
+        }
+
+        var ownerDisplay = TileOwnerHeader(a.ActionId, a.Owner);
+
+        // string TileOwnerLastNames(string? raw)
+        // {
+        //   var s = (raw ?? "").Trim();
+        //   if (string.IsNullOrWhiteSpace(s)) return "";
+
+        //   // remove "(+N)" if present
+        //   var plusIdx = s.IndexOf("(+");
+        //   if (plusIdx > 0) s = s.Substring(0, plusIdx).Trim();
+
+        //   // IMPORTANT: your Owner field is typically "First Owner" only,
+        //   // so this returns ONE last name.
+        //   // If you later store comma-separated names, this will handle that too.
+        //   var pieces = s.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+        //   var lastNames = pieces
+        //       .Select(p =>
+        //       {
+        //         var words = p.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        //         return words.Length > 0 ? words[^1] : "";
+        //       })
+        //       .Where(x => !string.IsNullOrWhiteSpace(x));
+
+        //   return string.Join(", ", lastNames);
+        // }
+
+        // var ownerDisplay = TileOwnerLastNames(CleanOwner(a.Owner));
 
         // KPI vs General info block
         string info;
