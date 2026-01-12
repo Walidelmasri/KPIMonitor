@@ -431,9 +431,9 @@
 
         const label = textOverride || btn.textContent.trim() || 'Saving';
         btn.innerHTML = `
-          <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-          ${label}...
-        `;
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            ${label}...
+          `;
       } else {
         btn.disabled = false;
         btn.classList.remove('disabled');
@@ -537,11 +537,11 @@
         pill.className = 'badge rounded-pill text-bg-light border';
         pill.style.padding = '.5rem .6rem';
         pill.innerHTML = `
-          <span class="me-2">${name}</span>
-          <button type="button" class="btn btn-sm btn-link p-0 text-danger"
-                  data-remove-owner="${empId}" data-owner-prefix="${prefix}"
-                  style="text-decoration:none;">✕</button>
-        `;
+            <span class="me-2">${name}</span>
+            <button type="button" class="btn btn-sm btn-link p-0 text-danger"
+                    data-remove-owner="${empId}" data-owner-prefix="${prefix}"
+                    style="text-decoration:none;">✕</button>
+          `;
         list.appendChild(pill);
 
         const inp = document.createElement('input');
@@ -605,14 +605,14 @@
       const text = escapeHtml(c.text || '');
 
       return `
-        <div class="border rounded-3 p-2 bg-white">
-          <div class="d-flex justify-content-between">
-            <div class="fw-semibold">${author}</div>
-            <div class="text-muted small">${when}</div>
+          <div class="border rounded-3 p-2 bg-white">
+            <div class="d-flex justify-content-between">
+              <div class="fw-semibold">${author}</div>
+              <div class="text-muted small">${when}</div>
+            </div>
+            <div class="mt-1">${text}</div>
           </div>
-          <div class="mt-1">${text}</div>
-        </div>
-      `;
+        `;
     }
 
     async function openActionDetails(actionId, opts) {
@@ -668,11 +668,15 @@
     document.addEventListener('DOMContentLoaded', refreshBoard);
 
     // IMPORTANT: prevent tile click when clicking buttons inside tiles
+    // IMPORTANT: prevent tile click when clicking buttons inside tiles
     document.addEventListener('click', (e) => {
       const stop = e.target.closest('.ap-stop-tile');
       if (!stop) return;
-      e.stopPropagation();
-    });
+
+      e.preventDefault();
+      e.stopImmediatePropagation(); // <-- THIS is the key (stops other document handlers too)
+    }, true); // capture phase so it runs before the other document click handlers
+
 
     // Remove owner pill (both modals)
     document.addEventListener('click', (e) => {
