@@ -436,6 +436,7 @@ namespace KPIMonitor.Controllers
 
             foreach (var a in items)
             {
+                var isArchived = string.Equals(a.StatusCode, "archived", StringComparison.OrdinalIgnoreCase);
                 var sTodo = a.StatusCode?.Equals("todo", StringComparison.OrdinalIgnoreCase) == true ? "selected" : "";
                 var sProg = a.StatusCode?.Equals("inprogress", StringComparison.OrdinalIgnoreCase) == true ? "selected" : "";
                 var sDone = a.StatusCode?.Equals("done", StringComparison.OrdinalIgnoreCase) == true ? "selected" : "";
@@ -448,13 +449,18 @@ namespace KPIMonitor.Controllers
       <div class='small text-muted'>Assigned: {Fmt(a.AssignedAt)}</div>
     </div>
     <div class='d-flex align-items-center gap-2'>
-      <select class='form-select form-select-sm' data-action='set-status' data-id='{a.ActionId}'>
-        <option value='todo' {sTodo}>To Do</option>
-        <option value='inprogress' {sProg}>In Progress</option>
-        <option value='done' {sDone}>Done</option>
-      </select>
-      <button type='button' class='btn btn-sm btn-outline-secondary' data-action='move-deadline' data-id='{a.ActionId}'>Move deadline</button>
+      {(isArchived
+        ? "<span class='badge text-bg-secondary'>Archived</span>"
+        : $@"
+          <select class='form-select form-select-sm' data-action='set-status' data-id='{a.ActionId}'>
+            <option value='todo' {sTodo}>To Do</option>
+            <option value='inprogress' {sProg}>In Progress</option>
+            <option value='done' {sDone}>Done</option>
+          </select>
+          <button type='button' class='btn btn-sm btn-outline-secondary' data-action='move-deadline' data-id='{a.ActionId}'>Move deadline</button>
+        ")}
     </div>
+
   </div>
   <div class='mt-2'>{H(a.Description)}</div>
   <div class='small text-muted mt-1'>Due: {Fmt(a.DueDate)} • Ext: {a.ExtensionCount}</div>

@@ -1,9 +1,14 @@
 @using KPIMonitor.Services
 @inject IAdminAuthorizer AdminAuthorizer
+@inject IEmployeeDirectory EmpDir
 @{
     ViewData["Title"] = "RedBoard";
     var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User);
+
+    // EmployeePickDto => EmpId, Label (same as ActionPlans page)
+    var employees = await EmpDir.GetAllForPickAsync();
 }
+
 <style>
     /* subtle alert tint for RedBoard */
     .alert-tint {
@@ -659,11 +664,11 @@
             const btns = document.createElement('div');
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
-                                        <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeUp(this)">↑</button>
-                                        <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeDown(this)">↓</button>
-                                        <button type="button" class="btn btn-outline-danger" onclick="removeFromSelected(this)">✕</button>
-                                        <button type="button" class="btn btn-outline-warning" onclick="hideFromSelected(this)">Hide</button>
-                                    `;
+                                            <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeUp(this)">↑</button>
+                                            <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeDown(this)">↓</button>
+                                            <button type="button" class="btn btn-outline-danger" onclick="removeFromSelected(this)">✕</button>
+                                            <button type="button" class="btn btn-outline-warning" onclick="hideFromSelected(this)">Hide</button>
+                                        `;
 
             li.appendChild(info);
             li.appendChild(btns);
@@ -689,9 +694,9 @@
             const btns = document.createElement('div');
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
-                                        <button type="button" class="btn btn-outline-primary" onclick="addToSelected(this)">Add</button>
-                                        <button type="button" class="btn btn-outline-warning" onclick="hideFromAvailable(this)">Hide</button>
-                                    `;
+                                            <button type="button" class="btn btn-outline-primary" onclick="addToSelected(this)">Add</button>
+                                            <button type="button" class="btn btn-outline-warning" onclick="hideFromAvailable(this)">Hide</button>
+                                        `;
 
             li.appendChild(info);
             li.appendChild(btns);
@@ -717,8 +722,8 @@
             const btns = document.createElement('div');
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
-                                        <button type="button" class="btn btn-outline-success" onclick="unhideIndicator(this)">Unhide</button>
-                                    `;
+                                            <button type="button" class="btn btn-outline-success" onclick="unhideIndicator(this)">Unhide</button>
+                                        `;
 
             li.appendChild(info);
             li.appendChild(btns);
@@ -1068,8 +1073,19 @@
                         <input type="hidden" name="KpiId" id="af_kpiId" />
                         <div class="mb-3">
                             <label class="form-label">Owner</label>
-                            <input class="form-control" name="Owner" id="af_owner" required />
+                            <select class="form-select" name="Owner" id="af_owner" required>
+                                <option value="">— Select —</option>
+                                @foreach (var e in employees ??
+                                                                Enumerable.Empty<KPIMonitor.ViewModels.EmployeePickDto>())
+                                {
+                                    var display = e.Label ?? "";
+                                    var idx = display.IndexOf('(');
+                                    if (idx > 0) { display = display.Substring(0, idx).Trim(); }
+                                    <option value="@display">@display</option>
+                                }
+                            </select>
                         </div>
+
                         <div class="mb-3">
                             <label class="form-label">Assigned At</label>
                             <input type="datetime-local" class="form-control" name="AssignedAt" />
