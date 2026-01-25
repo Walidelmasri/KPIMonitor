@@ -278,17 +278,23 @@ namespace KPIMonitor.Controllers
             var yearTargets = new List<object>();
             if (fy != null)
             {
-                void Add(int off, decimal? v)
-                {
-                    var year = fy.BaseYear + off;
+void Add(int off, decimal? v)
+{
+    var year = fy.BaseYear + off;
 
-                    // ✅ If final period exists for the plan year, use it instead of the year target
-                    if (year == planYear && finalPeriodValue.HasValue)
-                        v = finalPeriodValue.Value;
+    var isActual = false;
 
-                    if (v.HasValue)
-                        yearTargets.Add(new { year, value = v.Value });
-                }
+    // ✅ If final period exists for the plan year, use it instead of the year target
+    if (year == planYear && finalPeriodValue.HasValue)
+    {
+        v = finalPeriodValue.Value;
+        isActual = true; // 👈 THIS is the missing piece
+    }
+
+    if (v.HasValue)
+        yearTargets.Add(new { year, value = v.Value, isActual }); // 👈 ADD isActual
+}
+
 
                 Add(0, fy.Period1Value);
                 Add(1, fy.Period2Value);
