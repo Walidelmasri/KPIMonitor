@@ -402,11 +402,17 @@
             const tgt = data?.chart?.target || [];
             const fct = data?.chart?.forecast || [];
             const yrs = Array.isArray(data?.chart?.yearTargets) ? data.chart.yearTargets : [];
+
             const yearLabels = yrs.map(y => String(y.year));
-            const yearVals = yrs.map(y => y.value ?? null);
+
+            // split into two value arrays based on isActual flag
+            const yearTargetVals = yrs.map(y => (y?.isActual ? null : (y.value ?? null)));
+            const yearActualVals = yrs.map(y => (y?.isActual ? (y.value ?? null) : null));
+
             const allLabels = baseLabels.concat(yearLabels);
             const pad = new Array(yearLabels.length).fill(null);
             const leftNulls = new Array(baseLabels.length).fill(null);
+
 
             const chartData = {
                 labels: allLabels,
@@ -446,11 +452,20 @@
                     {
                         type: 'bar',
                         label: 'Year Target',
-                        data: leftNulls.concat(yearVals),
+                        data: leftNulls.concat(yearTargetVals),
                         backgroundColor: '#7a7a7a',
                         borderColor: '#7a7a7a',
                         borderWidth: 1
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Year Actual',
+                        data: leftNulls.concat(yearActualVals),
+                        backgroundColor: '#800080',
+                        borderColor: '#800080',
+                        borderWidth: 2
                     }
+
                 ]
             };
 
@@ -693,11 +708,11 @@
             const btns = document.createElement('div');
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
-                                                    <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeUp(this)">↑</button>
-                                                    <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeDown(this)">↓</button>
-                                                    <button type="button" class="btn btn-outline-danger" onclick="removeFromSelected(this)">✕</button>
-                                                    <button type="button" class="btn btn-outline-warning" onclick="hideFromSelected(this)">Hide</button>
-                                                `;
+                                                            <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeUp(this)">↑</button>
+                                                            <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeDown(this)">↓</button>
+                                                            <button type="button" class="btn btn-outline-danger" onclick="removeFromSelected(this)">✕</button>
+                                                            <button type="button" class="btn btn-outline-warning" onclick="hideFromSelected(this)">Hide</button>
+                                                        `;
 
             li.appendChild(info);
             li.appendChild(btns);
@@ -723,9 +738,9 @@
             const btns = document.createElement('div');
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
-                                                    <button type="button" class="btn btn-outline-primary" onclick="addToSelected(this)">Add</button>
-                                                    <button type="button" class="btn btn-outline-warning" onclick="hideFromAvailable(this)">Hide</button>
-                                                `;
+                                                            <button type="button" class="btn btn-outline-primary" onclick="addToSelected(this)">Add</button>
+                                                            <button type="button" class="btn btn-outline-warning" onclick="hideFromAvailable(this)">Hide</button>
+                                                        `;
 
             li.appendChild(info);
             li.appendChild(btns);
@@ -751,8 +766,8 @@
             const btns = document.createElement('div');
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
-                                                    <button type="button" class="btn btn-outline-success" onclick="unhideIndicator(this)">Unhide</button>
-                                                `;
+                                                            <button type="button" class="btn btn-outline-success" onclick="unhideIndicator(this)">Unhide</button>
+                                                        `;
 
             li.appendChild(info);
             li.appendChild(btns);

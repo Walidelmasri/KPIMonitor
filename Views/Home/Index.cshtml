@@ -58,7 +58,7 @@
 
   /* =========================
      Summary counters (left/right of pies)
-                                                                                                                                                                                                                                                                ========================= */
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ========================= */
   #summaryCard .kpi {
     display: flex;
     align-items: center;
@@ -1122,7 +1122,9 @@
           { type: 'bar', label: 'Actual', data: [], backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
           { type: 'line', label: 'Target', data: [], borderWidth: 2, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', tension: .3, fill: false },
           { type: 'line', label: 'Forecast', data: [], borderWidth: 2, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], tension: .3, fill: false },
-          { type: 'bar', label: 'Year Target', data: [], backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
+          { type: 'bar', label: 'Year Target', data: [], backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 },
+          { type: 'bar', label: 'Year Actual', data: [], backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2 }
+
         ]
       },
       options: {
@@ -1241,17 +1243,30 @@
       const target = res?.chart?.target || [];
       const forecast = res?.chart?.forecast || [];
       const yrArr = Array.isArray(res?.chart?.yearTargets) ? res.chart.yearTargets : [];
+
       const yearLabels = yrArr.map(y => String(y.year));
-      const yearBarVals = yrArr.map(y => y.value ?? null);
+
+      // split into two series
+      const yearTargetVals = yrArr.map(y => (y?.isActual ? null : (y.value ?? null)));
+      const yearActualVals = yrArr.map(y => (y?.isActual ? (y.value ?? null) : null));
+
       const allLabels = baseLabels.concat(yearLabels);
       const pad = new Array(yearLabels.length).fill(null);
       const leftNulls = new Array(baseLabels.length).fill(null);
+
       kpiChart.data.labels = allLabels;
       kpiChart.data.datasets[0].data = actual.concat(pad);
       kpiChart.data.datasets[1].data = target.concat(pad);
       kpiChart.data.datasets[2].data = forecast.concat(pad);
-      kpiChart.data.datasets[3].data = leftNulls.concat(yearBarVals);
+
+      // Grey year targets
+      kpiChart.data.datasets[3].data = leftNulls.concat(yearTargetVals);
+
+      // Purple year actual (only plan year point)
+      kpiChart.data.datasets[4].data = leftNulls.concat(yearActualVals);
+
       kpiChart.update();
+
 
       const rows = res?.table || [];
       if (!rows.length) {

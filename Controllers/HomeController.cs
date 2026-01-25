@@ -277,6 +277,20 @@ namespace KPIMonitor.Controllers
                          && f.Period.Year == planYear)
                 .OrderBy(f => f.Period!.StartDate)
                 .ToListAsync();
+            // --- Final period value (Dec for monthly, Q4 for quarterly) ---
+            // Prefer Actual, else Forecast.
+            bool isMonthly = facts.Any(f => f.Period != null && f.Period.MonthNum.HasValue);
+
+            var finalFact = isMonthly
+                ? facts.LastOrDefault(f => f.Period != null && f.Period.MonthNum == 12)
+                : facts.LastOrDefault(f => f.Period != null && f.Period.QuarterNum == 4);
+
+            decimal? finalPeriodValue = null;
+            if (finalFact != null)
+            {
+                if (finalFact.ActualValue.HasValue) finalPeriodValue = finalFact.ActualValue.Value;
+                else if (finalFact.ForecastValue.HasValue) finalPeriodValue = finalFact.ForecastValue.Value;
+            }
 
             var factIds = facts.Select(f => f.KpiFactId).ToList();
 
@@ -324,12 +338,24 @@ namespace KPIMonitor.Controllers
                 .FirstOrDefaultAsync();
 
             var yearTargets = new List<object>();
+
             if (fy != null)
             {
                 void Add(int offset, decimal? v)
                 {
-                    if (v.HasValue) yearTargets.Add(new { year = fy.BaseYear + offset, value = v.Value });
+                    var year = fy.BaseYear + offset;
+
+                    // If this is the plan year and we have final period value, override + mark as actual
+                    if (year == planYear && finalPeriodValue.HasValue)
+                    {
+                        yearTargets.Add(new { year, value = finalPeriodValue.Value, isActual = true });
+                        return;
+                    }
+
+                    if (v.HasValue)
+                        yearTargets.Add(new { year, value = v.Value, isActual = false });
                 }
+
                 Add(0, fy.Period1Value);
                 Add(1, fy.Period2Value);
                 Add(2, fy.Period3Value);
