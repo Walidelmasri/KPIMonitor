@@ -1417,7 +1417,7 @@ namespace KPIMonitor.Controllers
                     .ThenBy(r => r.IndicatorLabel)
                     .GroupBy(r => new { r.EmpId, r.Name, r.Login });
 
-                sb.AppendLine($"<div class='fw-bold mb-2'>{H(title)}</div>");
+                sb.AppendLine($"<div class='fw-bold mb-3 mt-4 fs-4 text-dark border-start border-4 ps-3'>{H(title)}</div>");
                 sb.AppendLine("<div class='table-responsive'>");
                 sb.AppendLine("<table class='table table-sm table-hover align-middle mb-3'>");
                 sb.AppendLine("<thead><tr>");

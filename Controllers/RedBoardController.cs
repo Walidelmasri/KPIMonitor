@@ -450,7 +450,7 @@ namespace KPIMonitor.Controllers
     </div>
     <div class='d-flex align-items-center gap-2'>
       {(isArchived
-        ? "<span class='badge text-bg-secondary'>Archived</span>"
+        ? "<span class='badge text-bg-secondary'>Done - Archived</span>"
         : $@"
           <select class='form-select form-select-sm' data-action='set-status' data-id='{a.ActionId}'>
             <option value='todo' {sTodo}>To Do</option>
