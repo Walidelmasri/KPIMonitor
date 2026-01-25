@@ -303,6 +303,33 @@
             idx = 0;
             await showCurrent();
         }
+        // ---------------------------
+        // Comments (read-only)
+        // ---------------------------
+        async function loadYearPlanCommentReadOnly(planId) {
+            const el = $('commentRead');
+            if (!el) return;
+
+            if (!planId) {
+                el.textContent = 'Select a KPI to view comments.';
+                return;
+            }
+
+            el.textContent = 'Loading…';
+            try {
+                // This endpoint already exists in HomeController (used in Dashboard)
+                const url = '@Url.Action("GetYearPlanComment", "Home")' + '?planId=' + encodeURIComponent(planId);
+                const res = await fetch(url, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+
+                const data = await res.json();
+                const text = (data?.text ?? '').toString();
+                el.textContent = text.trim() ? text : '—';
+            } catch {
+                el.textContent = 'Failed to load comment.';
+            }
+        }
 
         // ---------------------------
         // Show current slide 
@@ -349,6 +376,8 @@
             }
 
             const data = await getJSON('@Url.Action("GetKpiPresentation", "RedBoard")?kpiId=' + slide.kpiId);
+            await loadYearPlanCommentReadOnly(data?.meta?.planId);
+
             $('m_title').innerText = data?.meta?.title ?? '—';
             // Extract only the KPI code from slide.code
             let cleanCode = "—";
@@ -664,11 +693,11 @@
             const btns = document.createElement('div');
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
-                                            <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeUp(this)">↑</button>
-                                            <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeDown(this)">↓</button>
-                                            <button type="button" class="btn btn-outline-danger" onclick="removeFromSelected(this)">✕</button>
-                                            <button type="button" class="btn btn-outline-warning" onclick="hideFromSelected(this)">Hide</button>
-                                        `;
+                                                    <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeUp(this)">↑</button>
+                                                    <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeDown(this)">↓</button>
+                                                    <button type="button" class="btn btn-outline-danger" onclick="removeFromSelected(this)">✕</button>
+                                                    <button type="button" class="btn btn-outline-warning" onclick="hideFromSelected(this)">Hide</button>
+                                                `;
 
             li.appendChild(info);
             li.appendChild(btns);
@@ -694,9 +723,9 @@
             const btns = document.createElement('div');
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
-                                            <button type="button" class="btn btn-outline-primary" onclick="addToSelected(this)">Add</button>
-                                            <button type="button" class="btn btn-outline-warning" onclick="hideFromAvailable(this)">Hide</button>
-                                        `;
+                                                    <button type="button" class="btn btn-outline-primary" onclick="addToSelected(this)">Add</button>
+                                                    <button type="button" class="btn btn-outline-warning" onclick="hideFromAvailable(this)">Hide</button>
+                                                `;
 
             li.appendChild(info);
             li.appendChild(btns);
@@ -722,8 +751,8 @@
             const btns = document.createElement('div');
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
-                                            <button type="button" class="btn btn-outline-success" onclick="unhideIndicator(this)">Unhide</button>
-                                        `;
+                                                    <button type="button" class="btn btn-outline-success" onclick="unhideIndicator(this)">Unhide</button>
+                                                `;
 
             li.appendChild(info);
             li.appendChild(btns);
@@ -1030,6 +1059,18 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+            <!-- ======= Comments (read-only) ======= -->
+            <div class="card shadow-sm rounded-4 mt-3 mb-4" id="commentsCard">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="m-0 text-secondary">Comments</h6>
+                    </div>
+
+                    <div id="commentRead" class="text-muted" style="white-space: pre-wrap;">
+                        Select a KPI to view comments.
                     </div>
                 </div>
             </div>

@@ -253,6 +253,20 @@ namespace KPIMonitor.Controllers
                 "attente" => ("Data Missing", "#0d6efd"),
                 _ => ("—", "")
             };
+            // ✅ Determine final period value for the plan year:
+            // Monthly => Dec, Quarterly => Q4. Prefer Actual, else Forecast.
+            bool isMonthly = facts.Any(f => f.Period?.MonthNum != null);
+
+            var finalFact = isMonthly
+                ? facts.LastOrDefault(f => f.Period?.MonthNum == 12)
+                : facts.LastOrDefault(f => f.Period?.QuarterNum == 4);
+
+            decimal? finalPeriodValue = null;
+            if (finalFact != null)
+            {
+                if (finalFact.ActualValue.HasValue) finalPeriodValue = finalFact.ActualValue.Value;
+                else if (finalFact.ForecastValue.HasValue) finalPeriodValue = finalFact.ForecastValue.Value;
+            }
 
             // five-year targets (bars to the right)
             var fy = await _db.KpiFiveYearTargets
@@ -264,9 +278,25 @@ namespace KPIMonitor.Controllers
             var yearTargets = new List<object>();
             if (fy != null)
             {
-                void Add(int off, decimal? v) { if (v.HasValue) yearTargets.Add(new { year = fy.BaseYear + off, value = v.Value }); }
-                Add(0, fy.Period1Value); Add(1, fy.Period2Value); Add(2, fy.Period3Value); Add(3, fy.Period4Value); Add(4, fy.Period5Value);
+                void Add(int off, decimal? v)
+                {
+                    var year = fy.BaseYear + off;
+
+                    // ✅ If final period exists for the plan year, use it instead of the year target
+                    if (year == planYear && finalPeriodValue.HasValue)
+                        v = finalPeriodValue.Value;
+
+                    if (v.HasValue)
+                        yearTargets.Add(new { year, value = v.Value });
+                }
+
+                Add(0, fy.Period1Value);
+                Add(1, fy.Period2Value);
+                Add(2, fy.Period3Value);
+                Add(3, fy.Period4Value);
+                Add(4, fy.Period5Value);
             }
+
 
             string fmt(DateTime? d) => d?.ToString("yyyy-MM-dd") ?? "—";
             var table = facts.Select(f => new
@@ -285,6 +315,8 @@ namespace KPIMonitor.Controllers
             var kpi = await _db.DimKpis.AsNoTracking().FirstOrDefaultAsync(x => x.KpiId == kpiId);
             var meta = new
             {
+                planId = plan.KpiYearPlanId, // THIS (so frontend can fetch the comment)
+
                 title = kpi?.KpiName ?? "—",
                 code = kpi?.KpiCode ?? "—",
                 owner = plan.Owner ?? "—",
@@ -336,20 +368,6 @@ namespace KPIMonitor.Controllers
             return Ok(new { ok = true });
         }
 
-        // [HttpGet]
-        // public async Task<IActionResult> ActionsList(decimal kpiId)
-        // {
-        //     var list = await _db.KpiActions
-        //         .AsNoTracking()
-        //         .Where(a => a.KpiId == kpiId)
-        //         .OrderBy(a => a.StatusCode)
-        //         .ThenBy(a => a.DueDate)
-        //         .ToListAsync();
-
-        //     ViewBag.KpiId = kpiId;
-        //     return PartialView("_ActionsList", list);
-        // }
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> MoveDeadline(decimal actionId, DateTime newDueDate, string? reason)
@@ -394,23 +412,6 @@ namespace KPIMonitor.Controllers
             return Ok(new { ok = true });
         }
 
-        // Final "Decisions" board for the current run (three columns by status)
-        // [HttpPost]
-        // public async Task<IActionResult> DecisionsBoard([FromBody] decimal[] kpiIds)
-        // {
-        //     var actions = await _db.KpiActions
-        //         .AsNoTracking()
-        //         .Where(a => kpiIds.Contains(a.KpiId))
-        //         .OrderBy(a => a.StatusCode).ThenBy(a => a.DueDate)
-        //         .ToListAsync();
-
-        //     var todo = actions.Where(a => a.StatusCode == "todo").ToList();
-        //     var prog = actions.Where(a => a.StatusCode == "inprogress").ToList();
-        //     var done = actions.Where(a => a.StatusCode == "done").ToList();
-
-        //     ViewBag.Total = actions.Count;
-        //     return PartialView("_DecisionsBoard", (todo, prog, done));
-        // }
         // ---------- HTML (no partials, no JSON) ----------
 
         [HttpGet]
