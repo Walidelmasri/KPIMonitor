@@ -58,7 +58,7 @@
 
   /* =========================
      Summary counters (left/right of pies)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ========================= */
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ========================= */
   #summaryCard .kpi {
     display: flex;
     align-items: center;
@@ -525,14 +525,20 @@
 
   <script>
     /* ========= Utilities ========= */
-    function _fmtShort(v) {
+    @* function _fmtShort(v) {
       const n = Number(v); if (!isFinite(n)) return '';
       const a = Math.abs(n);
       if (a >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
       if (a >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
       if (a >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
       return n.toString();
-    }
+    } *@
+      function _fmtShort(v) {
+        const n = Number(v);
+        if (!isFinite(n)) return '';
+        return n.toLocaleString();
+      }
+
     Chart.defaults.font.family = 'Tajawal, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
     Chart.defaults.font.size = 12;
 
@@ -1238,7 +1244,7 @@
       const color = (res?.meta?.statusColor || '');
       metaStatus.textContent = uiStatus(raw); metaStatus.className = 'status-pill'; if (color) metaStatus.style.background = color;
 
-      const baseLabels = res?.chart?.labels || [];
+      @* const baseLabels = res?.chart?.labels || [];
       const actual = res?.chart?.actual || [];
       const target = res?.chart?.target || [];
       const forecast = res?.chart?.forecast || [];
@@ -1264,6 +1270,45 @@
 
       // Purple year actual (only plan year point)
       kpiChart.data.datasets[4].data = leftNulls.concat(yearActualVals);
+
+      kpiChart.update(); *@
+  // --- PERIOD series (unchanged) ---
+  const baseLabels = res?.chart?.labels || [];
+      const actual = res?.chart?.actual || [];
+      const target = res?.chart?.target || [];
+      const forecast = res?.chart?.forecast || [];
+
+      // --- YEAR target/actual source ---
+      const yrArr = Array.isArray(res?.chart?.yearTargets) ? res.chart.yearTargets : [];
+
+      // 1) Keep ONLY period labels (do NOT append year labels)
+      kpiChart.data.labels = baseLabels;
+
+      // 2) Keep the 3 main series exactly as-is (no padding)
+      kpiChart.data.datasets[0].data = actual;
+      kpiChart.data.datasets[1].data = target;
+      kpiChart.data.datasets[2].data = forecast;
+
+      // 3) Place Year Target / Year Actual on the FINAL period
+      const lastIdx = Math.max(0, baseLabels.length - 1);
+
+      // build arrays that match period-length and default to null
+      const yearTargetOnLast = new Array(baseLabels.length).fill(null);
+      const yearActualOnLast = new Array(baseLabels.length).fill(null);
+
+      // pick values from yrArr (your API already marks isActual)
+      const yearTargetVal = yrArr.find(y => !y?.isActual)?.value ?? null;
+      const yearActualVal = yrArr.find(y => y?.isActual)?.value ?? null;
+
+      // set them ONLY at the final period
+      if (baseLabels.length > 0) {
+        yearTargetOnLast[lastIdx] = yearTargetVal;
+        yearActualOnLast[lastIdx] = yearActualVal;
+      }
+
+      // push into datasets 3 & 4 (same datasets you already have)
+      kpiChart.data.datasets[3].data = yearTargetOnLast;
+      kpiChart.data.datasets[4].data = yearActualOnLast;
 
       kpiChart.update();
 
