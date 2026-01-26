@@ -1244,7 +1244,7 @@
       const color = (res?.meta?.statusColor || '');
       metaStatus.textContent = uiStatus(raw); metaStatus.className = 'status-pill'; if (color) metaStatus.style.background = color;
 
-      @* const baseLabels = res?.chart?.labels || [];
+      const baseLabels = res?.chart?.labels || [];
       const actual = res?.chart?.actual || [];
       const target = res?.chart?.target || [];
       const forecast = res?.chart?.forecast || [];
@@ -1271,9 +1271,9 @@
       // Purple year actual (only plan year point)
       kpiChart.data.datasets[4].data = leftNulls.concat(yearActualVals);
 
-      kpiChart.update(); *@
+      kpiChart.update();
   // --- PERIOD series (unchanged) ---
-  const baseLabels = res?.chart?.labels || [];
+  @* const baseLabels = res?.chart?.labels || [];
       const actual = res?.chart?.actual || [];
       const target = res?.chart?.target || [];
       const forecast = res?.chart?.forecast || [];
@@ -1310,7 +1310,7 @@
       kpiChart.data.datasets[3].data = yearTargetOnLast;
       kpiChart.data.datasets[4].data = yearActualOnLast;
 
-      kpiChart.update();
+      kpiChart.update(); *@
 
 
       const rows = res?.table || [];
