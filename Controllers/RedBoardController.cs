@@ -285,11 +285,11 @@ namespace KPIMonitor.Controllers
                     var isActual = false;
 
                     // ✅ If final period exists for the plan year, use it instead of the year target
-                    if (year == planYear && finalPeriodValue.HasValue)
-                    {
-                        v = finalPeriodValue.Value;
-                        isActual = true; // 👈 THIS is the missing piece
-                    }
+                    // if (year == planYear && finalPeriodValue.HasValue)
+                    // {
+                    //     v = finalPeriodValue.Value;
+                    //     isActual = true; // 👈 THIS is the missing piece
+                    // }
 
                     if (v.HasValue)
                         yearTargets.Add(new { year, value = v.Value, isActual }); // 👈 ADD isActual

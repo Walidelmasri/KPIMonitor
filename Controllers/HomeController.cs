@@ -346,11 +346,11 @@ namespace KPIMonitor.Controllers
                     var year = fy.BaseYear + offset;
 
                     // If this is the plan year and we have final period value, override + mark as actual
-                    if (year == planYear && finalPeriodValue.HasValue)
-                    {
-                        yearTargets.Add(new { year, value = finalPeriodValue.Value, isActual = true });
-                        return;
-                    }
+                    // if (year == planYear && finalPeriodValue.HasValue)
+                    // {
+                    //     yearTargets.Add(new { year, value = finalPeriodValue.Value, isActual = true });
+                    //     return;
+                    // }
 
                     if (v.HasValue)
                         yearTargets.Add(new { year, value = v.Value, isActual = false });
