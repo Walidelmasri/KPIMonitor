@@ -44,12 +44,14 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         o.Cookie.Name = "KpiMonitorAuthProd";
         o.Cookie.HttpOnly = true;
         o.Cookie.SameSite = SameSiteMode.Lax;
-        o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        // o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
         o.LoginPath = "/Account/Login";
         o.LogoutPath = "/Account/Logout";
         o.AccessDeniedPath = "/Account/AccessDenied";
+        // o.SlidingExpiration = false;
+        o.SlidingExpiration = true;
         o.ExpireTimeSpan = TimeSpan.FromMinutes(30);
-        o.SlidingExpiration = false;
     });
 
 // Global requirement: must be authenticated + in Steervision
