@@ -149,26 +149,40 @@ namespace KPIMonitor.Controllers
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            if (cleanedOwners.Count > 0)
+            foreach (var empId in cleanedOwners)
             {
-                foreach (var empId in cleanedOwners)
+                var pick = await _empDir.TryGetByEmpIdAsync(empId);
+                var ownerName = (pick?.NameEng ?? "").Trim();
+
+                if (!string.IsNullOrWhiteSpace(ownerName))
                 {
-                    _db.KpiActionOwners.Add(new KPIMonitor.Models.KpiActionOwner
-                    {
-                        ActionId = vm.ActionId,
-                        OwnerEmpId = empId,
-                        CreatedBy = vm.CreatedBy,
-                        CreatedDate = DateTime.UtcNow
-                    });
+                    var idx = ownerName.IndexOf('(');
+                    if (idx > 0) ownerName = ownerName.Substring(0, idx).Trim();
                 }
 
-                // UI normally sends "FirstName (+N)" in vm.Owner. If missing, fallback.
-                if (string.IsNullOrWhiteSpace(vm.Owner))
-                    vm.Owner = cleanedOwners[0] + (cleanedOwners.Count > 1 ? $" (+{cleanedOwners.Count - 1})" : "");
+                _db.KpiActionOwners.Add(new KpiActionOwner
+                {
+                    ActionId = vm.ActionId,
+                    OwnerEmpId = empId,
+                    OwnerName = string.IsNullOrWhiteSpace(ownerName) ? null : ownerName,
+                    CreatedBy = vm.CreatedBy,
+                    CreatedDate = DateTime.UtcNow
+                });
+            }
 
-                _db.KpiActions.Update(vm);
+            // Make sure the tile display string is correct (First (+N))
+            if (cleanedOwners.Count > 0)
+            {
+                var firstOwner = _db.KpiActionOwners.Local.FirstOrDefault();
+                var firstName = firstOwner?.OwnerName;
+
+                vm.Owner = cleanedOwners.Count > 1
+                    ? $"{(string.IsNullOrWhiteSpace(firstName) ? cleanedOwners[0] : firstName)} (+{cleanedOwners.Count - 1})"
+                    : (string.IsNullOrWhiteSpace(firstName) ? cleanedOwners[0] : firstName);
+
                 await _db.SaveChangesAsync();
             }
+
 
             // AJAX-friendly
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
