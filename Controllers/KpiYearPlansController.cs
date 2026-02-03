@@ -5,6 +5,9 @@ using KPIMonitor.Data;
 using KPIMonitor.Models;
 using KPIMonitor.Services;
 using System.Threading;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace KPIMonitor.Controllers
 {
@@ -12,6 +15,169 @@ namespace KPIMonitor.Controllers
     {
         private readonly AppDbContext _db;
         public KpiYearPlansController(AppDbContext db) => _db = db;
+
+        // --------- Clone Year Plans (admin utility) ---------
+
+        [HttpGet]
+        [Microsoft.AspNetCore.Authorization.Authorize(Policy = "AdminOnly")]
+        public async Task<IActionResult> CloneModal(CancellationToken ct)
+        {
+            // Year periods
+            var years = await _db.DimPeriods
+                .AsNoTracking()
+                .Where(p => p.IsActive == 1 && p.MonthNum == null && p.QuarterNum == null)
+                .OrderBy(p => p.Year)
+                .Select(p => new { p.PeriodId, Label = "Year " + p.Year })
+                .ToListAsync(ct);
+            ViewBag.YearPeriods = new SelectList(years, "PeriodId", "Label");
+
+            // Pillars
+            var pillars = await _db.DimPillars
+                .AsNoTracking()
+                .OrderBy(p => p.PillarCode)
+                .Select(p => new { p.PillarId, Name = p.PillarCode + " — " + p.PillarName })
+                .ToListAsync(ct);
+            ViewBag.Pillars = new SelectList(pillars, "PillarId", "Name");
+
+            // KPIs
+            var kpis = await _db.DimKpis
+                .AsNoTracking()
+                .Where(k => k.IsActive == 1)
+                .OrderBy(k => k.KpiCode)
+                .Select(k => new { k.KpiId, Label = k.KpiCode + " — " + k.KpiName })
+                .ToListAsync(ct);
+            ViewBag.Kpis = new SelectList(kpis, "KpiId", "Label");
+
+            return PartialView("_KpiYearPlanCloneModal");
+        }
+
+        public sealed class CloneRequest
+        {
+            public string Scope { get; set; } = "kpi";          // "kpi" | "pillar"
+            public decimal SourceYearPeriodId { get; set; }
+            public decimal TargetYearPeriodId { get; set; }
+            public decimal? KpiId { get; set; }
+            public decimal? PillarId { get; set; }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Clone([FromForm] CloneRequest req, CancellationToken ct)
+        {
+            if (req.SourceYearPeriodId == req.TargetYearPeriodId)
+                return BadRequest("Source year and target year must be different.");
+
+            // Validate YEAR periods
+            async Task<bool> IsYearPeriod(decimal pid) => await _db.DimPeriods
+                .AsNoTracking()
+                .AnyAsync(p => p.PeriodId == pid && p.MonthNum == null && p.QuarterNum == null, ct);
+
+            if (!await IsYearPeriod(req.SourceYearPeriodId) || !await IsYearPeriod(req.TargetYearPeriodId))
+                return BadRequest("Invalid year period selection.");
+
+            // Determine KPI scope
+            List<decimal> kpiIds;
+            if (string.Equals(req.Scope, "pillar", StringComparison.OrdinalIgnoreCase))
+            {
+                if (req.PillarId == null) return BadRequest("Pillar is required.");
+
+                kpiIds = await _db.DimKpis
+                    .AsNoTracking()
+                    .Where(k => k.IsActive == 1 && k.PillarId == req.PillarId.Value)
+                    .Select(k => k.KpiId)
+                    .ToListAsync(ct);
+
+                if (kpiIds.Count == 0)
+                    return Json(new { ok = true, created = 0, skipped = 0, failed = 0, details = Array.Empty<object>() });
+            }
+            else
+            {
+                if (req.KpiId == null) return BadRequest("KPI is required.");
+                kpiIds = new List<decimal> { req.KpiId.Value };
+            }
+
+            // Load source & target plans for these KPIs
+            var sourcePlans = await _db.KpiYearPlans
+                .AsNoTracking()
+                .Where(p => p.PeriodId == req.SourceYearPeriodId && kpiIds.Contains(p.KpiId))
+                .ToListAsync(ct);
+
+            var targetPlansExisting = await _db.KpiYearPlans
+                .AsNoTracking()
+                .Where(p => p.PeriodId == req.TargetYearPeriodId && kpiIds.Contains(p.KpiId))
+                .Select(p => p.KpiId)
+                .ToListAsync(ct);
+
+            var targetSet = targetPlansExisting.ToHashSet();
+            var sourceMap = sourcePlans.ToDictionary(p => p.KpiId, p => p);
+
+            int created = 0, skipped = 0, failed = 0;
+            var details = new List<object>();
+
+            var who = User?.Identity?.Name ?? "system";
+            var now = DateTime.UtcNow;
+
+            foreach (var kpiId in kpiIds)
+            {
+                if (!sourceMap.TryGetValue(kpiId, out var src))
+                {
+                    failed++;
+                    details.Add(new { kpiId, status = "failed", reason = "No source year plan" });
+                    continue;
+                }
+
+                if (targetSet.Contains(kpiId))
+                {
+                    skipped++;
+                    details.Add(new { kpiId, status = "skipped", reason = "Target year plan already exists" });
+                    continue;
+                }
+
+                // Copy every plan field 1:1, only swap PeriodId + audit fields
+                var clone = new KpiYearPlan
+                {
+                    KpiId = src.KpiId,
+                    PeriodId = req.TargetYearPeriodId,
+
+                    Frequency = src.Frequency,
+                    AnnualTarget = src.AnnualTarget,
+                    AnnualBudget = src.AnnualBudget,
+                    Priority = src.Priority,
+                    Owner = src.Owner,
+                    Editor = src.Editor,
+                    OwnerLogin = src.OwnerLogin,
+                    EditorLogin = src.EditorLogin,
+                    Unit = src.Unit,
+                    TargetDirection = src.TargetDirection,
+                    IsActive = src.IsActive,
+
+                    OwnerEmpId = src.OwnerEmpId,
+                    EditorEmpId = src.EditorEmpId,
+                    Editor2EmpId = src.Editor2EmpId,
+                    Editor2 = src.Editor2,
+
+                    CreatedBy = who,
+                    LastChangedBy = who,
+                    CreatedDate = now
+                };
+
+                _db.KpiYearPlans.Add(clone);
+                created++;
+                details.Add(new { kpiId, status = "created" });
+            }
+
+            try
+            {
+                if (created > 0)
+                    await _db.SaveChangesAsync(ct);
+
+                return Json(new { ok = true, created, skipped, failed, details });
+            }
+            catch (DbUpdateException ex)
+            {
+                return StatusCode(500, "Clone failed: " + ex.Message);
+            }
+        }
 
         // GET: /KpiYearPlans
         public async Task<IActionResult> Index(int? year, decimal? pillarId)

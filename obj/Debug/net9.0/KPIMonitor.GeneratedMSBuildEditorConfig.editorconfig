@@ -142,6 +142,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpWWVhclBsYW5zL0luZGV4LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[/Users/walidsalem/BADEA/KPIMonitor/Views/KpiYearPlans/_KpiYearPlanCloneModal.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpWWVhclBsYW5zL19LcGlZZWFyUGxhbkNsb25lTW9kYWwuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [/Users/walidsalem/BADEA/KPIMonitor/Views/KpiYearPlans/_KpiYearPlanEditModal.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3MvS3BpWWVhclBsYW5zL19LcGlZZWFyUGxhbkVkaXRNb2RhbC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 

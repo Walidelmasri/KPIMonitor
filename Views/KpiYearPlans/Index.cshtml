@@ -57,6 +57,8 @@
 
             <div class="col ms-auto text-end">
                 <a class="btn btn-primary rounded-4" asp-admin-only href="@Url.Action("Create")">➕ New Year Plan</a>
+                <button type="button" class="btn btn-outline-primary rounded-4 ms-2" asp-admin-only onclick="openClonePlans()">Clone Year Plans</button>
+
             </div>
         </div>
 
@@ -139,11 +141,113 @@
 
         <!-- Modal host (content loaded via AJAX) -->
         <div id="planEditHost"></div>
+        <div id="planCloneHost"></div>
+
     </div>
 </div>
 
 @section Scripts {
 <script>
+async function openClonePlans(){
+  const host = document.getElementById('planCloneHost');
+  host.innerHTML = "<div class='modal fade show' style='display:block'><div class='modal-dialog'><div class='modal-content p-4 text-center'>Loading…</div></div></div>";
+
+  try {
+    const url = '@Url.Action("CloneModal","KpiYearPlans")';
+    const html = await fetch(url, { headers: { 'Accept': 'text/html' } }).then(r => r.text());
+    host.innerHTML = html;
+
+    const modalEl = document.getElementById('planCloneModal');
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+
+    const form = document.getElementById('planCloneForm');
+    const btn = document.getElementById('cloneBtn');
+    const spinner = document.getElementById('cloneSpinner');
+    const result = document.getElementById('cloneResult');
+    const kpiRow = document.getElementById('cloneKpiRow');
+    const pillarRow = document.getElementById('clonePillarRow');
+
+    const anti = () => (form.querySelector('input[name="__RequestVerificationToken"]')?.value || '');
+
+    const syncScope = () => {
+      const scope = (form.querySelector('input[name="scope"]:checked')?.value || 'kpi');
+      if (scope === 'pillar') {
+        pillarRow.classList.remove('d-none');
+        kpiRow.classList.add('d-none');
+      } else {
+        kpiRow.classList.remove('d-none');
+        pillarRow.classList.add('d-none');
+      }
+      if (result) result.classList.add('d-none');
+    };
+
+    form.querySelectorAll('input[name="scope"]').forEach(x => x.addEventListener('change', syncScope));
+    syncScope();
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const fd = new FormData(form);
+      const scope = (fd.get('scope') || 'kpi').toString();
+      if (scope === 'kpi' && !fd.get('kpiId')) { alert('Select a KPI.'); return; }
+      if (scope === 'pillar' && !fd.get('pillarId')) { alert('Select a Pillar.'); return; }
+
+      btn.disabled = true;
+      spinner.classList.remove('d-none');
+
+      try {
+        const res = await fetch('@Url.Action("Clone","KpiYearPlans")', {
+          method: 'POST',
+          body: fd,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'RequestVerificationToken': anti()
+          },
+          credentials: 'same-origin'
+        });
+
+        if (!res.ok) {
+          const txt = await res.text().catch(()=> '');
+          alert('Clone failed: ' + (txt || res.status));
+          return;
+        }
+
+        const data = await res.json().catch(()=> ({}));
+
+        if (result) {
+          result.classList.remove('d-none');
+          result.innerHTML = `
+            <div class="alert alert-success rounded-4 mb-0">
+              <div class="fw-semibold">Done</div>
+              <div class="small">Created <strong>${data.created ?? 0}</strong>, Skipped <strong>${data.skipped ?? 0}</strong>, Failed <strong>${data.failed ?? 0}</strong>.</div>
+            </div>`;
+        }
+
+        // Refresh the table without leaving the page
+        const pageHtml = await fetch(window.location.href, { headers: { 'Accept': 'text/html' } }).then(r => r.text());
+        const doc = new DOMParser().parseFromString(pageHtml, 'text/html');
+        const newTbody = doc.querySelector('table tbody');
+        const currentTbody = document.querySelector('table tbody');
+        if (newTbody && currentTbody) currentTbody.innerHTML = newTbody.innerHTML;
+
+      } catch (err) {
+        console.error('[ClonePlans] ERROR', err);
+        alert('Clone failed. Check console for details.');
+      } finally {
+        spinner.classList.add('d-none');
+        btn.disabled = false;
+      }
+    }, { once: true });
+
+  } catch (err) {
+    host.innerHTML = '';
+    console.error('[ClonePlans] ERROR loading modal', err);
+    alert('Failed to load clone modal.');
+  }
+}
+
 async function openPlanEdit(id){
   const host = document.getElementById('planEditHost');
 
