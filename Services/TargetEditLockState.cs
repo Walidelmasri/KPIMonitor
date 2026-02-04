@@ -119,16 +119,21 @@ SELECT FLAG_VALUE
             await using var con = new OracleConnection(_connStr);
             await con.OpenAsync(ct);
 
+            await using var tx = con.BeginTransaction(); // ✅ IMPORTANT (so we can COMMIT)
+
             // flip 0/1
             await using (var cmd = con.CreateCommand())
             {
+                cmd.Transaction = tx; // ✅ bind command to transaction
+
                 cmd.CommandText = @"
 UPDATE APP_FEATURE_FLAGS
    SET FLAG_VALUE = CASE WHEN FLAG_VALUE = 1 THEN 0 ELSE 1 END,
        UPDATED_BY = :u,
        UPDATED_AT = SYSDATE
  WHERE FLAG_KEY = :k";
-                cmd.Parameters.Add(new OracleParameter("u", updatedBy ?? "system"));
+
+                cmd.Parameters.Add(new OracleParameter("u", string.IsNullOrWhiteSpace(updatedBy) ? "system" : updatedBy));
                 cmd.Parameters.Add(new OracleParameter("k", FlagKey));
 
                 var rows = await cmd.ExecuteNonQueryAsync(ct);
@@ -136,8 +141,11 @@ UPDATE APP_FEATURE_FLAGS
                     throw new InvalidOperationException("TARGET_EDIT_UNLOCKED row not found or not unique.");
             }
 
-            // read back
+            await tx.CommitAsync(ct); // ✅ THIS is what makes it persistent
+
+            // read back (new session state is committed already, but this is fine)
             return await ReadDbAsync(ct);
         }
+
     }
 }

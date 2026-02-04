@@ -58,7 +58,7 @@
 
   /* =========================
      Summary counters (left/right of pies)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ========================= */
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ========================= */
   #summaryCard .kpi {
     display: flex;
     align-items: center;
@@ -457,10 +457,19 @@
   <!-- KPI-level Edit Button -->
   <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
     <h6 class="m-0 text-secondary">Facts</h6>
-    <button id="openEditKpiBtn" class="btn btn-primary btn-sm" disabled>
-      Edit Data (Actual & Forecast)
-    </button>
+
+    <div class="d-flex gap-2 align-items-center">
+      <!-- Global Target Lock Toggle (Super Admin only) -->
+      <button asp-admin-only id="btnToggleTargetLock" type="button" class="btn btn-outline-secondary btn-sm d-none">
+        Loading target lock…
+      </button>
+
+      <button id="openEditKpiBtn" class="btn btn-primary btn-sm" disabled>
+        Edit Data (Actual & Forecast)
+      </button>
+    </div>
   </div>
+
 
   <!-- Data Table -->
   <div class="table-responsive shadow-sm rounded-4 mt-4">
@@ -1272,8 +1281,8 @@
       kpiChart.data.datasets[4].data = leftNulls.concat(yearActualVals);
 
       kpiChart.update();
-  // --- PERIOD series (unchanged) ---
-  @* const baseLabels = res?.chart?.labels || [];
+      // --- PERIOD series (unchanged) ---
+      @* const baseLabels = res?.chart?.labels || [];
       const actual = res?.chart?.actual || [];
       const target = res?.chart?.target || [];
       const forecast = res?.chart?.forecast || [];
@@ -1313,7 +1322,7 @@
       kpiChart.update(); *@
 
 
-      const rows = res?.table || [];
+        const rows = res?.table || [];
       if (!rows.length) {
         tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No facts for this plan/year.</td></tr>';
       } else {
@@ -1379,11 +1388,70 @@
         } catch (err) { alert(err?.message || 'Failed to update status'); }
       });
     }
+/* ===== Admin: Target Lock Toggle ===== */
+const btnToggleTargetLock = byId('btnToggleTargetLock');
+
+async function refreshTargetLockButton() {
+  if (!btnToggleTargetLock) return;
+
+  try {
+    // If not super admin, your endpoint should return 403.
+    const res = await fetch('@Url.Action("GetTargetLockState", "Home")', {
+      headers: { 'Accept': 'application/json' },
+      cache: 'no-store'
+    });
+
+    if (res.status === 403) {
+      btnToggleTargetLock.classList.add('d-none');
+      return;
+    }
+
+    if (!res.ok) throw new Error('Failed to load target lock');
+
+    const data = await res.json();
+    const unlocked = !!data.unlocked;
+
+    btnToggleTargetLock.textContent = unlocked
+      ? 'Lock Targets (stop editing)'
+      : 'Unlock Targets (allow editing)';
+
+    btnToggleTargetLock.classList.remove('d-none');
+  } catch {
+    // If something fails, hide to avoid confusing UI
+    btnToggleTargetLock.classList.add('d-none');
+  }
+}
+
+btnToggleTargetLock?.addEventListener('click', async () => {
+  try {
+    btnToggleTargetLock.disabled = true;
+
+    const res = await fetch('@Url.Action("ToggleTargetLock", "Home")', {
+      method: 'POST',
+      cache: 'no-store'
+    });
+
+    if (res.status === 403) {
+      alert('Super Admin only.');
+      return;
+    }
+
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data?.error || 'Toggle failed');
+
+    await refreshTargetLockButton();
+  } catch (e) {
+    alert(e?.message || 'Failed to toggle target lock.');
+  } finally {
+    btnToggleTargetLock.disabled = false;
+  }
+});
+
 
     /* ===== Init ===== */
     function getQS(name) { const u = new URL(window.location.href); return u.searchParams.get(name); }
     async function initPage() {
-      loadSummary(); loadRoleSummary(); await loadPillars();
+      loadSummary(); loadRoleSummary(); await loadPillars();  refreshTargetLockButton(); // <-- add this
       const qP = getQS('pillarId'), qO = getQS('objectiveId'), qK = getQS('kpiId');
       if (qP) { selPillar.value = qP; selPillar.dispatchEvent(new Event('change')); }
       if (qO) { await new Promise(r => setTimeout(r, 150)); selObjective.value = qO; selObjective.dispatchEvent(new Event('change')); }

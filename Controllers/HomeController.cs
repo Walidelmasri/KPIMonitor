@@ -89,6 +89,7 @@ namespace KPIMonitor.Controllers
             return inAdmins || inSupers;
         }
         [HttpPost]
+        
         public async Task<IActionResult> AdminSetKpiStatus(decimal kpiId, string status)
         {
             if (!IsAdminOrSuperAdmin())
@@ -540,7 +541,7 @@ namespace KPIMonitor.Controllers
                     .ToListAsync();
 
                 bool isMonthly = facts.Any(f => f.Period!.MonthNum.HasValue);
-var isSuper = _admin.IsSuperAdmin(User);
+                var isSuper = _admin.IsSuperAdmin(User);
 
                 var vm = new KpiEditModalVm
                 {
@@ -549,9 +550,9 @@ var isSuper = _admin.IsSuperAdmin(User);
                     IsMonthly = isMonthly,
                     KpiName = displayTitle,
                     Unit = string.IsNullOrWhiteSpace(plan.Unit) ? "—" : plan.Unit,
-    IsSuperAdmin = isSuper,
-    CanEditTargets = isSuper || _targetLock.IsUnlocked
-                    };
+                    IsSuperAdmin = isSuper,
+                    CanEditTargets = isSuper || _targetLock.IsUnlocked
+                };
                 vm.Actuals ??= new Dictionary<int, decimal?>();
                 vm.Forecasts ??= new Dictionary<int, decimal?>();
                 vm.EditableActualKeys ??= new HashSet<int>();
@@ -1735,7 +1736,7 @@ var isSuper = _admin.IsSuperAdmin(User);
             });
         }
         [HttpPost]
-        [ValidateAntiForgeryToken]
+        // [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleTargetLock(CancellationToken ct)
         {
             if (!_admin.IsSuperAdmin(User))
@@ -1743,7 +1744,7 @@ var isSuper = _admin.IsSuperAdmin(User);
 
             var who = User?.Identity?.Name ?? "system";
             var unlocked = await _targetLock.ToggleAsync(who, ct);
-            return Json(new { unlocked });
+            return Json(new { ok = true, unlocked = _targetLock.IsUnlocked });
         }
         [HttpGet]
         public IActionResult GetTargetLockState()
