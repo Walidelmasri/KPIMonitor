@@ -36,12 +36,13 @@ builder.Services.AddScoped<IKpiFactChangeBatchService, KpiFactChangeBatchService
 builder.Services.AddScoped<IKpiStatusService, KpiStatusService>();
 builder.Services.AddScoped<IEmailSender, EmailSenderService>();
 builder.Services.AddScoped<IAdAuthenticator, LdapAdAuthenticator>();
+builder.Services.AddSingleton<TargetEditLockState>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>
     {
         //Remove dev for prod server
-        o.Cookie.Name = "KpiMonitorAuthProd";
+        o.Cookie.Name = "KpiMonitorAuthDev";
         o.Cookie.HttpOnly = true;
         o.Cookie.SameSite = SameSiteMode.Lax;
         // o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
@@ -104,5 +105,6 @@ PeriodEditPolicy.Configure(app.Services.GetRequiredService<IAdminAuthorizer>());
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Account}/{action=Login}/{id?}");
+await app.Services.GetRequiredService<TargetEditLockState>().WarmUpAsync(CancellationToken.None);
 
 app.Run();

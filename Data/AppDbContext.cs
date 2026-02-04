@@ -23,6 +23,7 @@ namespace KPIMonitor.Data
         public DbSet<KpiYearPlanComment> KpiYearPlanComments { get; set; } = default!;
         public DbSet<KpiActionOwner> KpiActionOwners { get; set; } = default!;
         public DbSet<KpiActionComment> KpiActionComments { get; set; } = default!;
+        public DbSet<TargetEditLockSetting> TargetEditLockSettings => Set<TargetEditLockSetting>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -44,6 +45,15 @@ namespace KPIMonitor.Data
                 // Optional: reflect DB default for CreatedDate (won’t auto-populate back unless reloaded)
                 // e.Property(p => p.CreatedDate).HasDefaultValueSql("SYSTIMESTAMP");
             });
+            modelBuilder.Entity<TargetEditLockSetting>(e =>
+{
+    e.ToTable("TARGET_EDIT_LOCK_SETTINGS");
+    e.HasKey(x => x.Id);
+    e.Property(x => x.IsUnlocked).HasColumnName("IS_UNLOCKED");
+    e.Property(x => x.ChangedBy).HasColumnName("CHANGED_BY");
+    e.Property(x => x.ChangedAtUtc).HasColumnName("CHANGED_AT_UTC");
+});
+
             modelBuilder.Entity<DimObjective>(e =>
             {
                 e.ToTable("DIMOBJECTIVE");

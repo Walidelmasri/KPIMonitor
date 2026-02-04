@@ -21,6 +21,7 @@ namespace KPIMonitor.Controllers
         private readonly global::IAdminAuthorizer _admin;
         private readonly IEmployeeDirectory _dir;
         private readonly IConfiguration _cfg;
+        private readonly TargetEditLockState _targetLock; // ✅ ADD
 
         public HomeController(
             ILogger<HomeController> logger,
@@ -28,8 +29,8 @@ namespace KPIMonitor.Controllers
             IKpiAccessService acl,
             global::IAdminAuthorizer admin,
             IEmployeeDirectory dir,
-            IConfiguration cfg)
-
+            IConfiguration cfg,
+            TargetEditLockState targetLock) // ✅ ADD
         {
             _logger = logger;
             _db = db;
@@ -37,7 +38,9 @@ namespace KPIMonitor.Controllers
             _admin = admin;
             _dir = dir;
             _cfg = cfg;
+            _targetLock = targetLock; // ✅ ADD
         }
+
 
         // --------------------------
         // helpers
@@ -537,6 +540,7 @@ namespace KPIMonitor.Controllers
                     .ToListAsync();
 
                 bool isMonthly = facts.Any(f => f.Period!.MonthNum.HasValue);
+var isSuper = _admin.IsSuperAdmin(User);
 
                 var vm = new KpiEditModalVm
                 {
@@ -545,8 +549,9 @@ namespace KPIMonitor.Controllers
                     IsMonthly = isMonthly,
                     KpiName = displayTitle,
                     Unit = string.IsNullOrWhiteSpace(plan.Unit) ? "—" : plan.Unit,
-                    IsSuperAdmin = _admin.IsSuperAdmin(User)
-                };
+    IsSuperAdmin = isSuper,
+    CanEditTargets = isSuper || _targetLock.IsUnlocked
+                    };
                 vm.Actuals ??= new Dictionary<int, decimal?>();
                 vm.Forecasts ??= new Dictionary<int, decimal?>();
                 vm.EditableActualKeys ??= new HashSet<int>();
@@ -1728,6 +1733,25 @@ namespace KPIMonitor.Controllers
                 ok = true,
                 text = row?.CommentText ?? ""
             });
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleTargetLock(CancellationToken ct)
+        {
+            if (!_admin.IsSuperAdmin(User))
+                return StatusCode(403, "SuperAdmin only");
+
+            var who = User?.Identity?.Name ?? "system";
+            var unlocked = await _targetLock.ToggleAsync(who, ct);
+            return Json(new { unlocked });
+        }
+        [HttpGet]
+        public IActionResult GetTargetLockState()
+        {
+            if (!_admin.IsSuperAdmin(User))
+                return StatusCode(403, "SuperAdmin only");
+
+            return Json(new { unlocked = _targetLock.IsUnlocked });
         }
 
         [HttpPost]

@@ -10,6 +10,7 @@ namespace KPIMonitor.ViewModels
 
         public string KpiName { get; set; } = "";
         public string Unit { get; set; } = "";
+public bool CanEditTargets { get; set; }
 
         // existing
         public Dictionary<int, decimal?> Actuals { get; set; } = new();     // key = month (1-12) or quarter (1-4)
