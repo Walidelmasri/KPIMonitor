@@ -906,6 +906,7 @@ namespace KPIMonitor.Controllers
                     c.BatchId,
                     c.KpiFactId,
                     c.ProposedActualValue,
+                    c.ProposedTargetValue,   // <-- ADD
                     c.ProposedForecastValue,
                     c.SubmittedBy,
                     c.SubmittedAt
@@ -920,6 +921,8 @@ namespace KPIMonitor.Controllers
                 {
                     f.KpiFactId,
                     f.ActualValue,
+                    f.TargetValue,           // <-- ADD
+
                     f.ForecastValue,
                     Period = f.Period
                 })
@@ -1024,9 +1027,11 @@ namespace KPIMonitor.Controllers
     <table class='table table-sm align-middle mb-0'>
       <thead class='table-light'>
         <tr>
-          <th style='width:34%'>Period</th>
-          <th style='width:33%'>Actual</th>
-          <th style='width:33%'>Forecast</th>
+<th style='width:34%'>Period</th>
+<th style='width:22%'>Actual</th>
+<th style='width:22%'>Target</th>
+<th style='width:22%'>Forecast</th>
+
         </tr>
       </thead>
       <tbody>");
@@ -1036,16 +1041,20 @@ namespace KPIMonitor.Controllers
                         facts.TryGetValue(r.KpiFactId, out var fh);
                         var perLabel = PeriodLabel(fh?.Period);
                         var actCell = DiffNum(fh?.ActualValue, r.ProposedActualValue);
+                        var tarCell = DiffNum(fh?.TargetValue, r.ProposedTargetValue);     // <-- ADD
                         var fctCell = DiffNum(fh?.ForecastValue, r.ProposedForecastValue);
+
                         sb.Append($@"
-        <tr>
-          <td>
-            <div>{H(perLabel)}</div>
-            <div class='small text-muted'>Submitted: {F(r.SubmittedAt)}</div>
-          </td>
-          <td>{actCell}</td>
-          <td>{fctCell}</td>
-        </tr>");
+<tr>
+  <td>
+    <div>{H(perLabel)}</div>
+    <div class='small text-muted'>Submitted: {F(r.SubmittedAt)}</div>
+  </td>
+  <td>{actCell}</td>
+  <td>{tarCell}</td>                                               // <-- ADD
+  <td>{fctCell}</td>
+</tr>");
+
                     }
 
                     sb.Append(@"
@@ -1163,6 +1172,8 @@ namespace KPIMonitor.Controllers
                          {
                              c.KpiFactId,
                              c.ProposedActualValue,
+                             c.ProposedTargetValue,     // <-- ADD
+
                              c.ProposedForecastValue,
                              c.SubmittedBy,
                              c.SubmittedAt
@@ -1206,6 +1217,7 @@ namespace KPIMonitor.Controllers
                     proposed = new
                     {
                         actual = r.ProposedActualValue,
+                        target = r.ProposedTargetValue,       // <-- ADD
                         forecast = r.ProposedForecastValue
                     },
                     submittedBy = r.SubmittedBy,

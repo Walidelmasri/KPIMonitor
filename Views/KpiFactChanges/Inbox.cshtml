@@ -85,9 +85,11 @@
         <!-- simple summary -->
         <div class="row small mt-3" id="proposedSummary" style="row-gap:.25rem">
           <div class="col-6 col-md-3"><strong># Actual points:</strong> <span id="pv_count_actual">—</span></div>
+          <div class="col-6 col-md-3"><strong># Target points:</strong> <span id="pv_count_target">—</span></div>
           <div class="col-6 col-md-3"><strong># Forecast points:</strong> <span id="pv_count_forecast">—</span></div>
           <div class="col-12 mt-2"><strong>Periods:</strong> <span id="pv_periods">—</span></div>
         </div>
+
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
@@ -193,7 +195,7 @@
         qsa('[data-tab]').forEach(b => {
           b.classList.remove('btn-primary');
           b.classList.add('btn-outline-secondary');
-        }); 
+        });
 
         tabBtn.classList.add('btn-primary');
         tabBtn.classList.remove('btn-outline-secondary');
@@ -406,6 +408,7 @@
 
         // 3) Build overlay arrays for ALL proposed points
         const overlayActual = new Array(labels.length).fill(null);
+        const overlayTarget = new Array(labels.length).fill(null);   // <-- ADD
         const overlayForecast = new Array(labels.length).fill(null);
         const changedPeriods = [];
 
@@ -417,8 +420,10 @@
           if (idx < 0) continue;
 
           const pa = toNum(it?.proposed?.actual);
+          const pt = toNum(it?.proposed?.target);          // <-- ADD
           const pf = toNum(it?.proposed?.forecast);
           if (isFiniteNum(pa)) overlayActual[idx] = pa;
+          if (isFiniteNum(pt)) overlayTarget[idx] = pt;    // <-- ADD
           if (isFiniteNum(pf)) overlayForecast[idx] = pf;
 
           changedPeriods.push(it?.period?.label || summarizePeriod(it?.period));
@@ -434,6 +439,20 @@
         ];
         if (overlayActual.some(v => v != null))
           datasets.push({ type: 'bar', label: 'Proposed Actual', data: overlayActual, backgroundColor: overlayColor, borderColor: overlayColor, borderWidth: 2, borderSkipped: 'bottom' });
+        if (overlayTarget.some(v => v != null))
+          datasets.push({
+            type: 'line',
+            label: 'Proposed Target',
+            data: overlayTarget,
+            borderColor: overlayColor,
+            pointBackgroundColor: overlayColor,
+            pointBorderColor: overlayColor,
+            borderDash: [3, 3],
+            borderWidth: 2,
+            tension: .3,
+            fill: false
+          });
+
         if (overlayForecast.some(v => v != null))
           datasets.push({ type: 'line', label: 'Proposed Forecast', data: overlayForecast, borderColor: overlayColor, pointBackgroundColor: overlayColor, pointBorderColor: overlayColor, borderDash: [2, 2], borderWidth: 2, tension: .3, fill: false });
 
@@ -446,8 +465,10 @@
         $('detailsSubtitle').textContent = hdrBits.join(' • ') || '—';
 
         const aCount = overlayActual.filter(v => v != null).length;
+        const tCount = overlayTarget.filter(v => v != null).length;     // <-- ADD
         const fCount = overlayForecast.filter(v => v != null).length;
         $('pv_count_actual').textContent = String(aCount);
+        $('pv_count_target').textContent = String(tCount);              // <-- ADD
         $('pv_count_forecast').textContent = String(fCount);
         $('pv_periods').textContent = changedPeriods.length ? changedPeriods.join(', ') : '—';
 
@@ -502,6 +523,7 @@
         const yearBar = leftNulls.concat(yearVals);
 
         const pActual = toNum(info?.proposed?.actual);
+        const pTarget = toNum(info?.proposed?.target);       // <-- ADD
         const pForecast = toNum(info?.proposed?.forecast);
 
         const pIdx = findLabelIndex(labels, info.period);
@@ -510,6 +532,7 @@
         const overlayForecast = new Array(labels.length).fill(null);
         if (pIdx >= 0) {
           if (isFiniteNum(pActual)) overlayActual[pIdx] = pActual;
+          if (isFiniteNum(pTarget)) overlayTarget[pIdx] = pTarget;      // <-- ADD
           if (isFiniteNum(pForecast)) overlayForecast[pIdx] = pForecast;
         }
 
@@ -532,6 +555,7 @@
           (info.submittedAt ? ` at ${info.submittedAt}` : '');
 
         $('pv_count_actual').textContent = overlayActual.filter(v => v != null).length;
+        $('pv_count_target').textContent = overlayTarget.filter(v => v != null).length;   // <-- ADD
         $('pv_count_forecast').textContent = overlayForecast.filter(v => v != null).length;
         $('pv_periods').textContent = info?.period?.label || '—';
 
