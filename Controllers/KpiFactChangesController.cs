@@ -52,6 +52,7 @@ namespace KPIMonitor.Controllers
             _log = log;
             _email = email;
             _dir = dir;
+            _targetLock = targetLock;
         }
 
         // ------------------------
