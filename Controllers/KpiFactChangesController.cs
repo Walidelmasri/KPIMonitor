@@ -1051,7 +1051,7 @@ namespace KPIMonitor.Controllers
     <div class='small text-muted'>Submitted: {F(r.SubmittedAt)}</div>
   </td>
   <td>{actCell}</td>
-  <td>{tarCell}</td>                                               // <-- ADD
+  <td>{tarCell}</td>                                               
   <td>{fctCell}</td>
 </tr>");
 
