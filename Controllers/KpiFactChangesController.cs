@@ -26,6 +26,7 @@ namespace KPIMonitor.Controllers
         private readonly ILogger<KpiFactChangesController> _log;
         private readonly IEmailSender _email;            // DO NOT TOUCH email behavior
         private readonly IEmployeeDirectory _dir;
+        private readonly TargetEditLockState _targetLock;
 
         // keep http so images render in intranet mail clients (not used by approvals page)
         private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFactChanges/Inbox";
@@ -39,7 +40,9 @@ namespace KPIMonitor.Controllers
             IKpiFactChangeBatchService batches,
             ILogger<KpiFactChangesController> log,
             IEmailSender email,
-            IEmployeeDirectory dir)
+            IEmployeeDirectory dir,
+                TargetEditLockState targetLock)
+
         {
             _svc = svc;
             _acl = acl;
@@ -555,6 +558,8 @@ namespace KPIMonitor.Controllers
 
                 var nowUtc = DateTime.UtcNow;
                 var isSuperAdmin = _admin.IsSuperAdmin(User);
+                var canEditTargets = isSuperAdmin || _targetLock.IsUnlocked;
+
                 HashSet<int> editableA, editableF;
                 if (monthly)
                 {
@@ -602,7 +607,8 @@ namespace KPIMonitor.Controllers
 
                     var changeA = aProvided && (f.ActualValue != newA);
                     var changeF = fProvided && (f.ForecastValue != newF);
-                    var changeT = isSuperAdmin && tProvided && (f.TargetValue != newT);
+                    // var changeT = isSuperAdmin && tProvided && (f.TargetValue != newT);
+                    var changeT = canEditTargets && tProvided && (f.TargetValue != newT);
 
                     if (!changeA && !changeF && !changeT) { skipped++; continue; }
                     if ((changeA && !editableA.Contains(key)) || (changeF && !editableF.Contains(key))) { skipped++; continue; }

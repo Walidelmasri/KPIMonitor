@@ -23,6 +23,7 @@ public sealed class ConfigAdminAuthorizer : IAdminAuthorizer
         }
         return false;
     }
+    
     // NEW — mirrors IsAdmin logic but checks SuperAdminUsers list instead
     public bool IsSuperAdmin(ClaimsPrincipal user)
     {
