@@ -89,7 +89,7 @@ namespace KPIMonitor.Controllers
             return inAdmins || inSupers;
         }
         [HttpPost]
-        
+
         public async Task<IActionResult> AdminSetKpiStatus(decimal kpiId, string status)
         {
             if (!IsAdminOrSuperAdmin())
@@ -210,6 +210,25 @@ namespace KPIMonitor.Controllers
 
             return Json(data);
         }
+        [HttpGet]
+        public async Task<IActionResult> GetKpiYearPlans(decimal kpiId, CancellationToken ct = default)
+        {
+            var plans = await _db.KpiYearPlans
+                .AsNoTracking()
+                .Include(p => p.Period)
+                .Where(p => p.KpiId == kpiId && p.IsActive == 1 && p.Period != null)
+                .OrderByDescending(p => p.Period!.Year)
+                .ThenByDescending(p => p.KpiYearPlanId)
+                .Select(p => new
+                {
+                    planId = p.KpiYearPlanId,
+                    year = p.Period!.Year,
+                    label = p.Period!.Year.ToString()
+                })
+                .ToListAsync(ct);
+
+            return Json(plans);
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetKpis(decimal objectiveId)
@@ -230,17 +249,33 @@ namespace KPIMonitor.Controllers
 
         // The big one: meta + period series + 5-year targets
         [HttpGet]
-        public async Task<IActionResult> GetKpiSummary(decimal kpiId)
+        public async Task<IActionResult> GetKpiSummary(decimal kpiId, decimal? planId)
         {
-            var plan = await _db.KpiYearPlans
+            KpiYearPlan? plan = null;
+
+            if (planId.HasValue)
+            {
+                plan = await _db.KpiYearPlans
+                    .Include(p => p.Period)
+                    .AsNoTracking()
+                    .Where(p => p.KpiYearPlanId == planId.Value
+                             && p.KpiId == kpiId
+                             && p.IsActive == 1
+                             && p.Period != null)
+                    .FirstOrDefaultAsync();
+            }
+
+            // fallback: keep existing behavior (latest)
+            plan ??= await _db.KpiYearPlans
                 .Include(p => p.Period)
                 .AsNoTracking()
                 .Where(p => p.KpiId == kpiId && p.IsActive == 1 && p.Period != null)
                 .OrderByDescending(p => p.KpiYearPlanId)
                 .FirstOrDefaultAsync();
 
-            var planId = plan?.KpiYearPlanId ?? 0;
-            var canEdit = plan != null && await _acl.CanEditPlanAsync(planId, User);
+
+            var planYearPlanId = plan?.KpiYearPlanId ?? 0;
+            var canEdit = plan != null && await _acl.CanEditPlanAsync(planYearPlanId, User);
 
             if (plan == null || plan.Period == null)
             {
@@ -407,7 +442,7 @@ namespace KPIMonitor.Controllers
                 statusColor = status.color,
                 statusRaw = string.IsNullOrWhiteSpace(latestStatusCode) ? "" : latestStatusCode,
 
-                planId = planId,
+                planId = planYearPlanId,
                 canEdit = canEdit,
 
                 // inside: var meta = new { ... }
@@ -497,16 +532,31 @@ namespace KPIMonitor.Controllers
 
         // GET: modal with grid
         [HttpGet]
-        public async Task<IActionResult> EditKpiFactsModal(decimal kpiId)
+        public async Task<IActionResult> EditKpiFactsModal(decimal kpiId, decimal? planId)
         {
             try
             {
-                var plan = await _db.KpiYearPlans
+                KpiYearPlan? plan = null;
+
+                if (planId.HasValue)
+                {
+                    plan = await _db.KpiYearPlans
+                        .Include(p => p.Period)
+                        .AsNoTracking()
+                        .Where(p => p.KpiYearPlanId == planId.Value
+                                 && p.KpiId == kpiId
+                                 && p.IsActive == 1
+                                 && p.Period != null)
+                        .FirstOrDefaultAsync();
+                }
+
+                plan ??= await _db.KpiYearPlans
                     .Include(p => p.Period)
                     .AsNoTracking()
                     .Where(p => p.KpiId == kpiId && p.IsActive == 1 && p.Period != null)
                     .OrderByDescending(p => p.KpiYearPlanId)
                     .FirstOrDefaultAsync();
+
 
                 if (plan == null || plan.Period == null)
                     return Content("No active year plan found for this KPI.", "text/plain");

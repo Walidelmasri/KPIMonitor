@@ -42,7 +42,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     .AddCookie(o =>
     {
         //Remove dev for prod server
-        o.Cookie.Name = "KpiMonitorAuthProd";
+        o.Cookie.Name = "KpiMonitorAuthDev";
         o.Cookie.HttpOnly = true;
         o.Cookie.SameSite = SameSiteMode.Lax;
         // o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
