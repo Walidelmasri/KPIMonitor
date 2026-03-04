@@ -126,7 +126,10 @@
           },
           body: new URLSearchParams({ status: currentTab })
         });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
+if (!res.ok) {
+  const txt = await res.text().catch(() => '');
+  throw new Error(txt || ('HTTP ' + res.status));
+}
         body.innerHTML = await res.text();
 
         // Optionally decorate batch tiles with a Details button if server didn't render one
@@ -154,7 +157,10 @@
           body: '' // no extra payload
         });
 
-        if (!res.ok) throw new Error('HTTP ' + res.status);
+if (!res.ok) {
+  const txt = await res.text().catch(() => '');
+  throw new Error(txt || ('HTTP ' + res.status));
+}
         body.innerHTML = await res.text();
       } catch (err) {
         console.error(err);
