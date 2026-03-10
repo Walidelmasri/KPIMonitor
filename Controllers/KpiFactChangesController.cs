@@ -29,8 +29,8 @@ namespace KPIMonitor.Controllers
         private readonly TargetEditLockState _targetLock;
 
         // keep http so images render in intranet mail clients (not used by approvals page)
-        private const string InboxUrl = "http://kpimonitor.badea.local/kpimonitor/KpiFactChanges/Inbox";
-        private const string LogoUrl = "http://kpimonitor.badea.local/kpimonitor/images/logo-en.png";
+        private const string InboxUrl = "http://kpimonitor.badea.org/KpiFactChanges/Inbox";
+        private const string LogoUrl = "http://kpimonitor.badea.org/images/logo-en.png";
 
         public KpiFactChangesController(
             IKpiFactChangeService svc,
