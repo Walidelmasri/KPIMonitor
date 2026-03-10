@@ -350,9 +350,9 @@ public async Task<IActionResult> Indicators(CancellationToken ct = default)
             var mySam = Sam();
             var mySamUp = mySam.ToUpperInvariant();
 
-            var isOwnerSomewhere = !string.IsNullOrWhiteSpace(myEmp) &&
-                                   await _db.KpiYearPlans.AsNoTracking()
-                                       .AnyAsync(p => p.OwnerEmpId == myEmp, ct);
+var isOwnerSomewhere = !string.IsNullOrWhiteSpace(myEmp) &&
+                       await _db.KpiYearPlans.AsNoTracking()
+                           .CountAsync(p => p.OwnerEmpId == myEmp, ct) > 0;
 
             var mode = (isAdmin || isOwnerSomewhere) ? "owner" : "editor";
             var forced = (modeOverride ?? Request?.Query["mode"].FirstOrDefault())?.Trim().ToLowerInvariant();
@@ -898,7 +898,7 @@ public async Task<IActionResult> ListBatchesHtml(string? status = "pending", str
 
         var isOwnerSomewhere = !string.IsNullOrWhiteSpace(myEmp) &&
                                await _db.KpiYearPlans.AsNoTracking()
-                                   .AnyAsync(p => p.OwnerEmpId == myEmp, ct);
+                                   .CountAsync(p => p.OwnerEmpId == myEmp, ct) > 0;
 
         var mode = (isAdmin || isOwnerSomewhere) ? "owner" : "editor";
         var forced = (modeOverride ?? Request?.Query["mode"].FirstOrDefault())?.Trim().ToLowerInvariant();
@@ -925,7 +925,7 @@ public async Task<IActionResult> ListBatchesHtml(string? status = "pending", str
                  where p.KpiYearPlanId == b.KpiYearPlanId
                        && p.OwnerEmpId != null
                        && p.OwnerEmpId == myEmp
-                 select 1).Any());
+                 select p.KpiYearPlanId).Count() > 0);
         }
         else if (mode == "editor")
         {
@@ -940,13 +940,13 @@ public async Task<IActionResult> ListBatchesHtml(string? status = "pending", str
                 qb = qb.Where(b =>
                     (b.SubmittedBy != null && b.SubmittedBy.ToUpper() == mySamUp)
                     ||
-                    (from p in _db.KpiYearPlans
-                     where p.KpiYearPlanId == b.KpiYearPlanId
-                           && (
+                    ((from p in _db.KpiYearPlans
+                      where p.KpiYearPlanId == b.KpiYearPlanId
+                            && (
                                 (p.EditorEmpId != null && p.EditorEmpId == myEmp)
                                 || (p.Editor2EmpId != null && p.Editor2EmpId == myEmp)
-                              )
-                     select 1).Any());
+                            )
+                      select p.KpiYearPlanId).Count() > 0));
             }
         }
 
