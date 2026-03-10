@@ -49,18 +49,19 @@ public async Task<IActionResult> BoardHtml([FromBody] decimal[] kpiIds)
             .Concat(general)
             .Where(a => !string.Equals(a.StatusCode, "archived", StringComparison.OrdinalIgnoreCase))
             .ToList();
+var actionIds = actions.Select(a => a.ActionId).ToList();
 
-        var actionIds = actions.Select(a => a.ActionId).ToList();
+var ownersByActionId = actionIds.Count == 0
+    ? new List<KpiActionOwner>()
+    : await _db.KpiActionOwners
+        .AsNoTracking()
+        .Where(o => actionIds.Contains(o.ActionId))
+        .OrderBy(o => o.KpiActionOwnerId)
+        .ToListAsync();
 
-        var ownersByActionId = await _db.KpiActionOwners
-            .AsNoTracking()
-            .Where(o => actionIds.Contains(o.ActionId))
-            .OrderBy(o => o.KpiActionOwnerId)
-            .ToListAsync();
-
-        var ownersLookup = ownersByActionId
-            .GroupBy(o => o.ActionId)
-            .ToDictionary(g => g.Key, g => g.ToList());
+var ownersLookup = ownersByActionId
+    .GroupBy(o => o.ActionId)
+    .ToDictionary(g => g.Key, g => g.ToList());
 
         var todo = actions
             .Where(a => string.Equals(a.StatusCode, "todo", StringComparison.OrdinalIgnoreCase))
