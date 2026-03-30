@@ -380,21 +380,33 @@ namespace KPIMonitor.Controllers
 
             if (fy != null)
             {
+                // void Add(int offset, decimal? v)
+                // {
+                //     var year = fy.BaseYear + offset;
+
+                //     // If this is the plan year and we have final period value, override + mark as actual
+                //     // if (year == planYear && finalPeriodValue.HasValue)
+                //     // {
+                //     //     yearTargets.Add(new { year, value = finalPeriodValue.Value, isActual = true });
+                //     //     return;
+                //     // }
+
+                //     if (v.HasValue)
+                //         yearTargets.Add(new { year, value = v.Value, isActual = false });
+                // }
                 void Add(int offset, decimal? v)
                 {
                     var year = fy.BaseYear + offset;
-
-                    // If this is the plan year and we have final period value, override + mark as actual
-                    // if (year == planYear && finalPeriodValue.HasValue)
-                    // {
-                    //     yearTargets.Add(new { year, value = finalPeriodValue.Value, isActual = true });
-                    //     return;
-                    // }
+                    var currentYear = DateTime.UtcNow.Year;
 
                     if (v.HasValue)
-                        yearTargets.Add(new { year, value = v.Value, isActual = false });
+                        yearTargets.Add(new
+                        {
+                            year,
+                            value = v.Value,
+                            isActual = year < currentYear   // ✅ THIS is the change
+                        });
                 }
-
                 Add(0, fy.Period1Value);
                 Add(1, fy.Period2Value);
                 Add(2, fy.Period3Value);
