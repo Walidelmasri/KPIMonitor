@@ -1946,8 +1946,8 @@ else if (pf == "quarterly")
             sb.AppendLine($@"
 <div class='d-flex gap-2 mb-3'>
   <button type='button' class='btn btn-sm {allCls} js-editor-period' data-period-filter='all'>All</button>
-  <button type='button' class='btn btn-sm {quarterCls} js-editor-period' data-period-filter='quarter'>By Quarter</button>
-  <button type='button' class='btn btn-sm {monthCls} js-editor-period' data-period-filter='month'>By Month</button>
+  <button type='button' class='btn btn-sm {quarterCls} js-editor-period' data-period-filter='quarterly'>By Quarter</button>
+  <button type='button' class='btn btn-sm {monthCls} js-editor-period' data-period-filter='monthly'>By Month</button>
 </div>");
 
             void RenderSection(string title, List<(string EmpId, string Name, string? Login, string IndicatorLabel, string? OwnerName, DateTime? LastSubmittedAt, string? ApprovalStatus)> rows)
