@@ -1654,6 +1654,7 @@ namespace KPIMonitor.Controllers
             {
                 return StatusCode(403, "Not allowed.");
             }
+            // test for monthly or quarterly
             var pf = (periodFilter ?? "all").Trim().ToLowerInvariant();
             if (pf != "all" && pf != "quarter" && pf != "month")
                 pf = "all";
@@ -1745,12 +1746,12 @@ namespace KPIMonitor.Controllers
                     plansQuery = isSecondary
                         ? plansQuery.Where(p => p.Editor2EmpId == empId)
                         : plansQuery.Where(p => p.EditorEmpId == empId);
-
-                    if (pf == "monthly")
+// change here for month
+                    if (pf == "month")
                     {
                         plansQuery = plansQuery.Where(p => p.Period != null && p.Period.MonthNum != null);
                     }
-                    else if (pf == "quarterly")
+                    else if (pf == "quarter")
                     {
                         plansQuery = plansQuery.Where(p => p.Period != null && p.Period.QuarterNum != null);
                     }

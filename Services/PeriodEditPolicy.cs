@@ -79,7 +79,7 @@ namespace KPIMonitor.Services
                 DateTime.DaysInMonth(lastClosedYear, lastClosedMonth),
                 23, 59, 59, DateTimeKind.Unspecified);
                 // change to have less months in grace period 
-            var graceEnd = lastClosedEndLocal.AddMonths(3);
+            var graceEnd = lastClosedEndLocal.AddMonths(4);
 
             if (lastClosedYear == year && now <= graceEnd)
                 w.ActualMonths.Add(lastClosedMonth);
