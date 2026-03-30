@@ -38,13 +38,13 @@ namespace KPIMonitor.Services
         // ----- Result types (unchanged) -----
         public sealed class MonthlyWindow
         {
-            public HashSet<int> ActualMonths   { get; } = new();
+            public HashSet<int> ActualMonths { get; } = new();
             public HashSet<int> ForecastMonths { get; } = new();
         }
 
         public sealed class QuarterlyWindow
         {
-            public HashSet<int> ActualQuarters   { get; } = new();
+            public HashSet<int> ActualQuarters { get; } = new();
             public HashSet<int> ForecastQuarters { get; } = new();
         }
 
@@ -70,7 +70,7 @@ namespace KPIMonitor.Services
                 w.ActualMonths.Add(currentMonth);
 
             // Also allow LAST CLOSED month within +1 month grace (even if last year)
-            int lastClosedYear  = (now.Month == 1) ? now.Year - 1 : now.Year;
+            int lastClosedYear = (now.Month == 1) ? now.Year - 1 : now.Year;
             int lastClosedMonth = (now.Month == 1) ? 12 : now.Month - 1;
 
             var lastClosedEndLocal = new DateTime(
@@ -78,11 +78,19 @@ namespace KPIMonitor.Services
                 lastClosedMonth,
                 DateTime.DaysInMonth(lastClosedYear, lastClosedMonth),
                 23, 59, 59, DateTimeKind.Unspecified);
-                // change to have less months in grace period 
+            // change to have less months in grace period 
             var graceEnd = lastClosedEndLocal.AddMonths(4);
-
+            // this is what adds more months btw change it and the line above
             if (lastClosedYear == year && now <= graceEnd)
+            {
                 w.ActualMonths.Add(lastClosedMonth);
+
+                int secondClosedYear = (lastClosedMonth == 1) ? lastClosedYear - 1 : lastClosedYear;
+                int secondClosedMonth = (lastClosedMonth == 1) ? 12 : lastClosedMonth - 1;
+
+                if (secondClosedYear == year)
+                    w.ActualMonths.Add(secondClosedMonth);
+            }
 
             // Forecasts: current..Dec for this year, all months for future years
             if (year == now.Year)
@@ -110,7 +118,7 @@ namespace KPIMonitor.Services
 
             // Also allow LAST CLOSED quarter within +1 month grace (even if last year)
             int lastClosedYear = (currentQ == 1) ? now.Year - 1 : now.Year;
-            int lastClosedQ    = (currentQ == 1) ? 4 : currentQ - 1;
+            int lastClosedQ = (currentQ == 1) ? 4 : currentQ - 1;
 
             var (qy, qm, qd) = QuarterEnd(lastClosedYear, lastClosedQ);
             var lastClosedEndLocal = new DateTime(qy, qm, qd, 23, 59, 59, DateTimeKind.Unspecified);
@@ -172,7 +180,7 @@ namespace KPIMonitor.Services
         private static (int year, int month, int day) QuarterEnd(int year, int q)
         {
             int month = q * 3;
-            int day   = DateTime.DaysInMonth(year, month);
+            int day = DateTime.DaysInMonth(year, month);
             return (year, month, day);
         }
     }

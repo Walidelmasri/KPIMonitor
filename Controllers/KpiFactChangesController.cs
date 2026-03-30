@@ -1656,7 +1656,7 @@ namespace KPIMonitor.Controllers
             }
             // test for monthly or quarterly
             var pf = (periodFilter ?? "all").Trim().ToLowerInvariant();
-            if (pf != "all" && pf != "quarterly" && pf != "monthly")
+            if (pf != "all" && pf != "quarter" && pf != "month")
                 pf = "all";
             // 1) Collect distinct PRIMARY editor EmpIds from active plans
             var primaryEditorEmpIds = await _db.KpiYearPlans
@@ -1747,11 +1747,11 @@ namespace KPIMonitor.Controllers
                         ? plansQuery.Where(p => p.Editor2EmpId == empId)
                         : plansQuery.Where(p => p.EditorEmpId == empId);
 // change here for month
-                    if (pf == "monthly")
+                    if (pf == "month")
                     {
                         plansQuery = plansQuery.Where(p => p.Period != null && p.Period.MonthNum != null);
                     }
-                    else if (pf == "quarterly")
+                    else if (pf == "quarter")
                     {
                         plansQuery = plansQuery.Where(p => p.Period != null && p.Period.QuarterNum != null);
                     }
