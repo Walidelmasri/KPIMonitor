@@ -1656,7 +1656,7 @@ namespace KPIMonitor.Controllers
             }
             // test for monthly or quarterly
             var pf = (periodFilter ?? "all").Trim().ToLowerInvariant();
-            if (pf != "all" && pf != "quarter" && pf != "month")
+            if (pf != "all" && pf != "quarterly" && pf != "monthly")
                 pf = "all";
             // 1) Collect distinct PRIMARY editor EmpIds from active plans
             var primaryEditorEmpIds = await _db.KpiYearPlans
@@ -1747,14 +1747,18 @@ namespace KPIMonitor.Controllers
                         ? plansQuery.Where(p => p.Editor2EmpId == empId)
                         : plansQuery.Where(p => p.EditorEmpId == empId);
 // change here for month
-                    if (pf == "month")
-                    {
-                        plansQuery = plansQuery.Where(p => p.Period != null && p.Period.MonthNum != null);
-                    }
-                    else if (pf == "quarter")
-                    {
-                        plansQuery = plansQuery.Where(p => p.Period != null && p.Period.QuarterNum != null);
-                    }
+if (pf == "monthly")
+{
+    plansQuery = plansQuery.Where(p =>
+        p.Frequency != null &&
+        p.Frequency.Trim().ToUpper() == "MONTHLY");
+}
+else if (pf == "quarterly")
+{
+    plansQuery = plansQuery.Where(p =>
+        p.Frequency != null &&
+        p.Frequency.Trim().ToUpper() == "QUARTERLY");
+}
 
                     var plans = await plansQuery
                         .GroupBy(p => p.KpiId)
@@ -1936,8 +1940,8 @@ namespace KPIMonitor.Controllers
             var sb = new StringBuilder();
 
             var allCls = pf == "all" ? "btn-primary" : "btn-outline-secondary";
-            var quarterCls = pf == "quarter" ? "btn-primary" : "btn-outline-secondary";
-            var monthCls = pf == "month" ? "btn-primary" : "btn-outline-secondary";
+            var quarterCls = pf == "quarterly" ? "btn-primary" : "btn-outline-secondary";
+            var monthCls = pf == "monthly" ? "btn-primary" : "btn-outline-secondary";
 
             sb.AppendLine($@"
 <div class='d-flex gap-2 mb-3'>
