@@ -108,242 +108,279 @@
     const anti = () => (qs('input[name="__RequestVerificationToken"]')?.value || '');
 
     let currentTab = 'pending';
+    let currentEditorPeriodFilter = 'all';
+
     let apprChart = null; // single Chart.js instance
 
     // ---------- list loader (batches) ----------
     async function loadList(tab) {
-      currentTab = tab || currentTab || 'pending';
-      const body = $('apprBody');
-      body.innerHTML = "<div class='text-muted small'>Loading…</div>";
-      try {
-        const listUrl = '@Url.Action("ListBatchesHtml", "KpiFactChanges")' + (window.location.search || '');
-        const res = await fetch(listUrl, {
-          method: 'POST',
-          headers: {
-            'Accept': 'text/html',
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'RequestVerificationToken': anti()
-          },
-          body: new URLSearchParams({ status: currentTab })
-        });
-if (!res.ok) {
-  const txt = await res.text().catch(() => '');
-  throw new Error(txt || ('HTTP ' + res.status));
-}
-        body.innerHTML = await res.text();
+    currentTab = tab || currentTab || 'pending';
+    const body = $('apprBody');
+    body.innerHTML = "<div class='text-muted small'>Loading…</div>";
+    try {
+    const listUrl = '@Url.Action("ListBatchesHtml", "KpiFactChanges")' + (window.location.search || '');
+    const res = await fetch(listUrl, {
+    method: 'POST',
+    headers: {
+    'Accept': 'text/html',
+    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+    'RequestVerificationToken': anti()
+    },
+    body: new URLSearchParams({ status: currentTab })
+    });
+    if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(txt || ('HTTP ' + res.status));
+    }
+    body.innerHTML = await res.text();
 
-        // Optionally decorate batch tiles with a Details button if server didn't render one
-        decorateBatchCards();
-      } catch (err) {
-        console.error(err);
-        body.innerHTML = "<div class='text-danger small'>Failed to load.</div>";
-      }
+    // Optionally decorate batch tiles with a Details button if server didn't render one
+    decorateBatchCards();
+    } catch (err) {
+    console.error(err);
+    body.innerHTML = "<div class='text-danger small'>Failed to load.</div>";
+    }
     }
     // ---------- editor stats loader ----------
-    async function loadEditors() {
-      currentTab = 'editors';
-      const body = $('apprBody');
-      body.innerHTML = "<div class='text-muted small'>Loading…</div>";
+    @* async function loadEditors() {
+    currentTab = 'editors';
+    const body = $('apprBody');
+    body.innerHTML = "<div class='text-muted small'>Loading…</div>";
 
-      try {
-        const url = '@Url.Action("EditorStatsHtml", "KpiFactChanges")' + (window.location.search || '');
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Accept': 'text/html',
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'RequestVerificationToken': anti()
-          },
-          body: '' // no extra payload
-        });
+    try {
+    const url = '@Url.Action("EditorStatsHtml", "KpiFactChanges")' + (window.location.search || '');
+    const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+    'Accept': 'text/html',
+    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+    'RequestVerificationToken': anti()
+    },
+    body: '' // no extra payload
+    });
 
-if (!res.ok) {
-  const txt = await res.text().catch(() => '');
-  throw new Error(txt || ('HTTP ' + res.status));
-}
-        body.innerHTML = await res.text();
-      } catch (err) {
-        console.error(err);
-        body.innerHTML = "<div class='text-danger small'>Failed to load.</div>";
-      }
+    if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(txt || ('HTTP ' + res.status));
+    }
+    body.innerHTML = await res.text();
+    } catch (err) {
+    console.error(err);
+    body.innerHTML = "<div class='text-danger small'>Failed to load.</div>";
+    }
+    } *@
+
+    async function loadEditors(periodFilter) {
+    currentTab = 'editors';
+    currentEditorPeriodFilter = periodFilter || currentEditorPeriodFilter || 'all';
+
+    const body = $('apprBody');
+    body.innerHTML = "<div class='text-muted small'>Loading…</div>";
+
+    try {
+    const url = '@Url.Action("EditorStatsHtml", "KpiFactChanges")' + (window.location.search || '');
+    const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+    'Accept': 'text/html',
+    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+    'RequestVerificationToken': anti()
+    },
+    body: new URLSearchParams({ periodFilter: currentEditorPeriodFilter })
+    });
+
+    if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(txt || ('HTTP ' + res.status));
     }
 
-
+    body.innerHTML = await res.text();
+    } catch (err) {
+    console.error(err);
+    body.innerHTML = "<div class='text-danger small'>Failed to load.</div>";
+    }
+    }
     // If server tiles lack a unified details button, add it
     function decorateBatchCards() {
-      const cards = qsa('.appr-card[data-batch-id]');
-      for (const card of cards) {
-        const right = card.querySelector('.text-end') || card;
-        if (!right) continue;
-        const already = right.querySelector('.appr-batch-details');
-        if (already) continue;
+    const cards = qsa('.appr-card[data-batch-id]');
+    for (const card of cards) {
+    const right = card.querySelector('.text-end') || card;
+    if (!right) continue;
+    const already = right.querySelector('.appr-batch-details');
+    if (already) continue;
 
-        const batchId = card.getAttribute('data-batch-id');
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'btn btn-sm btn-outline-secondary ms-2 appr-batch-details';
-        btn.setAttribute('data-batch-id', batchId);
-        const kpiId = card.getAttribute('data-kpi-id');
-        if (kpiId) btn.setAttribute('data-kpi-id', kpiId);
-        btn.textContent = 'Details';
-        right.appendChild(btn);
-      }
+    const batchId = card.getAttribute('data-batch-id');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-sm btn-outline-secondary ms-2 appr-batch-details';
+    btn.setAttribute('data-batch-id', batchId);
+    const kpiId = card.getAttribute('data-kpi-id');
+    if (kpiId) btn.setAttribute('data-kpi-id', kpiId);
+    btn.textContent = 'Details';
+    right.appendChild(btn);
+    }
     }
 
     // ---------- click handlers ----------
     document.addEventListener('click', async (e) => {
-      // tabs
-      // tabs
-      const tabBtn = e.target.closest('[data-tab]');
-      if (tabBtn) {
-        e.preventDefault();
+    // tabs
+    // tabs
+    const tabBtn = e.target.closest('[data-tab]');
+    if (tabBtn) {
+    e.preventDefault();
 
-        qsa('[data-tab]').forEach(b => {
-          b.classList.remove('btn-primary');
-          b.classList.add('btn-outline-secondary');
-        });
+    qsa('[data-tab]').forEach(b => {
+    b.classList.remove('btn-primary');
+    b.classList.add('btn-outline-secondary');
+    });
 
-        tabBtn.classList.add('btn-primary');
-        tabBtn.classList.remove('btn-outline-secondary');
+    tabBtn.classList.add('btn-primary');
+    tabBtn.classList.remove('btn-outline-secondary');
 
-        const tab = tabBtn.getAttribute('data-tab');
-        if (tab === 'editors') {
-          await loadEditors();
-        } else {
-          await loadList(tab);
-        }
-        return;
-      }
+    const tab = tabBtn.getAttribute('data-tab');
+    if (tab === 'editors') {
+    await loadEditors();
+    } else {
+    await loadList(tab);
+    }
+    return;
+    }
 
+    const periodBtn = e.target.closest('.js-editor-period');
+    if (periodBtn) {
+    e.preventDefault();
+    const pf = periodBtn.getAttribute('data-period-filter') || 'all';
+    await loadEditors(pf);
+    return;
+    }
+    const btn = e.target.closest('.appr-btn, .appr-batch-details, .appr-details');
+    if (!btn) return;
 
-      const btn = e.target.closest('.appr-btn, .appr-batch-details, .appr-details');
-      if (!btn) return;
+    // Approve entire batch
+    if (btn.classList.contains('appr-btn') && btn.getAttribute('data-action') === 'approve-batch') {
+    const batchId = btn.getAttribute('data-batch-id');
+    if (!batchId) return;
+    btn.disabled = true;
+    try {
+    const fd = new FormData();
+    fd.append('__RequestVerificationToken', anti());
+    fd.append('batchId', batchId);
+    const res = await fetch('@Url.Action("ApproveBatch", "KpiFactChanges")', {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+    body: fd
+    });
+    if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.error || 'Approve failed');
+    }
+    await loadList(currentTab);
+    } catch (err) { alert(err.message); btn.disabled = false; }
+    return;
+    }
 
-      // Approve entire batch
-      if (btn.classList.contains('appr-btn') && btn.getAttribute('data-action') === 'approve-batch') {
-        const batchId = btn.getAttribute('data-batch-id');
-        if (!batchId) return;
-        btn.disabled = true;
-        try {
-          const fd = new FormData();
-          fd.append('__RequestVerificationToken', anti());
-          fd.append('batchId', batchId);
-          const res = await fetch('@Url.Action("ApproveBatch", "KpiFactChanges")', {
-            method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-            body: fd
-          });
-          if (!res.ok) {
-            const err = await res.json().catch(() => null);
-            throw new Error(err?.error || 'Approve failed');
-          }
-          await loadList(currentTab);
-        } catch (err) { alert(err.message); btn.disabled = false; }
-        return;
-      }
+    // Reject entire batch (open modal)
+    if (btn.classList.contains('appr-btn') && btn.getAttribute('data-action') === 'reject-batch') {
+    const batchId = btn.getAttribute('data-batch-id');
+    if (!batchId) return;
+    $('rej_changeId').value = '';
+    $('rej_batchId').value = batchId;
+    $('rej_reason').value = '';
+    new bootstrap.Modal(document.getElementById('rejectModal')).show();
+    return;
+    }
 
-      // Reject entire batch (open modal)
-      if (btn.classList.contains('appr-btn') && btn.getAttribute('data-action') === 'reject-batch') {
-        const batchId = btn.getAttribute('data-batch-id');
-        if (!batchId) return;
-        $('rej_changeId').value = '';
-        $('rej_batchId').value = batchId;
-        $('rej_reason').value = '';
-        new bootstrap.Modal(document.getElementById('rejectModal')).show();
-        return;
-      }
+    // Legacy single-row approve/reject
+    if (btn.classList.contains('appr-btn') && btn.getAttribute('data-action') === 'approve') {
+    const id = btn.getAttribute('data-id');
+    if (!id) return;
+    btn.disabled = true;
+    try {
+    const fd = new FormData();
+    fd.append('__RequestVerificationToken', anti());
+    fd.append('changeId', id);
+    const res = await fetch('@Url.Action("Approve", "KpiFactChanges")', {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+    body: fd
+    });
+    if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.error || 'Approve failed');
+    }
+    await loadList(currentTab);
+    } catch (err) { alert(err.message); btn.disabled = false; }
+    return;
+    }
 
-      // Legacy single-row approve/reject
-      if (btn.classList.contains('appr-btn') && btn.getAttribute('data-action') === 'approve') {
-        const id = btn.getAttribute('data-id');
-        if (!id) return;
-        btn.disabled = true;
-        try {
-          const fd = new FormData();
-          fd.append('__RequestVerificationToken', anti());
-          fd.append('changeId', id);
-          const res = await fetch('@Url.Action("Approve", "KpiFactChanges")', {
-            method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-            body: fd
-          });
-          if (!res.ok) {
-            const err = await res.json().catch(() => null);
-            throw new Error(err?.error || 'Approve failed');
-          }
-          await loadList(currentTab);
-        } catch (err) { alert(err.message); btn.disabled = false; }
-        return;
-      }
+    if (btn.classList.contains('appr-btn') && btn.getAttribute('data-action') === 'reject') {
+    const id = btn.getAttribute('data-id');
+    if (!id) return;
+    $('rej_batchId').value = '';
+    $('rej_changeId').value = id;
+    $('rej_reason').value = '';
+    new bootstrap.Modal(document.getElementById('rejectModal')).show();
+    return;
+    }
 
-      if (btn.classList.contains('appr-btn') && btn.getAttribute('data-action') === 'reject') {
-        const id = btn.getAttribute('data-id');
-        if (!id) return;
-        $('rej_batchId').value = '';
-        $('rej_changeId').value = id;
-        $('rej_reason').value = '';
-        new bootstrap.Modal(document.getElementById('rejectModal')).show();
-        return;
-      }
+    // Unified batch Details
+    if (btn.classList.contains('appr-batch-details')) {
+    e.preventDefault();
+    const batchId = btn.getAttribute('data-batch-id');
+    const kpiIdAttr = btn.getAttribute('data-kpi-id'); // optional
+    if (batchId) openBatchDetails(batchId, kpiIdAttr);
+    return;
+    }
 
-      // Unified batch Details
-      if (btn.classList.contains('appr-batch-details')) {
-        e.preventDefault();
-        const batchId = btn.getAttribute('data-batch-id');
-        const kpiIdAttr = btn.getAttribute('data-kpi-id'); // optional
-        if (batchId) openBatchDetails(batchId, kpiIdAttr);
-        return;
-      }
-
-      // Fallback: single-row details (if present)
-      if (btn.classList.contains('appr-details')) {
-        e.preventDefault();
-        const changeId = btn.getAttribute('data-id');
-        if (changeId) openRowDetails(changeId);
-        return;
-      }
+    // Fallback: single-row details (if present)
+    if (btn.classList.contains('appr-details')) {
+    e.preventDefault();
+    const changeId = btn.getAttribute('data-id');
+    if (changeId) openRowDetails(changeId);
+    return;
+    }
     });
 
     // ---------- Reject submit (batch or single) ----------
     $('rejectForm').addEventListener('submit', async (ev) => {
-      ev.preventDefault();
-      const changeId = $('rej_changeId').value;
-      const batchId = $('rej_batchId').value;
-      const reason = $('rej_reason').value.trim();
-      if (!reason) { alert('Reason is required.'); return; }
+    ev.preventDefault();
+    const changeId = $('rej_changeId').value;
+    const batchId = $('rej_batchId').value;
+    const reason = $('rej_reason').value.trim();
+    if (!reason) { alert('Reason is required.'); return; }
 
-      try {
-        const fd = new FormData(ev.target);
-        let url;
-        if (batchId) {
-          url = '@Url.Action("RejectBatch", "KpiFactChanges")';
-          fd.append('batchId', batchId);
-        } else {
-          url = '@Url.Action("Reject", "KpiFactChanges")';
-          fd.append('changeId', changeId);
-        }
+    try {
+    const fd = new FormData(ev.target);
+    let url;
+    if (batchId) {
+    url = '@Url.Action("RejectBatch", "KpiFactChanges")';
+    fd.append('batchId', batchId);
+    } else {
+    url = '@Url.Action("Reject", "KpiFactChanges")';
+    fd.append('changeId', changeId);
+    }
 
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-          body: fd
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => null);
-          throw new Error(err?.error || 'Reject failed');
-        }
-        bootstrap.Modal.getInstance(document.getElementById('rejectModal')).hide();
-        await loadList(currentTab);
-      } catch (err) { alert(err.message); }
+    const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+    body: fd
+    });
+    if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.error || 'Reject failed');
+    }
+    bootstrap.Modal.getInstance(document.getElementById('rejectModal')).hide();
+    await loadList(currentTab);
+    } catch (err) { alert(err.message); }
     });
 
     $('refreshBtn').addEventListener('click', (e) => {
-      e.preventDefault();
-      if (currentTab === 'editors') {
-        loadEditors();
-      } else {
-        loadList(currentTab);
-      }
+    e.preventDefault();
+    if (currentTab === 'editors') {
+    loadEditors(currentEditorPeriodFilter);
+    } else {
+    loadList(currentTab);
+    }
     });
     document.addEventListener('DOMContentLoaded', () => loadList('pending'));
 
@@ -354,245 +391,245 @@ if (!res.ok) {
     function isFiniteNum(v) { return typeof v === 'number' && isFinite(v); }
 
     function findLabelIndex(labels, period) {
-      const L = labels.map(normalize);
-      const y = period?.year ?? null;
-      const qn = period?.quarter ?? period?.quarterNum ?? null;
-      const mn = period?.month ?? period?.monthNum ?? null;
+    const L = labels.map(normalize);
+    const y = period?.year ?? null;
+    const qn = period?.quarter ?? period?.quarterNum ?? null;
+    const mn = period?.month ?? period?.monthNum ?? null;
 
-      if (y != null && (qn != null || mn != null)) {
-        const cand = qn != null ? `${y} - q${qn}` : `${y} - ${MONTH_ABBR[(mn - 1) || 0]}`;
-        const idx = L.findIndex(x => x === normalize(cand));
-        if (idx >= 0) return idx;
-      }
+    if (y != null && (qn != null || mn != null)) {
+    const cand = qn != null ? `${y} - q${qn}` : `${y} - ${MONTH_ABBR[(mn - 1) || 0]}`;
+    const idx = L.findIndex(x => x === normalize(cand));
+    if (idx >= 0) return idx;
+    }
 
-      const lab = String(period?.label ?? '');
-      let m = lab.match(/(\d{4}).*q\s*([1-4])/i);
-      if (m) {
-        const idx = L.findIndex(x => x === normalize(`${m[1]} - q${m[2]}`));
-        if (idx >= 0) return idx;
-      }
-      m = lab.match(/(\d{4}).*([A-Za-z]{3})/);
-      if (m) {
-        const idx = L.findIndex(x => x === normalize(`${m[1]} - ${m[2]}`));
-        if (idx >= 0) return idx;
-      }
-      return -1;
+    const lab = String(period?.label ?? '');
+    let m = lab.match(/(\d{4}).*q\s*([1-4])/i);
+    if (m) {
+    const idx = L.findIndex(x => x === normalize(`${m[1]} - q${m[2]}`));
+    if (idx >= 0) return idx;
+    }
+    m = lab.match(/(\d{4}).*([A-Za-z]{3})/);
+    if (m) {
+    const idx = L.findIndex(x => x === normalize(`${m[1]} - ${m[2]}`));
+    if (idx >= 0) return idx;
+    }
+    return -1;
     }
 
     // ---- Batch Details (overlay ALL points in the batch) ----
     async function openBatchDetails(batchId, kpiIdFromBtn) {
-      try {
-        // 1) fetch batch overlay info
-        const infoUrl = '@Url.Action("ChangeOverlayInfoBatch", "KpiFactChanges")' + '?batchId=' + encodeURIComponent(batchId);
-        const info = await fetch(infoUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
-        if (!info?.ok) throw new Error(info?.error || 'Failed to load batch details.');
+    try {
+    // 1) fetch batch overlay info
+    const infoUrl = '@Url.Action("ChangeOverlayInfoBatch", "KpiFactChanges")' + '?batchId=' + encodeURIComponent(batchId);
+    const info = await fetch(infoUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+    if (!info?.ok) throw new Error(info?.error || 'Failed to load batch details.');
 
-        const kpiId = kpiIdFromBtn || info.kpiId;
-        if (!kpiId) throw new Error('KPI id missing for chart.');
+    const kpiId = kpiIdFromBtn || info.kpiId;
+    if (!kpiId) throw new Error('KPI id missing for chart.');
 
-        // 2) base chart data
-        const baseUrl = '@Url.Action("GetKpiPresentation", "RedBoard")' + '?kpiId=' + encodeURIComponent(kpiId);
-        const base = await fetch(baseUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+    // 2) base chart data
+    const baseUrl = '@Url.Action("GetKpiPresentation", "RedBoard")' + '?kpiId=' + encodeURIComponent(kpiId);
+    const base = await fetch(baseUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
 
-        const labelsBase = base?.chart?.labels || [];
-        const actBase = (base?.chart?.actual || []).slice();
-        const tgtBase = (base?.chart?.target || []).slice();   // only for context (not edited)
-        const fctBase = (base?.chart?.forecast || []).slice();
+    const labelsBase = base?.chart?.labels || [];
+    const actBase = (base?.chart?.actual || []).slice();
+    const tgtBase = (base?.chart?.target || []).slice();   // only for context (not edited)
+    const fctBase = (base?.chart?.forecast || []).slice();
 
-        const yrs = Array.isArray(base?.chart?.yearTargets) ? base.chart.yearTargets : [];
-        const yearLabels = yrs.map(y => String(y.year));
-        const yearVals = yrs.map(y => (y?.value ?? null));
+    const yrs = Array.isArray(base?.chart?.yearTargets) ? base.chart.yearTargets : [];
+    const yearLabels = yrs.map(y => String(y.year));
+    const yearVals = yrs.map(y => (y?.value ?? null));
 
-        const labels = labelsBase.concat(yearLabels);
-        const pad = new Array(yearLabels.length).fill(null);
-        const leftNulls = new Array(labelsBase.length).fill(null);
+    const labels = labelsBase.concat(yearLabels);
+    const pad = new Array(yearLabels.length).fill(null);
+    const leftNulls = new Array(labelsBase.length).fill(null);
 
-        const act = actBase.concat(pad);
-        const tgt = tgtBase.concat(pad);
-        const fct = fctBase.concat(pad);
-        const yearBar = leftNulls.concat(yearVals);
+    const act = actBase.concat(pad);
+    const tgt = tgtBase.concat(pad);
+    const fct = fctBase.concat(pad);
+    const yearBar = leftNulls.concat(yearVals);
 
-        // 3) Build overlay arrays for ALL proposed points
-        const overlayActual = new Array(labels.length).fill(null);
-        const overlayTarget = new Array(labels.length).fill(null);   // <-- ADD
-        const overlayForecast = new Array(labels.length).fill(null);
-        const changedPeriods = [];
+    // 3) Build overlay arrays for ALL proposed points
+    const overlayActual = new Array(labels.length).fill(null);
+    const overlayTarget = new Array(labels.length).fill(null);   // <-- ADD
+    const overlayForecast = new Array(labels.length).fill(null);
+    const changedPeriods = [];
 
-        const items = Array.isArray(info?.items) ? info.items : [];
-        // expect items like: { period:{year,month|quarter,label}, proposed:{actual,forecast}, submittedBy, submittedAt }
+    const items = Array.isArray(info?.items) ? info.items : [];
+    // expect items like: { period:{year,month|quarter,label}, proposed:{actual,forecast}, submittedBy, submittedAt }
 
-        for (const it of items) {
-          const idx = findLabelIndex(labels, it?.period);
-          if (idx < 0) continue;
+    for (const it of items) {
+    const idx = findLabelIndex(labels, it?.period);
+    if (idx < 0) continue;
 
-          const pa = toNum(it?.proposed?.actual);
-          const pt = toNum(it?.proposed?.target);          // <-- ADD
-          const pf = toNum(it?.proposed?.forecast);
-          if (isFiniteNum(pa)) overlayActual[idx] = pa;
-          if (isFiniteNum(pt)) overlayTarget[idx] = pt;    // <-- ADD
-          if (isFiniteNum(pf)) overlayForecast[idx] = pf;
+    const pa = toNum(it?.proposed?.actual);
+    const pt = toNum(it?.proposed?.target);          // <-- ADD
+    const pf = toNum(it?.proposed?.forecast);
+    if (isFiniteNum(pa)) overlayActual[idx] = pa;
+    if (isFiniteNum(pt)) overlayTarget[idx] = pt;    // <-- ADD
+    if (isFiniteNum(pf)) overlayForecast[idx] = pf;
 
-          changedPeriods.push(it?.period?.label || summarizePeriod(it?.period));
-        }
+    changedPeriods.push(it?.period?.label || summarizePeriod(it?.period));
+    }
 
-        // 4) Compose datasets (Target kept for context; no edit on target/status)
-        const overlayColor = '#0d6efd';
-        const datasets = [
-          { type: 'bar', label: 'Actual', data: act, backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
-          { type: 'line', label: 'Target', data: tgt, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
-          { type: 'line', label: 'Forecast', data: fct, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
-          { type: 'bar', label: 'Year Target', data: yearBar, backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
-        ];
-        if (overlayActual.some(v => v != null))
-          datasets.push({ type: 'bar', label: 'Proposed Actual', data: overlayActual, backgroundColor: overlayColor, borderColor: overlayColor, borderWidth: 2, borderSkipped: 'bottom' });
-        if (overlayTarget.some(v => v != null))
-          datasets.push({
-            type: 'line',
-            label: 'Proposed Target',
-            data: overlayTarget,
-            borderColor: overlayColor,
-            pointBackgroundColor: overlayColor,
-            pointBorderColor: overlayColor,
-            borderDash: [3, 3],
-            borderWidth: 2,
-            tension: .3,
-            fill: false
-          });
+    // 4) Compose datasets (Target kept for context; no edit on target/status)
+    const overlayColor = '#0d6efd';
+    const datasets = [
+    { type: 'bar', label: 'Actual', data: act, backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
+    { type: 'line', label: 'Target', data: tgt, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
+    { type: 'line', label: 'Forecast', data: fct, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
+    { type: 'bar', label: 'Year Target', data: yearBar, backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
+    ];
+    if (overlayActual.some(v => v != null))
+    datasets.push({ type: 'bar', label: 'Proposed Actual', data: overlayActual, backgroundColor: overlayColor, borderColor: overlayColor, borderWidth: 2, borderSkipped: 'bottom' });
+    if (overlayTarget.some(v => v != null))
+    datasets.push({
+    type: 'line',
+    label: 'Proposed Target',
+    data: overlayTarget,
+    borderColor: overlayColor,
+    pointBackgroundColor: overlayColor,
+    pointBorderColor: overlayColor,
+    borderDash: [3, 3],
+    borderWidth: 2,
+    tension: .3,
+    fill: false
+    });
 
-        if (overlayForecast.some(v => v != null))
-          datasets.push({ type: 'line', label: 'Proposed Forecast', data: overlayForecast, borderColor: overlayColor, pointBackgroundColor: overlayColor, pointBorderColor: overlayColor, borderDash: [2, 2], borderWidth: 2, tension: .3, fill: false });
+    if (overlayForecast.some(v => v != null))
+    datasets.push({ type: 'line', label: 'Proposed Forecast', data: overlayForecast, borderColor: overlayColor, pointBackgroundColor: overlayColor, pointBorderColor: overlayColor, borderDash: [2, 2], borderWidth: 2, tension: .3, fill: false });
 
-        // 5) Header + summary
-        $('detailsLabel').textContent = info.kpiText || 'Change Details';
-        const hdrBits = [];
-        if (info?.frequency) hdrBits.push('Freq: ' + info.frequency);
-        if (info?.submittedBy) hdrBits.push('Submitted by ' + info.submittedBy);
-        if (info?.submittedAt) hdrBits.push('at ' + info.submittedAt);
-        $('detailsSubtitle').textContent = hdrBits.join(' • ') || '—';
+    // 5) Header + summary
+    $('detailsLabel').textContent = info.kpiText || 'Change Details';
+    const hdrBits = [];
+    if (info?.frequency) hdrBits.push('Freq: ' + info.frequency);
+    if (info?.submittedBy) hdrBits.push('Submitted by ' + info.submittedBy);
+    if (info?.submittedAt) hdrBits.push('at ' + info.submittedAt);
+    $('detailsSubtitle').textContent = hdrBits.join(' • ') || '—';
 
-        const aCount = overlayActual.filter(v => v != null).length;
-        const tCount = overlayTarget.filter(v => v != null).length;     // <-- ADD
-        const fCount = overlayForecast.filter(v => v != null).length;
-        $('pv_count_actual').textContent = String(aCount);
-        $('pv_count_target').textContent = String(tCount);              // <-- ADD
-        $('pv_count_forecast').textContent = String(fCount);
-        $('pv_periods').textContent = changedPeriods.length ? changedPeriods.join(', ') : '—';
+    const aCount = overlayActual.filter(v => v != null).length;
+    const tCount = overlayTarget.filter(v => v != null).length;     // <-- ADD
+    const fCount = overlayForecast.filter(v => v != null).length;
+    $('pv_count_actual').textContent = String(aCount);
+    $('pv_count_target').textContent = String(tCount);              // <-- ADD
+    $('pv_count_forecast').textContent = String(fCount);
+    $('pv_periods').textContent = changedPeriods.length ? changedPeriods.join(', ') : '—';
 
-        // 6) Show modal + render chart
-        new bootstrap.Modal(document.getElementById('detailsModal')).show();
-        const ctx = $('apprChart').getContext('2d');
-        if (apprChart) apprChart.destroy();
-        apprChart = new Chart(ctx, {
-          type: 'bar',
-          data: { labels, datasets },
-          options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: { x: { grid: { display: false } }, y: { grid: { display: false }, beginAtZero: true } },
-            plugins: {
-              legend: { position: 'top', labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 10, weight: '700' } } },
-              tooltip: { enabled: true }
-            }
-          }
-        });
-      } catch (err) {
-        console.error(err);
-        alert(err.message || 'Failed to load details.');
-      }
+    // 6) Show modal + render chart
+    new bootstrap.Modal(document.getElementById('detailsModal')).show();
+    const ctx = $('apprChart').getContext('2d');
+    if (apprChart) apprChart.destroy();
+    apprChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: { x: { grid: { display: false } }, y: { grid: { display: false }, beginAtZero: true } },
+    plugins: {
+    legend: { position: 'top', labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 10, weight: '700' } } },
+    tooltip: { enabled: true }
+    }
+    }
+    });
+    } catch (err) {
+    console.error(err);
+    alert(err.message || 'Failed to load details.');
+    }
     }
 
     // Fallback single-row details (if needed)
     async function openRowDetails(changeId) {
-      try {
-        const infoUrl = '@Url.Action("ChangeOverlayInfo", "KpiFactChanges")' + '?changeId=' + encodeURIComponent(changeId);
-        const info = await fetch(infoUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
-        if (!info?.ok) throw new Error(info?.error || 'Failed to load details.');
+    try {
+    const infoUrl = '@Url.Action("ChangeOverlayInfo", "KpiFactChanges")' + '?changeId=' + encodeURIComponent(changeId);
+    const info = await fetch(infoUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+    if (!info?.ok) throw new Error(info?.error || 'Failed to load details.');
 
-        const baseUrl = '@Url.Action("GetKpiPresentation", "RedBoard")' + '?kpiId=' + encodeURIComponent(info.kpiId);
-        const base = await fetch(baseUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+    const baseUrl = '@Url.Action("GetKpiPresentation", "RedBoard")' + '?kpiId=' + encodeURIComponent(info.kpiId);
+    const base = await fetch(baseUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
 
-        const labelsBase = base?.chart?.labels || [];
-        const actBase = (base?.chart?.actual || []).slice();
-        const tgtBase = (base?.chart?.target || []).slice();
-        const fctBase = (base?.chart?.forecast || []).slice();
+    const labelsBase = base?.chart?.labels || [];
+    const actBase = (base?.chart?.actual || []).slice();
+    const tgtBase = (base?.chart?.target || []).slice();
+    const fctBase = (base?.chart?.forecast || []).slice();
 
-        const yrs = Array.isArray(base?.chart?.yearTargets) ? base.chart.yearTargets : [];
-        const yearLabels = yrs.map(y => String(y.year));
-        const yearVals = yrs.map(y => (y?.value ?? null));
+    const yrs = Array.isArray(base?.chart?.yearTargets) ? base.chart.yearTargets : [];
+    const yearLabels = yrs.map(y => String(y.year));
+    const yearVals = yrs.map(y => (y?.value ?? null));
 
-        const labels = labelsBase.concat(yearLabels);
-        const pad = new Array(yearLabels.length).fill(null);
-        const leftNulls = new Array(labelsBase.length).fill(null);
+    const labels = labelsBase.concat(yearLabels);
+    const pad = new Array(yearLabels.length).fill(null);
+    const leftNulls = new Array(labelsBase.length).fill(null);
 
-        const act = actBase.concat(pad);
-        const tgt = tgtBase.concat(pad);
-        const fct = fctBase.concat(pad);
-        const yearBar = leftNulls.concat(yearVals);
+    const act = actBase.concat(pad);
+    const tgt = tgtBase.concat(pad);
+    const fct = fctBase.concat(pad);
+    const yearBar = leftNulls.concat(yearVals);
 
-        const pActual = toNum(info?.proposed?.actual);
-        const pTarget = toNum(info?.proposed?.target);       // <-- ADD
-        const pForecast = toNum(info?.proposed?.forecast);
+    const pActual = toNum(info?.proposed?.actual);
+    const pTarget = toNum(info?.proposed?.target);       // <-- ADD
+    const pForecast = toNum(info?.proposed?.forecast);
 
-        const pIdx = findLabelIndex(labels, info.period);
+    const pIdx = findLabelIndex(labels, info.period);
 
-        const overlayActual = new Array(labels.length).fill(null);
-        const overlayForecast = new Array(labels.length).fill(null);
-        if (pIdx >= 0) {
-          if (isFiniteNum(pActual)) overlayActual[pIdx] = pActual;
-          if (isFiniteNum(pTarget)) overlayTarget[pIdx] = pTarget;      // <-- ADD
-          if (isFiniteNum(pForecast)) overlayForecast[pIdx] = pForecast;
-        }
+    const overlayActual = new Array(labels.length).fill(null);
+    const overlayForecast = new Array(labels.length).fill(null);
+    if (pIdx >= 0) {
+    if (isFiniteNum(pActual)) overlayActual[pIdx] = pActual;
+    if (isFiniteNum(pTarget)) overlayTarget[pIdx] = pTarget;      // <-- ADD
+    if (isFiniteNum(pForecast)) overlayForecast[pIdx] = pForecast;
+    }
 
-        const overlayColor = '#0d6efd';
-        const datasets = [
-          { type: 'bar', label: 'Actual', data: act, backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
-          { type: 'line', label: 'Target', data: tgt, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
-          { type: 'line', label: 'Forecast', data: fct, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
-          { type: 'bar', label: 'Year Target', data: yearBar, backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
-        ];
-        if (overlayActual.some(v => v != null))
-          datasets.push({ type: 'bar', label: 'Proposed Actual', data: overlayActual, backgroundColor: overlayColor, borderColor: overlayColor, borderWidth: 2, borderSkipped: 'bottom' });
-        if (overlayForecast.some(v => v != null))
-          datasets.push({ type: 'line', label: 'Proposed Forecast', data: overlayForecast, borderColor: overlayColor, pointBackgroundColor: '#0d6efd', pointBorderColor: '#0d6efd', borderDash: [2, 2], borderWidth: 2, tension: .3, fill: false });
+    const overlayColor = '#0d6efd';
+    const datasets = [
+    { type: 'bar', label: 'Actual', data: act, backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
+    { type: 'line', label: 'Target', data: tgt, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
+    { type: 'line', label: 'Forecast', data: fct, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
+    { type: 'bar', label: 'Year Target', data: yearBar, backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
+    ];
+    if (overlayActual.some(v => v != null))
+    datasets.push({ type: 'bar', label: 'Proposed Actual', data: overlayActual, backgroundColor: overlayColor, borderColor: overlayColor, borderWidth: 2, borderSkipped: 'bottom' });
+    if (overlayForecast.some(v => v != null))
+    datasets.push({ type: 'line', label: 'Proposed Forecast', data: overlayForecast, borderColor: overlayColor, pointBackgroundColor: '#0d6efd', pointBorderColor: '#0d6efd', borderDash: [2, 2], borderWidth: 2, tension: .3, fill: false });
 
-        $('detailsLabel').textContent = info.kpiText || 'Change Details';
-        $('detailsSubtitle').textContent =
-          'Period: ' + (info.period?.label || '—') +
-          (info.submittedBy ? ` • Submitted by ${info.submittedBy}` : '') +
-          (info.submittedAt ? ` at ${info.submittedAt}` : '');
+    $('detailsLabel').textContent = info.kpiText || 'Change Details';
+    $('detailsSubtitle').textContent =
+    'Period: ' + (info.period?.label || '—') +
+    (info.submittedBy ? ` • Submitted by ${info.submittedBy}` : '') +
+    (info.submittedAt ? ` at ${info.submittedAt}` : '');
 
-        $('pv_count_actual').textContent = overlayActual.filter(v => v != null).length;
-        $('pv_count_target').textContent = overlayTarget.filter(v => v != null).length;   // <-- ADD
-        $('pv_count_forecast').textContent = overlayForecast.filter(v => v != null).length;
-        $('pv_periods').textContent = info?.period?.label || '—';
+    $('pv_count_actual').textContent = overlayActual.filter(v => v != null).length;
+    $('pv_count_target').textContent = overlayTarget.filter(v => v != null).length;   // <-- ADD
+    $('pv_count_forecast').textContent = overlayForecast.filter(v => v != null).length;
+    $('pv_periods').textContent = info?.period?.label || '—';
 
-        new bootstrap.Modal(document.getElementById('detailsModal')).show();
-        const ctx = $('apprChart').getContext('2d');
-        if (apprChart) apprChart.destroy();
-        apprChart = new Chart(ctx, {
-          type: 'bar',
-          data: { labels, datasets },
-          options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: { x: { grid: { display: false } }, y: { grid: { display: false }, beginAtZero: true } },
-            plugins: {
-              legend: { position: 'top', labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 10, weight: '700' } } },
-              tooltip: { enabled: true }
-            }
-          }
-        });
-      } catch (err) {
-        console.error(err);
-        alert('Failed to load details.');
-      }
+    new bootstrap.Modal(document.getElementById('detailsModal')).show();
+    const ctx = $('apprChart').getContext('2d');
+    if (apprChart) apprChart.destroy();
+    apprChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: { x: { grid: { display: false } }, y: { grid: { display: false }, beginAtZero: true } },
+    plugins: {
+    legend: { position: 'top', labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 10, weight: '700' } } },
+    tooltip: { enabled: true }
+    }
+    }
+    });
+    } catch (err) {
+    console.error(err);
+    alert('Failed to load details.');
+    }
     }
 
     function summarizePeriod(p) {
-      if (!p) return '';
-      if (p.month) return `${p.year} - ${MONTH_ABBR[(p.month - 1) || 0]}`;
-      if (p.quarter) return `${p.year} - Q${p.quarter}`;
-      if (p.monthNum) return `${p.year} - ${MONTH_ABBR[(p.monthNum - 1) || 0]}`;
-      if (p.quarterNum) return `${p.year} - Q${p.quarterNum}`;
-      return p.label || String(p.year || '');
+    if (!p) return '';
+    if (p.month) return `${p.year} - ${MONTH_ABBR[(p.month - 1) || 0]}`;
+    if (p.quarter) return `${p.year} - Q${p.quarter}`;
+    if (p.monthNum) return `${p.year} - ${MONTH_ABBR[(p.monthNum - 1) || 0]}`;
+    if (p.quarterNum) return `${p.year} - Q${p.quarterNum}`;
+    return p.label || String(p.year || '');
     }
   </script>
 }
