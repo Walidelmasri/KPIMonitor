@@ -1656,7 +1656,7 @@ namespace KPIMonitor.Controllers
             }
             // test for monthly or quarterly
             var pf = (periodFilter ?? "all").Trim().ToLowerInvariant();
-            if (pf != "all" && pf != "quarter" && pf != "month")
+            if (pf != "all" && pf != "quarterly" && pf != "monthly")
                 pf = "all";
             // 1) Collect distinct PRIMARY editor EmpIds from active plans
             var primaryEditorEmpIds = await _db.KpiYearPlans
@@ -1747,11 +1747,11 @@ namespace KPIMonitor.Controllers
                         ? plansQuery.Where(p => p.Editor2EmpId == empId)
                         : plansQuery.Where(p => p.EditorEmpId == empId);
 // change here for month
-                    if (pf == "month")
+                    if (pf == "monthly")
                     {
                         plansQuery = plansQuery.Where(p => p.Period != null && p.Period.MonthNum != null);
                     }
-                    else if (pf == "quarter")
+                    else if (pf == "quarterly")
                     {
                         plansQuery = plansQuery.Where(p => p.Period != null && p.Period.QuarterNum != null);
                     }
@@ -1936,14 +1936,14 @@ namespace KPIMonitor.Controllers
             var sb = new StringBuilder();
 
             var allCls = pf == "all" ? "btn-primary" : "btn-outline-secondary";
-            var quarterCls = pf == "quarter" ? "btn-primary" : "btn-outline-secondary";
-            var monthCls = pf == "month" ? "btn-primary" : "btn-outline-secondary";
+            var quarterCls = pf == "quarterly" ? "btn-primary" : "btn-outline-secondary";
+            var monthCls = pf == "monthly" ? "btn-primary" : "btn-outline-secondary";
 
             sb.AppendLine($@"
 <div class='d-flex gap-2 mb-3'>
   <button type='button' class='btn btn-sm {allCls} js-editor-period' data-period-filter='all'>All</button>
-  <button type='button' class='btn btn-sm {quarterCls} js-editor-period' data-period-filter='quarter'>By Quarter</button>
-  <button type='button' class='btn btn-sm {monthCls} js-editor-period' data-period-filter='month'>By Month</button>
+  <button type='button' class='btn btn-sm {quarterCls} js-editor-period' data-period-filter='quarterly'>By Quarter</button>
+  <button type='button' class='btn btn-sm {monthCls} js-editor-period' data-period-filter='monthly'>By Month</button>
 </div>");
 
             void RenderSection(string title, List<(string EmpId, string Name, string? Login, string IndicatorLabel, string? OwnerName, DateTime? LastSubmittedAt, string? ApprovalStatus)> rows)
