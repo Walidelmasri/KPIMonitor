@@ -97,7 +97,48 @@
     </div>
   </div>
 </div>
+<!-- Latest Submissions Details Modal -->
+<div class="modal fade" id="editorDetailsModal" tabindex="-1" aria-labelledby="editorDetailsLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content rounded-3">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title" id="editorDetailsLabel">Indicator Details</h5>
+          <div class="small text-muted" id="editorDetailsSubtitle">—</div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="border rounded p-2" style="height:360px">
+          <canvas id="editorApprChart"></canvas>
+        </div>
 
+        <div class="row small mt-3" style="row-gap:.4rem">
+          <div class="col-6 col-md-3"><strong>Approved Actual:</strong> <span id="ed_approved_actual">—</span></div>
+          <div class="col-6 col-md-3"><strong>Approved Target:</strong> <span id="ed_approved_target">—</span></div>
+          <div class="col-6 col-md-3"><strong>Approved Forecast:</strong> <span id="ed_approved_forecast">—</span></div>
+          <div class="col-6 col-md-3"><strong>Approved Status:</strong> <span id="ed_approved_status">—</span></div>
+
+          <div class="col-6 col-md-3"><strong>Pending Actual:</strong> <span id="ed_pending_actual">—</span></div>
+          <div class="col-6 col-md-3"><strong>Pending Target:</strong> <span id="ed_pending_target">—</span></div>
+          <div class="col-6 col-md-3"><strong>Pending Forecast:</strong> <span id="ed_pending_forecast">—</span></div>
+          <div class="col-6 col-md-3"><strong>Pending Status:</strong> <span id="ed_pending_status">—</span></div>
+
+          <div class="col-6 col-md-3"><strong>Missing Actual:</strong> <span id="ed_missing_actual">—</span></div>
+          <div class="col-6 col-md-3"><strong>Missing Target:</strong> <span id="ed_missing_target">—</span></div>
+          <div class="col-6 col-md-3"><strong>Missing Forecast:</strong> <span id="ed_missing_forecast">—</span></div>
+          <div class="col-6 col-md-3"><strong>Missing Status:</strong> <span id="ed_missing_status">—</span></div>
+
+          <div class="col-12 mt-2"><strong>Pending periods:</strong> <span id="ed_periods_pending">—</span></div>
+          <div class="col-12"><strong>Missing periods:</strong> <span id="ed_periods_missing">—</span></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 @section Scripts {
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
@@ -110,8 +151,8 @@
     let currentTab = 'pending';
     let currentEditorPeriodFilter = 'all';
 
-    let apprChart = null; // single Chart.js instance
-
+    let apprChart = null;       // existing modal chart
+    let editorApprChart = null; // latest submissions modal chart
     // ---------- list loader (batches) ----------
     async function loadList(tab) {
     currentTab = tab || currentTab || 'pending';
@@ -253,8 +294,7 @@
     await loadEditors(pf);
     return;
     }
-    const btn = e.target.closest('.appr-btn, .appr-batch-details, .appr-details');
-    if (!btn) return;
+    const btn = e.target.closest('.appr-btn, .appr-batch-details, .appr-details, .appr-editor-details'); if (!btn) return;
 
     // Approve entire batch
     if (btn.classList.contains('appr-btn') && btn.getAttribute('data-action') === 'approve-batch') {
@@ -331,7 +371,13 @@
     if (batchId) openBatchDetails(batchId, kpiIdAttr);
     return;
     }
-
+    // Latest submissions details
+    if (btn.classList.contains('appr-editor-details')) {
+    e.preventDefault();
+    const kpiId = btn.getAttribute('data-kpi-id');
+    if (kpiId) openEditorDetails(kpiId);
+    return;
+    }
     // Fallback: single-row details (if present)
     if (btn.classList.contains('appr-details')) {
     e.preventDefault();
@@ -389,7 +435,9 @@
     const normalize = s => String(s ?? '').toLowerCase().replace(/[—–-]/g, '-').replace(/\s+/g, ' ').trim();
     function toNum(v) { return (v === null || v === undefined || v === '') ? null : Number(v); }
     function isFiniteNum(v) { return typeof v === 'number' && isFinite(v); }
-
+    function joinOrDash(arr) {
+    return Array.isArray(arr) && arr.length ? arr.join(', ') : '—';
+    }
     function findLabelIndex(labels, period) {
     const L = labels.map(normalize);
     const y = period?.year ?? null;
@@ -536,7 +584,151 @@
     alert(err.message || 'Failed to load details.');
     }
     }
+    // ---- Latest submissions details ----
+    async function openEditorDetails(kpiId) {
+    try {
+    const infoUrl = '@Url.Action("LatestIndicatorDetails", "KpiFactChanges")' + '?kpiId=' + encodeURIComponent(kpiId);
+    const info = await fetch(infoUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+    if (!info?.ok) throw new Error(info?.error || 'Failed to load indicator details.');
 
+    const baseUrl = '@Url.Action("GetKpiPresentation", "RedBoard")' + '?kpiId=' + encodeURIComponent(kpiId);
+    const base = await fetch(baseUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+
+    const labelsBase = base?.chart?.labels || [];
+    const actBase = (base?.chart?.actual || []).slice();
+    const tgtBase = (base?.chart?.target || []).slice();
+    const fctBase = (base?.chart?.forecast || []).slice();
+
+    const yrs = Array.isArray(base?.chart?.yearTargets) ? base.chart.yearTargets : [];
+    const yearLabels = yrs.map(y => String(y.year));
+    const yearVals = yrs.map(y => (y?.value ?? null));
+
+    const labels = labelsBase.concat(yearLabels);
+    const pad = new Array(yearLabels.length).fill(null);
+    const leftNulls = new Array(labelsBase.length).fill(null);
+
+    const act = actBase.concat(pad);
+    const tgt = tgtBase.concat(pad);
+    const fct = fctBase.concat(pad);
+    const yearBar = leftNulls.concat(yearVals);
+
+    const overlayActual = new Array(labels.length).fill(null);
+    const overlayTarget = new Array(labels.length).fill(null);
+    const overlayForecast = new Array(labels.length).fill(null);
+
+    const items = Array.isArray(info?.items) ? info.items : [];
+
+    for (const it of items) {
+    if (!it?.pending) continue;
+
+    const idx = findLabelIndex(labels, it.period);
+    if (idx < 0) continue;
+
+    const pa = toNum(it?.pending?.actual);
+    const pt = toNum(it?.pending?.target);
+    const pf = toNum(it?.pending?.forecast);
+
+    if (isFiniteNum(pa)) overlayActual[idx] = pa;
+    if (isFiniteNum(pt)) overlayTarget[idx] = pt;
+    if (isFiniteNum(pf)) overlayForecast[idx] = pf;
+    }
+
+    const overlayColor = '#0d6efd';
+    const datasets = [
+    { type: 'bar', label: 'Actual', data: act, backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
+    { type: 'line', label: 'Target', data: tgt, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
+    { type: 'line', label: 'Forecast', data: fct, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
+    { type: 'bar', label: 'Year Target', data: yearBar, backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
+    ];
+
+    if (overlayActual.some(v => v != null))
+    datasets.push({ type: 'bar', label: 'Pending Actual', data: overlayActual, backgroundColor: overlayColor, borderColor: overlayColor, borderWidth: 2, borderSkipped: 'bottom' });
+
+    if (overlayTarget.some(v => v != null))
+    datasets.push({
+    type: 'line',
+    label: 'Pending Target',
+    data: overlayTarget,
+    borderColor: overlayColor,
+    pointBackgroundColor: overlayColor,
+    pointBorderColor: overlayColor,
+    borderDash: [3, 3],
+    borderWidth: 2,
+    tension: .3,
+    fill: false
+    });
+
+    if (overlayForecast.some(v => v != null))
+    datasets.push({
+    type: 'line',
+    label: 'Pending Forecast',
+    data: overlayForecast,
+    borderColor: overlayColor,
+    pointBackgroundColor: overlayColor,
+    pointBorderColor: overlayColor,
+    borderDash: [2, 2],
+    borderWidth: 2,
+    tension: .3,
+    fill: false
+    });
+
+    $('editorDetailsLabel').textContent = info.kpiText || 'Indicator Details';
+
+    const hdrBits = [];
+    if (info?.frequency) hdrBits.push('Freq: ' + info.frequency);
+    if (info?.ownerName) hdrBits.push('Owner: ' + info.ownerName);
+    if (info?.latestPendingSubmittedBy) hdrBits.push('Latest pending by ' + info.latestPendingSubmittedBy);
+    if (info?.latestPendingSubmittedAt) hdrBits.push('at ' + info.latestPendingSubmittedAt);
+    $('editorDetailsSubtitle').textContent = hdrBits.join(' • ') || '—';
+
+    const s = info?.summary || {};
+    $('ed_approved_actual').textContent = String(s.approvedActualCount ?? 0);
+    $('ed_approved_target').textContent = String(s.approvedTargetCount ?? 0);
+    $('ed_approved_forecast').textContent = String(s.approvedForecastCount ?? 0);
+    $('ed_approved_status').textContent = String(s.approvedStatusCount ?? 0);
+
+    $('ed_pending_actual').textContent = String(s.pendingActualCount ?? 0);
+    $('ed_pending_target').textContent = String(s.pendingTargetCount ?? 0);
+    $('ed_pending_forecast').textContent = String(s.pendingForecastCount ?? 0);
+    $('ed_pending_status').textContent = String(s.pendingStatusCount ?? 0);
+
+    $('ed_missing_actual').textContent = String(s.missingActualCount ?? 0);
+    $('ed_missing_target').textContent = String(s.missingTargetCount ?? 0);
+    $('ed_missing_forecast').textContent = String(s.missingForecastCount ?? 0);
+    $('ed_missing_status').textContent = String(s.missingStatusCount ?? 0);
+
+    $('ed_periods_pending').textContent = joinOrDash(info?.periods?.pending);
+    $('ed_periods_missing').textContent = joinOrDash(info?.periods?.missing);
+
+    new bootstrap.Modal(document.getElementById('editorDetailsModal')).show();
+
+    const ctx = $('editorApprChart').getContext('2d');
+    if (editorApprChart) editorApprChart.destroy();
+
+    editorApprChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+    x: { grid: { display: false } },
+    y: { grid: { display: false }, beginAtZero: true }
+    },
+    plugins: {
+    legend: {
+    position: 'top',
+    labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 10, weight: '700' } }
+    },
+    tooltip: { enabled: true }
+    }
+    }
+    });
+    } catch (err) {
+    console.error(err);
+    alert(err.message || 'Failed to load indicator details.');
+    }
+    }
     // Fallback single-row details (if needed)
     async function openRowDetails(changeId) {
     try {

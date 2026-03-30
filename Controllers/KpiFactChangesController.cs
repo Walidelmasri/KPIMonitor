@@ -1643,22 +1643,577 @@ namespace KPIMonitor.Controllers
             });
         }
         // ------------------------
+        // Latest submissions details (admin only)
+        // ------------------------
+        [HttpGet]
+        public async Task<IActionResult> LatestIndicatorDetails(decimal kpiId, CancellationToken ct = default)
+        {
+            if (!(_admin.IsAdmin(User) || _admin.IsSuperAdmin(User)))
+                return StatusCode(403, new { ok = false, error = "Not allowed." });
+
+            var plan = await _db.KpiYearPlans
+                .AsNoTracking()
+                .Include(p => p.Period)
+                .Include(p => p.Kpi)!.ThenInclude(k => k.Pillar)
+                .Include(p => p.Kpi)!.ThenInclude(k => k.Objective)
+                .Where(p => p.KpiId == kpiId && p.IsActive != 0 && p.Period != null)
+                .OrderByDescending(p => p.Period!.Year)
+                .ThenByDescending(p => p.KpiYearPlanId)
+                .FirstOrDefaultAsync(ct);
+
+            if (plan == null || plan.Period == null)
+                return NotFound(new { ok = false, error = "Active KPI year plan not found." });
+
+            var planYear = plan.Period.Year;
+
+            var facts = await _db.KpiFacts
+                .AsNoTracking()
+                .Include(f => f.Period)
+                .Where(f =>
+                    f.KpiId == kpiId &&
+                    f.KpiYearPlanId == plan.KpiYearPlanId &&
+                    f.IsActive != 0 &&
+                    f.Period != null &&
+                    f.Period.Year == planYear)
+                .OrderBy(f => f.Period!.StartDate)
+                .ToListAsync(ct);
+
+            var factIds = facts.Select(f => f.KpiFactId).Distinct().ToList();
+
+            var pendingRaw = await _db.KpiFactChanges
+                .AsNoTracking()
+                .Where(c =>
+                    factIds.Contains(c.KpiFactId) &&
+                    c.ApprovalStatus != null &&
+                    c.ApprovalStatus.ToLower() == "pending")
+                .OrderByDescending(c => c.SubmittedAt)
+                .ThenByDescending(c => c.KpiFactChangeId)
+                .Select(c => new
+                {
+                    c.KpiFactId,
+                    c.ProposedActualValue,
+                    c.ProposedTargetValue,
+                    c.ProposedForecastValue,
+                    c.ProposedStatusCode,
+                    c.SubmittedBy,
+                    c.SubmittedAt
+                })
+                .ToListAsync(ct);
+
+            var pendingByFact = pendingRaw
+                .GroupBy(x => x.KpiFactId)
+                .ToDictionary(g => g.Key, g => g.First());
+
+            string? ownerName = null;
+            if (!string.IsNullOrWhiteSpace(plan.OwnerEmpId))
+            {
+                var ownerRec = await _dir.TryGetByEmpIdAsync(plan.OwnerEmpId, ct);
+                ownerName = ownerRec?.NameEng ?? plan.OwnerEmpId;
+            }
+            else if (!string.IsNullOrWhiteSpace(plan.Owner))
+            {
+                ownerName = plan.Owner;
+            }
+
+            var k = plan.Kpi;
+            string kpiText = k == null
+                ? $"KPI {kpiId}"
+                : $"{(k.Pillar?.PillarCode ?? "")}.{(k.Objective?.ObjectiveCode ?? "")} {(k.KpiCode ?? "")} — {(k.KpiName ?? "-")}";
+
+            var items = facts.Select(f =>
+            {
+                pendingByFact.TryGetValue(f.KpiFactId, out var pending);
+
+                var missingActual = f.ActualValue == null && (pending == null || pending.ProposedActualValue == null);
+                var missingTarget = f.TargetValue == null && (pending == null || pending.ProposedTargetValue == null);
+                var missingForecast = f.ForecastValue == null && (pending == null || pending.ProposedForecastValue == null);
+                var missingStatus = string.IsNullOrWhiteSpace(f.StatusCode) && (pending == null || string.IsNullOrWhiteSpace(pending.ProposedStatusCode));
+
+                return new
+                {
+                    period = new
+                    {
+                        year = f.Period?.Year,
+                        month = f.Period?.MonthNum,
+                        quarter = f.Period?.QuarterNum,
+                        label = PeriodLabel(f.Period)
+                    },
+                    current = new
+                    {
+                        actual = f.ActualValue,
+                        target = f.TargetValue,
+                        forecast = f.ForecastValue,
+                        status = f.StatusCode
+                    },
+                    pending = pending == null ? null : new
+                    {
+                        actual = pending.ProposedActualValue,
+                        target = pending.ProposedTargetValue,
+                        forecast = pending.ProposedForecastValue,
+                        status = pending.ProposedStatusCode,
+                        submittedBy = pending.SubmittedBy,
+                        submittedAt = pending.SubmittedAt
+                    },
+                    missing = new
+                    {
+                        actual = missingActual,
+                        target = missingTarget,
+                        forecast = missingForecast,
+                        status = missingStatus
+                    }
+                };
+            }).ToList();
+
+            var latestPending = pendingRaw.FirstOrDefault();
+
+            var periodsPending = items
+                .Where(x => x.pending != null)
+                .Select(x => x.period.label)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList();
+
+            var periodsMissing = items
+                .Where(x => x.missing.actual || x.missing.target || x.missing.forecast || x.missing.status)
+                .Select(x => x.period.label)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList();
+
+            var summary = new
+            {
+                approvedActualCount = facts.Count(f => f.ActualValue != null),
+                approvedTargetCount = facts.Count(f => f.TargetValue != null),
+                approvedForecastCount = facts.Count(f => f.ForecastValue != null),
+                approvedStatusCount = facts.Count(f => !string.IsNullOrWhiteSpace(f.StatusCode)),
+
+                pendingActualCount = pendingByFact.Values.Count(x => x.ProposedActualValue != null),
+                pendingTargetCount = pendingByFact.Values.Count(x => x.ProposedTargetValue != null),
+                pendingForecastCount = pendingByFact.Values.Count(x => x.ProposedForecastValue != null),
+                pendingStatusCount = pendingByFact.Values.Count(x => !string.IsNullOrWhiteSpace(x.ProposedStatusCode)),
+
+                missingActualCount = items.Count(x => x.missing.actual),
+                missingTargetCount = items.Count(x => x.missing.target),
+                missingForecastCount = items.Count(x => x.missing.forecast),
+                missingStatusCount = items.Count(x => x.missing.status),
+
+                totalPeriods = items.Count
+            };
+
+            return Json(new
+            {
+                ok = true,
+                kpiId,
+                kpiText,
+                frequency = plan.Frequency,
+                ownerName,
+                planYear,
+                latestPendingSubmittedBy = latestPending?.SubmittedBy,
+                latestPendingSubmittedAt = latestPending?.SubmittedAt,
+                summary,
+                periods = new
+                {
+                    pending = periodsPending,
+                    missing = periodsMissing
+                },
+                items
+            });
+        }
+        // ------------------------
+        // Editors stats (admin only)
+        // ------------------------
+        //         [HttpPost]
+        //         [ValidateAntiForgeryToken]
+        //         public async Task<IActionResult> EditorStatsHtml(string? periodFilter = "all", CancellationToken ct = default)
+        //         {
+        //             // Hard guard: only Admin / SuperAdmin
+        //             if (!(_admin.IsAdmin(User) || _admin.IsSuperAdmin(User)))
+        //             {
+        //                 return StatusCode(403, "Not allowed.");
+        //             }
+        //             // test for monthly or quarterly
+        //             var pf = (periodFilter ?? "all").Trim().ToLowerInvariant();
+        //             if (pf != "all" && pf != "quarterly" && pf != "monthly")
+        //                 pf = "all";
+        //             // 1) Collect distinct PRIMARY editor EmpIds from active plans
+        //             var primaryEditorEmpIds = await _db.KpiYearPlans
+        //                 .AsNoTracking()
+        //                 .Where(p => p.EditorEmpId != null && p.IsActive != 0)
+        //                 .Select(p => p.EditorEmpId!)
+        //                 .Distinct()
+        //                 .ToListAsync(ct);
+
+        //             // 1b) Collect distinct SECONDARY editor EmpIds from active plans
+        //             var secondaryEditorEmpIds = await _db.KpiYearPlans
+        //                 .AsNoTracking()
+        //                 .Where(p => p.Editor2EmpId != null && p.IsActive != 0)
+        //                 .Select(p => p.Editor2EmpId!)
+        //                 .Distinct()
+        //                 .ToListAsync(ct);
+
+        //             // If nothing at all
+        //             if (primaryEditorEmpIds.Count == 0 && secondaryEditorEmpIds.Count == 0)
+        //             {
+        //                 return Content("<div class='text-muted small'>No editors configured.</div>", "text/html; charset=utf-8");
+        //             }
+
+        //             // local helpers (same ones you already use)
+        //             static string H(string? s) => WebUtility.HtmlEncode(s ?? "");
+        //             static string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd") : "—"; // DATE ONLY
+        //             static string StatusLabel(string? s)
+        //             {
+        //                 if (string.IsNullOrWhiteSpace(s)) return "Pending";
+        //                 s = s.Trim().ToLowerInvariant();
+        //                 return s switch
+        //                 {
+        //                     "approved" => "Approved",
+        //                     "rejected" => "Rejected",
+        //                     "pending" => "Pending",
+        //                     _ => s
+        //                 };
+        //             }
+
+        //             // One row per (Editor, Indicator)
+        //             var primaryRows = new List<(
+        //                 string EmpId,
+        //                 string Name,
+        //                 string? Login,
+        //                 string IndicatorLabel,
+        //                 string? OwnerName,
+        //                 DateTime? LastSubmittedAt,
+        //                 string? ApprovalStatus
+        //             )>();
+
+        //             var secondaryRows = new List<(
+        //                 string EmpId,
+        //                 string Name,
+        //                 string? Login,
+        //                 string IndicatorLabel,
+        //                 string? OwnerName,
+        //                 DateTime? LastSubmittedAt,
+        //                 string? ApprovalStatus
+        //             )>();
+
+        //             // This is your existing logic, just parameterized by:
+        //             // - which editor column to match (primary vs secondary)
+        //             // - which list to write into (primaryRows vs secondaryRows)
+        //             async Task BuildRowsAsync(List<string> editorEmpIds, bool isSecondary, CancellationToken token)
+        //             {
+        //                 foreach (var empId in editorEmpIds)
+        //                 {
+        //                     if (string.IsNullOrWhiteSpace(empId))
+        //                         continue;
+
+        //                     var rec = await _dir.TryGetByEmpIdAsync(empId, token);
+        //                     var login = await _dir.TryGetLoginByEmpIdAsync(empId, token);
+        //                     var sam = Sam(login);
+
+        //                     if (string.IsNullOrWhiteSpace(sam))
+        //                         continue;
+
+        //                     var samUp = sam.ToUpperInvariant();
+
+        //                     var plansQuery = _db.KpiYearPlans
+        //                         .AsNoTracking()
+        //                         .Include(p => p.Kpi).ThenInclude(k => k.Pillar)
+        //                         .Include(p => p.Kpi).ThenInclude(k => k.Objective)
+        //                         .Include(p => p.Period)
+        //                         .Where(p => p.IsActive != 0);
+
+        //                     plansQuery = isSecondary
+        //                         ? plansQuery.Where(p => p.Editor2EmpId == empId)
+        //                         : plansQuery.Where(p => p.EditorEmpId == empId);
+        //                     // change here for month
+        //                     if (pf == "monthly")
+        //                     {
+        //                         plansQuery = plansQuery.Where(p =>
+        //                             p.Frequency != null &&
+        //                             p.Frequency.Trim().ToUpper() == "MONTHLY");
+        //                     }
+        //                     else if (pf == "quarterly")
+        //                     {
+        //                         plansQuery = plansQuery.Where(p =>
+        //                             p.Frequency != null &&
+        //                             p.Frequency.Trim().ToUpper() == "QUARTERLY");
+        //                     }
+
+        //                     var plans = await plansQuery
+        //                         .GroupBy(p => p.KpiId)
+        //                         .Select(g => g
+        //                             .OrderByDescending(x => x.Period != null ? x.Period.Year : 0)
+        //                             .ThenByDescending(x => x.KpiYearPlanId)
+        //                             .First())
+        //                         .ToListAsync(token);
+        //                     foreach (var plan in plans)
+        //                     {
+        //                         string indicatorLabel;
+        //                         var kpi = plan.Kpi;
+
+        //                         if (kpi != null)
+        //                         {
+        //                             var pillCode = kpi.Pillar?.PillarCode ?? "";
+        //                             var objCode = kpi.Objective?.ObjectiveCode ?? "";
+        //                             var codePart = $"{pillCode}.{objCode} {kpi.KpiCode}".Trim();
+        //                             var namePart = kpi.KpiName ?? "";
+
+        //                             if (!string.IsNullOrWhiteSpace(codePart) && !string.IsNullOrWhiteSpace(namePart))
+        //                                 indicatorLabel = $"{codePart} — {namePart}";
+        //                             else if (!string.IsNullOrWhiteSpace(namePart))
+        //                                 indicatorLabel = namePart;
+        //                             else
+        //                                 indicatorLabel = codePart;
+        //                         }
+        //                         else
+        //                         {
+        //                             indicatorLabel = "(no KPI)";
+        //                         }
+
+        //                         string? ownerName = null;
+        //                         if (!string.IsNullOrWhiteSpace(plan.OwnerEmpId))
+        //                         {
+        //                             var ownerRec = await _dir.TryGetByEmpIdAsync(plan.OwnerEmpId, token);
+        //                             ownerName = ownerRec?.NameEng ?? plan.OwnerEmpId;
+        //                         }
+        //                         else if (!string.IsNullOrWhiteSpace(plan.Owner))
+        //                         {
+        //                             ownerName = plan.Owner;
+        //                         }
+
+        //                         var latestChange = await _db.KpiFactChanges
+        //                             .AsNoTracking()
+        //                             .Include(c => c.KpiFact)
+        //                             .Where(c =>
+        //                                 c.KpiFact.KpiId == plan.KpiId &&
+        //                                 c.SubmittedBy != null &&
+        //                                 c.SubmittedBy.ToUpper() == samUp)
+        //                             .OrderByDescending(c => c.SubmittedAt)
+        //                             .FirstOrDefaultAsync(token);
+
+        //                         DateTime? lastSubmittedAt = latestChange?.SubmittedAt;
+        //                         string? approvalStatus = latestChange?.ApprovalStatus;
+
+        //                         var row = (
+        //                             EmpId: empId,
+        //                             Name: rec?.NameEng ?? empId,
+        //                             Login: login,
+        //                             IndicatorLabel: indicatorLabel,
+        //                             OwnerName: ownerName,
+        //                             LastSubmittedAt: lastSubmittedAt,
+        //                             ApprovalStatus: approvalStatus
+        //                         );
+
+        //                         if (isSecondary) secondaryRows.Add(row);
+        //                         else primaryRows.Add(row);
+        //                     }
+        //                 }
+        //             }
+        //             // async Task BuildRowsAsync(List<string> editorEmpIds, bool isSecondary, CancellationToken token)
+        //             // {
+        //             //     foreach (var empId in editorEmpIds)
+        //             //     {
+        //             //         if (string.IsNullOrWhiteSpace(empId))
+        //             //             continue;
+
+        //             //         // Editor info (name + login)
+        //             //         var rec = await _dir.TryGetByEmpIdAsync(empId, token);
+        //             //         var login = await _dir.TryGetLoginByEmpIdAsync(empId, token);
+        //             //         var sam = Sam(login); // normalize DOMAIN\user / user@mail → bare SAM
+
+        //             //         // keep your existing behavior: if no SAM, skip
+        //             //         if (string.IsNullOrWhiteSpace(sam))
+        //             //             continue;
+
+        //             //         var samUp = sam.ToUpperInvariant();
+
+        //             //         // 2) All active indicators (plans) for this editor
+        //             //         var plansQuery = _db.KpiYearPlans
+        //             //             .AsNoTracking()
+        //             //             .Include(p => p.Kpi).ThenInclude(k => k.Pillar)
+        //             //             .Include(p => p.Kpi).ThenInclude(k => k.Objective)
+        //             //             .Where(p => p.IsActive != 0);
+
+        //             //         // ONLY difference: which column we match
+        //             //         plansQuery = isSecondary
+        //             //             ? plansQuery.Where(p => p.Editor2EmpId == empId)
+        //             //             : plansQuery.Where(p => p.EditorEmpId == empId);
+
+        //             //         var plans = await plansQuery.ToListAsync(token);
+
+        //             //         foreach (var plan in plans)
+        //             //         {
+        //             //             // Build indicator label: e.g. "1.1 v — KPI Name"
+        //             //             string indicatorLabel;
+        //             //             var kpi = plan.Kpi;
+
+        //             //             if (kpi != null)
+        //             //             {
+        //             //                 var pillCode = kpi.Pillar?.PillarCode ?? "";
+        //             //                 var objCode = kpi.Objective?.ObjectiveCode ?? "";
+        //             //                 var codePart = $"{pillCode}.{objCode} {kpi.KpiCode}".Trim();
+        //             //                 var namePart = kpi.KpiName ?? "";
+
+        //             //                 if (!string.IsNullOrWhiteSpace(codePart) && !string.IsNullOrWhiteSpace(namePart))
+        //             //                     indicatorLabel = $"{codePart} — {namePart}";
+        //             //                 else if (!string.IsNullOrWhiteSpace(namePart))
+        //             //                     indicatorLabel = namePart;
+        //             //                 else
+        //             //                     indicatorLabel = codePart;
+        //             //             }
+        //             //             else
+        //             //             {
+        //             //                 indicatorLabel = "(no KPI)";
+        //             //             }
+
+        //             //             // Owner name (from OwnerEmpId where possible)
+        //             //             string? ownerName = null;
+        //             //             if (!string.IsNullOrWhiteSpace(plan.OwnerEmpId))
+        //             //             {
+        //             //                 var ownerRec = await _dir.TryGetByEmpIdAsync(plan.OwnerEmpId, token);
+        //             //                 ownerName = ownerRec?.NameEng ?? plan.OwnerEmpId;
+        //             //             }
+        //             //             else if (!string.IsNullOrWhiteSpace(plan.Owner))
+        //             //             {
+        //             //                 ownerName = plan.Owner;
+        //             //             }
+
+        //             //             // 3) Latest submission for this indicator by this editor (by date)
+        //             //             var latestChange = await _db.KpiFactChanges
+        //             //                 .AsNoTracking()
+        //             //                 .Include(c => c.KpiFact)
+        //             //                 .Where(c =>
+        //             //                     c.KpiFact.KpiYearPlanId == plan.KpiYearPlanId &&
+        //             //                     c.SubmittedBy != null &&
+        //             //                     c.SubmittedBy.ToUpper() == samUp)
+        //             //                 .OrderByDescending(c => c.SubmittedAt)
+        //             //                 .FirstOrDefaultAsync(token);
+
+        //             //             DateTime? lastSubmittedAt = latestChange?.SubmittedAt;
+        //             //             string? approvalStatus = latestChange?.ApprovalStatus;
+
+        //             //             var row = (
+        //             //                 EmpId: empId,
+        //             //                 Name: rec?.NameEng ?? empId,
+        //             //                 Login: login,
+        //             //                 IndicatorLabel: indicatorLabel,
+        //             //                 OwnerName: ownerName,
+        //             //                 LastSubmittedAt: lastSubmittedAt,
+        //             //                 ApprovalStatus: approvalStatus
+        //             //             );
+
+        //             //             if (isSecondary) secondaryRows.Add(row);
+        //             //             else primaryRows.Add(row);
+        //             //         }
+        //             //     }
+        //             // }
+
+        //             // Build primary then secondary using the SAME logic
+        //             if (primaryEditorEmpIds.Count > 0)
+        //                 await BuildRowsAsync(primaryEditorEmpIds, isSecondary: false, ct);
+
+        //             if (secondaryEditorEmpIds.Count > 0)
+        //                 await BuildRowsAsync(secondaryEditorEmpIds, isSecondary: true, ct);
+
+        //             // 4) Render (same table format), but now with two sections
+        //             var sb = new StringBuilder();
+
+        //             var allCls = pf == "all" ? "btn-primary" : "btn-outline-secondary";
+        //             var quarterCls = pf == "quarterly" ? "btn-primary" : "btn-outline-secondary";
+        //             var monthCls = pf == "monthly" ? "btn-primary" : "btn-outline-secondary";
+
+        //             sb.AppendLine($@"
+        // <div class='d-flex gap-2 mb-3'>
+        //   <button type='button' class='btn btn-sm {allCls} js-editor-period' data-period-filter='all'>All</button>
+        //   <button type='button' class='btn btn-sm {quarterCls} js-editor-period' data-period-filter='quarterly'>By Quarter</button>
+        //   <button type='button' class='btn btn-sm {monthCls} js-editor-period' data-period-filter='monthly'>By Month</button>
+        // </div>");
+
+        //             void RenderSection(string title, List<(string EmpId, string Name, string? Login, string IndicatorLabel, string? OwnerName, DateTime? LastSubmittedAt, string? ApprovalStatus)> rows)
+        //             {
+        //                 if (rows.Count == 0) return;
+
+        //                 var grouped = rows
+        //                     .OrderBy(r => r.Name)
+        //                     .ThenBy(r => r.IndicatorLabel)
+        //                     .GroupBy(r => new { r.EmpId, r.Name, r.Login });
+
+        //                 sb.AppendLine($"<div class='fw-bold mb-3 mt-4 fs-4 text-dark border-start border-4 ps-3'>{H(title)}</div>");
+        //                 sb.AppendLine("<div class='table-responsive'>");
+        //                 sb.AppendLine("<table class='table table-sm table-hover align-middle mb-3'>");
+        //                 sb.AppendLine("<thead><tr>");
+        //                 sb.AppendLine("<th>Indicator</th>");
+        //                 sb.AppendLine("<th>Owner</th>");
+        //                 sb.AppendLine("<th>Approval Status</th>");
+        //                 sb.AppendLine("<th>Last Submission</th>");
+        //                 sb.AppendLine("</tr></thead><tbody>");
+
+        //                 foreach (var group in grouped)
+        //                 {
+        //                     var displayName = group.Key.Name;
+        //                     var login = group.Key.Login;
+
+        //                     // Editor header row (editor shown once)
+        //                     sb.Append("<tr class='table-light'>");
+        //                     sb.Append("<td colspan='4'><strong>")
+        //                       .Append(H(displayName));
+
+        //                     if (!string.IsNullOrWhiteSpace(login))
+        //                     {
+        //                         sb.Append("</strong> <span class='text-muted small'>(")
+        //                           .Append(H(login))
+        //                           .Append(")</span>");
+        //                     }
+        //                     else
+        //                     {
+        //                         sb.Append("</strong>");
+        //                     }
+
+        //                     sb.Append("</td></tr>");
+
+        //                     foreach (var r in group)
+        //                     {
+        //                         var hasSubmission = r.LastSubmittedAt.HasValue;
+
+        //                         var displayStatus = hasSubmission
+        //                             ? StatusLabel(r.ApprovalStatus)
+        //                             : "—";
+
+        //                         sb.Append("<tr>");
+        //                         sb.Append("<td>").Append(H(r.IndicatorLabel)).Append("</td>");
+        //                         sb.Append("<td>").Append(H(r.OwnerName ?? "—")).Append("</td>");
+        //                         sb.Append("<td>").Append(H(displayStatus)).Append("</td>");
+        //                         sb.Append("<td>").Append(H(F(r.LastSubmittedAt))).Append("</td>");
+        //                         sb.AppendLine("</tr>");
+        //                     }
+        //                 }
+
+        //                 sb.AppendLine("</tbody></table></div>");
+        //             }
+
+        //             RenderSection("Editors", primaryRows);
+        //             RenderSection("Secondary editors", secondaryRows);
+
+        //             if (primaryRows.Count == 0 && secondaryRows.Count == 0)
+        //             {
+        //                 return Content("<div class='text-muted small'>No editor indicators found.</div>", "text/html; charset=utf-8");
+        //             }
+
+        //             return Content(sb.ToString(), "text/html; charset=utf-8");
+
+        //         }
+        // ------------------------
         // Editors stats (admin only)
         // ------------------------
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditorStatsHtml(string? periodFilter = "all", CancellationToken ct = default)
         {
-            // Hard guard: only Admin / SuperAdmin
             if (!(_admin.IsAdmin(User) || _admin.IsSuperAdmin(User)))
             {
                 return StatusCode(403, "Not allowed.");
             }
-            // test for monthly or quarterly
+
             var pf = (periodFilter ?? "all").Trim().ToLowerInvariant();
             if (pf != "all" && pf != "quarterly" && pf != "monthly")
                 pf = "all";
-            // 1) Collect distinct PRIMARY editor EmpIds from active plans
+
             var primaryEditorEmpIds = await _db.KpiYearPlans
                 .AsNoTracking()
                 .Where(p => p.EditorEmpId != null && p.IsActive != 0)
@@ -1666,7 +2221,6 @@ namespace KPIMonitor.Controllers
                 .Distinct()
                 .ToListAsync(ct);
 
-            // 1b) Collect distinct SECONDARY editor EmpIds from active plans
             var secondaryEditorEmpIds = await _db.KpiYearPlans
                 .AsNoTracking()
                 .Where(p => p.Editor2EmpId != null && p.IsActive != 0)
@@ -1674,15 +2228,13 @@ namespace KPIMonitor.Controllers
                 .Distinct()
                 .ToListAsync(ct);
 
-            // If nothing at all
             if (primaryEditorEmpIds.Count == 0 && secondaryEditorEmpIds.Count == 0)
             {
                 return Content("<div class='text-muted small'>No editors configured.</div>", "text/html; charset=utf-8");
             }
 
-            // local helpers (same ones you already use)
             static string H(string? s) => WebUtility.HtmlEncode(s ?? "");
-            static string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd") : "—"; // DATE ONLY
+            static string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd") : "—";
             static string StatusLabel(string? s)
             {
                 if (string.IsNullOrWhiteSpace(s)) return "Pending";
@@ -1696,11 +2248,12 @@ namespace KPIMonitor.Controllers
                 };
             }
 
-            // One row per (Editor, Indicator)
             var primaryRows = new List<(
                 string EmpId,
                 string Name,
                 string? Login,
+                decimal KpiId,
+                string? Frequency,
                 string IndicatorLabel,
                 string? OwnerName,
                 DateTime? LastSubmittedAt,
@@ -1711,15 +2264,14 @@ namespace KPIMonitor.Controllers
                 string EmpId,
                 string Name,
                 string? Login,
+                decimal KpiId,
+                string? Frequency,
                 string IndicatorLabel,
                 string? OwnerName,
                 DateTime? LastSubmittedAt,
                 string? ApprovalStatus
             )>();
 
-            // This is your existing logic, just parameterized by:
-            // - which editor column to match (primary vs secondary)
-            // - which list to write into (primaryRows vs secondaryRows)
             async Task BuildRowsAsync(List<string> editorEmpIds, bool isSecondary, CancellationToken token)
             {
                 foreach (var empId in editorEmpIds)
@@ -1746,19 +2298,19 @@ namespace KPIMonitor.Controllers
                     plansQuery = isSecondary
                         ? plansQuery.Where(p => p.Editor2EmpId == empId)
                         : plansQuery.Where(p => p.EditorEmpId == empId);
-// change here for month
-if (pf == "monthly")
-{
-    plansQuery = plansQuery.Where(p =>
-        p.Frequency != null &&
-        p.Frequency.Trim().ToUpper() == "MONTHLY");
-}
-else if (pf == "quarterly")
-{
-    plansQuery = plansQuery.Where(p =>
-        p.Frequency != null &&
-        p.Frequency.Trim().ToUpper() == "QUARTERLY");
-}
+
+                    if (pf == "monthly")
+                    {
+                        plansQuery = plansQuery.Where(p =>
+                            p.Frequency != null &&
+                            p.Frequency.Trim().ToUpper() == "MONTHLY");
+                    }
+                    else if (pf == "quarterly")
+                    {
+                        plansQuery = plansQuery.Where(p =>
+                            p.Frequency != null &&
+                            p.Frequency.Trim().ToUpper() == "QUARTERLY");
+                    }
 
                     var plans = await plansQuery
                         .GroupBy(p => p.KpiId)
@@ -1767,6 +2319,7 @@ else if (pf == "quarterly")
                             .ThenByDescending(x => x.KpiYearPlanId)
                             .First())
                         .ToListAsync(token);
+
                     foreach (var plan in plans)
                     {
                         string indicatorLabel;
@@ -1819,6 +2372,8 @@ else if (pf == "quarterly")
                             EmpId: empId,
                             Name: rec?.NameEng ?? empId,
                             Login: login,
+                            KpiId: plan.KpiId,
+                            Frequency: plan.Frequency,
                             IndicatorLabel: indicatorLabel,
                             OwnerName: ownerName,
                             LastSubmittedAt: lastSubmittedAt,
@@ -1830,113 +2385,13 @@ else if (pf == "quarterly")
                     }
                 }
             }
-            // async Task BuildRowsAsync(List<string> editorEmpIds, bool isSecondary, CancellationToken token)
-            // {
-            //     foreach (var empId in editorEmpIds)
-            //     {
-            //         if (string.IsNullOrWhiteSpace(empId))
-            //             continue;
 
-            //         // Editor info (name + login)
-            //         var rec = await _dir.TryGetByEmpIdAsync(empId, token);
-            //         var login = await _dir.TryGetLoginByEmpIdAsync(empId, token);
-            //         var sam = Sam(login); // normalize DOMAIN\user / user@mail → bare SAM
-
-            //         // keep your existing behavior: if no SAM, skip
-            //         if (string.IsNullOrWhiteSpace(sam))
-            //             continue;
-
-            //         var samUp = sam.ToUpperInvariant();
-
-            //         // 2) All active indicators (plans) for this editor
-            //         var plansQuery = _db.KpiYearPlans
-            //             .AsNoTracking()
-            //             .Include(p => p.Kpi).ThenInclude(k => k.Pillar)
-            //             .Include(p => p.Kpi).ThenInclude(k => k.Objective)
-            //             .Where(p => p.IsActive != 0);
-
-            //         // ONLY difference: which column we match
-            //         plansQuery = isSecondary
-            //             ? plansQuery.Where(p => p.Editor2EmpId == empId)
-            //             : plansQuery.Where(p => p.EditorEmpId == empId);
-
-            //         var plans = await plansQuery.ToListAsync(token);
-
-            //         foreach (var plan in plans)
-            //         {
-            //             // Build indicator label: e.g. "1.1 v — KPI Name"
-            //             string indicatorLabel;
-            //             var kpi = plan.Kpi;
-
-            //             if (kpi != null)
-            //             {
-            //                 var pillCode = kpi.Pillar?.PillarCode ?? "";
-            //                 var objCode = kpi.Objective?.ObjectiveCode ?? "";
-            //                 var codePart = $"{pillCode}.{objCode} {kpi.KpiCode}".Trim();
-            //                 var namePart = kpi.KpiName ?? "";
-
-            //                 if (!string.IsNullOrWhiteSpace(codePart) && !string.IsNullOrWhiteSpace(namePart))
-            //                     indicatorLabel = $"{codePart} — {namePart}";
-            //                 else if (!string.IsNullOrWhiteSpace(namePart))
-            //                     indicatorLabel = namePart;
-            //                 else
-            //                     indicatorLabel = codePart;
-            //             }
-            //             else
-            //             {
-            //                 indicatorLabel = "(no KPI)";
-            //             }
-
-            //             // Owner name (from OwnerEmpId where possible)
-            //             string? ownerName = null;
-            //             if (!string.IsNullOrWhiteSpace(plan.OwnerEmpId))
-            //             {
-            //                 var ownerRec = await _dir.TryGetByEmpIdAsync(plan.OwnerEmpId, token);
-            //                 ownerName = ownerRec?.NameEng ?? plan.OwnerEmpId;
-            //             }
-            //             else if (!string.IsNullOrWhiteSpace(plan.Owner))
-            //             {
-            //                 ownerName = plan.Owner;
-            //             }
-
-            //             // 3) Latest submission for this indicator by this editor (by date)
-            //             var latestChange = await _db.KpiFactChanges
-            //                 .AsNoTracking()
-            //                 .Include(c => c.KpiFact)
-            //                 .Where(c =>
-            //                     c.KpiFact.KpiYearPlanId == plan.KpiYearPlanId &&
-            //                     c.SubmittedBy != null &&
-            //                     c.SubmittedBy.ToUpper() == samUp)
-            //                 .OrderByDescending(c => c.SubmittedAt)
-            //                 .FirstOrDefaultAsync(token);
-
-            //             DateTime? lastSubmittedAt = latestChange?.SubmittedAt;
-            //             string? approvalStatus = latestChange?.ApprovalStatus;
-
-            //             var row = (
-            //                 EmpId: empId,
-            //                 Name: rec?.NameEng ?? empId,
-            //                 Login: login,
-            //                 IndicatorLabel: indicatorLabel,
-            //                 OwnerName: ownerName,
-            //                 LastSubmittedAt: lastSubmittedAt,
-            //                 ApprovalStatus: approvalStatus
-            //             );
-
-            //             if (isSecondary) secondaryRows.Add(row);
-            //             else primaryRows.Add(row);
-            //         }
-            //     }
-            // }
-
-            // Build primary then secondary using the SAME logic
             if (primaryEditorEmpIds.Count > 0)
                 await BuildRowsAsync(primaryEditorEmpIds, isSecondary: false, ct);
 
             if (secondaryEditorEmpIds.Count > 0)
                 await BuildRowsAsync(secondaryEditorEmpIds, isSecondary: true, ct);
 
-            // 4) Render (same table format), but now with two sections
             var sb = new StringBuilder();
 
             var allCls = pf == "all" ? "btn-primary" : "btn-outline-secondary";
@@ -1950,7 +2405,9 @@ else if (pf == "quarterly")
   <button type='button' class='btn btn-sm {monthCls} js-editor-period' data-period-filter='monthly'>By Month</button>
 </div>");
 
-            void RenderSection(string title, List<(string EmpId, string Name, string? Login, string IndicatorLabel, string? OwnerName, DateTime? LastSubmittedAt, string? ApprovalStatus)> rows)
+            void RenderSection(
+                string title,
+                List<(string EmpId, string Name, string? Login, decimal KpiId, string? Frequency, string IndicatorLabel, string? OwnerName, DateTime? LastSubmittedAt, string? ApprovalStatus)> rows)
             {
                 if (rows.Count == 0) return;
 
@@ -1967,6 +2424,7 @@ else if (pf == "quarterly")
                 sb.AppendLine("<th>Owner</th>");
                 sb.AppendLine("<th>Approval Status</th>");
                 sb.AppendLine("<th>Last Submission</th>");
+                sb.AppendLine("<th class='text-end'>Action</th>");
                 sb.AppendLine("</tr></thead><tbody>");
 
                 foreach (var group in grouped)
@@ -1974,9 +2432,8 @@ else if (pf == "quarterly")
                     var displayName = group.Key.Name;
                     var login = group.Key.Login;
 
-                    // Editor header row (editor shown once)
                     sb.Append("<tr class='table-light'>");
-                    sb.Append("<td colspan='4'><strong>")
+                    sb.Append("<td colspan='5'><strong>")
                       .Append(H(displayName));
 
                     if (!string.IsNullOrWhiteSpace(login))
@@ -1995,16 +2452,18 @@ else if (pf == "quarterly")
                     foreach (var r in group)
                     {
                         var hasSubmission = r.LastSubmittedAt.HasValue;
-
-                        var displayStatus = hasSubmission
-                            ? StatusLabel(r.ApprovalStatus)
-                            : "—";
+                        var displayStatus = hasSubmission ? StatusLabel(r.ApprovalStatus) : "—";
 
                         sb.Append("<tr>");
                         sb.Append("<td>").Append(H(r.IndicatorLabel)).Append("</td>");
                         sb.Append("<td>").Append(H(r.OwnerName ?? "—")).Append("</td>");
                         sb.Append("<td>").Append(H(displayStatus)).Append("</td>");
                         sb.Append("<td>").Append(H(F(r.LastSubmittedAt))).Append("</td>");
+                        sb.Append("<td class='text-end'>");
+                        sb.Append("<button type='button' class='btn btn-sm btn-outline-secondary appr-editor-details' data-kpi-id='")
+                          .Append(r.KpiId)
+                          .Append("'>Details</button>");
+                        sb.Append("</td>");
                         sb.AppendLine("</tr>");
                     }
                 }
@@ -2021,8 +2480,6 @@ else if (pf == "quarterly")
             }
 
             return Content(sb.ToString(), "text/html; charset=utf-8");
-
         }
-
     }
 }
