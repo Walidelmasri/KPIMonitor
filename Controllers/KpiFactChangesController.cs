@@ -1936,8 +1936,8 @@ namespace KPIMonitor.Controllers
             var sb = new StringBuilder();
 
             var allCls = pf == "all" ? "btn-primary" : "btn-outline-secondary";
-            var quarterCls = pf == "quarterly" ? "btn-primary" : "btn-outline-secondary";
-            var monthCls = pf == "monthly" ? "btn-primary" : "btn-outline-secondary";
+            var quarterCls = pf == "quarter" ? "btn-primary" : "btn-outline-secondary";
+            var monthCls = pf == "month" ? "btn-primary" : "btn-outline-secondary";
 
             sb.AppendLine($@"
 <div class='d-flex gap-2 mb-3'>
