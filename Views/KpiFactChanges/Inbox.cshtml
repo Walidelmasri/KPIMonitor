@@ -681,7 +681,7 @@
     if (info?.latestPendingSubmittedAt) hdrBits.push('at ' + info.latestPendingSubmittedAt);
     $('editorDetailsSubtitle').textContent = hdrBits.join(' • ') || '—';
 
-    const s = info?.summary || {};
+    @* const s = info?.summary || {};
     $('ed_approved_actual').textContent = String(s.approvedActualCount ?? 0);
     $('ed_approved_target').textContent = String(s.approvedTargetCount ?? 0);
     $('ed_approved_forecast').textContent = String(s.approvedForecastCount ?? 0);
@@ -698,7 +698,7 @@
     $('ed_missing_status').textContent = String(s.missingStatusCount ?? 0);
 
     $('ed_periods_pending').textContent = joinOrDash(info?.periods?.pending);
-    $('ed_periods_missing').textContent = joinOrDash(info?.periods?.missing);
+    $('ed_periods_missing').textContent = joinOrDash(info?.periods?.missing); *@
 
     new bootstrap.Modal(document.getElementById('editorDetailsModal')).show();
 
