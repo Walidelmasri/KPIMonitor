@@ -1,6 +1,8 @@
 @model KPIMonitor.Models.ViewModels.PriorityMatrixVm
+@inject Microsoft.AspNetCore.Mvc.Localization.IViewLocalizer Localizer
+
 @{
-  ViewData["Title"] = "Priority Matrix";
+  ViewData["Title"] = Localizer["PriorityMatrix"];
 }
 
 <style>
@@ -12,24 +14,23 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: auto auto;
-    gap: 24px; /* more space between quadrants */
+    gap: 24px;
   }
   @@media (max-width: 992px){
     .pm-grid { grid-template-columns: 1fr; grid-template-rows: auto auto auto auto; }
   }
 
-  /* center cross lines drawn UNDER the tiles */
   .pm-grid::before,
   .pm-grid::after {
     content:"";
     position:absolute;
     background:#dee2e6;
-    z-index:0; /* keep under cells */
+    z-index:0;
   }
-  .pm-grid::before { /* vertical */
+  .pm-grid::before {
     top:0; left:50%; width:1px; height:100%; transform:translateX(-0.5px);
   }
-  .pm-grid::after { /* horizontal */
+  .pm-grid::after {
     left:0; top:50%; height:1px; width:100%; transform:translateY(-0.5px);
   }
   @@media (max-width: 992px){
@@ -38,19 +39,18 @@
 
   /* ---- Quadrant cell ---- */
   .pm-cell {
-    position: relative; z-index:1; /* above cross lines */
+    position: relative; z-index:1;
     background:#fff;
     border:1px solid #e9ecef;
     border-radius:14px;
     box-shadow:0 6px 16px rgba(0,0,0,.04);
     padding:12px;
-    min-height: 420px; /* more vertical room */
+    min-height: 420px;
     display:flex;
     flex-direction:column;
     gap:10px;
   }
 
-  /* neutral header (no blue) */
   .pm-head {
     position: sticky;
     top: calc(var(--rails-header-offset, 0px));
@@ -64,31 +64,28 @@
     letter-spacing:.2px;
   }
 
-  /* ---- Tiles grid inside a quadrant ---- */
   .pm-tiles {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); /* boxed tiles */
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 10px;
     align-content: start;
   }
 
-  /* ---- Objective tile (compact card) ---- */
   .pm-tile {
-    --status:#6c757d;                /* injected per-card via style attr */
+    --status:#6c757d;
     display: grid;
-    grid-template-columns: 1fr;      /* full fill (no left dash) */
+    grid-template-columns: 1fr;
     gap: 10px;
     align-items: start;
-    background: var(--status);       /* <— fill with status color */
+    background: var(--status);
     color:#fff;
     border:1px solid transparent;
     border-radius:12px;
     box-shadow: 0 3px 10px rgba(0,0,0,.10);
     padding:10px 12px;
     min-height: 68px;
-    text-shadow: 0 1px 0 rgba(0,0,0,.25); /* readability on strong colors */
+    text-shadow: 0 1px 0 rgba(0,0,0,.25);
   }
-  /* keep markup-compatible if a strip element remains */
   .pm-tile .pm-strip { display:none; }
 
   .pm-code {
@@ -106,7 +103,6 @@
     word-break:break-word;
   }
 
-  /* print */
   @@media print {
     .page-hero, .pm-toolbar { display:none !important; }
     .pm-wrap { padding:0; }
@@ -118,8 +114,7 @@
   @section PageHeader {
     <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
       <div class="page-hero-content">
-        <h1 class="page-title">Priority Matrix</h1>
-
+        <h1 class="page-title">@Localizer["PriorityMatrix"]</h1>
       </div>
     </div>
   }
@@ -137,7 +132,7 @@
       @foreach (var q in arr)
       {
         <section class="pm-cell">
-          <header class="pm-head">Priority @q?.Quadrant</header>
+          <header class="pm-head">@Localizer["Priority"] @q?.Quadrant</header>
 
           <div class="pm-tiles">
             @if (q?.Objectives?.Any() == true)
@@ -145,7 +140,6 @@
               foreach (var o in q!.Objectives)
               {
                 <article class="pm-tile" style="--status:@o.StatusColor">
-                  <!-- pm-strip kept for markup compatibility; hidden by CSS -->
                   <span class="pm-strip"></span>
                   <div>
                     <div class="pm-code">@o.ObjectiveCode</div>
@@ -156,7 +150,7 @@
             }
             else
             {
-              <div class="text-muted small">No objectives.</div>
+              <div class="text-muted small">@Localizer["NoObjectives"]</div>
             }
           </div>
         </section>

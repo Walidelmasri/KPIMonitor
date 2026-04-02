@@ -1,6 +1,8 @@
 @model KPIMonitor.Models.ViewModels.StrategyMapVm
+@inject Microsoft.AspNetCore.Mvc.Localization.IViewLocalizer Localizer
+
 @{
-    ViewData["Title"] = "Strategy Map";
+    ViewData["Title"] = Localizer["StrategyMap"];
 }
 
 <style>
@@ -19,12 +21,10 @@
 /* ===== Seven-column board → wider tracks, centered, auto-wrap ===== */
 .sm7-grid{
   display:grid;
-  /* each column is 320–360px; grid adds as many as fits, then wraps */
   grid-template-columns: repeat(auto-fit, minmax(320px, 360px));
   gap: 1rem;
-  justify-content: center; /* center the tracks when there’s extra space */
+  justify-content: center;
 }
-
 
   /* ===== Pillar column ===== */
   .pillar {
@@ -34,7 +34,6 @@
   }
   .pillar-head {
     position: sticky; top: calc(var(--rails-header-offset, 0px)); z-index:1;
-    /* CHANGED: neutral grey header instead of blue gradient */
     background:#f8f9fa;
     color:#212529;
     border-top-left-radius:12px;
@@ -42,38 +41,37 @@
     border-bottom:1px solid #e9ecef;
     padding:.6rem .8rem; text-align:center; font-weight:700; letter-spacing:.2px;
   }
-.pillar-title-small{
-  font-size:.95rem;
-  line-height:1.2;
-  white-space: normal;      /* was: nowrap */
-  overflow: visible;        /* was: hidden */
-  text-overflow: clip;      /* was: ellipsis */
-}
+  .pillar-title-small{
+    font-size:.95rem;
+    line-height:1.2;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
   .pillar-body {
     display:grid; gap:.55rem; padding:.7rem; align-content:flex-start;
   }
 
-  /* ===== Objective cards (unchanged sizing & full background color) ===== */
-.objective-card{
-  color:#fff;
-  border-radius:12px;
-  padding:.75rem 1rem;      /* more breathing room */
-  border:1px solid rgba(255,255,255,.22);
-  box-shadow: 0 4px 10px rgba(0,0,0,.06);
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
-  text-shadow: 0 1px 0 rgba(0,0,0,.2);
-  min-height: 72px;         /* optional: keeps cards “big” */
-}
-.objective-code{ font-size:.9rem; font-weight:800; letter-spacing:.3px; }
-.objective-name{
-  font-size:.95rem;
-  line-height:1.35;
-  margin-top:.25rem;
-  overflow-wrap:anywhere;   /* wrap long words/names */
-  word-break: normal;
-}
-
+  /* ===== Objective cards ===== */
+  .objective-card{
+    color:#fff;
+    border-radius:12px;
+    padding:.75rem 1rem;
+    border:1px solid rgba(255,255,255,.22);
+    box-shadow: 0 4px 10px rgba(0,0,0,.06);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    text-shadow: 0 1px 0 rgba(0,0,0,.2);
+    min-height: 72px;
+  }
+  .objective-code{ font-size:.9rem; font-weight:800; letter-spacing:.3px; }
+  .objective-name{
+    font-size:.95rem;
+    line-height:1.35;
+    margin-top:.25rem;
+    overflow-wrap:anywhere;
+    word-break: normal;
+  }
 
   /* ===== Print ===== */
   @@media print {
@@ -87,24 +85,18 @@
   @section PageHeader {
     <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
       <div class="page-hero-content">
-        <h1 class="page-title">Strategy Map</h1>
+        <h1 class="page-title">@Localizer["StrategyMap"]</h1>
       </div>
     </div>
   }
 
   <div class="with-rails">
     <div class="toolbar">
-      @* <form method="get" class="d-flex align-items-center gap-2">
-        <label for="year" class="form-label mb-0 small">Year (optional)</label>
-        <input id="year" name="year" type="number" class="form-control form-control-sm" style="width:110px" value="@Model.Year" />
-        <button class="btn btn-sm btn-outline-secondary rounded-4">Apply</button>
-      </form> *@
-
-      <div class="legend" aria-label="Status legend">
-        <div class="item"><span class="dot r"></span><span>Target Missed</span></div>
-        <div class="item"><span class="dot o"></span><span>On Forecast</span></div>
-        <div class="item"><span class="dot b"></span><span>Data Missing</span></div>
-        <div class="item"><span class="dot g"></span><span>Target Achieved</span></div>
+      <div class="legend" aria-label="@Localizer["StatusLegend"]">
+        <div class="item"><span class="dot r"></span><span>@Localizer["TargetMissed"]</span></div>
+        <div class="item"><span class="dot o"></span><span>@Localizer["OnForecast"]</span></div>
+        <div class="item"><span class="dot b"></span><span>@Localizer["DataMissing"]</span></div>
+        <div class="item"><span class="dot g"></span><span>@Localizer["TargetAchieved"]</span></div>
       </div>
     </div>
 
@@ -129,7 +121,7 @@
             }
             else
             {
-              <div class="text-muted small">No objectives.</div>
+              <div class="text-muted small">@Localizer["NoObjectives"]</div>
             }
           </div>
         </section>
