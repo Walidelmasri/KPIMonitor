@@ -131,6 +131,10 @@ app.MapGet("/culture/set", (string culture, string? returnUrl, HttpContext httpC
     if (culture != "en" && culture != "ar")
         culture = "en";
 
+    var cookiePath = httpContext.Request.PathBase.HasValue
+        ? httpContext.Request.PathBase.Value
+        : "/";
+
     httpContext.Response.Cookies.Append(
         CookieRequestCultureProvider.DefaultCookieName,
         CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
@@ -140,7 +144,8 @@ app.MapGet("/culture/set", (string culture, string? returnUrl, HttpContext httpC
             IsEssential = true,
             HttpOnly = false,
             Secure = httpContext.Request.IsHttps,
-            SameSite = SameSiteMode.Lax
+            SameSite = SameSiteMode.Lax,
+            Path = cookiePath
         });
 
     if (!string.IsNullOrWhiteSpace(returnUrl) && Uri.IsWellFormedUriString(returnUrl, UriKind.Relative))
