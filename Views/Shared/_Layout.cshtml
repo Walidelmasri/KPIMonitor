@@ -61,6 +61,16 @@
                 pointer-events: none;
                 opacity: .75
             }
+
+            [dir="ltr"] .approvals-dot {
+                left: 100%;
+                transform: translate(-50%, -50%);
+            }
+
+            [dir="rtl"] .approvals-dot {
+                right: 100%;
+                transform: translate(50%, -50%);
+            }
     </style>
 
 </head>
@@ -249,7 +259,7 @@
                                                                                         <a class="nav-link position-relative" asp-controller="KpiFactChanges" asp-action="Inbox">
                                                                                             @Localizer["Approvals"]
                                                                                             <span id="apprDot"
-                                                                                                  class="position-absolute top-0 start-100 translate-middle bg-danger border border-light rounded-circle d-none"
+                                                                                                  class="position-absolute top-0 bg-danger border border-light rounded-circle d-none approvals-dot"
                                                                                                   style="width:10px;height:10px;"></span>
                                                                                         </a>
 
