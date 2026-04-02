@@ -201,14 +201,20 @@ select {
 }
 
 /* More space between logo and text */
-.navbar-brand .app-name {
+/* .navbar-brand .app-name {
   margin-left: 1rem;
   font-weight: 700;
   font-size: 18px;
   color: #1d1d1f;
   letter-spacing: .2px;
+} */
+.navbar-brand .app-name {
+  margin-inline-start: 1rem;
+  font-weight: 700;
+  font-size: 18px;
+  color: #1d1d1f;
+  letter-spacing: .2px;
 }
-
 /* Top-level nav links */
 .navbar-nav .nav-link {
   color: #2d2d2d !important;

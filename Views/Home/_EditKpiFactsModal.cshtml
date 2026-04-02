@@ -130,6 +130,7 @@
                        value="@(Model.Forecasts.ContainsKey(q) ? Model.Forecasts[q] : null)" @(canF ? "" : "readonly           aria-readonly=\"true\" title=\"Not editable (outside allowed range)\"") />
                 @if (!canF)
                 {
+                  
                   <span class="ro-badge">🔒</span>
                 }
               </td>

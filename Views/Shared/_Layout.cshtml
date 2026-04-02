@@ -1,5 +1,16 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+﻿@using System.Globalization
+@using Microsoft.AspNetCore.Localization
+@inject Microsoft.AspNetCore.Mvc.Localization.IViewLocalizer Localizer
+
+@{
+    var requestCulture = Context.Features.Get<IRequestCultureFeature>();
+    var culture = requestCulture?.RequestCulture.UICulture?.Name ?? CultureInfo.CurrentUICulture.Name;
+    var isArabic = culture.StartsWith("ar", StringComparison.OrdinalIgnoreCase);
+    var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
+}
+
+<!DOCTYPE html>
+<html lang="@(isArabic ? "ar" : "en")" dir="@(isArabic ? "rtl" : "ltr")">
 
 <head>
     <meta charset="utf-8" />
@@ -7,41 +18,48 @@
     <title>@ViewData["Title"] - KPIMonitor</title>
 
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    @if (isArabic)
+    {
+        <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.rtl.min.css" />
+    }
+    else
+    {
+        <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    }
 
     <!-- Tajawal font -->
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap"
-        rel="stylesheet">
+          rel="stylesheet">
 
     <!-- App CSS -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/KPIMonitor.styles.css" asp-append-version="true" />
     <link rel="preload" as="image" href="~/images/side-rail1.jpeg" fetchpriority="high" />
     <style>
-        /* tiny inline spinner */
-        .btn-spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            vertical-align: -2px;
-            border-radius: 50%;
-            border: 2px solid currentColor;
-            border-right-color: transparent;
-            animation: btnspin .6s linear infinite
-        }
-
-        @@keyframes btnspin {
-            to {
-                transform: rotate(360deg)
+            /* tiny inline spinner */
+            .btn-spinner {
+                display: inline-block;
+                width: 16px;
+                height: 16px;
+                vertical-align: -2px;
+                border-radius: 50%;
+                border: 2px solid currentColor;
+                border-right-color: transparent;
+                animation: btnspin .6s linear infinite
             }
-        }
 
-        /* busy state */
-        button[aria-busy="true"],
-        .btn[aria-busy="true"] {
-            pointer-events: none;
-            opacity: .75
-        }
+            @@keyframes btnspin {
+                to {
+                    transform: rotate(360deg)
+                }
+            }
+
+            /* busy state */
+            button[aria-busy="true"],
+            .btn[aria-busy="true"] {
+                pointer-events: none;
+                opacity: .75
+            }
     </style>
 
 </head>
@@ -97,7 +115,7 @@
 
                 <!-- Toggler -->
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
-                    aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+                        aria-controls="mainNav" aria-expanded="false" aria-label="@Localizer["ToggleNavigation"]">
                     <span class="navbar-toggler-icon"></span>
                 </button>
 
@@ -115,448 +133,470 @@
                                         <a class="dropdown-item dropdown-toggle" href="#">Pillars</a>
                                         <ul class="dropdown-menu">
                                             <li><a class="dropdown-item" asp-controller="Pillars" asp-action="Index">All
-                                                    Pillars</a></li>
-                                            <li asp-admin-only><a class="dropdown-item" asp-controller="Pillars"
-                                                    asp-action="Create">Add
+                                                Pillars</a></li>
+                                                <li asp-admin-only><a class="dropdown-item" asp-controller="Pillars"
+                                                                      asp-action="Create">Add
                                                     Pillar</a></li>
-                                        </ul>
-                                    </li>
-
-                                    <!-- Objectives submenu -->
-                                    <li class="dropdown-submenu">
-                                        <a class="dropdown-item dropdown-toggle" href="#">Objectives</a>
-                                        <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" asp-controller="Objectives" asp-action="Index">All
-                                                    Objectives</a></li>
-                                            <li asp-admin-only><a class="dropdown-item" asp-controller="Objectives"
-                                                    asp-action="Create">Add
-                                                    Objective</a></li>
-                                        </ul>
-                                    </li>
-
-                                    <!-- KPIs submenu -->
-                                    <li class="dropdown-submenu">
-                                        <a class="dropdown-item dropdown-toggle" href="#">KPIs</a>
-                                        <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" asp-controller="Kpis" asp-action="Index">All
-                                                    KPIs</a></li>
-                                            <li asp-admin-only><a class="dropdown-item" asp-controller="Kpis"
-                                                    asp-action="Create">Add
-                                                    KPI</a></li>
-                                        </ul>
-                                    </li>
-                                </ul>
-                            </li>
-
-                            <!-- ===== Planning ===== -->
-                            <li class="nav-item dropdown" asp-admin-only>
-                                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Planning</a>
-                                <ul class="dropdown-menu">
-                                    <!-- KPI Periods -->
-                                    <li class="dropdown-submenu">
-                                        <a class="dropdown-item dropdown-toggle" href="#">KPI Periods</a>
-                                        <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" asp-controller="KpiPeriods" asp-action="Index">View
-                                                    KPI Periods</a></li>
-                                            <li asp-admin-only><a class="dropdown-item" asp-controller="KpiPeriods"
-                                                    asp-action="Create">Create KPI Period</a></li>
-                                        </ul>
-                                    </li>
-                                    <!-- KPI Year Plans -->
-                                    <li class="dropdown-submenu">
-                                        <a class="dropdown-item dropdown-toggle" href="#">KPI Year Plans</a>
-                                        <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" asp-controller="KpiYearPlans"
-                                                    asp-action="Index">View Year Plans</a></li>
-                                            <li asp-admin-only><a class="dropdown-item" asp-controller="KpiYearPlans"
-                                                    asp-action="Create">Create Year Plan</a></li>
-
-                                            <!-- Five-Year Targets (nested under KPI Year Plans) -->
-                                            <li class="dropdown-submenu">
-                                                <a class="dropdown-item dropdown-toggle" href="#">Five-Year Targets</a>
-                                                <ul class="dropdown-menu">
-                                                    <li><a class="dropdown-item" asp-controller="KpiFiveYearTargets"
-                                                            asp-action="Index">View Five-Year Targets</a></li>
-                                                    <li asp-admin-only><a class="dropdown-item"
-                                                            asp-controller="KpiFiveYearTargets" asp-action="Create">Add
-                                                            Five-Year Targets</a></li>
                                                 </ul>
                                             </li>
-                                            <!-- /Five-Year Targets -->
-                                        </ul>
-                                    </li>
-                                </ul>
-                            </li>
 
-                            <!-- ===== Monitoring ===== -->
-                            <li class="nav-item dropdown" asp-admin-only>
-                                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Monitoring</a>
-                                <ul class="dropdown-menu">
-                                    <!-- KPI Facts -->
-                                    <li class="dropdown-submenu">
-                                        <a class="dropdown-item dropdown-toggle" href="#">KPI Facts</a>
-                                        <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" asp-controller="KpiFacts" asp-action="Index">View
-                                                    All</a></li>
-                                            <li asp-admin-only><a class="dropdown-item" asp-controller="KpiFacts"
-                                                    asp-action="Create">Create</a></li>
-                                        </ul>
-                                    </li>
-                                </ul>
-                            </li>
+                                            <!-- Objectives submenu -->
+                                            <li class="dropdown-submenu">
+                                                <a class="dropdown-item dropdown-toggle" href="#">Objectives</a>
+                                                <ul class="dropdown-menu">
+                                                    <li><a class="dropdown-item" asp-controller="Objectives" asp-action="Index">All
+                                                        Objectives</a></li>
+                                                        <li asp-admin-only><a class="dropdown-item" asp-controller="Objectives"
+                                                                              asp-action="Create">Add
+                                                            Objective</a></li>
+                                                        </ul>
+                                                    </li>
 
-                            <li class="nav-item" asp-admin-only>
-                                <a class="nav-link" asp-controller="Audit" asp-action="Index">Audit</a>
-                            </li>
-                            @* <li class="nav-item">
+                                                    <!-- KPIs submenu -->
+                                                    <li class="dropdown-submenu">
+                                                        <a class="dropdown-item dropdown-toggle" href="#">KPIs</a>
+                                                        <ul class="dropdown-menu">
+                                                            <li><a class="dropdown-item" asp-controller="Kpis" asp-action="Index">All
+                                                                KPIs</a></li>
+                                                                <li asp-admin-only><a class="dropdown-item" asp-controller="Kpis"
+                                                                                      asp-action="Create">Add
+                                                                    KPI</a></li>
+                                                                </ul>
+                                                            </li>
+                                                        </ul>
+                                                    </li>
+
+                                                    <!-- ===== Planning ===== -->
+                                                    <li class="nav-item dropdown" asp-admin-only>
+                                                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Planning</a>
+                                                        <ul class="dropdown-menu">
+                                                            <!-- KPI Periods -->
+                                                            <li class="dropdown-submenu">
+                                                                <a class="dropdown-item dropdown-toggle" href="#">KPI Periods</a>
+                                                                <ul class="dropdown-menu">
+                                                                    <li><a class="dropdown-item" asp-controller="KpiPeriods" asp-action="Index">View
+                                                                        KPI Periods</a></li>
+                                                                        <li asp-admin-only><a class="dropdown-item" asp-controller="KpiPeriods"
+                                                                                                  asp-action="Create">Create KPI Period</a></li>
+                                                                        </ul>
+                                                                    </li>
+                                                                    <!-- KPI Year Plans -->
+                                                                    <li class="dropdown-submenu">
+                                                                        <a class="dropdown-item dropdown-toggle" href="#">KPI Year Plans</a>
+                                                                        <ul class="dropdown-menu">
+                                                                            <li><a class="dropdown-item" asp-controller="KpiYearPlans"
+                                                                                       asp-action="Index">View Year Plans</a></li>
+                                                                                <li asp-admin-only><a class="dropdown-item" asp-controller="KpiYearPlans"
+                                                                                                          asp-action="Create">Create Year Plan</a></li>
+
+                                                                                    <!-- Five-Year Targets (nested under KPI Year Plans) -->
+                                                                                    <li class="dropdown-submenu">
+                                                                                        <a class="dropdown-item dropdown-toggle" href="#">Five-Year Targets</a>
+                                                                                        <ul class="dropdown-menu">
+                                                                                            <li><a class="dropdown-item" asp-controller="KpiFiveYearTargets"
+                                                                                                       asp-action="Index">View Five-Year Targets</a></li>
+                                                                                                <li asp-admin-only><a class="dropdown-item"
+                                                                                                                      asp-controller="KpiFiveYearTargets" asp-action="Create">Add
+                                                                                                    Five-Year Targets</a></li>
+                                                                                                </ul>
+                                                                                            </li>
+                                                                                            <!-- /Five-Year Targets -->
+                                                                                        </ul>
+                                                                                    </li>
+                                                                                </ul>
+                                                                            </li>
+
+                                                                            <!-- ===== Monitoring ===== -->
+                                                                            <li class="nav-item dropdown" asp-admin-only>
+                                                                                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Monitoring</a>
+                                                                                <ul class="dropdown-menu">
+                                                                                    <!-- KPI Facts -->
+                                                                                    <li class="dropdown-submenu">
+                                                                                        <a class="dropdown-item dropdown-toggle" href="#">KPI Facts</a>
+                                                                                        <ul class="dropdown-menu">
+                                                                                            <li><a class="dropdown-item" asp-controller="KpiFacts" asp-action="Index">View
+                                                                                                All</a></li>
+                                                                                                <li asp-admin-only><a class="dropdown-item" asp-controller="KpiFacts"
+                                                                                                                          asp-action="Create">Create</a></li>
+                                                                                                </ul>
+                                                                                            </li>
+                                                                                        </ul>
+                                                                                    </li>
+
+                                                                                    <li class="nav-item" asp-admin-only>
+                                                                                        <a class="nav-link" asp-controller="Audit" asp-action="Index">Audit</a>
+                                                                                    </li>
+                                                                                    @* <li class="nav-item">
                                 <a class="nav-link" asp-controller="PresidentBoard" asp-action="Index">President Board</a>
                             </li> *@
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="RedBoard" asp-action="Index">RedBoard</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="ActionPlans" asp-action="Index">Action Plans</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="StrategyMap" asp-action="Index">Strategy Map</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="PriorityMatrix" asp-action="Index">Priority Matrix</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link position-relative" asp-controller="KpiFactChanges" asp-action="Inbox">
-                                    Approvals
-                                    <span id="apprDot"
-                                        class="position-absolute top-0 start-100 translate-middle bg-danger border border-light rounded-circle d-none"
-                                        style="width:10px;height:10px;"></span>
-                                </a>
+                                                                                    <li class="nav-item">
+                                                                                        <a class="nav-link" asp-controller="RedBoard" asp-action="Index">@Localizer["RedBoard"]</a>
+                                                                                    </li>
+                                                                                    <li class="nav-item">
+                                                                                        <a class="nav-link" asp-controller="ActionPlans"
+                                                                                           asp-action="Index">@Localizer["ActionPlans"]</a>
+                                                                                    </li>
+                                                                                    <li class="nav-item">
+                                                                                        <a class="nav-link" asp-controller="StrategyMap"
+                                                                                           asp-action="Index">@Localizer["StrategyMap"]</a>
+                                                                                    </li>
+                                                                                    <li class="nav-item">
+                                                                                        <a class="nav-link" asp-controller="PriorityMatrix"
+                                                                                           asp-action="Index">@Localizer["PriorityMatrix"]</a>
+                                                                                    </li>
+                                                                                    <li class="nav-item">
+                                                                                        <a class="nav-link position-relative" asp-controller="KpiFactChanges" asp-action="Inbox">
+                                                                                            @Localizer["Approvals"]
+                                                                                            <span id="apprDot"
+                                                                                                  class="position-absolute top-0 start-100 translate-middle bg-danger border border-light rounded-circle d-none"
+                                                                                                  style="width:10px;height:10px;"></span>
+                                                                                        </a>
 
-                            </li>
+                                                                                    </li>
+                                                                                }
+                                                                            </ul>
 
+                                                                        </div>
 
+                                                                        <!-- RIGHT SIDE: Help on the far right -->
+                                                                        <ul class="navbar-nav ms-auto d-flex align-items-center gap-2">
+                                                                            <li class="nav-item">
+                                                                                <div class="d-flex align-items-center gap-1">
+                                                                                    @if (isArabic)
+                                                                                    {
+                                                                                        <a class="btn btn-outline-secondary btn-sm"
+                                                                                               href="/culture/set?culture=en&returnUrl=@Uri.EscapeDataString(returnUrl)">
+                                                                                            EN
+                                                                                        </a>
+                                                                                        <span class="btn btn-sm btn-secondary disabled" aria-disabled="true">AR</span>
+                                                                                    }
+                                                                                    else
+                                                                                    {
+                                                                                        <span class="btn btn-sm btn-secondary disabled" aria-disabled="true">EN</span>
+                                                                                        <a class="btn btn-outline-secondary btn-sm"
+                                                                                               href="/culture/set?culture=ar&returnUrl=@Uri.EscapeDataString(returnUrl)">
+                                                                                            AR
+                                                                                        </a>
+                                                                                    }
+                                                                                </div>
+                                                                            </li>
 
-                        }
-                    </ul>
+                                                                            @if (isAuth)
+                                                                            {
+                                                                                <li class="nav-item">
+                                                                                    <span class="navbar-text">@Localizer["Hello"], <strong>@displayName</strong></span>
+                                                                                </li>
+                                                                                <li class="nav-item">
+                                                                                    <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline mb-0">
+                                                                                        @Html.AntiForgeryToken()
+                                                                                        <button type="submit" class="btn btn-outline-secondary btn-sm">@Localizer["Logout"]</button>
+                                                                                    </form>
+                                                                                </li>
+                                                                            }
 
-                </div>
-                <!-- RIGHT SIDE: Help on the far right -->
-                <ul class="navbar-nav ms-auto d-flex align-items-center gap-2">
-                    @if (isAuth)
-                    {
-                        <li class="nav-item">
-                            <span class="navbar-text">Hello, <strong>@displayName</strong></span>
-                        </li>
-                        <li class="nav-item">
-                            <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline mb-0">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-outline-secondary btn-sm">Logout</button>
-                            </form>
-                        </li>
-                    }
+                                                                            <li class="nav-item">
+                                                                                <a class="nav-link d-flex align-items-center" asp-controller="HowTo" asp-action="Index"
+                                                                                       title="@Localizer["HowTo"]" aria-label="@Localizer["HowTo"]">
+                                                                                    <span
+                                                                                        style="display:inline-flex;width:26px;height:26px;border-radius:50%;
+                                                                                        border:1px solid #cfd6dd;align-items:center;justify-content:center;font-weight:700;">
+                                                                                        ?
+                                                                                    </span>
+                                                                                </a>
+                                                                            </li>
+                                                                        </ul>
 
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center" asp-controller="HowTo" asp-action="Index"
-                            title="How To">
-                            <span style="display:inline-flex;width:26px;height:26px;border-radius:50%;
-                 border:1px solid #cfd6dd;align-items:center;justify-content:center;font-weight:700;">
-                                ?
-                            </span>
-                        </a>
-                    </li>
-                </ul>
+                                                                    </div>
+                                                                </nav>
+                                                            </header>
 
-                </ul>
+                                                            <div class="container">
+                                                                <main role="main" class="pb-3">
+                                                                    @if (IsSectionDefined("PageHeader"))
+                                                                    {
+                                                                        <div class="page-hero">
+                                                                            @RenderSection("PageHeader", required: false)
+                                                                        </div>
+                                                                    }
+                                                                    @RenderBody()
+                                                                </main>
+                                                            </div>
 
-        </nav>
-    </header>
+                                                            <footer class="border-top footer text-muted">
+                                                                <div class="container">
+                                                                    &copy; 2025 - KPIMonitor - <a asp-controller="Home" asp-action="Privacy">Privacy</a>
+                                                                </div>
+                                                            </footer>
 
-    <div class="container">
-        <main role="main" class="pb-3">
-            @if (IsSectionDefined("PageHeader"))
-            {
-                <div class="page-hero">
-                    @RenderSection("PageHeader", required: false)
-                </div>
-            }
-            @RenderBody()
-        </main>
-    </div>
+                                                            <!-- JS -->
+                                                            <script src="~/lib/jquery/dist/jquery.min.js"></script>
+                                                            <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+                                                            <script src="~/js/site.js" asp-append-version="true"></script>
+                                                            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2025 - KPIMonitor - <a asp-controller="Home" asp-action="Privacy">Privacy</a>
-        </div>
-    </footer>
+                                                            <!-- Bootstrap 5: enable multi-level submenu with click -->
+                                                            <script>
+                                                                // Allow clicking items with .dropdown-toggle inside dropdowns to open submenus (Bootstrap 5)
+                                                                document.querySelectorAll('.dropdown-menu .dropdown-toggle').forEach(function (toggle) {
+                                                                toggle.addEventListener('click', function (e) {
+                                                                const nextMenu = this.nextElementSibling;
+                                                                if (nextMenu && nextMenu.classList.contains('dropdown-menu')) {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                nextMenu.classList.toggle('show');
 
-    <!-- JS -->
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                                                                // close siblings
+                                                                const siblings = this.parentElement.parentElement.querySelectorAll('.dropdown-menu.show');
+                                                                siblings.forEach(s => { if (s !== nextMenu) s.classList.remove('show'); });
+                                                                }
+                                                                });
+                                                                });
 
-    <!-- Bootstrap 5: enable multi-level submenu with click -->
-    <script>
-        // Allow clicking items with .dropdown-toggle inside dropdowns to open submenus (Bootstrap 5)
-        document.querySelectorAll('.dropdown-menu .dropdown-toggle').forEach(function (toggle) {
-            toggle.addEventListener('click', function (e) {
-                const nextMenu = this.nextElementSibling;
-                if (nextMenu && nextMenu.classList.contains('dropdown-menu')) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    nextMenu.classList.toggle('show');
+                                                                // Close any open submenus when parent dropdown hides
+                                                                document.querySelectorAll('.dropdown').forEach(function (dd) {
+                                                                dd.addEventListener('hide.bs.dropdown', function () {
+                                                                this.querySelectorAll('.dropdown-menu.show').forEach(m => m.classList.remove('show'));
+                                                                });
+                                                                });
+                                                                document.addEventListener('DOMContentLoaded', () => {
+                                                                if (window.Chart) Chart.defaults.font.family = "'Tajawal', sans-serif";
+                                                                });
+                                                                (function apprPing() {
+                                                                fetch('/KpiFactChanges/Indicators', { cache: 'no-store' })
+                                                                .then(r => r.ok ? r.json() : { pendingForOwner: 0, decisionsForEditor: 0 })
+                                                                .then(({ pendingForOwner = 0, decisionsForEditor = 0 }) => {
+                                                                const show = (pendingForOwner > 0) || (decisionsForEditor > 0);
+                                                                const dot = document.getElementById('apprDot');
+                                                                if (dot) dot.classList.toggle('d-none', !show);
+                                                                })
+                                                                .catch(() => {
+                                                                // fail silently; keep current dot state
+                                                                })
+                                                                .finally(() => setTimeout(apprPing, 30000)); // poll every 30s
+                                                                })();
+                                                                // ---------- helpers ----------
+                                                                function setBusyButton(btn, busy, label) {
+                                                                if (!btn) return;
+                                                                if (busy) {
+                                                                if (!btn.dataset.origHtml) btn.dataset.origHtml = btn.innerHTML;
+                                                                btn.setAttribute('aria-busy', 'true'); btn.disabled = true;
+                                                                btn.innerHTML = `<span class="btn-spinner"></span> <span>${label || 'Working…'}</span>`;
+                                                                } else {
+                                                                btn.removeAttribute('aria-busy'); btn.disabled = false;
+                                                                if (btn.dataset.origHtml) btn.innerHTML = btn.dataset.origHtml;
+                                                                }
+                                                                }
+                                                                async function postJson(url, body) {
+                                                                const opts = { method: 'POST', headers: {} };
+                                                                if (body instanceof FormData) { opts.body = body; }
+                                                                else { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body || {}); }
+                                                                const r = await fetch(url, opts);
+                                                                const ct = (r.headers.get('content-type') || '');
+                                                                const data = ct.includes('application/json') ? await r.json() : await r.text();
+                                                                if (!r.ok || (data && data.ok === false)) throw new Error((data && (data.error || data.message)) || r.statusText || 'Request failed');
+                                                                return data;
+                                                                }
+                                                                function showToast(msg, kind) {
+                                                                const id = 'mini-toast-area';
+                                                                let area = document.getElementById(id);
+                                                                if (!area) { area = document.createElement('div'); area.id = id; area.style.position = 'fixed'; area.style.right = '16px'; area.style.bottom = '16px'; area.style.zIndex = '9999'; document.body.appendChild(area); }
+                                                                const n = document.createElement('div');
+                                                                n.textContent = msg || ''; n.style.marginTop = '8px'; n.style.padding = '10px 12px'; n.style.borderRadius = '10px';
+                                                                n.style.boxShadow = '0 6px 18px rgba(0,0,0,.15)'; n.style.background = (kind === 'success') ? '#16a34a' : (kind === 'warning') ? '#d97706' : '#dc2626';
+                                                                n.style.color = '#fff'; area.appendChild(n);
+                                                                setTimeout(() => { n.style.opacity = '0'; n.style.transition = 'opacity .2s'; }, 1800);
+                                                                setTimeout(() => area.removeChild(n), 2100);
+                                                                }
 
-                    // close siblings
-                    const siblings = this.parentElement.parentElement.querySelectorAll('.dropdown-menu.show');
-                    siblings.forEach(s => { if (s !== nextMenu) s.classList.remove('show'); });
-                }
-            });
-        });
+                                                                // ---------- Approve/Reject buttons on Inbox cards ----------
+                                                                document.addEventListener('click', async (ev) => {
+                                                                const btn = ev.target.closest('.appr-btn'); // your existing class on Inbox buttons
+                                                                if (!btn) return;
+                                                                if (btn.getAttribute('aria-busy') === 'true') return;
+                                                                // Skip handling when the click is inside the Approvals Inbox page,
+                                                                // because that page has its own specialized handler with anti-forgery.
+                                                                if (btn.closest('#apprBody')) return;
 
-        // Close any open submenus when parent dropdown hides
-        document.querySelectorAll('.dropdown').forEach(function (dd) {
-            dd.addEventListener('hide.bs.dropdown', function () {
-                this.querySelectorAll('.dropdown-menu.show').forEach(m => m.classList.remove('show'));
-            });
-        });
-        document.addEventListener('DOMContentLoaded', () => {
-            if (window.Chart) Chart.defaults.font.family = "'Tajawal', sans-serif";
-        });
-        (function apprPing() {
-            fetch('/KpiFactChanges/Indicators', { cache: 'no-store' })
-                .then(r => r.ok ? r.json() : { pendingForOwner: 0, decisionsForEditor: 0 })
-                .then(({ pendingForOwner = 0, decisionsForEditor = 0 }) => {
-                    const show = (pendingForOwner > 0) || (decisionsForEditor > 0);
-                    const dot = document.getElementById('apprDot');
-                    if (dot) dot.classList.toggle('d-none', !show);
-                })
-                .catch(() => {
-                    // fail silently; keep current dot state
-                })
-                .finally(() => setTimeout(apprPing, 30000)); // poll every 30s
-        })();
-        // ---------- helpers ----------
-        function setBusyButton(btn, busy, label) {
-            if (!btn) return;
-            if (busy) {
-                if (!btn.dataset.origHtml) btn.dataset.origHtml = btn.innerHTML;
-                btn.setAttribute('aria-busy', 'true'); btn.disabled = true;
-                btn.innerHTML = `<span class="btn-spinner"></span> <span>${label || 'Working…'}</span>`;
-            } else {
-                btn.removeAttribute('aria-busy'); btn.disabled = false;
-                if (btn.dataset.origHtml) btn.innerHTML = btn.dataset.origHtml;
-            }
-        }
-        async function postJson(url, body) {
-            const opts = { method: 'POST', headers: {} };
-            if (body instanceof FormData) { opts.body = body; }
-            else { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body || {}); }
-            const r = await fetch(url, opts);
-            const ct = (r.headers.get('content-type') || '');
-            const data = ct.includes('application/json') ? await r.json() : await r.text();
-            if (!r.ok || (data && data.ok === false)) throw new Error((data && (data.error || data.message)) || r.statusText || 'Request failed');
-            return data;
-        }
-        function showToast(msg, kind) {
-            const id = 'mini-toast-area';
-            let area = document.getElementById(id);
-            if (!area) { area = document.createElement('div'); area.id = id; area.style.position = 'fixed'; area.style.right = '16px'; area.style.bottom = '16px'; area.style.zIndex = '9999'; document.body.appendChild(area); }
-            const n = document.createElement('div');
-            n.textContent = msg || ''; n.style.marginTop = '8px'; n.style.padding = '10px 12px'; n.style.borderRadius = '10px';
-            n.style.boxShadow = '0 6px 18px rgba(0,0,0,.15)'; n.style.background = (kind === 'success') ? '#16a34a' : (kind === 'warning') ? '#d97706' : '#dc2626';
-            n.style.color = '#fff'; area.appendChild(n);
-            setTimeout(() => { n.style.opacity = '0'; n.style.transition = 'opacity .2s'; }, 1800);
-            setTimeout(() => area.removeChild(n), 2100);
-        }
+                                                                const action = (btn.dataset.action || '').toLowerCase();
+                                                                const changeId = btn.dataset.id;
+                                                                const batchId = btn.dataset.batchId;
 
-        // ---------- Approve/Reject buttons on Inbox cards ----------
-        document.addEventListener('click', async (ev) => {
-            const btn = ev.target.closest('.appr-btn'); // your existing class on Inbox buttons
-            if (!btn) return;
-            if (btn.getAttribute('aria-busy') === 'true') return;
-            // Skip handling when the click is inside the Approvals Inbox page,
-            // because that page has its own specialized handler with anti-forgery.
-            if (btn.closest('#apprBody')) return;
+                                                                let url, payload, label;
+                                                                if (action === 'approve') {
+                                                                url = '/kpimonitor/KpiFactChanges/Approve';
+                                                                payload = { changeId };
+                                                                label = 'Approving…';
+                                                                } else if (action === 'reject') {
+                                                                // If your reject runs via a separate modal form, that form handler below will run instead.
+                                                                // Leaving prompt as a fallback in case the inline button is used.
+                                                                const reason = btn.dataset.reason || prompt('Reject reason:');
+                                                                if (!reason) return;
+                                                                url = '/kpimonitor/KpiFactChanges/Reject';
+                                                                payload = { changeId, reason };
+                                                                label = 'Rejecting…';
+                                                                } else if (action === 'approve-batch') {
+                                                                url = '/kpimonitor/KpiFactChanges/ApproveBatch';
+                                                                payload = { batchId };
+                                                                label = 'Approving…';
+                                                                } else if (action === 'reject-batch') {
+                                                                const reason = btn.dataset.reason || prompt('Reject reason:');
+                                                                if (!reason) return;
+                                                                url = '/kpimonitor/KpiFactChanges/RejectBatch';
+                                                                payload = { batchId, reason };
+                                                                label = 'Rejecting…';
+                                                                } else {
+                                                                return;
+                                                                }
 
-            const action = (btn.dataset.action || '').toLowerCase();
-            const changeId = btn.dataset.id;
-            const batchId = btn.dataset.batchId;
+                                                                ev.preventDefault();
+                                                                setBusyButton(btn, true, label);
 
-            let url, payload, label;
-            if (action === 'approve') {
-                url = '/kpimonitor/KpiFactChanges/Approve';
-                payload = { changeId };
-                label = 'Approving…';
-            } else if (action === 'reject') {
-                // If your reject runs via a separate modal form, that form handler below will run instead.
-                // Leaving prompt as a fallback in case the inline button is used.
-                const reason = btn.dataset.reason || prompt('Reject reason:');
-                if (!reason) return;
-                url = '/kpimonitor/KpiFactChanges/Reject';
-                payload = { changeId, reason };
-                label = 'Rejecting…';
-            } else if (action === 'approve-batch') {
-                url = '/kpimonitor/KpiFactChanges/ApproveBatch';
-                payload = { batchId };
-                label = 'Approving…';
-            } else if (action === 'reject-batch') {
-                const reason = btn.dataset.reason || prompt('Reject reason:');
-                if (!reason) return;
-                url = '/kpimonitor/KpiFactChanges/RejectBatch';
-                payload = { batchId, reason };
-                label = 'Rejecting…';
-            } else {
-                return;
-            }
+                                                                const group = btn.closest('.btn-group');
+                                                                const sibs = group ? group.querySelectorAll('.appr-btn') : [];
+                                                                sibs.forEach(b => { if (b !== btn) b.disabled = true; });
 
-            ev.preventDefault();
-            setBusyButton(btn, true, label);
+                                                                try {
+                                                                await postJson(url, payload);
 
-            const group = btn.closest('.btn-group');
-            const sibs = group ? group.querySelectorAll('.appr-btn') : [];
-            sibs.forEach(b => { if (b !== btn) b.disabled = true; });
+                                                                const card = btn.closest('.appr-card') || btn.closest('.border.rounded-3');
+                                                                if (card) {
+                                                                const headerRight = card.querySelector('.text-end');
+                                                                if (headerRight) {
+                                                                headerRight.innerHTML = (action.includes('approve'))
+                                                                ? "<span class='badge text-bg-success'>Approved</span>"
+                                                                : "<span class='badge text-bg-danger'>Rejected</span>";
+                                                                }
+                                                                }
 
-            try {
-                await postJson(url, payload);
+                                                                // Your existing reload hook – call whichever you actually have
+                                                                if (typeof window.reloadActiveApprovalsTab === 'function') {
+                                                                await window.reloadActiveApprovalsTab();
+                                                                } else if (typeof window.loadList === 'function') {
+                                                                const activePane = document.querySelector('.tab-pane.active.show');
+                                                                if (activePane?.id === 'tab-batches') {
+                                                                await window.loadList('#tab-batches', '/kpimonitor/KpiFactChanges/ListBatchesHtml', { status: 'pending' });
+                                                                } else {
+                                                                await window.loadList('#tab-changes', '/kpimonitor/KpiFactChanges/ListHtml', { status: 'pending' });
+                                                                }
+                                                                }
+                                                                showToast(action.includes('approve') ? 'Approved successfully' : 'Rejected successfully', 'success');
+                                                                } catch (err) {
+                                                                showToast(err.message || 'Request failed', 'error');
+                                                                } finally {
+                                                                setBusyButton(btn, false);
+                                                                sibs.forEach(b => { if (b !== btn) b.disabled = false; });
+                                                                }
+                                                                });
 
-                const card = btn.closest('.appr-card') || btn.closest('.border.rounded-3');
-                if (card) {
-                    const headerRight = card.querySelector('.text-end');
-                    if (headerRight) {
-                        headerRight.innerHTML = (action.includes('approve'))
-                            ? "<span class='badge text-bg-success'>Approved</span>"
-                            : "<span class='badge text-bg-danger'>Rejected</span>";
-                    }
-                }
+                                                                // ---------- Save-for-approval modal (button inside a form) ----------
+                                                                // Delegated handler so it works for dynamically-injected modals
+                                                                document.addEventListener('click', async (e) => {
+                                                                const btn = e.target.closest('#btn-save-for-approval');
+                                                                if (!btn) return;
+                                                                if (btn.getAttribute('aria-busy') === 'true') return;
 
-                // Your existing reload hook – call whichever you actually have
-                if (typeof window.reloadActiveApprovalsTab === 'function') {
-                    await window.reloadActiveApprovalsTab();
-                } else if (typeof window.loadList === 'function') {
-                    const activePane = document.querySelector('.tab-pane.active.show');
-                    if (activePane?.id === 'tab-batches') {
-                        await window.loadList('#tab-batches', '/kpimonitor/KpiFactChanges/ListBatchesHtml', { status: 'pending' });
-                    } else {
-                        await window.loadList('#tab-changes', '/kpimonitor/KpiFactChanges/ListHtml', { status: 'pending' });
-                    }
-                }
-                showToast(action.includes('approve') ? 'Approved successfully' : 'Rejected successfully', 'success');
-            } catch (err) {
-                showToast(err.message || 'Request failed', 'error');
-            } finally {
-                setBusyButton(btn, false);
-                sibs.forEach(b => { if (b !== btn) b.disabled = false; });
-            }
-        });
+                                                                const form = btn.closest('form'); // your <form id="kpi-edit-form" asp-controller="KpiFactChanges" asp-action="SubmitBatch">
+                                                                if (!form) return;
 
-        // ---------- Save-for-approval modal (button inside a form) ----------
-        // Delegated handler so it works for dynamically-injected modals
-        document.addEventListener('click', async (e) => {
-            const btn = e.target.closest('#btn-save-for-approval');
-            if (!btn) return;
-            if (btn.getAttribute('aria-busy') === 'true') return;
+                                                                e.preventDefault();
+                                                                setBusyButton(btn, true, 'Submitting…');
 
-            const form = btn.closest('form'); // your <form id="kpi-edit-form" asp-controller="KpiFactChanges" asp-action="SubmitBatch">
-            if (!form) return;
+                                                                try {
+                                                                const fd = new FormData(form); // includes the antiforgery token that’s already in your form
+                                                                const r = await fetch(form.action, {
+                                                                method: 'POST',
+                                                                body: fd,
+                                                                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                                                                });
+                                                                const ct = (r.headers.get('content-type') || '');
+                                                                const data = ct.includes('application/json') ? await r.json() : await r.text();
+                                                                if (!r.ok || (data && data.ok === false)) throw new Error((data && (data.error || data.message)) || 'Submit failed');
 
-            e.preventDefault();
-            setBusyButton(btn, true, 'Submitting…');
+                                                                showToast('Request sent successfully', 'success');
 
-            try {
-                const fd = new FormData(form); // includes the antiforgery token that’s already in your form
-                const r = await fetch(form.action, {
-                    method: 'POST',
-                    body: fd,
-                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-                });
-                const ct = (r.headers.get('content-type') || '');
-                const data = ct.includes('application/json') ? await r.json() : await r.text();
-                if (!r.ok || (data && data.ok === false)) throw new Error((data && (data.error || data.message)) || 'Submit failed');
+                                                                // Close the modal if it’s a Bootstrap modal
+                                                                const modalEl = form.closest('.modal');
+                                                                if (modalEl && window.bootstrap) {
+                                                                (bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl)).hide();
+                                                                }
 
-                showToast('Request sent successfully', 'success');
+                                                                // === Immediate optimistic flip on Dashboard button ===
+                                                                const openBtn = document.getElementById('openEditKpiBtn');
+                                                                if (openBtn) {
+                                                                openBtn.disabled = true;
+                                                                openBtn.textContent = '⏳ Pending approval';
+                                                                }
 
-                // Close the modal if it’s a Bootstrap modal
-                const modalEl = form.closest('.modal');
-                if (modalEl && window.bootstrap) {
-                    (bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl)).hide();
-                }
+                                                                // Small pause to let DB commit; then refresh the page summary if available
+                                                                await new Promise(r => setTimeout(r, 250));
+                                                                if (typeof window.loadKpiSummary === 'function') {
+                                                                await window.loadKpiSummary();
+                                                                }
 
-                // === Immediate optimistic flip on Dashboard button ===
-                const openBtn = document.getElementById('openEditKpiBtn');
-                if (openBtn) {
-                    openBtn.disabled = true;
-                    openBtn.textContent = '⏳ Pending approval';
-                }
+                                                                // Keep your list reloads (for Inbox etc.)
+                                                                if (typeof window.reloadActiveApprovalsTab === 'function') {
+                                                                await window.reloadActiveApprovalsTab();
+                                                                } else if (typeof window.loadList === 'function') {
+                                                                const activePane = document.querySelector('.tab-pane.active.show');
+                                                                if (activePane?.id === 'tab-batches') {
+                                                                await window.loadList('#tab-batches', '/kpimonitor/KpiFactChanges/ListBatchesHtml', { status: 'pending' });
+                                                                } else {
+                                                                await window.loadList('#tab-changes', '/kpimonitor/KpiFactChanges/ListHtml', { status: 'pending' });
+                                                                }
+                                                                }
+                                                                } catch (err) {
+                                                                showToast(err.message || 'Submit failed', 'error');
+                                                                } finally {
+                                                                setBusyButton(btn, false);
+                                                                }
+                                                                });
 
-                // Small pause to let DB commit; then refresh the page summary if available
-                await new Promise(r => setTimeout(r, 250));
-                if (typeof window.loadKpiSummary === 'function') {
-                    await window.loadKpiSummary();
-                }
+                                                                // ---------- Reject modal (collects reason, posts to Reject) ----------
+                                                                (function () {
+                                                                const form = document.getElementById('reject-form');            // <form id="reject-form" action="/kpimonitor/KpiFactChanges/Reject">
+                                                                if (!form) return;
+                                                                const submitBtn = form.querySelector('[type="submit"]');        // submit button in the modal
+                                                                const changeIdEl = form.querySelector('input[name="changeId"]');// hidden input you already fill when opening modal
+                                                                const reasonEl = form.querySelector('textarea[name="reason"]'); // textarea for reason
 
-                // Keep your list reloads (for Inbox etc.)
-                if (typeof window.reloadActiveApprovalsTab === 'function') {
-                    await window.reloadActiveApprovalsTab();
-                } else if (typeof window.loadList === 'function') {
-                    const activePane = document.querySelector('.tab-pane.active.show');
-                    if (activePane?.id === 'tab-batches') {
-                        await window.loadList('#tab-batches', '/kpimonitor/KpiFactChanges/ListBatchesHtml', { status: 'pending' });
-                    } else {
-                        await window.loadList('#tab-changes', '/kpimonitor/KpiFactChanges/ListHtml', { status: 'pending' });
-                    }
-                }
-            } catch (err) {
-                showToast(err.message || 'Submit failed', 'error');
-            } finally {
-                setBusyButton(btn, false);
-            }
-        });
+                                                                form.addEventListener('submit', async (e) => {
+                                                                if (submitBtn && submitBtn.getAttribute('aria-busy') === 'true') return;
+                                                                e.preventDefault();
+                                                                const changeId = changeIdEl?.value;
+                                                                const reason = reasonEl?.value?.trim();
+                                                                if (!changeId) { showToast('Missing change id', 'error'); return; }
+                                                                if (!reason) { showToast('Reject reason is required', 'warning'); return; }
 
-        // ---------- Reject modal (collects reason, posts to Reject) ----------
-        (function () {
-            const form = document.getElementById('reject-form');            // <form id="reject-form" action="/kpimonitor/KpiFactChanges/Reject">
-            if (!form) return;
-            const submitBtn = form.querySelector('[type="submit"]');        // submit button in the modal
-            const changeIdEl = form.querySelector('input[name="changeId"]');// hidden input you already fill when opening modal
-            const reasonEl = form.querySelector('textarea[name="reason"]'); // textarea for reason
+                                                                setBusyButton(submitBtn, true, 'Rejecting…');
+                                                                try {
+                                                                const fd = new FormData(form); // includes token
+                                                                const data = await postJson(form.action, fd);
+                                                                showToast('Rejected successfully', 'success');
 
-            form.addEventListener('submit', async (e) => {
-                if (submitBtn && submitBtn.getAttribute('aria-busy') === 'true') return;
-                e.preventDefault();
-                const changeId = changeIdEl?.value;
-                const reason = reasonEl?.value?.trim();
-                if (!changeId) { showToast('Missing change id', 'error'); return; }
-                if (!reason) { showToast('Reject reason is required', 'warning'); return; }
+                                                                // close modal if you use Bootstrap 5
+                                                                const modalEl = form.closest('.modal');
+                                                                if (modalEl && window.bootstrap) {
+                                                                const inst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                                                                inst.hide();
+                                                                }
 
-                setBusyButton(submitBtn, true, 'Rejecting…');
-                try {
-                    const fd = new FormData(form); // includes token
-                    const data = await postJson(form.action, fd);
-                    showToast('Rejected successfully', 'success');
+                                                                // refresh list
+                                                                if (typeof window.reloadActiveApprovalsTab === 'function') {
+                                                                await window.reloadActiveApprovalsTab();
+                                                                } else if (typeof window.loadList === 'function') {
+                                                                await window.loadList('#tab-changes', '/kpimonitor/KpiFactChanges/ListHtml', { status: 'pending' });
+                                                                }
+                                                                } catch (err) {
+                                                                showToast(err.message || 'Reject failed', 'error');
+                                                                } finally {
+                                                                setBusyButton(submitBtn, false);
+                                                                }
+                                                                });
+                                                                })();
 
-                    // close modal if you use Bootstrap 5
-                    const modalEl = form.closest('.modal');
-                    if (modalEl && window.bootstrap) {
-                        const inst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-                        inst.hide();
-                    }
+                                                            </script>
 
-                    // refresh list
-                    if (typeof window.reloadActiveApprovalsTab === 'function') {
-                        await window.reloadActiveApprovalsTab();
-                    } else if (typeof window.loadList === 'function') {
-                        await window.loadList('#tab-changes', '/kpimonitor/KpiFactChanges/ListHtml', { status: 'pending' });
-                    }
-                } catch (err) {
-                    showToast(err.message || 'Reject failed', 'error');
-                } finally {
-                    setBusyButton(submitBtn, false);
-                }
-            });
-        })();
+                                                            @await RenderSectionAsync("Scripts", required: false)
+                                                        </body>
 
-    </script>
-
-    @await RenderSectionAsync("Scripts", required: false)
-</body>
-
-</html>
+                                                    </html>

@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Authorization;
 using KPIMonitor.Services.Auth;
 using KPIMonitor.Services;
 using KPIMonitor.Services.Abstractions;
+using System.Globalization;
+using Microsoft.AspNetCore.Localization;
 
 // alias to avoid clash with KPIMonitor.Services.StatusCodes
 using HttpStatusCodes = Microsoft.AspNetCore.Http.StatusCodes;
@@ -18,10 +20,14 @@ builder.Services.AddDbContext<AppDbContext>(options => options.UseOracle(oracleC
 
 builder.Services.AddHttpContextAccessor();
 
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+
 builder.Services.AddControllersWithViews(o =>
 {
     o.Conventions.Add(new ProtectCreateActionsConvention());
-});
+})
+.AddViewLocalization()
+.AddDataAnnotationsLocalization();
 
 // DI
 builder.Services.AddScoped<IEmployeeDirectory, OracleEmployeeDirectory>();
@@ -42,7 +48,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     .AddCookie(o =>
     {
         //Remove dev for prod server
-        o.Cookie.Name = "KpiMonitorAuthProd";
+        o.Cookie.Name = "KpiMonitorAuthDev";
         o.Cookie.HttpOnly = true;
         o.Cookie.SameSite = SameSiteMode.Lax;
         // o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
@@ -68,6 +74,19 @@ builder.Services.AddAuthorization(options =>
 });
 builder.Services.AddScoped<IAuthorizationHandler, AdminOnlyHandler>();
 
+var supportedCultures = new[]
+{
+    new CultureInfo("en"),
+    new CultureInfo("ar")
+};
+
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    options.DefaultRequestCulture = new RequestCulture("en");
+    options.SupportedCultures = supportedCultures;
+    options.SupportedUICultures = supportedCultures;
+});
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -78,6 +97,13 @@ if (!app.Environment.IsDevelopment())
 
 // app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+var locOptions = app.Services
+    .GetRequiredService<Microsoft.Extensions.Options.IOptions<RequestLocalizationOptions>>()
+    .Value;
+
+app.UseRequestLocalization(locOptions);
+
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -100,10 +126,34 @@ app.Use(async (ctx, next) =>
 // For edit windows (existing)
 PeriodEditPolicy.Configure(app.Services.GetRequiredService<IAdminAuthorizer>());
 
+app.MapGet("/culture/set", (string culture, string? returnUrl, HttpContext httpContext) =>
+{
+    if (culture != "en" && culture != "ar")
+        culture = "en";
+
+    httpContext.Response.Cookies.Append(
+        CookieRequestCultureProvider.DefaultCookieName,
+        CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+        new CookieOptions
+        {
+            Expires = DateTimeOffset.UtcNow.AddYears(1),
+            IsEssential = true,
+            HttpOnly = false,
+            Secure = httpContext.Request.IsHttps,
+            SameSite = SameSiteMode.Lax
+        });
+
+    if (!string.IsNullOrWhiteSpace(returnUrl) && Uri.IsWellFormedUriString(returnUrl, UriKind.Relative))
+        return Results.LocalRedirect(returnUrl);
+
+    return Results.LocalRedirect("/");
+});
+
 // Default route to login (IIS virtual dir handled by PathBase automatically)
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Account}/{action=Login}/{id?}");
+
 await app.Services.GetRequiredService<TargetEditLockState>().WarmUpAsync(CancellationToken.None);
 
 app.Run();
