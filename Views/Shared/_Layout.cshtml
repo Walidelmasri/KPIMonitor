@@ -6,8 +6,8 @@
     var requestCulture = Context.Features.Get<IRequestCultureFeature>();
     var culture = requestCulture?.RequestCulture.UICulture?.Name ?? CultureInfo.CurrentUICulture.Name;
     var isArabic = culture.StartsWith("ar", StringComparison.OrdinalIgnoreCase);
-    var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
     var pathBase = Context.Request.PathBase.Value ?? "";
+    var returnUrl = $"{pathBase}{Context.Request.Path}{Context.Request.QueryString}";
 }
 
 <!DOCTYPE html>
@@ -266,7 +266,7 @@
                                                                                     @if (isArabic)
                                                                                     {
                                                                                         <a class="btn btn-outline-secondary btn-sm"
-                                                                                               href="@($"{pathBase}/culture/set?culture=en&returnUrl={Uri.EscapeDataString(returnUrl)}")">
+                                                                                               href="@($"{Url.Content("~/culture/set")}?culture=en&returnUrl={Uri.EscapeDataString(returnUrl)}")">
                                                                                             EN
                                                                                         </a>
                                                                                         <span class="btn btn-sm btn-secondary disabled" aria-disabled="true">AR</span>
@@ -275,7 +275,7 @@
                                                                                     {
                                                                                         <span class="btn btn-sm btn-secondary disabled" aria-disabled="true">EN</span>
                                                                                         <a class="btn btn-outline-secondary btn-sm"
-                                                                                               href="@($"{pathBase}/culture/set?culture=ar&returnUrl={Uri.EscapeDataString(returnUrl)}")">
+                                                                                               href="@($"{Url.Content("~/culture/set")}?culture=ar&returnUrl={Uri.EscapeDataString(returnUrl)}")">
                                                                                             AR
                                                                                         </a>
                                                                                     }
