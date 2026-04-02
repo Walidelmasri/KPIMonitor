@@ -152,7 +152,8 @@ app.MapGet("/culture/set", (string culture, string? returnUrl, HttpContext httpC
         return Results.LocalRedirect(returnUrl);
 
     return Results.LocalRedirect("/");
-});
+})
+.AllowAnonymous();
 
 // Default route to login (IIS virtual dir handled by PathBase automatically)
 app.MapControllerRoute(

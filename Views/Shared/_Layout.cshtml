@@ -6,8 +6,12 @@
     var requestCulture = Context.Features.Get<IRequestCultureFeature>();
     var culture = requestCulture?.RequestCulture.UICulture?.Name ?? CultureInfo.CurrentUICulture.Name;
     var isArabic = culture.StartsWith("ar", StringComparison.OrdinalIgnoreCase);
+
     var pathBase = Context.Request.PathBase.Value ?? "";
-    var returnUrl = $"{pathBase}{Context.Request.Path}{Context.Request.QueryString}";
+    var isLoginPage = Context.Request.Path.StartsWithSegments("/Account/Login", StringComparison.OrdinalIgnoreCase);
+    var returnUrl = isLoginPage
+        ? $"{pathBase}{Context.Request.Path}"
+        : $"{pathBase}{Context.Request.Path}{Context.Request.QueryString}";
 }
 
 <!DOCTYPE html>
