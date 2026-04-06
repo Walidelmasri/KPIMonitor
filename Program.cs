@@ -131,22 +131,50 @@ app.MapGet("/culture/set", (string culture, string? returnUrl, HttpContext httpC
     if (culture != "en" && culture != "ar")
         culture = "en";
 
-    var cookiePath = httpContext.Request.PathBase.HasValue
-        ? httpContext.Request.PathBase.Value
+    var cookieValue = CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture));
+    var pathBase = httpContext.Request.PathBase.HasValue
+        ? httpContext.Request.PathBase.Value!
         : "/";
 
+    var commonOptions = new CookieOptions
+    {
+        Expires = DateTimeOffset.UtcNow.AddYears(1),
+        IsEssential = true,
+        HttpOnly = false,
+        Secure = httpContext.Request.IsHttps,
+        SameSite = SameSiteMode.Lax
+    };
+
+    // Always write root cookie too, to overwrite any old stale one
     httpContext.Response.Cookies.Append(
         CookieRequestCultureProvider.DefaultCookieName,
-        CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+        cookieValue,
         new CookieOptions
         {
-            Expires = DateTimeOffset.UtcNow.AddYears(1),
-            IsEssential = true,
-            HttpOnly = false,
-            Secure = httpContext.Request.IsHttps,
-            SameSite = SameSiteMode.Lax,
-            Path = cookiePath
+            Expires = commonOptions.Expires,
+            IsEssential = commonOptions.IsEssential,
+            HttpOnly = commonOptions.HttpOnly,
+            Secure = commonOptions.Secure,
+            SameSite = commonOptions.SameSite,
+            Path = "/"
         });
+
+    // If running under a virtual directory, also write path-based cookie
+    if (!string.Equals(pathBase, "/", StringComparison.Ordinal))
+    {
+        httpContext.Response.Cookies.Append(
+            CookieRequestCultureProvider.DefaultCookieName,
+            cookieValue,
+            new CookieOptions
+            {
+                Expires = commonOptions.Expires,
+                IsEssential = commonOptions.IsEssential,
+                HttpOnly = commonOptions.HttpOnly,
+                Secure = commonOptions.Secure,
+                SameSite = commonOptions.SameSite,
+                Path = pathBase
+            });
+    }
 
     if (!string.IsNullOrWhiteSpace(returnUrl) && Uri.IsWellFormedUriString(returnUrl, UriKind.Relative))
         return Results.LocalRedirect(returnUrl);
