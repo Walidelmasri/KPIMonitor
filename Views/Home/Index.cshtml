@@ -1,5 +1,7 @@
-﻿@{
-  ViewData["Title"] = "Dashboard";
+﻿@inject Microsoft.AspNetCore.Mvc.Localization.IViewLocalizer Localizer
+
+@{
+  ViewData["Title"] = Localizer["Dashboard"];
 }
 <style>
   /* =========================
@@ -58,7 +60,7 @@
 
   /* =========================
      Summary counters (left/right of pies)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ========================= */
+     ========================= */
   #summaryCard .kpi {
     display: flex;
     align-items: center;
@@ -113,10 +115,10 @@
     font-weight: 600;
   }
 
-#roleSummaryCard .role-list {
-  max-height: none;
-  overflow: visible;
-}
+  #roleSummaryCard .role-list {
+    max-height: none;
+    overflow: visible;
+  }
 
   #segmentKpiList .role-list {
     max-height: 132px;
@@ -250,7 +252,7 @@
   @section PageHeader {
     <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
       <div class="page-hero-content">
-        <h1 class="page-title">Dashboard</h1>
+        <h1 class="page-title">@Localizer["Dashboard"]</h1>
       </div>
     </div>
   }
@@ -260,10 +262,10 @@
     <div id="summaryCard" class="card shadow-sm rounded-4 mb-4">
       <div class="card-body">
         <div class="d-flex align-items-center justify-content-between mb-3">
-          <h6 class="m-0 text-secondary fw-bold">Overall Summary</h6>
+          <h6 class="m-0 text-secondary fw-bold">@Localizer["OverallSummary"]</h6>
           <div class="d-flex align-items-center gap-3">
             <span class="text-muted small" id="summaryUpdated">—</span>
-            <span class="text-muted small" id="summaryLoading">Loading…</span>
+            <span class="text-muted small" id="summaryLoading">@Localizer["Loading"]</span>
           </div>
         </div>
 
@@ -273,21 +275,21 @@
             <div class="border rounded-3 p-3 h-100">
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <div class="fw-bold text-secondary">
-                  Indicators (<span id="cntTotal" class="fw-bold text-dark">—</span>)
+                  @Localizer["Indicators"] (<span id="cntTotal" class="fw-bold text-dark">—</span>)
                 </div>
                 <div class="d-flex flex-column align-items-end gap-1 summary-counts-vertical">
-                  <div class="kpi"><span class="lbl">Target&nbsp;Achieved</span><span class="n ms-1"
+                  <div class="kpi"><span class="lbl">@Localizer["TargetAchieved"]</span><span class="n ms-1"
                       id="cntGreen">0</span></div>
-                  <div class="kpi"><span class="lbl">On&nbsp;Forecast</span><span class="n ms-1" id="cntOrange">0</span>
+                  <div class="kpi"><span class="lbl">@Localizer["OnForecast"]</span><span class="n ms-1" id="cntOrange">0</span>
                   </div>
-                  <div class="kpi"><span class="lbl">Target&nbsp;Missed</span><span class="n ms-1" id="cntRed">0</span>
+                  <div class="kpi"><span class="lbl">@Localizer["TargetMissed"]</span><span class="n ms-1" id="cntRed">0</span>
                   </div>
-                  <div class="kpi"><span class="lbl">Data&nbsp;Missing</span><span class="n ms-1" id="cntBlue">0</span>
+                  <div class="kpi"><span class="lbl">@Localizer["DataMissing"]</span><span class="n ms-1" id="cntBlue">0</span>
                   </div>
                 </div>
               </div>
               <div class="pie">
-                <canvas id="pieKpiStatus" aria-label="Indicators by Status" role="img"></canvas>
+                <canvas id="pieKpiStatus" aria-label="@Localizer["IndicatorsByStatus"]" role="img"></canvas>
               </div>
             </div>
           </div>
@@ -296,11 +298,11 @@
           <div class="col-lg-4">
             <div class="border rounded-3 p-3 h-100 bar-share">
               <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="fw-bold text-secondary">Pillars With Red Indicators</div>
-                <span class="text-muted small" id="redShareLoading">Loading…</span>
+                <div class="fw-bold text-secondary">@Localizer["PillarsWithRedIndicators"]</div>
+                <span class="text-muted small" id="redShareLoading">@Localizer["Loading"]</span>
               </div>
               <div class="pie">
-                <canvas id="barRedShare" aria-label="Red Share by Pillar" role="img"></canvas>
+                <canvas id="barRedShare" aria-label="@Localizer["RedShareByPillar"]" role="img"></canvas>
               </div>
 
               <!-- Turned-to bullets -->
@@ -314,16 +316,16 @@
           <div class="col-lg-4">
             <div class="border rounded-3 p-3 h-100">
               <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="fw-bold text-secondary">Action Plans by Status</div>
+                <div class="fw-bold text-secondary">@Localizer["ActionPlansByStatus"]</div>
                 <div class="d-flex flex-column align-items-end gap-1 summary-counts-vertical">
-                  <div class="kpi"><span class="lbl">To&nbsp;Do</span><span class="n ms-1" id="cntTodo">0</span></div>
-                  <div class="kpi"><span class="lbl">In&nbsp;Progress</span><span class="n ms-1" id="cntProg">0</span>
+                  <div class="kpi"><span class="lbl">@Localizer["ToDo"]</span><span class="n ms-1" id="cntTodo">0</span></div>
+                  <div class="kpi"><span class="lbl">@Localizer["InProgress"]</span><span class="n ms-1" id="cntProg">0</span>
                   </div>
-                  <div class="kpi"><span class="lbl">Done</span><span class="n ms-1" id="cntDone">0</span></div>
+                  <div class="kpi"><span class="lbl">@Localizer["Done"]</span><span class="n ms-1" id="cntDone">0</span></div>
                 </div>
               </div>
               <div class="pie">
-                <canvas id="pieActionStatus" aria-label="Actions by Status" role="img"></canvas>
+                <canvas id="pieActionStatus" aria-label="@Localizer["ActionsByStatus"]" role="img"></canvas>
               </div>
             </div>
           </div>
@@ -332,8 +334,8 @@
         <!-- KPIs from clicked segment -->
         <div id="segmentKpiList" class="mt-3 d-none">
           <div class="d-flex align-items-center justify-content-between mb-1">
-            <div class="text-muted small" id="segmentTitle">KPIs</div>
-            <button class="btn btn-sm btn-outline-secondary" id="clearSegmentBtn">Clear</button>
+            <div class="text-muted small" id="segmentTitle">@Localizer["KPIs"]</div>
+            <button class="btn btn-sm btn-outline-secondary" id="clearSegmentBtn">@Localizer["Clear"]</button>
           </div>
           <div class="role-list" id="segmentKpiRows"></div>
         </div>
@@ -341,11 +343,11 @@
         <!-- Red monthly trend (under pies) -->
         <div class="mt-3">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <div class="fw-bold text-secondary">Red KPIs this Year</div>
-            <span class="text-muted small" id="trendLoading">Loading…</span>
+            <div class="fw-bold text-secondary">@Localizer["RedKpisThisYear"]</div>
+            <span class="text-muted small" id="trendLoading">@Localizer["Loading"]</span>
           </div>
           <div style="min-height:160px">
-            <canvas id="lineRedTrend" aria-label="Red KPIs this Year" role="img"></canvas>
+            <canvas id="lineRedTrend" aria-label="@Localizer["RedKpisThisYear"]" role="img"></canvas>
           </div>
         </div>
       </div>
@@ -355,11 +357,11 @@
     <div class="card shadow-sm rounded-4 mb-4" id="roleSummaryCard">
       <div class="card-body">
         <div class="d-flex align-items-center justify-content-between mb-1">
-          <div class="text-muted small">Your role on indicators</div>
+          <div class="text-muted small">@Localizer["YourRoleOnIndicators"]</div>
           <span class="badge rounded-pill text-bg-light" id="roleSummaryBadge">—</span>
         </div>
         <div class="row g-3 small" id="roleSummaryRows">
-          <div class="col-12 text-muted small" id="roleSummaryPlaceholder">Loading your indicators…</div>
+          <div class="col-12 text-muted small" id="roleSummaryPlaceholder">@Localizer["LoadingYourIndicators"]</div>
         </div>
       </div>
     </div>
@@ -369,30 +371,30 @@
       <div class="card-body" id="scrollHere">
         <div class="row g-3 align-items-end">
           <div class="col-md-3">
-            <label for="pillarSelector" class="form-label">Pillar</label>
+            <label for="pillarSelector" class="form-label">@Localizer["Pillar"]</label>
             <select id="pillarSelector" class="form-select">
-              <option value="">-- Pillar --</option>
+              <option value="">-- @Localizer["Pillar"] --</option>
             </select>
           </div>
 
           <div class="col-md-3">
-            <label for="objectiveSelector" class="form-label">Objective</label>
+            <label for="objectiveSelector" class="form-label">@Localizer["Objective"]</label>
             <select id="objectiveSelector" class="form-select" disabled>
-              <option value="">-- Objective --</option>
+              <option value="">-- @Localizer["Objective"] --</option>
             </select>
           </div>
 
           <div class="col-md-3">
-            <label for="kpiSelector" class="form-label">KPI</label>
+            <label for="kpiSelector" class="form-label">@Localizer["KPI"]</label>
             <select id="kpiSelector" class="form-select" disabled>
-              <option value="">-- KPI --</option>
+              <option value="">-- @Localizer["KPI"] --</option>
             </select>
           </div>
 
           <div class="col-md-3">
-            <label for="yearPlanSelector" class="form-label">Year</label>
+            <label for="yearPlanSelector" class="form-label">@Localizer["Year"]</label>
             <select id="yearPlanSelector" class="form-select" disabled>
-              <option value="">-- Latest --</option>
+              <option value="">-- @Localizer["Latest"] --</option>
             </select>
           </div>
         </div>
@@ -404,8 +406,8 @@
     <div class="row mb-5 g-4">
       <div class="col-md-9">
         <div id="chartSection" class="bg-white border rounded shadow-sm p-3" style="height: 550px;">
-          <h6 id="kpiTitle" class="text-center text-secondary mb-2">KPI Title</h6>
-          <canvas id="kpiChart" aria-label="KPI Chart" role="img"></canvas>
+          <h6 id="kpiTitle" class="text-center text-secondary mb-2">@Localizer["KpiTitle"]</h6>
+          <canvas id="kpiChart" aria-label="@Localizer["KpiChart"]" role="img"></canvas>
         </div>
       </div>
 
@@ -413,27 +415,27 @@
         <div class="card shadow-sm rounded-3 w-100 align-self-stretch">
           <div class="card-body d-flex flex-column justify-content-between h-100">
             <div>
-              <h6 class="card-title text-secondary fw-bold mb-3">KPI Details</h6>
-              <p class="mb-2" style="font-size: larger;"><strong>Owner:</strong> <span id="metaOwner"
+              <h6 class="card-title text-secondary fw-bold mb-3">@Localizer["KpiDetails"]</h6>
+              <p class="mb-2" style="font-size: larger;"><strong>@Localizer["Owner"]:</strong> <span id="metaOwner"
                   class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>Editor:</strong> <span id="metaEditor"
+              <p class="mb-2" style="font-size: larger;"><strong>@Localizer["Editor"]:</strong> <span id="metaEditor"
                   class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>Frequency:</strong> <span id="metaFrequency"
+              <p class="mb-2" style="font-size: larger;"><strong>@Localizer["Frequency"]:</strong> <span id="metaFrequency"
                   class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>Unit:</strong> <span id="metaUnit"
+              <p class="mb-2" style="font-size: larger;"><strong>@Localizer["Unit"]:</strong> <span id="metaUnit"
                   class="text-dark">—</span></p>
             </div>
             <div class="mt-auto">
               <div class="mb-4 text-center">
-                <div class="text-muted">Priority</div>
+                <div class="text-muted">@Localizer["Priority"]</div>
                 <div id="metaPriority" class="display-6 fw-bold text-dark">—</div>
               </div>
               <div class="text-center">
-                <div class="text-muted mb-1">Status</div>
+                <div class="text-muted mb-1">@Localizer["Status"]</div>
                 <span id="metaStatus" class="status-pill">—</span>
                 <div class="mt-2">
                   <button asp-admin-only id="btnAdminSetStatus" type="button"
-                    class="btn btn-outline-secondary btn-sm">Set Status</button>
+                    class="btn btn-outline-secondary btn-sm">@Localizer["SetStatus"]</button>
                 </div>
               </div>
             </div>
@@ -447,52 +449,51 @@
   <div class="card shadow-sm rounded-4 mt-3 mb-4" id="commentsCard">
     <div class="card-body">
       <div class="d-flex justify-content-between align-items-center mb-2">
-        <h6 class="m-0 text-secondary">Comments</h6>
+        <h6 class="m-0 text-secondary">@Localizer["Comments"]</h6>
         <div class="d-flex gap-2">
-          <button id="btnEditComment" type="button" class="btn btn-outline-secondary btn-sm d-none">Edit</button>
-          <button id="btnSaveComment" type="button" class="btn btn-primary btn-sm d-none">Save</button>
-          <button id="btnCancelComment" type="button" class="btn btn-light btn-sm d-none">Cancel</button>
+          <button id="btnEditComment" type="button" class="btn btn-outline-secondary btn-sm d-none">@Localizer["Edit"]</button>
+          <button id="btnSaveComment" type="button" class="btn btn-primary btn-sm d-none">@Localizer["Save"]</button>
+          <button id="btnCancelComment" type="button" class="btn btn-light btn-sm d-none">@Localizer["Cancel"]</button>
         </div>
       </div>
 
-      <div id="commentRead" class="text-muted" style="white-space: pre-wrap;">Select a KPI to view comments.</div>
+      <div id="commentRead" class="text-muted" style="white-space: pre-wrap;">@Localizer["SelectKpiToViewComments"]</div>
 
       <div id="commentEditWrap" class="d-none">
-        <textarea id="commentEdit" class="form-control" rows="4" placeholder="Add comment…"></textarea>
-        <div class="form-text text-muted">Only the assigned editor can add/edit this comment.</div>
+        <textarea id="commentEdit" class="form-control" rows="4" placeholder="@Localizer["AddComment"]"></textarea>
+        <div class="form-text text-muted">@Localizer["OnlyAssignedEditorCanEditComment"]</div>
       </div>
     </div>
   </div>
 
   <!-- KPI-level Edit Button -->
   <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
-    <h6 class="m-0 text-secondary">Facts</h6>
+    <h6 class="m-0 text-secondary">@Localizer["Facts"]</h6>
 
     <div class="d-flex gap-2 align-items-center">
       <!-- Global Target Lock Toggle (Super Admin only) -->
       <button asp-admin-only id="btnToggleTargetLock" type="button" class="btn btn-outline-secondary btn-sm d-none">
-        Loading target lock…
+        @Localizer["LoadingTargetLock"]
       </button>
 
       <button id="openEditKpiBtn" class="btn btn-primary btn-sm" disabled>
-        Edit Data (Actual & Forecast)
+        @Localizer["EditDataActualForecast"]
       </button>
     </div>
   </div>
 
-
   <!-- Data Table -->
   <div class="table-responsive shadow-sm rounded-4 mt-4">
     <table class="table table-striped table-bordered mb-0 align-middle" aria-describedby="dataTableCaption">
-      <caption id="dataTableCaption">KPI Facts For the Selected Year Plan</caption>
+      <caption id="dataTableCaption">@Localizer["KpiFactsForSelectedYearPlan"]</caption>
       <thead class="table-light">
         <tr>
-          <th>Period</th>
-          <th>Start</th>
-          <th>End</th>
-          <th class="th-actual">Actual</th>
-          <th class="th-target">Target</th>
-          <th class="th-forecast">Forecast</th>
+          <th>@Localizer["Period"]</th>
+          <th>@Localizer["Start"]</th>
+          <th>@Localizer["End"]</th>
+          <th class="th-actual">@Localizer["Actual"]</th>
+          <th class="th-target">@Localizer["Target"]</th>
+          <th class="th-forecast">@Localizer["Forecast"]</th>
         </tr>
       </thead>
       <tbody id="factsTbody">
@@ -516,22 +517,22 @@
   <div class="modal-dialog modal-sm">
     <div class="modal-content">
       <div class="modal-header py-2">
-        <h6 class="modal-title">Set KPI Status</h6>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h6 class="modal-title">@Localizer["SetKpiStatus"]</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@Localizer["Close"]"></button>
       </div>
       <form id="adminStatusForm" class="p-3">
         <div class="mb-2">
-          <label for="adminStatusSelect" class="form-label small text-muted">Status</label>
+          <label for="adminStatusSelect" class="form-label small text-muted">@Localizer["Status"]</label>
           <select id="adminStatusSelect" class="form-select form-select-sm">
-            <option value="green">Target Achieved</option>
-            <option value="orange">On Forecast</option>
-            <option value="red">Target Missed</option>
-            <option value="blue">Data Missing</option>
+            <option value="green">@Localizer["TargetAchieved"]</option>
+            <option value="orange">@Localizer["OnForecast"]</option>
+            <option value="red">@Localizer["TargetMissed"]</option>
+            <option value="blue">@Localizer["DataMissing"]</option>
           </select>
         </div>
         <div class="d-flex justify-content-end gap-2">
-          <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary btn-sm">Save</button>
+          <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">@Localizer["Cancel"]</button>
+          <button type="submit" class="btn btn-primary btn-sm">@Localizer["Save"]</button>
         </div>
       </form>
     </div>
@@ -543,20 +544,77 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
   <script>
+    const t = {
+      loading: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Loading"].Value)),
+      updated: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Updated"].Value)),
+      targetAchieved: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["TargetAchieved"].Value)),
+      onForecast: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["OnForecast"].Value)),
+      targetMissed: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["TargetMissed"].Value)),
+      dataMissing: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["DataMissing"].Value)),
+      toDo: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["ToDo"].Value)),
+      inProgress: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["InProgress"].Value)),
+      done: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Done"].Value)),
+      kpis: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["KPIs"].Value)),
+      clear: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Clear"].Value)),
+      selectKpiToViewComments: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["SelectKpiToViewComments"].Value)),
+      failedToLoadComment: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["FailedToLoadComment"].Value)),
+      noIndicatorsAvailable: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["NoIndicatorsAvailable"].Value)),
+      couldNotLoadYourIndicators: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["CouldNotLoadYourIndicators"].Value)),
+      editorFor: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["EditorFor"].Value)),
+      ownerFor: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["OwnerFor"].Value)),
+      more: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["More"].Value)),
+      noKpisFound: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["NoKpisFound"].Value)),
+      failedToLoadKpis: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["FailedToLoadKpis"].Value)),
+      noRedKpis: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["NoRedKpis"].Value)),
+      couldNotLoadLatestChanges: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["CouldNotLoadLatestChanges"].Value)),
+      couldNotLoadTrend: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["CouldNotLoadTrend"].Value)),
+      couldNotLoadSummary: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["CouldNotLoadSummary"].Value)),
+      loadingTargetLock: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["LoadingTargetLock"].Value)),
+      lockTargets: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["LockTargets"].Value)),
+      unlockTargets: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["UnlockTargets"].Value)),
+      superAdminOnly: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["SuperAdminOnly"].Value)),
+      failedToToggleTargetLock: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["FailedToToggleTargetLock"].Value)),
+      noFactsForThisPlanYear: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["NoFactsForThisPlanYear"].Value)),
+      pending: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Pending"].Value)),
+      latest: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Latest"].Value)),
+      pillar: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Pillar"].Value)),
+      objective: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Objective"].Value)),
+      kpi: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["KPI"].Value)),
+      year: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Year"].Value)),
+      editDataActualForecast: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["EditDataActualForecast"].Value)),
+      editKpiNoAccess: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["EditKpiNoAccess"].Value)),
+      pendingApproval: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["PendingApproval"].Value)),
+      redKpis: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["RedKpis"].Value)),
+      redKpisForPillar: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["RedKpisForPillar"].Value)),
+      kpisWithStatus: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["KpisWithStatus"].Value)),
+      kpisWithActions: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["KpisWithActions"].Value)),
+      turnedTo: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["TurnedTo"].Value)),
+      indicatorsTurnedToTargetAchieved: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["IndicatorsTurnedToTargetAchieved"].Value)),
+      indicatorsTurnedToOnForecast: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["IndicatorsTurnedToOnForecast"].Value)),
+      indicatorsTurnedToTargetMissed: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["IndicatorsTurnedToTargetMissed"].Value)),
+      indicatorsTurnedToDataMissing: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["IndicatorsTurnedToDataMissing"].Value)),
+      actual: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Actual"].Value)),
+      target: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Target"].Value)),
+      forecast: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Forecast"].Value)),
+      yearTarget: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["YearTarget"].Value)),
+      yearActual: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["YearActual"].Value)),
+      saveFailed: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["SaveFailed"].Value)),
+      submittedChanges: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["SubmittedChanges"].Value)),
+      skipped: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Skipped"].Value)),
+      savedAutoApproved: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["SavedAutoApproved"].Value)),
+      submittedForApproval: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["SubmittedForApproval"].Value)),
+      failedToLoadEditor: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["FailedToLoadEditor"].Value)),
+      noAccessToEditKpi: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["NoAccessToEditKpi"].Value)),
+      failedToUpdateStatus: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["FailedToUpdateStatus"].Value)),
+      status: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Status"].Value))
+    };
+
     /* ========= Utilities ========= */
-    @* function _fmtShort(v) {
-      const n = Number(v); if (!isFinite(n)) return '';
-      const a = Math.abs(n);
-      if (a >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
-      if (a >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
-      if (a >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
-      return n.toString();
-    } *@
-      function _fmtShort(v) {
-        const n = Number(v);
-        if (!isFinite(n)) return '';
-        return n.toLocaleString();
-      }
+    function _fmtShort(v) {
+      const n = Number(v);
+      if (!isFinite(n)) return '';
+      return n.toLocaleString();
+    }
 
     Chart.defaults.font.family = 'Tajawal, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
     Chart.defaults.font.size = 12;
@@ -645,10 +703,10 @@
     function uiStatus(code) {
       const s = String(code || '').trim().toLowerCase();
       switch (s) {
-        case 'green': case 'conforme': case 'ok': return 'Target Achieved';
-        case 'orange': case 'rattrapage': case 'catching up': return 'On Forecast';
-        case 'red': case 'ecart': case 'needs attention': return 'Target Missed';
-        case 'blue': case 'attente': case 'data missing': return 'Data Missing';
+        case 'green': case 'conforme': case 'ok': return t.targetAchieved;
+        case 'orange': case 'rattrapage': case 'catching up': return t.onForecast;
+        case 'red': case 'ecart': case 'needs attention': return t.targetMissed;
+        case 'blue': case 'attente': case 'data missing': return t.dataMissing;
         default: return '—';
       }
     }
@@ -676,7 +734,7 @@
       host = document.createElement('div');
       host.className = 'pie-legend';
       host.dataset.for = id;
-      card.insertBefore(host, pie);  // place ABOVE the pie, fixed height
+      card.insertBefore(host, pie);
       return host;
     }
     function renderLegend(host, labels, colors) {
@@ -690,8 +748,7 @@
     }
 
     /* ===== Elements ===== */
-    @* const selPillar = byId('pillarSelector'), selObjective = byId('objectiveSelector'), selKpi = byId('kpiSelector'); *@
-          const selPillar = byId('pillarSelector'),
+    const selPillar = byId('pillarSelector'),
       selObjective = byId('objectiveSelector'),
       selKpi = byId('kpiSelector'),
       selYearPlan = byId('yearPlanSelector');
@@ -717,8 +774,6 @@
       commentEditWrap.classList.add('d-none');
       btnSaveComment.classList.add('d-none');
       btnCancelComment.classList.add('d-none');
-
-      // Only editor sees Edit
       btnEditComment.classList.toggle('d-none', !canEditFacts);
     }
 
@@ -734,7 +789,7 @@
     async function loadYearPlanComment() {
       if (!currentPlanId) {
         _commentCache = '';
-        commentRead.textContent = 'Select a KPI to view comments.';
+        commentRead.textContent = t.selectKpiToViewComments;
         setCommentUiReadMode();
         return;
       }
@@ -745,7 +800,7 @@
         commentRead.textContent = _commentCache.trim() ? _commentCache : '—';
         setCommentUiReadMode();
       } catch {
-        commentRead.textContent = 'Failed to load comment.';
+        commentRead.textContent = t.failedToLoadComment;
         setCommentUiReadMode();
       }
     }
@@ -770,7 +825,7 @@
         success: function () {
           _commentCache = commentEdit.value ?? '';
           commentRead.textContent = _commentCache.trim() ? _commentCache : '—';
-          setCommentUiReadMode(); // instant update
+          setCommentUiReadMode();
         },
         error: function (xhr) {
           if (xhr.status === 403) {
@@ -782,11 +837,10 @@
       });
     });
 
-
     /* ===== Summary Card ===== */
     let pieKpis, pieActs, lineTrend, _barRedShare;
     async function loadYearPlansForKpi(kpiId, selectedPlanId) {
-      selYearPlan.innerHTML = '<option value="">-- Latest --</option>';
+      selYearPlan.innerHTML = `<option value="">-- ${t.latest} --</option>`;
       selYearPlan.disabled = true;
 
       if (!kpiId) return;
@@ -800,9 +854,7 @@
         selYearPlan.appendChild(opt);
       }
 
-      // select current plan if present
       if (selectedPlanId) selYearPlan.value = String(selectedPlanId);
-
       selYearPlan.disabled = (selYearPlan.options.length <= 1);
     }
 
@@ -824,7 +876,7 @@
         byId('cntProg').textContent = a.inprogress ?? 0;
         byId('cntDone').textContent = a.done ?? 0;
 
-        byId('summaryUpdated').textContent = data?.updatedAt ? ('Updated ' + data.updatedAt) : '—';
+        byId('summaryUpdated').textContent = data?.updatedAt ? (`${t.updated} ${data.updatedAt}`) : '—';
         if (loadingEl) loadingEl.textContent = '';
 
         const kpiVals = [k.green ?? 0, k.orange ?? 0, k.red ?? 0, k.blue ?? 0];
@@ -835,17 +887,15 @@
         const actCtx = byId('pieActionStatus').getContext('2d');
         if (pieKpis) pieKpis.destroy(); if (pieActs) pieActs.destroy();
 
-        /* --- fixed DOM legends (outside canvas) --- */
         const kpiLegendHost = ensureLegendHost(byId('pieKpiStatus'), 'kpi');
         const actLegendHost = ensureLegendHost(byId('pieActionStatus'), 'act');
-        const kpiLabels = ['Target Achieved', 'On Forecast', 'Target Missed', 'Data Missing'];
+        const kpiLabels = [t.targetAchieved, t.onForecast, t.targetMissed, t.dataMissing];
         const kpiColors = ['#28a745', '#fd7e14', '#dc3545', '#0d6efd'];
-        const actLabels = ['To Do', 'In Progress', 'Done'];
+        const actLabels = [t.toDo, t.inProgress, t.done];
         const actColors = ['#6c757d', '#ffc107', '#198754'];
         renderLegend(kpiLegendHost, kpiLabels, kpiColors);
         renderLegend(actLegendHost, actLabels, actColors);
 
-        /* --- Doughnuts: legend disabled; identical cutout --- */
         const doughnutOpts = {
           responsive: true, maintainAspectRatio: false, resizeDelay: 0, cutout: '62%',
           animation: { duration: 0 },
@@ -856,7 +906,6 @@
           }
         };
 
-        // add click handlers (these were missing)
         const kpiOpts = { ...doughnutOpts, onClick: (evt, _els, chart) => onPieClick(evt, chart, 'kpi') };
         const actOpts = { ...doughnutOpts, onClick: (evt, _els, chart) => onPieClick(evt, chart, 'action') };
 
@@ -872,9 +921,7 @@
           options: actOpts
         });
 
-        /* ----- Red Share by Pillar (bars) ----- */
         const shareCtx = byId('barRedShare').getContext('2d');
-        const loading = byId('redShareLoading');
         if (_barRedShare) _barRedShare.destroy();
 
         const resp = await api('@Url.Action("GetRedShareByPillar", "Home")');
@@ -935,39 +982,37 @@
               const pts = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
               if (!pts?.length) return;
               const idx = pts[0].index, pillarId = pillarIds[idx], pillarName = labels[idx];
-              segRows.innerHTML = '<span class="text-muted small ms-1">Loading…</span>';
-              segWrap.classList.remove('d-none'); segTitle.textContent = `Red KPIs — ${pillarName}`;
+              segRows.innerHTML = `<span class="text-muted small ms-1">${t.loading}</span>`;
+              segWrap.classList.remove('d-none'); segTitle.textContent = `${t.redKpisForPillar} — ${pillarName}`;
               try {
                 const data = await api('@Url.Action("GetRedKpisForPillar", "Home")' + `?pillarId=${encodeURIComponent(pillarId)}`);
                 const list = Array.isArray(data?.items) ? data.items : [];
                 segRows.innerHTML = list.length
                   ? list.map(it => `<span class="role-chip" data-kpi-id="${it.id}" data-pillar-id="${it.pillarId}" data-objective-id="${it.objectiveId}" title="${it.text}">${it.text}</span>`).join('')
-                  : '<span class="text-muted small ms-1">No red KPIs.</span>';
+                  : `<span class="text-muted small ms-1">${t.noRedKpis}</span>`;
               } catch {
-                segRows.innerHTML = '<span class="text-danger small ms-1">Failed to load KPIs.</span>';
+                segRows.innerHTML = `<span class="text-danger small ms-1">${t.failedToLoadKpis}</span>`;
               }
             }
           }
         });
 
-        /* ----- Turned-to bullets ----- */
         try {
           const ch = await api('@Url.Action("GetLatestStatusChanges", "Home")');
           const list = [
-            { code: 'green', label: 'Indicators Turned To Target Achieved', count: ch?.toGreen || 0 },
-            { code: 'orange', label: 'Indicators Turned To On Forecast', count: ch?.toOrange || 0 },
-            { code: 'red', label: 'Indicators Turned To Target Missed', count: ch?.toRed || 0 },
-            { code: 'blue', label: 'Indicators Turned To Data Missing', count: ch?.toBlue || 0 },
+            { code: 'green', label: t.indicatorsTurnedToTargetAchieved, count: ch?.toGreen || 0 },
+            { code: 'orange', label: t.indicatorsTurnedToOnForecast, count: ch?.toOrange || 0 },
+            { code: 'red', label: t.indicatorsTurnedToTargetMissed, count: ch?.toRed || 0 },
+            { code: 'blue', label: t.indicatorsTurnedToDataMissing, count: ch?.toBlue || 0 },
           ];
           const ul = byId('turnedList'); ul.innerHTML = '';
           for (const x of list) {
             const li = document.createElement('li'); li.dataset.code = x.code; li.innerHTML = `${x.label}: <strong>${x.count}</strong>`;
             ul.appendChild(li);
           }
-        } catch { byId('turnedList').innerHTML = '<li class="text-danger">Could not load latest changes.</li>'; }
+        } catch { byId('turnedList').innerHTML = `<li class="text-danger">${t.couldNotLoadLatestChanges}</li>`; }
         byId('redShareLoading').textContent = '';
 
-        /* ----- Red monthly trend ----- */
         try {
           const trend = await api('@Url.Action("GetRedMonthlyTrend", "Home")');
           const trendCtx = byId('lineRedTrend').getContext('2d');
@@ -977,19 +1022,17 @@
           const now = new Date();
           const yr = Number(trend?.year) || now.getFullYear();
 
-          // Show up to the *previous* month if this is the current year
           let maxMonth;
           if (yr === now.getFullYear()) {
-            // now.getMonth() is 0-based; this gives you a count of *full* months
-            maxMonth = now.getMonth(); // e.g. December (11) → 11 → Jan–Nov
-            if (maxMonth < 1) maxMonth = 1; // in January, still show January only
+            maxMonth = now.getMonth();
+            if (maxMonth < 1) maxMonth = 1;
           } else {
-            // for past years, show all 12 months
             maxMonth = 12;
           }
+
           lineTrend = new Chart(trendCtx, {
             type: 'line',
-            data: { labels: labelsT.slice(0, maxMonth), datasets: [{ label: 'Red KPIs', data: vals.slice(0, maxMonth), borderWidth: 2, tension: .3, pointRadius: 3, pointHoverRadius: 4, borderColor: '#dc3545', pointBackgroundColor: '#dc3545', pointBorderColor: '#dc3545', fill: false }] },
+            data: { labels: labelsT.slice(0, maxMonth), datasets: [{ label: t.redKpis, data: vals.slice(0, maxMonth), borderWidth: 2, tension: .3, pointRadius: 3, pointHoverRadius: 4, borderColor: '#dc3545', pointBackgroundColor: '#dc3545', pointBorderColor: '#dc3545', fill: false }] },
             options: {
               responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18, bottom: 0 } },
               animation: { duration: 0 },
@@ -1001,55 +1044,56 @@
             }
           });
           byId('trendLoading').textContent = '';
-        } catch { byId('trendLoading').textContent = 'Could not load trend.'; }
+        } catch { byId('trendLoading').textContent = t.couldNotLoadTrend; }
 
-      } catch { if (loadingEl) loadingEl.textContent = 'Could not load summary.'; }
+      } catch { if (loadingEl) loadingEl.textContent = t.couldNotLoadSummary; }
     }
 
     /* ===== Segment interactions ===== */
     function mapLabel(kind, label) {
-      const s = String(label || '').trim().toLowerCase();
+      const s = String(label || '').trim();
       if (kind === 'kpi') {
-        if (s === 'target achieved') return 'green';
-        if (s === 'on forecast') return 'orange';
-        if (s === 'target missed') return 'red';
-        if (s === 'data missing') return 'blue';
+        if (s === t.targetAchieved) return 'green';
+        if (s === t.onForecast) return 'orange';
+        if (s === t.targetMissed) return 'red';
+        if (s === t.dataMissing) return 'blue';
         return 'unknown';
       } else {
-        if (s === 'to do') return 'todo';
-        if (s === 'in progress') return 'inprogress';
-        if (s === 'done') return 'done';
+        if (s === t.toDo) return 'todo';
+        if (s === t.inProgress) return 'inprogress';
+        if (s === t.done) return 'done';
         return 'other';
       }
     }
+
     async function onPieClick(evt, chart, kind) {
       const pts = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
       if (!pts?.length) return;
       const idx = pts[0].index, label = chart.data.labels[idx], code = mapLabel(kind, label);
-      segRows.innerHTML = '<span class="text-muted small ms-1">Loading…</span>';
+      segRows.innerHTML = `<span class="text-muted small ms-1">${t.loading}</span>`;
       segWrap.classList.remove('d-none');
-      segTitle.textContent = (kind === 'kpi' ? 'KPIs with status: ' : 'KPIs with actions: ') + label;
+      segTitle.textContent = (kind === 'kpi' ? `${t.kpisWithStatus}: ` : `${t.kpisWithActions}: `) + label;
       try {
         const data = await api('@Url.Action("GetKpisForSummarySegment", "Home")' + `?kind=${encodeURIComponent(kind)}&code=${encodeURIComponent(code)}`);
         const items = Array.isArray(data?.items) ? data.items : [];
         segRows.innerHTML = items.length
           ? items.map(it => `<span class="role-chip" data-kpi-id="${it.id}" data-pillar-id="${it.pillarId}" data-objective-id="${it.objectiveId}" title="${it.text}">${it.text}</span>`).join('')
-          : '<span class="text-muted small ms-1">No KPIs found.</span>';
-      } catch { segRows.innerHTML = '<span class="text-danger small ms-1">Failed to load KPIs.</span>'; }
+          : `<span class="text-muted small ms-1">${t.noKpisFound}</span>`;
+      } catch { segRows.innerHTML = `<span class="text-danger small ms-1">${t.failedToLoadKpis}</span>`; }
     }
 
     byId('turnedBullets').addEventListener('click', async (e) => {
       const li = e.target.closest('li[data-code]'); if (!li) return;
-      const code = li.dataset.code, labelMap = { green: 'Target Achieved', orange: 'On Forecast', red: 'Target Missed', blue: 'Data Missing' };
-      segRows.innerHTML = '<span class="text-muted small ms-1">Loading…</span>';
-      segWrap.classList.remove('d-none'); segTitle.textContent = `Turned to: ${labelMap[code]}`;
+      const code = li.dataset.code, labelMap = { green: t.targetAchieved, orange: t.onForecast, red: t.targetMissed, blue: t.dataMissing };
+      segRows.innerHTML = `<span class="text-muted small ms-1">${t.loading}</span>`;
+      segWrap.classList.remove('d-none'); segTitle.textContent = `${t.turnedTo}: ${labelMap[code]}`;
       try {
         const resp = await api('@Url.Action("GetKpisTurned", "Home")' + `?to=${encodeURIComponent(code)}`);
         const list = Array.isArray(resp?.items) ? resp.items : [];
         segRows.innerHTML = list.length
           ? list.map(it => `<span class="role-chip" data-kpi-id="${it.id}" data-pillar-id="${it.pillarId}" data-objective-id="${it.objectiveId}" title="${it.text}">${it.text}</span>`).join('')
-          : '<span class="text-muted small ms-1">No KPIs found.</span>';
-      } catch { segRows.innerHTML = '<span class="text-danger small ms-1">Failed to load KPIs.</span>'; }
+          : `<span class="text-muted small ms-1">${t.noKpisFound}</span>`;
+      } catch { segRows.innerHTML = `<span class="text-danger small ms-1">${t.failedToLoadKpis}</span>`; }
     });
 
     byId('segmentKpiRows').addEventListener('click', async (e) => {
@@ -1071,19 +1115,19 @@
     function renderRoleSummary(data) {
       const ed = Array.isArray(data?.editor) ? data.editor : [], ow = Array.isArray(data?.owner) ? data.owner : [];
       const ph = byId('roleSummaryPlaceholder'); if (ph) ph.remove();
-      if (!ed.length && !ow.length) { roleRows.innerHTML = '<div class="col-12 text-muted small">No indicators available.</div>'; roleBadge.textContent = '—'; return; }
+      if (!ed.length && !ow.length) { roleRows.innerHTML = `<div class="col-12 text-muted small">${t.noIndicatorsAvailable}</div>`; roleBadge.textContent = '—'; return; }
       roleRows.innerHTML = '';
       const makeCol = (title, items) => {
         const col = document.createElement('div'); col.className = 'col-md-6';
         const h = document.createElement('div'); h.className = 'fw-bold mb-1'; h.textContent = title;
         const list = document.createElement('div'); list.className = 'role-list';
         const MAX = 20; items.slice(0, MAX).forEach(it => list.appendChild(_mkChip(it)));
-        if (items.length > MAX) list.appendChild(_mkChip({ text: `+${items.length - MAX} more` }));
+        if (items.length > MAX) list.appendChild(_mkChip({ text: `+${items.length - MAX} ${t.more}` }));
         col.appendChild(h); col.appendChild(list); return col;
       };
-      if (ed.length) roleRows.appendChild(makeCol('Editor for', ed));
-      if (ow.length) roleRows.appendChild(makeCol('Owner for', ow));
-      roleBadge.textContent = (ed.length && ow.length) ? 'Editor for • Owner for' : (ed.length ? 'Editor for' : 'Owner for');
+      if (ed.length) roleRows.appendChild(makeCol(t.editorFor, ed));
+      if (ow.length) roleRows.appendChild(makeCol(t.ownerFor, ow));
+      roleBadge.textContent = (ed.length && ow.length) ? `${t.editorFor} • ${t.ownerFor}` : (ed.length ? t.editorFor : t.ownerFor);
       roleCard.classList.remove('d-none'); markActiveRoleChip(selKpi.value);
     }
     async function loadRoleSummary() {
@@ -1091,7 +1135,7 @@
         const r = await fetch('@Url.Action("MyKpiRoles", "Home")', { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
         if (!r.ok) throw 0; renderRoleSummary(await r.json());
       } catch {
-        const ph = byId('roleSummaryPlaceholder'); if (ph) ph.textContent = 'Could not load your indicators.'; roleBadge.textContent = '—';
+        const ph = byId('roleSummaryPlaceholder'); if (ph) ph.textContent = t.couldNotLoadYourIndicators; roleBadge.textContent = '—';
       }
     }
     roleRows.addEventListener('click', async (e) => {
@@ -1108,19 +1152,19 @@
     /* ===== Cascading dropdowns & KPI chart ===== */
     function resetSelect(sel, ph) { sel.innerHTML = ''; const o = document.createElement('option'); o.value = ''; o.textContent = ph; sel.appendChild(o); sel.disabled = true; }
     async function loadPillars() {
-      resetSelect(selPillar, '-- Pillar --'); resetSelect(selObjective, '-- Objective --'); resetSelect(selKpi, '-- KPI --');
+      resetSelect(selPillar, `-- ${t.pillar} --`); resetSelect(selObjective, `-- ${t.objective} --`); resetSelect(selKpi, `-- ${t.kpi} --`);
       const items = await api('@Url.Action("GetPillars", "Home")'); for (const it of items) { const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; selPillar.appendChild(o); }
       selPillar.disabled = false;
     }
     selPillar.addEventListener('change', async () => {
-      resetSelect(selObjective, '-- Objective --'); resetSelect(selKpi, '-- KPI --'); clearMeta(); clearChartAndTable();
+      resetSelect(selObjective, `-- ${t.objective} --`); resetSelect(selKpi, `-- ${t.kpi} --`); clearMeta(); clearChartAndTable();
       const pid = selPillar.value; if (!pid) return;
       const items = await api('@Url.Action("GetObjectives", "Home")?pillarId=' + encodeURIComponent(pid));
       for (const it of items) { const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; selObjective.appendChild(o); }
       selObjective.disabled = items.length === 0;
     });
     selObjective.addEventListener('change', async () => {
-      resetSelect(selKpi, '-- KPI --'); clearMeta(); clearChartAndTable();
+      resetSelect(selKpi, `-- ${t.kpi} --`); clearMeta(); clearChartAndTable();
       const oid = selObjective.value; if (!oid) return;
       const items = await api('@Url.Action("GetKpis", "Home")?objectiveId=' + encodeURIComponent(oid));
       for (const it of items) { const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; selKpi.appendChild(o); }
@@ -1129,7 +1173,7 @@
     selKpi.addEventListener('change', () => { loadKpiSummary().catch(console.error); });
     if (selYearPlan) {
       selYearPlan.addEventListener('change', async () => {
-        await loadKpiSummary();  // reloads in place via AJAX
+        await loadKpiSummary();
       });
     }
     function waitForOption(selectEl, value, timeout = 4000) {
@@ -1165,7 +1209,7 @@
       metaOwner.textContent = '—'; metaEditor.textContent = '—'; metaFrequency.textContent = '—';
       metaUnit.textContent = '—'; metaPriority.textContent = '—'; metaStatus.textContent = '—';
       metaStatus.className = 'status-pill'; metaStatus.style.background = '';
-      btnEditKpi.disabled = true; btnEditKpi.textContent = 'Edit KPI (Actual & Forecast)';
+      btnEditKpi.disabled = true; btnEditKpi.textContent = t.editDataActualForecast;
     }
 
     const ctx = document.getElementById('kpiChart').getContext('2d');
@@ -1173,12 +1217,11 @@
       data: {
         labels: [],
         datasets: [
-          { type: 'bar', label: 'Actual', data: [], backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
-          { type: 'line', label: 'Target', data: [], borderWidth: 2, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', tension: .3, fill: false },
-          { type: 'line', label: 'Forecast', data: [], borderWidth: 2, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], tension: .3, fill: false },
-          { type: 'bar', label: 'Year Target', data: [], backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 },
-          { type: 'bar', label: 'Year Actual', data: [], backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2 }
-
+          { type: 'bar', label: t.actual, data: [], backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
+          { type: 'line', label: t.target, data: [], borderWidth: 2, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', tension: .3, fill: false },
+          { type: 'line', label: t.forecast, data: [], borderWidth: 2, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], tension: .3, fill: false },
+          { type: 'bar', label: t.yearTarget, data: [], backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 },
+          { type: 'bar', label: t.yearActual, data: [], backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2 }
         ]
       },
       options: {
@@ -1212,30 +1255,28 @@
         try {
           const res = await fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: fd });
           const text = await res.text(); let data = null; try { data = JSON.parse(text); } catch { }
-          if (!res.ok) { const msg = (data && data.error) ? data.error : ('Save failed (' + res.status + ')'); throw new Error(msg); }
+          if (!res.ok) { const msg = (data && data.error) ? data.error : (`${t.saveFailed} (${res.status})`); throw new Error(msg); }
           if (data && typeof data === 'object') {
             const created = (typeof data.created === 'number') ? data.created : data.createdCount;
             const skipped = (typeof data.skipped === 'number') ? data.skipped : data.skippedCount;
-            if (typeof created === 'number') { alert(`Submitted: ${created} change(s)` + (skipped ? `, skipped: ${skipped}` : '')); }
-            else if (data.status) { alert(data.status === 'approved' ? 'Saved & auto-approved.' : 'Submitted for approval.'); }
+            if (typeof created === 'number') { alert(`${t.submittedChanges}: ${created} change(s)` + (skipped ? `, ${t.skipped}: ${skipped}` : '')); }
+            else if (data.status) { alert(data.status === 'approved' ? t.savedAutoApproved : t.submittedForApproval); }
           }
           bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).hide();
-          if (btnEditKpi) { btnEditKpi.disabled = true; btnEditKpi.textContent = '⏳ Pending approval'; }
+          if (btnEditKpi) { btnEditKpi.disabled = true; btnEditKpi.textContent = `⏳ ${t.pendingApproval}`; }
           await new Promise(r => setTimeout(r, 350)); await loadKpiSummary();
-        } catch (err) { alert(err?.message || 'Save failed'); }
+        } catch (err) { alert(err?.message || t.saveFailed); }
       });
     }
-    // Wire the "Edit Data (Actual & Forecast)" button to open the modal (restored with no-access handling)
+
     const editModalEl = document.getElementById('editKpiModal');
     const editModalContentEl = editModalEl ? editModalEl.querySelector('.modal-content') : null;
 
     if (btnEditKpi && editModalEl && editModalContentEl) {
       btnEditKpi.addEventListener('click', async () => {
         const kpiId = selKpi.value;
-        if (!kpiId) return; // nothing selected
+        if (!kpiId) return;
 
-        // If your controller uses EditFacts, keep EditFacts.
-        // If it uses EditKpiFactsModal, change the action name below.
         const qs = new URLSearchParams({ kpiId: kpiId });
         if (currentPlanId) {
           qs.append('planId', currentPlanId);
@@ -1243,16 +1284,15 @@
 
         const url = '@Url.Action("EditKpiFactsModal", "Home")' + '?' + qs.toString();
 
-        editModalContentEl.innerHTML = '<div class="p-3 text-center text-muted">Loading…</div>';
+        editModalContentEl.innerHTML = `<div class="p-3 text-center text-muted">${t.loading}</div>`;
 
         try {
           const res = await fetch(url, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
           });
 
-          // permission logic: if backend returns 403, show "no access"
           if (res.status === 403) {
-            editModalContentEl.innerHTML = '<div class="p-3 text-danger">You do not have access to edit this KPI.</div>';
+            editModalContentEl.innerHTML = `<div class="p-3 text-danger">${t.noAccessToEditKpi}</div>`;
             bootstrap.Modal.getOrCreateInstance(editModalEl).show();
             return;
           }
@@ -1260,14 +1300,14 @@
           const html = await res.text();
 
           if (!res.ok) {
-            throw new Error('Failed to load editor (' + res.status + ')');
+            throw new Error(`${t.failedToLoadEditor} (${res.status})`);
           }
 
           editModalContentEl.innerHTML = html;
           wireKpiModalAjax();
           bootstrap.Modal.getOrCreateInstance(editModalEl).show();
         } catch (err) {
-          alert(err?.message || 'Failed to load editor.');
+          alert(err?.message || t.failedToLoadEditor);
         }
       });
     }
@@ -1275,8 +1315,7 @@
     async function loadKpiSummary() {
       clearMeta(); clearChartAndTable();
       const kpiId = selKpi.value; if (!kpiId) return;
-      @* const res = await api('@Url.Action("GetKpiSummary", "Home")?kpiId=' + encodeURIComponent(kpiId)); *@
-          const qs = new URLSearchParams({ kpiId: kpiId });
+      const qs = new URLSearchParams({ kpiId: kpiId });
       if (selYearPlan && selYearPlan.value) qs.append('planId', selYearPlan.value);
       const res = await api('@Url.Action("GetKpiSummary", "Home")' + '?' + qs.toString());
 
@@ -1304,8 +1343,6 @@
       const yrArr = Array.isArray(res?.chart?.yearTargets) ? res.chart.yearTargets : [];
 
       const yearLabels = yrArr.map(y => String(y.year));
-
-      // split into two series
       const yearTargetVals = yrArr.map(y => (y?.isActual ? null : (y.value ?? null)));
       const yearActualVals = yrArr.map(y => (y?.isActual ? (y.value ?? null) : null));
 
@@ -1317,72 +1354,27 @@
       kpiChart.data.datasets[0].data = actual.concat(pad);
       kpiChart.data.datasets[1].data = target.concat(pad);
       kpiChart.data.datasets[2].data = forecast.concat(pad);
-
-      // Grey year targets
       kpiChart.data.datasets[3].data = leftNulls.concat(yearTargetVals);
-
-      // Purple year actual (only plan year point)
       kpiChart.data.datasets[4].data = leftNulls.concat(yearActualVals);
-
       kpiChart.update();
-      // --- PERIOD series (unchanged) ---
-      @* const baseLabels = res?.chart?.labels || [];
-      const actual = res?.chart?.actual || [];
-      const target = res?.chart?.target || [];
-      const forecast = res?.chart?.forecast || [];
 
-      // --- YEAR target/actual source ---
-      const yrArr = Array.isArray(res?.chart?.yearTargets) ? res.chart.yearTargets : [];
-
-      // 1) Keep ONLY period labels (do NOT append year labels)
-      kpiChart.data.labels = baseLabels;
-
-      // 2) Keep the 3 main series exactly as-is (no padding)
-      kpiChart.data.datasets[0].data = actual;
-      kpiChart.data.datasets[1].data = target;
-      kpiChart.data.datasets[2].data = forecast;
-
-      // 3) Place Year Target / Year Actual on the FINAL period
-      const lastIdx = Math.max(0, baseLabels.length - 1);
-
-      // build arrays that match period-length and default to null
-      const yearTargetOnLast = new Array(baseLabels.length).fill(null);
-      const yearActualOnLast = new Array(baseLabels.length).fill(null);
-
-      // pick values from yrArr (your API already marks isActual)
-      const yearTargetVal = yrArr.find(y => !y?.isActual)?.value ?? null;
-      const yearActualVal = yrArr.find(y => y?.isActual)?.value ?? null;
-
-      // set them ONLY at the final period
-      if (baseLabels.length > 0) {
-        yearTargetOnLast[lastIdx] = yearTargetVal;
-        yearActualOnLast[lastIdx] = yearActualVal;
-      }
-
-      // push into datasets 3 & 4 (same datasets you already have)
-      kpiChart.data.datasets[3].data = yearTargetOnLast;
-      kpiChart.data.datasets[4].data = yearActualOnLast;
-
-      kpiChart.update(); *@
-
-
-                const rows = res?.table || [];
+      const rows = res?.table || [];
       if (!rows.length) {
-        tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No facts for this plan/year.</td></tr>';
+        tableBody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">${t.noFactsForThisPlanYear}</td></tr>`;
       } else {
         tableBody.innerHTML = '';
         for (const r of rows) {
           const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${r.period ?? '—'} ${r.hasPending ? '<span class="badge text-bg-warning ms-1">Pending</span>' : ''}</td><td>${r.startDate ?? '—'}</td><td>${r.endDate ?? '—'}</td><td>${r.actual ?? '—'}</td><td>${r.target ?? '—'}</td><td>${r.forecast ?? '—'}</td>`;
+          tr.innerHTML = `<td>${r.period ?? '—'} ${r.hasPending ? `<span class="badge text-bg-warning ms-1">${t.pending}</span>` : ''}</td><td>${r.startDate ?? '—'}</td><td>${r.endDate ?? '—'}</td><td>${r.actual ?? '—'}</td><td>${r.target ?? '—'}</td><td>${r.forecast ?? '—'}</td>`;
           tableBody.appendChild(tr);
         }
       }
 
       const anyPending = Array.isArray(res?.table) && res.table.some(r => r.hasPending);
-      if (!selKpi.value) { btnEditKpi.disabled = true; btnEditKpi.textContent = 'Edit KPI (Actual & Forecast)'; }
-      else if (!canEditFacts) { btnEditKpi.disabled = true; btnEditKpi.textContent = 'Edit KPI (no access)'; }
-      else if (anyPending) { btnEditKpi.disabled = true; btnEditKpi.textContent = 'Pending approval'; }
-      else { btnEditKpi.disabled = false; btnEditKpi.textContent = 'Edit KPI (Actual & Forecast)'; }
+      if (!selKpi.value) { btnEditKpi.disabled = true; btnEditKpi.textContent = t.editDataActualForecast; }
+      else if (!canEditFacts) { btnEditKpi.disabled = true; btnEditKpi.textContent = t.editKpiNoAccess; }
+      else if (anyPending) { btnEditKpi.disabled = true; btnEditKpi.textContent = t.pendingApproval; }
+      else { btnEditKpi.disabled = false; btnEditKpi.textContent = t.editDataActualForecast; }
 
       markActiveRoleChip(selKpi.value);
       if (_pendingScrollToChart) { _pendingScrollToChart = false; _scrollToChart(); }
@@ -1409,11 +1401,9 @@
     };
     if (btnAdminSetStatus) {
       btnAdminSetStatus.addEventListener('click', () => {
-        const kpiId = selKpi.value;
-        const pillText = (byId('metaStatus')?.textContent || '').trim().toLowerCase();
-        const map = { 'target achieved': 'green', 'on forecast': 'orange', 'target missed': 'red', 'data missing': 'blue' };
-        adminStatusSelect.value = map[pillText] || 'green';
-        adminStatusForm.dataset.kpiId = kpiId || '';
+        const rawStatus = btnAdminSetStatus.dataset.status || 'green';
+        adminStatusSelect.value = rawStatus;
+        adminStatusForm.dataset.kpiId = selKpi.value || '';
         bootstrap.Modal.getOrCreateInstance(adminStatusModalEl).show();
       });
     }
@@ -1429,9 +1419,10 @@
           byId('metaStatus').style.background = data.color || '';
           loadSummary();
           bootstrap.Modal.getOrCreateInstance(adminStatusModalEl).hide();
-        } catch (err) { alert(err?.message || 'Failed to update status'); }
+        } catch (err) { alert(err?.message || t.failedToUpdateStatus); }
       });
     }
+
     /* ===== Admin: Target Lock Toggle ===== */
     const btnToggleTargetLock = byId('btnToggleTargetLock');
 
@@ -1439,7 +1430,6 @@
       if (!btnToggleTargetLock) return;
 
       try {
-        // If not super admin, your endpoint should return 403.
         const res = await fetch('@Url.Action("GetTargetLockState", "Home")', {
           headers: { 'Accept': 'application/json' },
           cache: 'no-store'
@@ -1456,12 +1446,11 @@
         const unlocked = !!data.unlocked;
 
         btnToggleTargetLock.textContent = unlocked
-          ? 'Lock Targets (stop editing)'
-          : 'Unlock Targets (allow editing)';
+          ? t.lockTargets
+          : t.unlockTargets;
 
         btnToggleTargetLock.classList.remove('d-none');
       } catch {
-        // If something fails, hide to avoid confusing UI
         btnToggleTargetLock.classList.add('d-none');
       }
     }
@@ -1476,7 +1465,7 @@
         });
 
         if (res.status === 403) {
-          alert('Super Admin only.');
+          alert(t.superAdminOnly);
           return;
         }
 
@@ -1485,17 +1474,16 @@
 
         await refreshTargetLockButton();
       } catch (e) {
-        alert(e?.message || 'Failed to toggle target lock.');
+        alert(e?.message || t.failedToToggleTargetLock);
       } finally {
         btnToggleTargetLock.disabled = false;
       }
     });
 
-
     /* ===== Init ===== */
     function getQS(name) { const u = new URL(window.location.href); return u.searchParams.get(name); }
     async function initPage() {
-      loadSummary(); loadRoleSummary(); await loadPillars(); refreshTargetLockButton(); // <-- add this
+      loadSummary(); loadRoleSummary(); await loadPillars(); refreshTargetLockButton();
       const qP = getQS('pillarId'), qO = getQS('objectiveId'), qK = getQS('kpiId');
       if (qP) { selPillar.value = qP; selPillar.dispatchEvent(new Event('change')); }
       if (qO) { await new Promise(r => setTimeout(r, 150)); selObjective.value = qO; selObjective.dispatchEvent(new Event('change')); }
