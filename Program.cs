@@ -74,15 +74,23 @@ builder.Services.AddAuthorization(options =>
 });
 builder.Services.AddScoped<IAuthorizationHandler, AdminOnlyHandler>();
 
+var englishCulture = new CultureInfo("en");
+
+var arabicCulture = new CultureInfo("ar");
+arabicCulture.DateTimeFormat.Calendar = new GregorianCalendar();
+arabicCulture.DateTimeFormat.ShortDatePattern = "dd/MM/yyyy";
+arabicCulture.DateTimeFormat.LongDatePattern = "dd/MM/yyyy";
+arabicCulture.DateTimeFormat.FullDateTimePattern = "dd/MM/yyyy HH:mm:ss";
+
 var supportedCultures = new[]
 {
-    new CultureInfo("en"),
-    new CultureInfo("ar")
+    englishCulture,
+    arabicCulture
 };
 
 builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
-    options.DefaultRequestCulture = new RequestCulture("en");
+    options.DefaultRequestCulture = new RequestCulture(englishCulture);
     options.SupportedCultures = supportedCultures;
     options.SupportedUICultures = supportedCultures;
 });
