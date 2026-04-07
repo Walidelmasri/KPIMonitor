@@ -69,7 +69,7 @@ namespace KPIMonitor.Services
             if (year == now.Year)
                 w.ActualMonths.Add(currentMonth);
 
-            // Also allow LAST CLOSED month within +1 month grace (even if last year)
+            // Also allow previous closed months within grace period
             int lastClosedYear = (now.Month == 1) ? now.Year - 1 : now.Year;
             int lastClosedMonth = (now.Month == 1) ? 12 : now.Month - 1;
 
@@ -78,18 +78,29 @@ namespace KPIMonitor.Services
                 lastClosedMonth,
                 DateTime.DaysInMonth(lastClosedYear, lastClosedMonth),
                 23, 59, 59, DateTimeKind.Unspecified);
-            // change to have less months in grace period 
-            var graceEnd = lastClosedEndLocal.AddMonths(4);
-            // this is what adds more months btw change it and the line above
-            if (lastClosedYear == year && now <= graceEnd)
+
+            // Grace window length for monthly edits
+            var graceEnd = lastClosedEndLocal.AddMonths(6);
+
+            // Number of previous closed months to keep editable
+            const int monthlyClosedMonthsToAllow = 4;
+
+            if (now <= graceEnd)
             {
-                w.ActualMonths.Add(lastClosedMonth);
+                for (int i = 0; i < monthlyClosedMonthsToAllow; i++)
+                {
+                    int month = lastClosedMonth - i;
+                    int y = lastClosedYear;
 
-                int secondClosedYear = (lastClosedMonth == 1) ? lastClosedYear - 1 : lastClosedYear;
-                int secondClosedMonth = (lastClosedMonth == 1) ? 12 : lastClosedMonth - 1;
+                    while (month <= 0)
+                    {
+                        month += 12;
+                        y--;
+                    }
 
-                if (secondClosedYear == year)
-                    w.ActualMonths.Add(secondClosedMonth);
+                    if (y == year)
+                        w.ActualMonths.Add(month);
+                }
             }
 
             // Forecasts: current..Dec for this year, all months for future years
@@ -116,17 +127,36 @@ namespace KPIMonitor.Services
             if (year == now.Year)
                 w.ActualQuarters.Add(currentQ);
 
-            // Also allow LAST CLOSED quarter within +1 month grace (even if last year)
+            // Also allow previous closed quarters within grace period
             int lastClosedYear = (currentQ == 1) ? now.Year - 1 : now.Year;
             int lastClosedQ = (currentQ == 1) ? 4 : currentQ - 1;
 
             var (qy, qm, qd) = QuarterEnd(lastClosedYear, lastClosedQ);
             var lastClosedEndLocal = new DateTime(qy, qm, qd, 23, 59, 59, DateTimeKind.Unspecified);
-            var graceEnd = lastClosedEndLocal.AddMonths(1);
 
-            if (lastClosedYear == year && now <= graceEnd)
-                w.ActualQuarters.Add(lastClosedQ);
+            // Grace window length for quarterly edits
+            var graceEnd = lastClosedEndLocal.AddMonths(3);
 
+            // Number of previous closed quarters to keep editable
+            const int quarterlyClosedQuartersToAllow = 2;
+
+            if (now <= graceEnd)
+            {
+                for (int i = 0; i < quarterlyClosedQuartersToAllow; i++)
+                {
+                    int q = lastClosedQ - i;
+                    int y = lastClosedYear;
+
+                    while (q <= 0)
+                    {
+                        q += 4;
+                        y--;
+                    }
+
+                    if (y == year)
+                        w.ActualQuarters.Add(q);
+                }
+            }
             // Forecasts: current..Q4 for this year, all quarters for future years
             if (year == now.Year)
             {
