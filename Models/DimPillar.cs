@@ -31,7 +31,8 @@ namespace KPIMonitor.Models
 
         [Column("ISACTIVE")]
         public int IsActive { get; set; } = 1;
-        [Column("PILLARNAME_AR")]
-        public string? PillarNameAr { get; set; }
+[Column("PILLARNAME_AR")]
+[MaxLength(200)]
+public string? PillarNameAr { get; set; }
     }
 }
