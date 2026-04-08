@@ -193,13 +193,16 @@ namespace KPIMonitor.Controllers
                     p.PillarNameAr
                 })
                 .ToListAsync();
-
-            var data = rows.Select(p => new
-            {
-                id = p.PillarId,
-                name = (p.PillarCode ?? "") + " — " + LocalizationHelper.Get(p.PillarNameAr, p.PillarName ?? "")
-            });
-
+                //debug 
+var data = rows.Select(p => new
+{
+    id = p.PillarId,
+    pillarName = p.PillarName,
+    pillarNameAr = p.PillarNameAr,
+    currentUiCulture = System.Globalization.CultureInfo.CurrentUICulture.Name,
+    currentCulture = System.Globalization.CultureInfo.CurrentCulture.Name,
+    resolved = LocalizationHelper.Get(p.PillarNameAr, p.PillarName ?? "")
+});
             return Json(data);
         }
 
