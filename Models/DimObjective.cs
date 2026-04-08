@@ -43,5 +43,6 @@ namespace KPIMonitor.Models
         // (optional) nav prop for display
         [ForeignKey(nameof(PillarId))]
         public DimPillar? Pillar { get; set; }
+        public string? ObjectiveNameAr { get; set; }
     }
 }

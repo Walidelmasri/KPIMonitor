@@ -37,6 +37,8 @@ namespace KPIMonitor.Data
 
                 e.Property(p => p.PillarCode).HasColumnName("PILLARCODE").HasMaxLength(10);
                 e.Property(p => p.PillarName).HasColumnName("PILLARNAME").HasMaxLength(200);
+                e.Property(p => p.PillarNameAr).HasColumnName("PILLARNAME_AR").HasMaxLength(200);
+
                 e.Property(p => p.CreatedBy).HasColumnName("CREATEDBY").HasMaxLength(50);
                 e.Property(p => p.CreatedDate).HasColumnName("CREATEDDATE");
                 e.Property(p => p.LastChangedBy).HasColumnName("LASTCHANGEDBY").HasMaxLength(50);
@@ -63,6 +65,9 @@ namespace KPIMonitor.Data
                 e.Property(x => x.PillarId).HasColumnName("PILLARID");
                 e.Property(x => x.ObjectiveCode).HasColumnName("OBJECTIVECODE").HasMaxLength(50);
                 e.Property(x => x.ObjectiveName).HasColumnName("OBJECTIVENAME").HasMaxLength(200);
+                e.Property(o => o.ObjectiveNameAr)
+ .HasColumnName("OBJECTIVENAME_AR")
+ .HasMaxLength(200);
                 e.Property(x => x.CreatedBy).HasColumnName("CREATEDBY").HasMaxLength(150);
                 e.Property(x => x.CreatedDate).HasColumnName("CREATEDDATE");
                 e.Property(x => x.LastChangedBy).HasColumnName("LASTCHANGEDBY").HasMaxLength(150);
@@ -84,6 +89,9 @@ namespace KPIMonitor.Data
                 e.Property(k => k.PillarId).HasColumnName("PILLARID");
                 e.Property(k => k.KpiCode).HasColumnName("KPICODE").HasMaxLength(50);
                 e.Property(k => k.KpiName).HasColumnName("KPINAME").HasMaxLength(200);
+                e.Property(k => k.KpiNameAr)
+ .HasColumnName("KPINAME_AR")
+ .HasMaxLength(300);
                 e.Property(k => k.CreatedBy).HasColumnName("CREATEDBY").HasMaxLength(150);
                 e.Property(k => k.CreatedDate).HasColumnName("CREATEDDATE");
                 e.Property(k => k.LastChangedBy).HasColumnName("LASTCHANGEDBY").HasMaxLength(150);

@@ -49,5 +49,6 @@ namespace KPIMonitor.Models
 
         [ForeignKey(nameof(ObjectiveId))]
         public DimObjective? Objective { get; set; }
+        public string? KpiNameAr { get; set; }
     }
 }

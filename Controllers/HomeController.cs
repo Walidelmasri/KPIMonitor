@@ -7,7 +7,8 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;                  // ClaimsPrincipal
 using KPIMonitor.Data;
 using KPIMonitor.Models;
-using KPIMonitor.Services;                 // IEmployeeDirectory
+using KPIMonitor.Services;
+using KPIMonitor.Helpers;           // IEmployeeDirectory
 using KPIMonitor.ViewModels;               // KpiEditModalVm
 using KPIMonitor.Services.Abstractions;    // IKpiAccessService, IAdminAuthorizer, IKpiStatusService
 using Microsoft.Extensions.Configuration;  // IConfiguration
@@ -180,16 +181,24 @@ namespace KPIMonitor.Controllers
         [HttpGet]
         public async Task<IActionResult> GetPillars()
         {
-            var data = await _db.DimPillars
+            var rows = await _db.DimPillars
                 .AsNoTracking()
                 .Where(p => p.IsActive == 1)
                 .OrderBy(p => p.PillarCode)
                 .Select(p => new
                 {
-                    id = p.PillarId,
-                    name = (p.PillarCode ?? "") + " — " + (p.PillarName ?? "")
+                    p.PillarId,
+                    p.PillarCode,
+                    p.PillarName,
+                    p.PillarNameAr
                 })
                 .ToListAsync();
+
+            var data = rows.Select(p => new
+            {
+                id = p.PillarId,
+                name = (p.PillarCode ?? "") + " — " + LocalizationHelper.Get(p.PillarNameAr, p.PillarName ?? "")
+            });
 
             return Json(data);
         }
@@ -1436,36 +1445,39 @@ namespace KPIMonitor.Controllers
                     k.KpiId,
                     PillarId = k.Objective!.Pillar!.PillarId,
                     PillarCode = k.Objective!.Pillar!.PillarCode,
-                    PillarName = k.Objective!.Pillar!.PillarName
+                    PillarName = k.Objective!.Pillar!.PillarName,
+                    PillarNameAr = k.Objective!.Pillar!.PillarNameAr
                 })
                 .ToListAsync(ct);
 
             var items = pillarRows
-                .GroupBy(x => new { x.PillarId, x.PillarCode, x.PillarName })
+                .GroupBy(x => new { x.PillarId, x.PillarCode, x.PillarName, x.PillarNameAr })
                 .Select(g =>
                 {
-                    var allKpisInPillar = g.Select(r => r.KpiId).Distinct().ToList();           // <-- denominator
+                    var allKpisInPillar = g.Select(r => r.KpiId).Distinct().ToList();
                     var total = allKpisInPillar.Count;
                     var red = allKpisInPillar.Count(kid => latestStatusByKpi.TryGetValue(kid, out var s) && s == "red");
                     var pct = total == 0 ? 0.0 : (double)red / total;
+
+                    var displayName = LocalizationHelper.Get(g.Key.PillarNameAr, g.Key.PillarName ?? "");
 
                     return new
                     {
                         pillarId = g.Key.PillarId,
                         pillarCode = g.Key.PillarCode ?? "",
-                        pillarName = string.IsNullOrWhiteSpace(g.Key.PillarName) ? $"Pillar {g.Key.PillarId}" : g.Key.PillarName,
+                        pillarName = string.IsNullOrWhiteSpace(displayName) ? $"Pillar {g.Key.PillarId}" : displayName,
                         red,
                         total,
                         pct
                     };
                 })
-                // order by numeric portion of PillarCode (fallback to int.MaxValue)
-                .OrderBy(x =>
-                {
-                    var digits = new string(x.pillarCode.Where(char.IsDigit).ToArray());
-                    return int.TryParse(digits, out var n) ? n : int.MaxValue;
-                })
-                .ToList();
+                            // order by numeric portion of PillarCode (fallback to int.MaxValue)
+                            .OrderBy(x =>
+                            {
+                                var digits = new string(x.pillarCode.Where(char.IsDigit).ToArray());
+                                return int.TryParse(digits, out var n) ? n : int.MaxValue;
+                            })
+                            .ToList();
 
             return Json(new { items });
         }

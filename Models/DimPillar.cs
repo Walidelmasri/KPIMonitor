@@ -31,5 +31,6 @@ namespace KPIMonitor.Models
 
         [Column("ISACTIVE")]
         public int IsActive { get; set; } = 1;
+        public string? PillarNameAr { get; set; }
     }
 }
