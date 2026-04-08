@@ -206,16 +206,25 @@ namespace KPIMonitor.Controllers
         [HttpGet]
         public async Task<IActionResult> GetObjectives(decimal pillarId)
         {
-            var data = await _db.DimObjectives
+            var rows = await _db.DimObjectives
                 .AsNoTracking()
                 .Where(o => o.PillarId == pillarId && o.IsActive == 1)
                 .OrderBy(o => o.ObjectiveCode)
                 .Select(o => new
                 {
-                    id = o.ObjectiveId,
-                    name = (o.ObjectiveCode ?? "") + " — " + (o.ObjectiveName ?? "")
+                    o.ObjectiveId,
+                    o.ObjectiveCode,
+                    o.ObjectiveName,
+                    o.ObjectiveNameAr
                 })
                 .ToListAsync();
+
+            var data = rows.Select(o => new
+            {
+                id = o.ObjectiveId,
+                name = (o.ObjectiveCode ?? "") + " — " +
+                       LocalizationHelper.Get(o.ObjectiveNameAr, o.ObjectiveName ?? "")
+            });
 
             return Json(data);
         }
@@ -242,16 +251,29 @@ namespace KPIMonitor.Controllers
         [HttpGet]
         public async Task<IActionResult> GetKpis(decimal objectiveId)
         {
-            var data = await _db.DimKpis
+            var rows = await _db.DimKpis
                 .AsNoTracking()
                 .Where(k => k.ObjectiveId == objectiveId && k.IsActive == 1)
                 .OrderBy(k => k.KpiCode)
                 .Select(k => new
                 {
-                    id = k.KpiId,
-                    name = (k.KpiCode ?? "") + " — " + (k.KpiName ?? "")
+                    k.KpiId,
+                    k.KpiCode,
+                    k.KpiName,
+                    k.KpiNameAr,
+                    k.PillarId,
+                    k.ObjectiveId
                 })
                 .ToListAsync();
+
+            var data = rows.Select(k => new
+            {
+                id = k.KpiId,
+                name = (k.KpiCode ?? "") + " — " +
+                       LocalizationHelper.Get(k.KpiNameAr, k.KpiName ?? ""),
+                pillarId = k.PillarId,
+                objectiveId = k.ObjectiveId
+            });
 
             return Json(data);
         }
