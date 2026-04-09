@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using KPIMonitor.Data;
 using KPIMonitor.Models.ViewModels;
 using KPIMonitor.Services.Abstractions;
-
+using KPIMonitor.Helpers;
 namespace KPIMonitor.Services
 {
     public class PriorityMatrixService : IPriorityMatrixService
@@ -68,6 +68,7 @@ namespace KPIMonitor.Services
                     o.ObjectiveId,
                     o.ObjectiveCode,
                     o.ObjectiveName,
+                    o.ObjectiveNameAr,
                     PillarCode = o.Pillar != null ? o.Pillar.PillarCode : null
                 })
                 .ToListAsync();
@@ -117,9 +118,9 @@ namespace KPIMonitor.Services
                     {
                         ObjectiveId = o.ObjectiveId,
                         ObjectiveCode = string.IsNullOrWhiteSpace(o.PillarCode)
-                    ? (o.ObjectiveCode ?? "")
-                    : $"{o.PillarCode}.{o.ObjectiveCode}",
-                        ObjectiveName = o.ObjectiveName ?? "",
+        ? (o.ObjectiveCode ?? "")
+        : $"{o.PillarCode}.{o.ObjectiveCode}",
+                        ObjectiveName = LocalizationHelper.Get(o.ObjectiveNameAr, o.ObjectiveName ?? ""),
                         StatusCode = canonical,
                         StatusColor = hex
                     }

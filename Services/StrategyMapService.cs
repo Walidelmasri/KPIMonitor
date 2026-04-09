@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using KPIMonitor.Data;
 using KPIMonitor.Models.ViewModels;
 using KPIMonitor.Services.Abstractions;
-
+using KPIMonitor.Helpers;
 namespace KPIMonitor.Services
 {
     /// <summary>
@@ -63,14 +63,27 @@ namespace KPIMonitor.Services
                 .AsNoTracking()
                 .Where(p => p.IsActive == 1)
                 .OrderBy(p => p.PillarCode)
-                .Select(p => new { p.PillarId, p.PillarCode, p.PillarName })
+                .Select(p => new
+                {
+                    p.PillarId,
+                    p.PillarCode,
+                    p.PillarName,
+                    p.PillarNameAr
+                })
                 .ToListAsync();
 
             var objectives = await _db.DimObjectives
                 .AsNoTracking()
                 .Where(o => o.IsActive == 1)
                 .OrderBy(o => o.PillarId).ThenBy(o => o.ObjectiveCode)
-                .Select(o => new { o.ObjectiveId, o.ObjectiveCode, o.ObjectiveName, o.PillarId })
+                .Select(o => new
+                {
+                    o.ObjectiveId,
+                    o.ObjectiveCode,
+                    o.ObjectiveName,
+                    o.ObjectiveNameAr,
+                    o.PillarId
+                })
                 .ToListAsync();
 
             var kpis = await _db.DimKpis
@@ -115,14 +128,18 @@ namespace KPIMonitor.Services
 
                     var (_, hex) = StatusPalette.Visual(canonical);
 
-                    return new { o.PillarId, Card = new ObjectiveCardVm
+                    return new
                     {
-                        ObjectiveId   = o.ObjectiveId,
-                        ObjectiveCode = o.ObjectiveCode ?? "",
-                        ObjectiveName = o.ObjectiveName ?? "",
-                        StatusCode    = canonical,
-                        StatusColor   = hex
-                    }};
+                        o.PillarId,
+                        Card = new ObjectiveCardVm
+                        {
+                            ObjectiveId = o.ObjectiveId,
+                            ObjectiveCode = o.ObjectiveCode ?? "",
+                            ObjectiveName = LocalizationHelper.Get(o.ObjectiveNameAr, o.ObjectiveName ?? ""),
+                            StatusCode = canonical,
+                            StatusColor = hex
+                        }
+                    };
                 })
                 .ToList();
 
@@ -130,9 +147,9 @@ namespace KPIMonitor.Services
             var columns = pillars
                 .Select(p => new PillarColumnVm
                 {
-                    PillarId   = p.PillarId,
+                    PillarId = p.PillarId,
                     PillarCode = p.PillarCode ?? "",
-                    PillarName = p.PillarName ?? "",
+                    PillarName = LocalizationHelper.Get(p.PillarNameAr, p.PillarName ?? ""),
                     Objectives = objectiveCards
                         .Where(x => x.PillarId == p.PillarId)
                         .Select(x => x.Card)
@@ -145,7 +162,7 @@ namespace KPIMonitor.Services
 
             return new StrategyMapVm
             {
-                Year    = headerYear,
+                Year = headerYear,
                 Pillars = columns
             };
         }
