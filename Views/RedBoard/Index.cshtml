@@ -1,4 +1,5 @@
 @using KPIMonitor.Services
+@using System.Text.Json
 @inject IAdminAuthorizer AdminAuthorizer
 @inject IEmployeeDirectory EmpDir
 @inject Microsoft.AspNetCore.Mvc.Localization.IViewLocalizer Localizer
@@ -39,28 +40,28 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <script>
         const rbText = {
-            targetAchieved: '@Localizer["TargetAchieved"]',
-            onForecast: '@Localizer["OnForecast"]',
-            targetMissed: '@Localizer["TargetMissed"]',
-            dataMissingNoChanges: '@Localizer["DataMissingNoChanges"]',
-            loading: '@Localizer["Loading"]',
-            selectKpiToViewComments: '@Localizer["SelectKpiToViewComments"]',
-            failedToLoadComment: '@Localizer["FailedToLoadComment"]',
-            failedToLoadActions: '@Localizer["FailedToLoadActions"]',
-            failedToUpdateStatus: '@Localizer["FailedToUpdateStatus"]',
-            saveFailed: '@Localizer["SaveFailed"]',
-            failedToMoveDeadline: '@Localizer["FailedToMoveDeadline"]',
-            failedToLoadDecisions: '@Localizer["FailedToLoadDecisions"]',
-            noRedKpisToArrange: '@Localizer["NoRedKpisToArrange"]',
-            noKpisInSlideshowOrHiddenConfirm: '@Localizer["NoKpisInSlideshowOrHiddenConfirm"]',
-            failedToSaveArrangement: '@Localizer["FailedToSaveArrangement"]',
-            badgeSingular: '@Localizer["BadgeSingular"]',
-            badgePlural: '@Localizer["BadgePlural"]',
-            adminsOnly: '@Localizer["AdminsOnly"]',
-            remove: '@Localizer["Remove"]',
-            hide: '@Localizer["Hide"]',
-            add: '@Localizer["Add"]',
-            unhide: '@Localizer["Unhide"]'
+        targetAchieved: @Html.Raw(JsonSerializer.Serialize(Localizer["TargetAchieved"].Value)),
+        onForecast: @Html.Raw(JsonSerializer.Serialize(Localizer["OnForecast"].Value)),
+        targetMissed: @Html.Raw(JsonSerializer.Serialize(Localizer["TargetMissed"].Value)),
+        dataMissingNoChanges: @Html.Raw(JsonSerializer.Serialize(Localizer["DataMissingNoChanges"].Value)),
+        loading: @Html.Raw(JsonSerializer.Serialize(Localizer["Loading"].Value)),
+        selectKpiToViewComments: @Html.Raw(JsonSerializer.Serialize(Localizer["SelectKpiToViewComments"].Value)),
+        failedToLoadComment: @Html.Raw(JsonSerializer.Serialize(Localizer["FailedToLoadComment"].Value)),
+        failedToLoadActions: @Html.Raw(JsonSerializer.Serialize(Localizer["FailedToLoadActions"].Value)),
+        failedToUpdateStatus: @Html.Raw(JsonSerializer.Serialize(Localizer["FailedToUpdateStatus"].Value)),
+        saveFailed: @Html.Raw(JsonSerializer.Serialize(Localizer["SaveFailed"].Value)),
+        failedToMoveDeadline: @Html.Raw(JsonSerializer.Serialize(Localizer["FailedToMoveDeadline"].Value)),
+        failedToLoadDecisions: @Html.Raw(JsonSerializer.Serialize(Localizer["FailedToLoadDecisions"].Value)),
+        noRedKpisToArrange: @Html.Raw(JsonSerializer.Serialize(Localizer["NoRedKpisToArrange"].Value)),
+        noKpisInSlideshowOrHiddenConfirm: @Html.Raw(JsonSerializer.Serialize(Localizer["NoKpisInSlideshowOrHiddenConfirm"].Value)),
+        failedToSaveArrangement: @Html.Raw(JsonSerializer.Serialize(Localizer["FailedToSaveArrangement"].Value)),
+        badgeSingular: @Html.Raw(JsonSerializer.Serialize(Localizer["BadgeSingular"].Value)),
+        badgePlural: @Html.Raw(JsonSerializer.Serialize(Localizer["BadgePlural"].Value)),
+        adminsOnly: @Html.Raw(JsonSerializer.Serialize(Localizer["AdminsOnly"].Value)),
+        remove: @Html.Raw(JsonSerializer.Serialize(Localizer["Remove"].Value)),
+        hide: @Html.Raw(JsonSerializer.Serialize(Localizer["Hide"].Value)),
+        add: @Html.Raw(JsonSerializer.Serialize(Localizer["Add"].Value)),
+        unhide: @Html.Raw(JsonSerializer.Serialize(Localizer["Unhide"].Value))
         };
 
         // ---------------------------
@@ -74,27 +75,27 @@
 
         // === UI status name mapper (code or label in, pretty label out) ===
         function uiStatus(codeOrLabel) {
-            const s = String(codeOrLabel || '').trim().toLowerCase();
-            switch (s) {
-                case 'green':
-                case 'conforme':
-                case 'ok':
-                    return rbText.targetAchieved;
-                case 'orange':
-                case 'rattrapage':
-                case 'catching up':
-                    return rbText.onForecast;
-                case 'red':
-                case 'ecart':
-                case 'needs attention':
-                    return rbText.targetMissed;
-                case 'blue':
-                case 'attente':
-                case 'data missing':
-                    return rbText.dataMissingNoChanges;
-                default:
-                    return '—';
-            }
+        const s = String(codeOrLabel || '').trim().toLowerCase();
+        switch (s) {
+        case 'green':
+        case 'conforme':
+        case 'ok':
+        return rbText.targetAchieved;
+        case 'orange':
+        case 'rattrapage':
+        case 'catching up':
+        return rbText.onForecast;
+        case 'red':
+        case 'ecart':
+        case 'needs attention':
+        return rbText.targetMissed;
+        case 'blue':
+        case 'attente':
+        case 'data missing':
+        return rbText.dataMissingNoChanges;
+        default:
+        return '—';
+        }
         }
 
         // Antiforgery token (we render it below in a hidden form)
@@ -108,41 +109,41 @@
 
         // Simple POST (form submit via fetch, following redirects)
         async function postForm(url, form) {
-            const fd = new FormData(form);
-            if (!fd.get('__RequestVerificationToken')) fd.append('__RequestVerificationToken', anti());
-            const res = await fetch(url, {
-                method: 'POST',
-                body: fd,
-                headers: { 'Accept': 'text/html', 'X-Requested-With': 'XMLHttpRequest' }
-            });
-            if (!res.ok) throw new Error(rbText.saveFailed);
-            return res.text();
+        const fd = new FormData(form);
+        if (!fd.get('__RequestVerificationToken')) fd.append('__RequestVerificationToken', anti());
+        const res = await fetch(url, {
+        method: 'POST',
+        body: fd,
+        headers: { 'Accept': 'text/html', 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        if (!res.ok) throw new Error(rbText.saveFailed);
+        return res.text();
         }
 
         // Strip/disable admin-only controls inside injected actions HTML
         function stripAdminControlsInActions() {
-            if (IS_ADMIN) return;
-            const root = $('actionsList');
-            if (!root) return;
+        if (IS_ADMIN) return;
+        const root = $('actionsList');
+        if (!root) return;
 
-            ['[data-action="move-deadline"]',
-                '[data-action="delete-action"]',
-                '[data-action="close-action"]',
-                '[data-action="edit-action"]',
-                '[data-admin-only]',
-                '[asp-admin-only]'].forEach(sel => {
-                    root.querySelectorAll(sel).forEach(n => n.remove());
-                });
+        ['[data-action="move-deadline"]',
+        '[data-action="delete-action"]',
+        '[data-action="close-action"]',
+        '[data-action="edit-action"]',
+        '[data-admin-only]',
+        '[asp-admin-only]'].forEach(sel => {
+        root.querySelectorAll(sel).forEach(n => n.remove());
+        });
 
-            root.querySelectorAll('select[data-action="set-status"]').forEach(sel => {
-                sel.disabled = true;
-                sel.classList.add('disabled');
-                sel.title = rbText.adminsOnly;
-            });
+        root.querySelectorAll('select[data-action="set-status"]').forEach(sel => {
+        sel.disabled = true;
+        sel.classList.add('disabled');
+        sel.title = rbText.adminsOnly;
+        });
 
-            root.querySelectorAll('.btn-group, .ap-actions, .card-actions').forEach(group => {
-                if (!group.querySelector('button, a, select')) group.remove();
-            });
+        root.querySelectorAll('.btn-group, .ap-actions, .card-actions').forEach(group => {
+        if (!group.querySelector('button, a, select')) group.remove();
+        });
         }
 
         // ---------------------------
@@ -156,556 +157,558 @@
         let runKpiIds = [];
 
         function _fmtShort(v) {
-            const n = Number(v);
-            if (!isFinite(n)) return '';
-            // full number, with thousands separators (e.g. 1,234,567)
-            return n.toLocaleString();
+        const n = Number(v);
+        if (!isFinite(n)) return '';
+        // full number, with thousands separators (e.g. 1,234,567)
+        return n.toLocaleString();
         }
 
         // === SmartValueLabels plugin ===
         const SmartValueLabels = {
-            id: 'smartValueLabels',
-            afterDatasetsDraw(chart, _args, opts) {
-                const { ctx, data, chartArea } = chart;
-                const o = opts || {};
-                const fmt = typeof o.formatter === 'function' ? o.formatter : (v) => String(v);
-                const fontSize = o.fontSize || 12;
-                const fontWeight = o.fontWeight || '700';
-                const minGap = o.minGap || 14;
-                const padTop = o.padTop || 4;
-                const padBottom = o.padBottom || 4;
-                const maxShift = o.maxShift || 40;
-                const barDY = (o.barDY != null ? o.barDY : -12);
-                const barDYNeg = (o.barDYNeg != null ? o.barDYNeg : 14);
-                const lineDY = (o.lineDY != null ? o.lineDY : -12);
-                const perDataset = o.perDataset || [];
-                const lineStepDefault = o.lineStep || 1;
-                const onlyLastForLinesDefault = !!o.onlyLastForLines;
+        id: 'smartValueLabels',
+        afterDatasetsDraw(chart, _args, opts) {
+        const { ctx, data, chartArea } = chart;
+        const o = opts || {};
+        const fmt = typeof o.formatter === 'function' ? o.formatter : (v) => String(v);
+        const fontSize = o.fontSize || 12;
+        const fontWeight = o.fontWeight || '700';
+        const minGap = o.minGap || 14;
+        const padTop = o.padTop || 4;
+        const padBottom = o.padBottom || 4;
+        const maxShift = o.maxShift || 40;
+        const barDY = (o.barDY != null ? o.barDY : -12);
+        const barDYNeg = (o.barDYNeg != null ? o.barDYNeg : 14);
+        const lineDY = (o.lineDY != null ? o.lineDY : -12);
+        const perDataset = o.perDataset || [];
+        const lineStepDefault = o.lineStep || 1;
+        const onlyLastForLinesDefault = !!o.onlyLastForLines;
 
-                ctx.save();
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'bottom';
-                ctx.font = `${fontWeight} ${fontSize}px system-ui,-apple-system,Segoe UI,Roboto,Arial`;
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.font = `${fontWeight} ${fontSize}px system-ui,-apple-system,Segoe UI,Roboto,Arial`;
 
-                const byIndex = new Map();
-                data.datasets.forEach((ds, di) => {
-                    if (!chart.isDatasetVisible(di)) return;
-                    const meta = chart.getDatasetMeta(di);
-                    const type = ds.type || meta.type;
-                    const isBar = type === 'bar';
-                    const isLine = type === 'line';
-                    const per = perDataset[di] || {};
-                    const step = Number.isInteger(per.step) ? Math.max(1, per.step) : lineStepDefault;
+        const byIndex = new Map();
+        data.datasets.forEach((ds, di) => {
+        if (!chart.isDatasetVisible(di)) return;
+        const meta = chart.getDatasetMeta(di);
+        const type = ds.type || meta.type;
+        const isBar = type === 'bar';
+        const isLine = type === 'line';
+        const per = perDataset[di] || {};
+        const step = Number.isInteger(per.step) ? Math.max(1, per.step) : lineStepDefault;
 
-                    let lastIdxForThisLine = null;
-                    if (isLine && (onlyLastForLinesDefault || per.onlyLast)) {
-                        for (let i = ds.data.length - 1; i >= 0; i--) {
-                            const v = ds.data[i];
-                            if (v != null && !Number.isNaN(+v)) { lastIdxForThisLine = i; break; }
-                        }
-                    }
+        let lastIdxForThisLine = null;
+        if (isLine && (onlyLastForLinesDefault || per.onlyLast)) {
+        for (let i = ds.data.length - 1; i >= 0; i--) {
+        const v = ds.data[i];
+        if (v != null && !Number.isNaN(+v)) { lastIdxForThisLine = i; break; }
+        }
+        }
 
-                    meta.data.forEach((el, i) => {
-                        const raw = ds.data[i];
-                        const val = Number(raw);
-                        if (raw == null || Number.isNaN(val)) return;
+        meta.data.forEach((el, i) => {
+        const raw = ds.data[i];
+        const val = Number(raw);
+        if (raw == null || Number.isNaN(val)) return;
 
-                        if (isLine) {
-                            if ((onlyLastForLinesDefault || per.onlyLast) && i !== lastIdxForThisLine) return;
-                            if ((i % step) !== 0) return;
-                        }
+        if (isLine) {
+        if ((onlyLastForLinesDefault || per.onlyLast) && i !== lastIdxForThisLine) return;
+        if ((i % step) !== 0) return;
+        }
 
-                        const { x, y } = el.getProps(['x', 'y'], true);
-                        let dy = isBar ? (val < 0 ? barDYNeg : barDY) : lineDY;
-                        if (typeof per.dy === 'number') dy = per.dy;
-                        const dx = (typeof per.dx === 'number') ? per.dx : 0;
+        const { x, y } = el.getProps(['x', 'y'], true);
+        let dy = isBar ? (val < 0 ? barDYNeg : barDY) : lineDY;
+        if (typeof per.dy === 'number') dy = per.dy;
+        const dx = (typeof per.dx === 'number') ? per.dx : 0;
 
-                        const text = fmt(val);
-                        const w = ctx.measureText(text).width;
-                        const h = fontSize * 1.2;
+        const text = fmt(val);
+        const w = ctx.measureText(text).width;
+        const h = fontSize * 1.2;
 
-                        const item = {
-                            x: x + dx, y: y + dy, baseY: y + dy,
-                            val, text, color: per.color || o.color || '#111',
-                            w, h, priority: isBar ? 0 : 1
-                        };
-                        const arr = byIndex.get(i);
-                        if (arr) arr.push(item); else byIndex.set(i, [item]);
-                    });
-                });
+        const item = {
+        x: x + dx, y: y + dy, baseY: y + dy,
+        val, text, color: per.color || o.color || '#111',
+        w, h, priority: isBar ? 0 : 1
+        };
+        const arr = byIndex.get(i);
+        if (arr) arr.push(item); else byIndex.set(i, [item]);
+        });
+        });
 
-                const topLimitBase = chartArea.top + padTop;
-                const botLimit = chartArea.bottom - padBottom;
+        const topLimitBase = chartArea.top + padTop;
+        const botLimit = chartArea.bottom - padBottom;
 
-                byIndex.forEach((items) => {
-                    const clamp = (it) => {
-                        const topLimit = topLimitBase + it.h;
-                        if (it.y < topLimit) it.y = topLimit;
-                        const low = it.baseY - maxShift;
-                        const high = it.baseY + maxShift;
-                        if (it.y < low) it.y = low;
-                        if (it.y > high) it.y = high;
-                        if (it.y > botLimit) it.y = botLimit;
-                    };
-                    items.forEach(it => { it.y = it.baseY; clamp(it); });
+        byIndex.forEach((items) => {
+        const clamp = (it) => {
+        const topLimit = topLimitBase + it.h;
+        if (it.y < topLimit) it.y = topLimit;
+        const low = it.baseY - maxShift;
+        const high = it.baseY + maxShift;
+        if (it.y < low) it.y = low;
+        if (it.y > high) it.y = high;
+        if (it.y > botLimit) it.y = botLimit;
+        };
+        items.forEach(it => { it.y = it.baseY; clamp(it); });
 
-                    let guard = 0;
-                    while (guard++ < 10) {
-                        let changed = false;
-                        for (let i = 0; i < items.length; i++) {
-                            for (let j = i + 1; j < items.length; j++) {
-                                const a = items[i], b = items[j];
-                                const aL = a.x - a.w / 2, aR = a.x + a.w / 2, aT = a.y - a.h, aB = a.y;
-                                const bL = b.x - b.w / 2, bR = b.x + b.w / 2, bT = b.y - b.h, bB = b.y;
-                                const overlap = !(aR < bL || aL > bR || aB < bT || aT > bB);
-                                if (overlap) {
-                                    const hi = (a.val >= b.val) ? a : b;
-                                    const lo = (hi === a) ? b : a;
-                                    hi.y -= minGap;
-                                    lo.y += Math.min(4, minGap / 2);
-                                    clamp(hi); clamp(lo);
-                                    changed = true;
-                                }
-                            }
-                        }
-                        if (!changed) break;
-                    }
+        let guard = 0;
+        while (guard++ < 10) {
+        let changed = false;
+        for (let i = 0; i < items.length; i++) {
+        for (let j = i + 1; j < items.length; j++) {
+        const a = items[i], b = items[j];
+        const aL = a.x - a.w / 2, aR = a.x + a.w / 2, aT = a.y - a.h, aB = a.y;
+        const bL = b.x - b.w / 2, bR = b.x + b.w / 2, bT = b.y - b.h, bB = b.y;
+        const overlap = !(aR < bL || aL > bR || aB < bT || aT > bB);
+        if (overlap) {
+        const hi = (a.val >= b.val) ? a : b;
+        const lo = (hi === a) ? b : a;
+        hi.y -= minGap;
+        lo.y += Math.min(4, minGap / 2);
+        clamp(hi); clamp(lo);
+        changed = true;
+        }
+        }
+        }
+        if (!changed) break;
+        }
 
-                    items.sort((a, b) => a.priority - b.priority);
-                    const { ctx } = chart;
-                    items.forEach(it => {
-                        ctx.fillStyle = it.color;
-                        if (o.outline) { ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.strokeText(it.text, it.x, it.y); }
-                        ctx.fillText(it.text, it.x, it.y);
-                    });
-                });
+        items.sort((a, b) => a.priority - b.priority);
+        const { ctx } = chart;
+        items.forEach(it => {
+        ctx.fillStyle = it.color;
+        if (o.outline) { ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.strokeText(it.text, it.x, it.y); }
+        ctx.fillText(it.text, it.x, it.y);
+        });
+        });
 
-                ctx.restore();
-            }
+        ctx.restore();
+        }
         };
         Chart.register(SmartValueLabels);
+        if (window.ChartDataLabels) {
         Chart.register(ChartDataLabels);
+        }
 
         // ---------------------------
         // Load red list + build deck (ORDER + HIDDEN COME FROM BACKEND)
         // ---------------------------
         async function loadRedList() {
-            redList = await getJSON('@Url.Action("GetRedKpiIds", "RedBoard")');
+        redList = await getJSON('@Url.Action("GetRedKpiIds", "RedBoard")');
 
-            const badge = $('redCountBadge');
-            if (badge) {
-                const n = Array.isArray(redList) ? redList.length : 0;
-                badge.textContent = n === 1
-                    ? rbText.badgeSingular.replace('{0}', n)
-                    : rbText.badgePlural.replace('{0}', n);
-                badge.classList.toggle('d-none', n === 0);
-            }
+        const badge = $('redCountBadge');
+        if (badge) {
+        const n = Array.isArray(redList) ? redList.length : 0;
+        badge.textContent = n === 1
+        ? rbText.badgeSingular.replace('{0}', n)
+        : rbText.badgePlural.replace('{0}', n);
+        badge.classList.toggle('d-none', n === 0);
+        }
 
-            if (!redList || redList.length === 0) {
-                $('emptyMsg').classList.remove('d-none');
-                $('slideWrap').classList.add('d-none');
-                deck = [];
-                runKpiIds = [];
-                idx = 0;
-                return;
-            }
+        if (!redList || redList.length === 0) {
+        $('emptyMsg').classList.remove('d-none');
+        $('slideWrap').classList.add('d-none');
+        deck = [];
+        runKpiIds = [];
+        idx = 0;
+        return;
+        }
 
-            $('emptyMsg').classList.add('d-none');
-            $('slideWrap').classList.remove('d-none');
+        $('emptyMsg').classList.add('d-none');
+        $('slideWrap').classList.remove('d-none');
 
-            deck = [];
-            runKpiIds = [];
+        deck = [];
+        runKpiIds = [];
 
-            // Only non-hidden KPIs go into slideshow deck
-            for (const k of redList) {
-                if (k.isHidden) continue;
-                deck.push({ type: 'kpi', ...k });
-                runKpiIds.push(k.kpiId);
-            }
+        // Only non-hidden KPIs go into slideshow deck
+        for (const k of redList) {
+        if (k.isHidden) continue;
+        deck.push({ type: 'kpi', ...k });
+        runKpiIds.push(k.kpiId);
+        }
 
-            if (ENABLE_DECISIONS && runKpiIds.length > 0) {
-                deck.push({ type: 'decisions' });
-            }
+        if (ENABLE_DECISIONS && runKpiIds.length > 0) {
+        deck.push({ type: 'decisions' });
+        }
 
-            idx = 0;
-            await showCurrent();
+        idx = 0;
+        await showCurrent();
         }
         // ---------------------------
         // Comments (read-only)
         // ---------------------------
         async function loadYearPlanCommentReadOnly(planId) {
-            const el = $('commentRead');
-            if (!el) return;
+        const el = $('commentRead');
+        if (!el) return;
 
-            if (!planId) {
-                el.textContent = rbText.selectKpiToViewComments;
-                return;
-            }
+        if (!planId) {
+        el.textContent = rbText.selectKpiToViewComments;
+        return;
+        }
 
-            el.textContent = rbText.loading;
-            try {
-                // This endpoint already exists in HomeController (used in Dashboard)
-                const url = '@Url.Action("GetYearPlanComment", "Home")' + '?planId=' + encodeURIComponent(planId);
-                const res = await fetch(url, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+        el.textContent = rbText.loading;
+        try {
+        // This endpoint already exists in HomeController (used in Dashboard)
+        const url = '@Url.Action("GetYearPlanComment", "Home")' + '?planId=' + encodeURIComponent(planId);
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
 
-                if (!res.ok) throw new Error('HTTP ' + res.status);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
 
-                const data = await res.json();
-                const text = (data?.text ?? '').toString();
-                el.textContent = text.trim() ? text : '—';
-            } catch {
-                el.textContent = rbText.failedToLoadComment;
-            }
+        const data = await res.json();
+        const text = (data?.text ?? '').toString();
+        el.textContent = text.trim() ? text : '—';
+        } catch {
+        el.textContent = rbText.failedToLoadComment;
+        }
         }
 
         // ---------------------------
         // Show current slide 
         // ---------------------------
         async function showCurrent() {
-            if (!deck.length) {
-                $('slideCounter').innerText = '0 / 0';
-                $('titleSlide').classList.add('d-none');
-                $('kpiSlide').classList.add('d-none');
-                $('actionsBlock').classList.add('d-none');
-                $('decisionsWrap').classList.add('d-none');
-                return;
-            }
+        if (!deck.length) {
+        $('slideCounter').innerText = '0 / 0';
+        $('titleSlide').classList.add('d-none');
+        $('kpiSlide').classList.add('d-none');
+        $('actionsBlock').classList.add('d-none');
+        $('decisionsWrap').classList.add('d-none');
+        return;
+        }
 
-            const slide = deck[idx];
-            $('slideCounter').innerText = `${idx + 1} / ${deck.length}`;
-            $('decisionsWrap').classList.add('d-none');
+        const slide = deck[idx];
+        $('slideCounter').innerText = `${idx + 1} / ${deck.length}`;
+        $('decisionsWrap').classList.add('d-none');
 
-            const isLast = (idx === deck.length - 1);
-            const isFirst = (idx === 0);
-            $('btnFirst') && ($('btnFirst').disabled = isFirst);
-            $('btnLast') && ($('btnLast').disabled = isLast);
+        const isLast = (idx === deck.length - 1);
+        const isFirst = (idx === 0);
+        $('btnFirst') && ($('btnFirst').disabled = isFirst);
+        $('btnLast') && ($('btnLast').disabled = isLast);
 
-            if (slide.type === 'decisions' && ENABLE_DECISIONS) {
-                $('titleSlide').classList.add('d-none');
-                $('kpiSlide').classList.add('d-none');
-                $('actionsBlock').classList.add('d-none');
-                await showDecisions();
-                return;
-            }
+        if (slide.type === 'decisions' && ENABLE_DECISIONS) {
+        $('titleSlide').classList.add('d-none');
+        $('kpiSlide').classList.add('d-none');
+        $('actionsBlock').classList.add('d-none');
+        await showDecisions();
+        return;
+        }
 
-            $('titleSlide').classList.add('d-none');
-            $('kpiSlide').classList.remove('d-none');
-            $('actionsBlock').classList.remove('d-none');
+        $('titleSlide').classList.add('d-none');
+        $('kpiSlide').classList.remove('d-none');
+        $('actionsBlock').classList.remove('d-none');
 
-            currentKpiId = slide.kpiId;
-            $('kpiHeading').innerText = `KPI Name: ${slide.name}`;
-            $('kpiSub').innerText = `${slide.code}`;
+        currentKpiId = slide.kpiId;
+        $('kpiHeading').innerText = `KPI Name: ${slide.name}`;
+        $('kpiSub').innerText = `${slide.code}`;
 
-            const addBtn = $('btnAddAction');
-            if (addBtn) {
-                addBtn.disabled = !IS_ADMIN;
-                addBtn.classList.toggle('d-none', !IS_ADMIN);
-            }
+        const addBtn = $('btnAddAction');
+        if (addBtn) {
+        addBtn.disabled = !IS_ADMIN;
+        addBtn.classList.toggle('d-none', !IS_ADMIN);
+        }
 
-            const data = await getJSON('@Url.Action("GetKpiPresentation", "RedBoard")?kpiId=' + slide.kpiId);
-            await loadYearPlanCommentReadOnly(data?.meta?.planId);
+        const data = await getJSON('@Url.Action("GetKpiPresentation", "RedBoard")?kpiId=' + slide.kpiId);
+        await loadYearPlanCommentReadOnly(data?.meta?.planId);
 
-            $('m_title').innerText = data?.meta?.title ?? '—';
-            // Extract only the KPI code from slide.code
-            let cleanCode = "—";
-            if (slide.code) {
-                const match = slide.code.match(/KPI Code:\s*(.*)/);
-                if (match && match[1]) cleanCode = match[1].trim();
-            }
+        $('m_title').innerText = data?.meta?.title ?? '—';
+        // Extract only the KPI code from slide.code
+        let cleanCode = "—";
+        if (slide.code) {
+        const match = slide.code.match(/KPI Code:\s*(.*)/);
+        if (match && match[1]) cleanCode = match[1].trim();
+        }
 
-            $('m_code').innerText = cleanCode;
-            $('m_owner').innerText = data?.meta?.owner ?? '—';
-            $('m_editor').innerText = data?.meta?.editor ?? '—';
-            $('m_frequency').innerText = data?.meta?.valueType ?? '—';
-            $('m_unit').innerText = data?.meta?.unit ?? '—';
-            $('m_priority').innerText = data?.meta?.priority ?? '—';
-            const status = $('m_status');
-            status.innerText = uiStatus(data?.meta?.statusLabel);
-            status.style.background = data?.meta?.statusColor ?? '';
-            status.className = 'status-pill';
+        $('m_code').innerText = cleanCode;
+        $('m_owner').innerText = data?.meta?.owner ?? '—';
+        $('m_editor').innerText = data?.meta?.editor ?? '—';
+        $('m_frequency').innerText = data?.meta?.valueType ?? '—';
+        $('m_unit').innerText = data?.meta?.unit ?? '—';
+        $('m_priority').innerText = data?.meta?.priority ?? '—';
+        const status = $('m_status');
+        status.innerText = uiStatus(data?.meta?.statusLabel);
+        status.style.background = data?.meta?.statusColor ?? '';
+        status.className = 'status-pill';
 
-            const baseLabels = data?.chart?.labels || [];
-            const act = data?.chart?.actual || [];
-            const tgt = data?.chart?.target || [];
-            const fct = data?.chart?.forecast || [];
-            const yrs = Array.isArray(data?.chart?.yearTargets) ? data.chart.yearTargets : [];
+        const baseLabels = data?.chart?.labels || [];
+        const act = data?.chart?.actual || [];
+        const tgt = data?.chart?.target || [];
+        const fct = data?.chart?.forecast || [];
+        const yrs = Array.isArray(data?.chart?.yearTargets) ? data.chart.yearTargets : [];
 
-            const yearLabels = yrs.map(y => String(y.year));
+        const yearLabels = yrs.map(y => String(y.year));
 
-            // split into two value arrays based on isActual flag
-            const yearTargetVals = yrs.map(y => (y?.isActual ? null : (y.value ?? null)));
-            const yearActualVals = yrs.map(y => (y?.isActual ? (y.value ?? null) : null));
+        // split into two value arrays based on isActual flag
+        const yearTargetVals = yrs.map(y => (y?.isActual ? null : (y.value ?? null)));
+        const yearActualVals = yrs.map(y => (y?.isActual ? (y.value ?? null) : null));
 
-            const allLabels = baseLabels.concat(yearLabels);
-            const pad = new Array(yearLabels.length).fill(null);
-            const leftNulls = new Array(baseLabels.length).fill(null);
+        const allLabels = baseLabels.concat(yearLabels);
+        const pad = new Array(yearLabels.length).fill(null);
+        const leftNulls = new Array(baseLabels.length).fill(null);
 
 
-            const chartData = {
-                labels: allLabels,
-                datasets: [
-                    {
-                        type: 'bar',
-                        label: 'Actual',
-                        data: act.concat(pad),
-                        backgroundColor: '#800080',
-                        borderColor: '#800080',
-                        borderWidth: 2,
-                        borderSkipped: 'bottom'
-                    },
-                    {
-                        type: 'line',
-                        label: 'Target',
-                        data: tgt.concat(pad),
-                        borderColor: '#7a7a7a',
-                        pointBackgroundColor: '#7a7a7a',
-                        pointBorderColor: '#7a7a7a',
-                        borderWidth: 2,
-                        tension: .3,
-                        fill: false
-                    },
-                    {
-                        type: 'line',
-                        label: 'Forecast',
-                        data: fct.concat(pad),
-                        borderColor: '#fd7e14',
-                        pointBackgroundColor: '#fd7e14',
-                        pointBorderColor: '#fd7e14',
-                        borderDash: [5, 5],
-                        borderWidth: 2,
-                        tension: .3,
-                        fill: false
-                    },
-                    {
-                        type: 'bar',
-                        label: 'Year Target',
-                        data: leftNulls.concat(yearTargetVals),
-                        backgroundColor: '#7a7a7a',
-                        borderColor: '#7a7a7a',
-                        borderWidth: 1
-                    },
-                    {
-                        type: 'bar',
-                        label: 'Year Actual',
-                        data: leftNulls.concat(yearActualVals),
-                        backgroundColor: '#800080',
-                        borderColor: '#800080',
-                        borderWidth: 2
-                    }
+        const chartData = {
+        labels: allLabels,
+        datasets: [
+        {
+        type: 'bar',
+        label: 'Actual',
+        data: act.concat(pad),
+        backgroundColor: '#800080',
+        borderColor: '#800080',
+        borderWidth: 2,
+        borderSkipped: 'bottom'
+        },
+        {
+        type: 'line',
+        label: 'Target',
+        data: tgt.concat(pad),
+        borderColor: '#7a7a7a',
+        pointBackgroundColor: '#7a7a7a',
+        pointBorderColor: '#7a7a7a',
+        borderWidth: 2,
+        tension: .3,
+        fill: false
+        },
+        {
+        type: 'line',
+        label: 'Forecast',
+        data: fct.concat(pad),
+        borderColor: '#fd7e14',
+        pointBackgroundColor: '#fd7e14',
+        pointBorderColor: '#fd7e14',
+        borderDash: [5, 5],
+        borderWidth: 2,
+        tension: .3,
+        fill: false
+        },
+        {
+        type: 'bar',
+        label: 'Year Target',
+        data: leftNulls.concat(yearTargetVals),
+        backgroundColor: '#7a7a7a',
+        borderColor: '#7a7a7a',
+        borderWidth: 1
+        },
+        {
+        type: 'bar',
+        label: 'Year Actual',
+        data: leftNulls.concat(yearActualVals),
+        backgroundColor: '#800080',
+        borderColor: '#800080',
+        borderWidth: 2
+        }
 
-                ]
-            };
+        ]
+        };
 
-            if (!kpiChart) {
-                kpiChart = new Chart($('rbChart').getContext('2d'), {
-                    data: chartData,
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        layout: { padding: { top: 28, bottom: 8 } },
-                        scales: {
-                            x: {
-                                grid: { display: false },
-                                ticks: {
-                                    padding: 8,
-                                    callback: function (v) {
-                                        return String(this.getLabelForValue(v)).replace(/^\s*\d{4}\s*[\-–—]\s*/, '');
-                                    }
-                                }
-                            },
-                            y: { display: false, grid: { display: false }, beginAtZero: true }
-                        },
-                        plugins: {
-                            datalabels: false,
-                            smartValueLabels: {
-                                formatter: _fmtShort,
-                                fontSize: 16,
-                                fontWeight: '700',
-                                minGap: 14,
-                                padTop: 12,
-                                padBottom: 4,
-                                outline: true,
-                                perDataset: [
-                                    { dy: -12, dx: 0, color: '#800080' },
-                                    { dy: 12, dx: -8, color: '#7a7a7a' },
-                                    { dy: -16, dx: 8, color: '#fd7e14' },
-                                    { dy: -12, dx: 0, color: '#7a7a7a' },
-                                    { dy: -12, dx: 0, color: '#800080' }  // Year Actual ✅
+        if (!kpiChart) {
+        kpiChart = new Chart($('rbChart').getContext('2d'), {
+        data: chartData,
+        options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 28, bottom: 8 } },
+        scales: {
+        x: {
+        grid: { display: false },
+        ticks: {
+        padding: 8,
+        callback: function (v) {
+        return String(this.getLabelForValue(v)).replace(/^\s*\d{4}\s*[\-–—]\s*/, '');
+        }
+        }
+        },
+        y: { display: false, grid: { display: false }, beginAtZero: true }
+        },
+        plugins: {
+        datalabels: false,
+        smartValueLabels: {
+        formatter: _fmtShort,
+        fontSize: 16,
+        fontWeight: '700',
+        minGap: 14,
+        padTop: 12,
+        padBottom: 4,
+        outline: true,
+        perDataset: [
+        { dy: -12, dx: 0, color: '#800080' },
+        { dy: 12, dx: -8, color: '#7a7a7a' },
+        { dy: -16, dx: 8, color: '#fd7e14' },
+        { dy: -12, dx: 0, color: '#7a7a7a' },
+        { dy: -12, dx: 0, color: '#800080' }  // Year Actual ✅
 
-                                ]
-                            },
-                            tooltip: { enabled: true },
-                            legend: {
-                                position: 'top',
-                                labels: {
-                                    boxWidth: 12,
-                                    boxHeight: 10,
-                                    padding: 12,
-                                    font: { size: 8, weight: '700' }
-                                }
-                            }
-                        }
-                    }
-                });
-            } else {
-                kpiChart.data = chartData;
-                kpiChart.update();
-            }
+        ]
+        },
+        tooltip: { enabled: true },
+        legend: {
+        position: 'top',
+        labels: {
+        boxWidth: 12,
+        boxHeight: 10,
+        padding: 12,
+        font: { size: 8, weight: '700' }
+        }
+        }
+        }
+        }
+        });
+        } else {
+        kpiChart.data = chartData;
+        kpiChart.update();
+        }
 
-            await loadActionsHtml(slide.kpiId);
+        await loadActionsHtml(slide.kpiId);
         }
 
         window.prevSlide = async () => {
-            if (!deck.length) return;
-            idx = (idx - 1 + deck.length) % deck.length;
-            await showCurrent();
+        if (!deck.length) return;
+        idx = (idx - 1 + deck.length) % deck.length;
+        await showCurrent();
         };
         window.nextSlide = async () => {
-            if (!deck.length) return;
-            idx = (idx + 1) % deck.length;
-            await showCurrent();
+        if (!deck.length) return;
+        idx = (idx + 1) % deck.length;
+        await showCurrent();
         };
         window.firstSlide = async () => {
-            if (!deck.length) return;
-            idx = 0;
-            await showCurrent();
+        if (!deck.length) return;
+        idx = 0;
+        await showCurrent();
         };
         window.lastSlide = async () => {
-            if (!deck.length) return;
-            idx = deck.length - 1;
-            await showCurrent();
+        if (!deck.length) return;
+        idx = deck.length - 1;
+        await showCurrent();
         };
 
         // ---------------------------
         // Actions Block (HTML fetch)
         // ---------------------------
         async function loadActionsHtml(kpiId) {
-            $('actionsList').innerHTML = "<div class='text-muted small'>" + rbText.loading + "</div>";
-            try {
-                const html = await getHTML('@Url.Action("ActionsListHtml", "RedBoard")?kpiId=' + encodeURIComponent(kpiId));
-                $('actionsList').innerHTML = html;
-                stripAdminControlsInActions();
-            } catch {
-                $('actionsList').innerHTML = "<div class='text-danger small'>" + rbText.failedToLoadActions + "</div>";
-            }
+        $('actionsList').innerHTML = "<div class='text-muted small'>" + rbText.loading + "</div>";
+        try {
+        const html = await getHTML('@Url.Action("ActionsListHtml", "RedBoard")?kpiId=' + encodeURIComponent(kpiId));
+        $('actionsList').innerHTML = html;
+        stripAdminControlsInActions();
+        } catch {
+        $('actionsList').innerHTML = "<div class='text-danger small'>" + rbText.failedToLoadActions + "</div>";
+        }
         }
 
         document.addEventListener('click', async (e) => {
-            const btn = e.target.closest('[data-action]');
-            if (!btn) return;
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
 
-            const act = btn.getAttribute('data-action');
-            if (act === 'move-deadline') {
-                if (!IS_ADMIN) return;
-                const id = btn.getAttribute('data-id');
-                openMoveDeadline(id);
-            }
+        const act = btn.getAttribute('data-action');
+        if (act === 'move-deadline') {
+        if (!IS_ADMIN) return;
+        const id = btn.getAttribute('data-id');
+        openMoveDeadline(id);
+        }
         });
 
         document.addEventListener('change', async (e) => {
-            const sel = e.target.closest('select[data-action="set-status"]');
-            if (!sel) return;
-            if (!IS_ADMIN) {
-                sel.value = sel.getAttribute('data-current') || sel.value;
-                return;
-            }
-            const id = sel.getAttribute('data-id');
-            const val = sel.value;
-            try {
-                const form = new FormData();
-                form.append('__RequestVerificationToken', anti());
-                form.append('actionId', id);
-                form.append('statusCode', val);
-                const res = await fetch('@Url.Action("SetStatus", "KpiActions")', {
-                    method: 'POST',
-                    body: form,
-                    headers: { 'Accept': 'text/html', 'X-Requested-With': 'XMLHttpRequest' }
-                });
-                if (!res.ok) throw 0;
-                await loadActionsHtml(currentKpiId);
-            } catch { alert(rbText.failedToUpdateStatus); }
+        const sel = e.target.closest('select[data-action="set-status"]');
+        if (!sel) return;
+        if (!IS_ADMIN) {
+        sel.value = sel.getAttribute('data-current') || sel.value;
+        return;
+        }
+        const id = sel.getAttribute('data-id');
+        const val = sel.value;
+        try {
+        const form = new FormData();
+        form.append('__RequestVerificationToken', anti());
+        form.append('actionId', id);
+        form.append('statusCode', val);
+        const res = await fetch('@Url.Action("SetStatus", "KpiActions")', {
+        method: 'POST',
+        body: form,
+        headers: { 'Accept': 'text/html', 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        if (!res.ok) throw 0;
+        await loadActionsHtml(currentKpiId);
+        } catch { alert(rbText.failedToUpdateStatus); }
         });
 
         // ---------------------------
         // Add Action Modal (admin only)
         // ---------------------------
         function openAddAction() {
-            if (!IS_ADMIN) return;
-            if (!currentKpiId) return;
-            $('af_kpiId').value = currentKpiId;
-            $('af_owner').value = '';
-            $('af_description').value = '';
-            $('af_due').value = '';
-            $('af_status').value = 'todo';
-            const m = new bootstrap.Modal(document.getElementById('addActionModal'));
-            m.show();
+        if (!IS_ADMIN) return;
+        if (!currentKpiId) return;
+        $('af_kpiId').value = currentKpiId;
+        $('af_owner').value = '';
+        $('af_description').value = '';
+        $('af_due').value = '';
+        $('af_status').value = 'todo';
+        const m = new bootstrap.Modal(document.getElementById('addActionModal'));
+        m.show();
         }
 
         async function submitAddAction(ev) {
-            ev.preventDefault();
-            if (!IS_ADMIN) return;
-            try {
-                const url = isGeneralCreate
-                    ? '@Url.Action("CreateGeneral", "KpiActions")'
-                    : '@Url.Action("Create", "KpiActions")';
+        ev.preventDefault();
+        if (!IS_ADMIN) return;
+        try {
+        const url = isGeneralCreate
+        ? '@Url.Action("CreateGeneral", "KpiActions")'
+        : '@Url.Action("Create", "KpiActions")';
 
-                await postForm(url, $('addActionForm'));
-                bootstrap.Modal.getInstance(document.getElementById('addActionModal')).hide();
-                isGeneralCreate = false;
-                await loadActionsHtml(currentKpiId);
-            } catch {
-                alert(rbText.saveFailed);
-            }
+        await postForm(url, $('addActionForm'));
+        bootstrap.Modal.getInstance(document.getElementById('addActionModal')).hide();
+        isGeneralCreate = false;
+        await loadActionsHtml(currentKpiId);
+        } catch {
+        alert(rbText.saveFailed);
+        }
         }
 
         // ---------------------------
         // Move Deadline Modal (admin only)
         // ---------------------------
         function openMoveDeadline(actionId) {
-            if (!IS_ADMIN) return;
-            $('md_actionId').value = actionId;
-            $('md_reason').value = '';
-            $('md_due').value = '';
-            const m = new bootstrap.Modal(document.getElementById('moveDeadlineModal'));
-            m.show();
+        if (!IS_ADMIN) return;
+        $('md_actionId').value = actionId;
+        $('md_reason').value = '';
+        $('md_due').value = '';
+        const m = new bootstrap.Modal(document.getElementById('moveDeadlineModal'));
+        m.show();
         }
 
         async function submitMoveDeadline(ev) {
-            ev.preventDefault();
-            if (!IS_ADMIN) return;
-            try {
-                await postForm('@Url.Action("MoveDeadline", "KpiActions")', $('moveDeadlineForm'));
-                bootstrap.Modal.getInstance(document.getElementById('moveDeadlineModal')).hide();
-                await loadActionsHtml(currentKpiId);
-            } catch {
-                alert(rbText.failedToMoveDeadline);
-            }
+        ev.preventDefault();
+        if (!IS_ADMIN) return;
+        try {
+        await postForm('@Url.Action("MoveDeadline", "KpiActions")', $('moveDeadlineForm'));
+        bootstrap.Modal.getInstance(document.getElementById('moveDeadlineModal')).hide();
+        await loadActionsHtml(currentKpiId);
+        } catch {
+        alert(rbText.failedToMoveDeadline);
+        }
         }
 
         // ---------------------------
         // Decisions Board (HTML fetch) + Add General Action (admin only)
         // ---------------------------
         async function showDecisions() {
-            if (!runKpiIds.length) return;
-            $('decisionsWrap').classList.remove('d-none');
-            $('decisionsBody').innerHTML = "<div class='text-muted small'>" + rbText.loading + "</div>";
-            try {
-                const res = await fetch('@Url.Action("DecisionsBoardHtml", "RedBoard")', {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'text/html',
-                        'Content-Type': 'application/json',
-                        'RequestVerificationToken': anti()
-                    },
-                    body: JSON.stringify(runKpiIds)
-                });
-                if (!res.ok) throw 0;
-                $('decisionsBody').innerHTML = await res.text();
-                $('decisionsWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
-                stripAdminControlsInActions();
-            } catch {
-                $('decisionsBody').innerHTML = "<div class='text-danger small'>" + rbText.failedToLoadDecisions + "</div>";
-            }
+        if (!runKpiIds.length) return;
+        $('decisionsWrap').classList.remove('d-none');
+        $('decisionsBody').innerHTML = "<div class='text-muted small'>" + rbText.loading + "</div>";
+        try {
+        const res = await fetch('@Url.Action("DecisionsBoardHtml", "RedBoard")', {
+        method: 'POST',
+        headers: {
+        'Accept': 'text/html',
+        'Content-Type': 'application/json',
+        'RequestVerificationToken': anti()
+        },
+        body: JSON.stringify(runKpiIds)
+        });
+        if (!res.ok) throw 0;
+        $('decisionsBody').innerHTML = await res.text();
+        $('decisionsWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        stripAdminControlsInActions();
+        } catch {
+        $('decisionsBody').innerHTML = "<div class='text-danger small'>" + rbText.failedToLoadDecisions + "</div>";
+        }
         }
 
         // ---------------------------
@@ -714,264 +717,274 @@
         let arrangeModalInstance = null;
 
         function findKpiById(id) {
-            const numId = Number(id);
-            return redList.find(k => Number(k.kpiId) === numId);
+        const numId = Number(id);
+        return redList.find(k => Number(k.kpiId) === numId);
         }
 
         function createSelectedLi(kpi) {
-            const li = document.createElement('li');
-            li.className = 'list-group-item d-flex justify-content-between align-items-center';
-            li.dataset.kpiId = kpi.kpiId;
+        const li = document.createElement('li');
+        li.className = 'list-group-item d-flex justify-content-between align-items-center';
+        li.dataset.kpiId = kpi.kpiId;
 
-            const info = document.createElement('div');
-            info.className = 'me-2';
-            const title = document.createElement('div');
-            title.className = 'fw-semibold';
-            title.textContent = kpi.name || '—';
-            const sub = document.createElement('div');
-            sub.className = 'small text-muted';
-            sub.textContent = kpi.code || '';
-            info.appendChild(title);
-            info.appendChild(sub);
+        const info = document.createElement('div');
+        info.className = 'me-2';
+        const title = document.createElement('div');
+        title.className = 'fw-semibold';
+        title.textContent = kpi.name || '—';
+        const sub = document.createElement('div');
+        sub.className = 'small text-muted';
+        sub.textContent = kpi.code || '';
+        info.appendChild(title);
+        info.appendChild(sub);
 
-            const btns = document.createElement('div');
-            btns.className = 'btn-group btn-group-sm';
-            btns.innerHTML = `
-                                                                <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeUp(this)">↑</button>
-                                                                <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeDown(this)">↓</button>
-                                                                <button type="button" class="btn btn-outline-danger" onclick="removeFromSelected(this)">${rbText.remove}</button>
-                                                                <button type="button" class="btn btn-outline-warning" onclick="hideFromSelected(this)">${rbText.hide}</button>
-                                                            `;
+        const btns = document.createElement('div');
+        btns.className = 'btn-group btn-group-sm';
+        btns.innerHTML = `
+        <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeUp(this)">↑</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeDown(this)">↓</button>
+        <button type="button" class="btn btn-outline-danger" onclick="removeFromSelected(this)">${rbText.remove}</button>
+        <button type="button" class="btn btn-outline-warning" onclick="hideFromSelected(this)">${rbText.hide}</button>
+        `;
 
-            li.appendChild(info);
-            li.appendChild(btns);
-            return li;
+        li.appendChild(info);
+        li.appendChild(btns);
+        return li;
         }
 
         function createAvailableLi(kpi) {
-            const li = document.createElement('li');
-            li.className = 'list-group-item d-flex justify-content-between align-items-center';
-            li.dataset.kpiId = kpi.kpiId;
+        const li = document.createElement('li');
+        li.className = 'list-group-item d-flex justify-content-between align-items-center';
+        li.dataset.kpiId = kpi.kpiId;
 
-            const info = document.createElement('div');
-            info.className = 'me-2';
-            const title = document.createElement('div');
-            title.className = 'fw-semibold';
-            title.textContent = kpi.name || '—';
-            const sub = document.createElement('div');
-            sub.className = 'small text-muted';
-            sub.textContent = kpi.code || '';
-            info.appendChild(title);
-            info.appendChild(sub);
+        const info = document.createElement('div');
+        info.className = 'me-2';
+        const title = document.createElement('div');
+        title.className = 'fw-semibold';
+        title.textContent = kpi.name || '—';
+        const sub = document.createElement('div');
+        sub.className = 'small text-muted';
+        sub.textContent = kpi.code || '';
+        info.appendChild(title);
+        info.appendChild(sub);
 
-            const btns = document.createElement('div');
-            btns.className = 'btn-group btn-group-sm';
-            btns.innerHTML = `
-                                                                <button type="button" class="btn btn-outline-primary" onclick="addToSelected(this)">${rbText.add}</button>
-                                                                <button type="button" class="btn btn-outline-warning" onclick="hideFromAvailable(this)">${rbText.hide}</button>
-                                                            `;
+        const btns = document.createElement('div');
+        btns.className = 'btn-group btn-group-sm';
+        btns.innerHTML = `
+        <button type="button" class="btn btn-outline-primary" onclick="addToSelected(this)">${rbText.add}</button>
+        <button type="button" class="btn btn-outline-warning" onclick="hideFromAvailable(this)">${rbText.hide}</button>
+        `;
 
-            li.appendChild(info);
-            li.appendChild(btns);
-            return li;
+        li.appendChild(info);
+        li.appendChild(btns);
+        return li;
         }
 
         function createHiddenLi(kpi) {
-            const li = document.createElement('li');
-            li.className = 'list-group-item d-flex justify-content-between align-items-center';
-            li.dataset.kpiId = kpi.kpiId;
+        const li = document.createElement('li');
+        li.className = 'list-group-item d-flex justify-content-between align-items-center';
+        li.dataset.kpiId = kpi.kpiId;
 
-            const info = document.createElement('div');
-            info.className = 'me-2';
-            const title = document.createElement('div');
-            title.className = 'fw-semibold text-muted';
-            title.textContent = kpi.name || '—';
-            const sub = document.createElement('div');
-            sub.className = 'small text-muted';
-            sub.textContent = kpi.code || '';
-            info.appendChild(title);
-            info.appendChild(sub);
+        const info = document.createElement('div');
+        info.className = 'me-2';
+        const title = document.createElement('div');
+        title.className = 'fw-semibold text-muted';
+        title.textContent = kpi.name || '—';
+        const sub = document.createElement('div');
+        sub.className = 'small text-muted';
+        sub.textContent = kpi.code || '';
+        info.appendChild(title);
+        info.appendChild(sub);
 
-            const btns = document.createElement('div');
-            btns.className = 'btn-group btn-group-sm';
-            btns.innerHTML = `
-                                                                <button type="button" class="btn btn-outline-success" onclick="unhideIndicator(this)">${rbText.unhide}</button>
-                                                            `;
+        const btns = document.createElement('div');
+        btns.className = 'btn-group btn-group-sm';
+        btns.innerHTML = `
+        <button type="button" class="btn btn-outline-success" onclick="unhideIndicator(this)">${rbText.unhide}</button>
+        `;
 
-            li.appendChild(info);
-            li.appendChild(btns);
-            return li;
+        li.appendChild(info);
+        li.appendChild(btns);
+        return li;
         }
 
         function moveArrangeUp(btn) {
-            const li = btn.closest('li');
-            const list = li.parentElement;
-            const prev = li.previousElementSibling;
-            if (prev) list.insertBefore(li, prev);
+        const li = btn.closest('li');
+        const list = li.parentElement;
+        const prev = li.previousElementSibling;
+        if (prev) list.insertBefore(li, prev);
         }
 
         function moveArrangeDown(btn) {
-            const li = btn.closest('li');
-            const list = li.parentElement;
-            const next = li.nextElementSibling;
-            if (next) list.insertBefore(next, li);
+        const li = btn.closest('li');
+        const list = li.parentElement;
+        const next = li.nextElementSibling;
+        if (next) list.insertBefore(next, li);
         }
 
         function removeFromSelected(btn) {
-            const li = btn.closest('li');
-            const kpi = findKpiById(li.dataset.kpiId);
-            if (!kpi) { li.remove(); return; }
-            const avail = $('arrangeAvailableList');
-            avail.appendChild(createAvailableLi(kpi));
-            li.remove();
+        const li = btn.closest('li');
+        const kpi = findKpiById(li.dataset.kpiId);
+        if (!kpi) { li.remove(); return; }
+        const avail = $('arrangeAvailableList');
+        avail.appendChild(createAvailableLi(kpi));
+        li.remove();
         }
 
         function addToSelected(btn) {
-            const li = btn.closest('li');
-            const kpi = findKpiById(li.dataset.kpiId);
-            if (!kpi) { li.remove(); return; }
-            const selected = $('arrangeSelectedList');
-            selected.appendChild(createSelectedLi(kpi));
-            li.remove();
+        const li = btn.closest('li');
+        const kpi = findKpiById(li.dataset.kpiId);
+        if (!kpi) { li.remove(); return; }
+        const selected = $('arrangeSelectedList');
+        selected.appendChild(createSelectedLi(kpi));
+        li.remove();
         }
 
         function hideFromSelected(btn) {
-            const li = btn.closest('li');
-            const kpi = findKpiById(li.dataset.kpiId);
-            if (!kpi) { li.remove(); return; }
-            const hidden = $('arrangeHiddenList');
-            hidden.appendChild(createHiddenLi(kpi));
-            li.remove();
+        const li = btn.closest('li');
+        const kpi = findKpiById(li.dataset.kpiId);
+        if (!kpi) { li.remove(); return; }
+        const hidden = $('arrangeHiddenList');
+        hidden.appendChild(createHiddenLi(kpi));
+        li.remove();
         }
 
         function hideFromAvailable(btn) {
-            const li = btn.closest('li');
-            const kpi = findKpiById(li.dataset.kpiId);
-            if (!kpi) { li.remove(); return; }
-            const hidden = $('arrangeHiddenList');
-            hidden.appendChild(createHiddenLi(kpi));
-            li.remove();
+        const li = btn.closest('li');
+        const kpi = findKpiById(li.dataset.kpiId);
+        if (!kpi) { li.remove(); return; }
+        const hidden = $('arrangeHiddenList');
+        hidden.appendChild(createHiddenLi(kpi));
+        li.remove();
         }
 
         function unhideIndicator(btn) {
-            const li = btn.closest('li');
-            const kpi = findKpiById(li.dataset.kpiId);
-            if (!kpi) { li.remove(); return; }
-            const available = $('arrangeAvailableList');
-            available.appendChild(createAvailableLi(kpi));
-            li.remove();
+        const li = btn.closest('li');
+        const kpi = findKpiById(li.dataset.kpiId);
+        if (!kpi) { li.remove(); return; }
+        const available = $('arrangeAvailableList');
+        available.appendChild(createAvailableLi(kpi));
+        li.remove();
         }
 
         function clearAllOrder() {
-            const selectedList = $('arrangeSelectedList');
-            const availableList = $('arrangeAvailableList');
+        const selectedList = $('arrangeSelectedList');
+        const availableList = $('arrangeAvailableList');
 
-            const items = qsa('li[data-kpi-id]', selectedList);
-            for (const li of items) {
-                const kpi = findKpiById(li.dataset.kpiId);
-                if (!kpi) continue;
-                availableList.appendChild(createAvailableLi(kpi));
-            }
-            selectedList.innerHTML = '';
+        const items = qsa('li[data-kpi-id]', selectedList);
+        for (const li of items) {
+        const kpi = findKpiById(li.dataset.kpiId);
+        if (!kpi) continue;
+        availableList.appendChild(createAvailableLi(kpi));
+        }
+        selectedList.innerHTML = '';
         }
 
         function openArrangeModal() {
-            if (!IS_ADMIN) return;
-            if (!redList || redList.length === 0) {
-                alert(rbText.noRedKpisToArrange);
-                return;
-            }
+        if (!IS_ADMIN) return;
+        if (!redList || redList.length === 0) {
+        alert(rbText.noRedKpisToArrange);
+        return;
+        }
 
-            const modalEl = $('arrangeModal');
-            arrangeModalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+        const modalEl = $('arrangeModal');
+        arrangeModalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
 
-            const hiddenList = $('arrangeHiddenList');
-            const selectedList = $('arrangeSelectedList');
-            const availableList = $('arrangeAvailableList');
+        const hiddenList = $('arrangeHiddenList');
+        const selectedList = $('arrangeSelectedList');
+        const availableList = $('arrangeAvailableList');
 
-            hiddenList.innerHTML = '';
-            selectedList.innerHTML = '';
-            availableList.innerHTML = '';
+        hiddenList.innerHTML = '';
+        selectedList.innerHTML = '';
+        availableList.innerHTML = '';
 
-            const currentOrderIds = deck
-                .filter(s => s.type === 'kpi')
-                .map(s => Number(s.kpiId));
-            const orderedSet = new Set(currentOrderIds);
-            const hiddenSet = new Set(
-                redList.filter(k => k.isHidden).map(k => Number(k.kpiId))
-            );
+        const currentOrderIds = deck
+        .filter(s => s.type === 'kpi')
+        .map(s => Number(s.kpiId));
+        const orderedSet = new Set(currentOrderIds);
+        const hiddenSet = new Set(
+        redList.filter(k => k.isHidden).map(k => Number(k.kpiId))
+        );
 
-            // Hidden
-            for (const k of redList) {
-                if (hiddenSet.has(Number(k.kpiId))) {
-                    hiddenList.appendChild(createHiddenLi(k));
-                }
-            }
+        // Hidden
+        for (const k of redList) {
+        if (hiddenSet.has(Number(k.kpiId))) {
+        hiddenList.appendChild(createHiddenLi(k));
+        }
+        }
 
-            // Selected (slideshow order)
-            for (const id of currentOrderIds) {
-                const k = findKpiById(id);
-                if (k && !hiddenSet.has(Number(k.kpiId))) {
-                    selectedList.appendChild(createSelectedLi(k));
-                }
-            }
+        // Selected (slideshow order)
+        for (const id of currentOrderIds) {
+        const k = findKpiById(id);
+        if (k && !hiddenSet.has(Number(k.kpiId))) {
+        selectedList.appendChild(createSelectedLi(k));
+        }
+        }
 
-            // Available
-            for (const k of redList) {
-                const numId = Number(k.kpiId);
-                if (!hiddenSet.has(numId) && !orderedSet.has(numId)) {
-                    availableList.appendChild(createAvailableLi(k));
-                }
-            }
+        // Available
+        for (const k of redList) {
+        const numId = Number(k.kpiId);
+        if (!hiddenSet.has(numId) && !orderedSet.has(numId)) {
+        availableList.appendChild(createAvailableLi(k));
+        }
+        }
 
-            arrangeModalInstance.show();
+        arrangeModalInstance.show();
         }
 
         async function saveArrangeOrder(ev) {
-            ev.preventDefault();
-            if (!IS_ADMIN) return;
+        ev.preventDefault();
+        if (!IS_ADMIN) return;
 
-            const selectedList = $('arrangeSelectedList');
-            const hiddenList = $('arrangeHiddenList');
+        const selectedList = $('arrangeSelectedList');
+        const hiddenList = $('arrangeHiddenList');
 
-            const selectedLis = qsa('li[data-kpi-id]', selectedList);
-            const hiddenLis = qsa('li[data-kpi-id]', hiddenList);
+        const selectedLis = qsa('li[data-kpi-id]', selectedList);
+        const hiddenLis = qsa('li[data-kpi-id]', hiddenList);
 
-            if (!selectedLis.length && !hiddenLis.length) {
-                if (!confirm(rbText.noKpisInSlideshowOrHiddenConfirm)) return;
-            }
+        if (!selectedLis.length && !hiddenLis.length) {
+        if (!confirm(rbText.noKpisInSlideshowOrHiddenConfirm)) return;
+        }
 
-            const fd = new FormData();
-            fd.append('__RequestVerificationToken', anti());
+        const fd = new FormData();
+        fd.append('__RequestVerificationToken', anti());
 
-            selectedLis.forEach(li => {
-                fd.append('orderedKpiIds', li.dataset.kpiId);
-            });
+        selectedLis.forEach(li => {
+        fd.append('orderedKpiIds', li.dataset.kpiId);
+        });
 
-            hiddenLis.forEach(li => {
-                fd.append('hiddenKpiIds', li.dataset.kpiId);
-            });
+        hiddenLis.forEach(li => {
+        fd.append('hiddenKpiIds', li.dataset.kpiId);
+        });
 
-            try {
-                const res = await fetch('@Url.Action("SaveOrder", "RedBoard")', {
-                    method: 'POST',
-                    body: fd,
-                    headers: { 'Accept': 'text/plain', 'X-Requested-With': 'XMLHttpRequest' }
-                });
-                if (!res.ok) throw 0;
-                await res.text();
-                if (arrangeModalInstance) arrangeModalInstance.hide();
-                await loadRedList();
-            } catch {
-                alert(rbText.failedToSaveArrangement);
-            }
+        try {
+        const res = await fetch('@Url.Action("SaveOrder", "RedBoard")', {
+        method: 'POST',
+        body: fd,
+        headers: { 'Accept': 'text/plain', 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        if (!res.ok) throw 0;
+        await res.text();
+        if (arrangeModalInstance) arrangeModalInstance.hide();
+        await loadRedList();
+        } catch {
+        alert(rbText.failedToSaveArrangement);
+        }
         }
 
         // ---------------------------
         // Boot
         // ---------------------------
-        document.addEventListener('DOMContentLoaded', () => loadRedList());
-        window.submitAddAction = submitAddAction;
+        document.addEventListener('DOMContentLoaded', async () => {
+        try {
+        await loadRedList();
+        } catch (err) {
+        console.error('RedBoard load failed:', err);
+        const empty = $('emptyMsg');
+        if (empty) {
+        empty.classList.remove('d-none');
+        empty.textContent = 'Failed to load RedBoard data.';
+        }
+        }
+        }); window.submitAddAction = submitAddAction;
         window.submitMoveDeadline = submitMoveDeadline;
         window.openAddAction = openAddAction;
         window.openMoveDeadline = openMoveDeadline;
@@ -982,20 +995,20 @@
         let isGeneralCreate = false;
 
         document.addEventListener('DOMContentLoaded', () => {
-            const btnGeneral = document.getElementById('btnAddGeneralAction');
-            if (btnGeneral) {
-                if (!IS_ADMIN) { btnGeneral.classList.add('d-none'); return; }
-                btnGeneral.addEventListener('click', () => {
-                    isGeneralCreate = true;
-                    $('af_kpiId').value = '';
-                    $('af_owner').value = '';
-                    $('af_description').value = '';
-                    $('af_due').value = '';
-                    $('af_status').value = 'todo';
-                    const m = new bootstrap.Modal(document.getElementById('addActionModal'));
-                    m.show();
-                });
-            }
+        const btnGeneral = document.getElementById('btnAddGeneralAction');
+        if (btnGeneral) {
+        if (!IS_ADMIN) { btnGeneral.classList.add('d-none'); return; }
+        btnGeneral.addEventListener('click', () => {
+        isGeneralCreate = true;
+        $('af_kpiId').value = '';
+        $('af_owner').value = '';
+        $('af_description').value = '';
+        $('af_due').value = '';
+        $('af_status').value = 'todo';
+        const m = new bootstrap.Modal(document.getElementById('addActionModal'));
+        m.show();
+        });
+        }
         });
     </script>
 }
@@ -1027,15 +1040,15 @@
                 <div class="d-flex align-items-center gap-2">
                     <span class="text-muted" id="slideCounter">0 / 0</span>
                     <span id="redCountBadge" class="badge rounded-pill text-bg-danger d-none px-3 py-2"
-                        title="@Localizer["RedKpis"]">0 KPIs need attention</span>
+                          title="@Localizer["RedKpis"]">0 KPIs need attention</span>
                     <button id="btnFirst" class="btn btn-outline-secondary" type="button" onclick="firstSlide()"
-                        title="@Localizer["GoToFirstSlide"]">⏮</button>
+                            title="@Localizer["GoToFirstSlide"]">⏮</button>
                     <button class="btn btn-outline-secondary" type="button" onclick="prevSlide()"
-                        title="@Localizer["Previous"]">◀</button>
+                            title="@Localizer["Previous"]">◀</button>
                     <button class="btn btn-outline-secondary" type="button" onclick="nextSlide()"
-                        title="@Localizer["Next"]">▶</button>
+                            title="@Localizer["Next"]">▶</button>
                     <button id="btnLast" class="btn btn-outline-secondary" type="button" onclick="lastSlide()"
-                        title="@Localizer["GoToLastSlide"]">⏭</button>
+                            title="@Localizer["GoToLastSlide"]">⏭</button>
                 </div>
             </div>
 
@@ -1069,22 +1082,28 @@
                                 <div>
                                     <h6 class="card-title text-secondary fw-bold mb-3">@Localizer["KpiDetails"]</h6>
                                     <p class="mb-2" style="font-size: larger;">
-                                        <strong>@Localizer["Kpi"]:</strong> <span id="m_title" class="text-dark">—</span>
+                                        <strong>@Localizer["Kpi"]:</strong> <span id="m_title"
+                                                                                  class="text-dark">—</span>
                                     </p>
                                     <p class="mb-2" style="font-size: larger;">
-                                        <strong>@Localizer["Code"]:</strong> <span id="m_code" class="text-dark">—</span>
+                                        <strong>@Localizer["Code"]:</strong> <span id="m_code"
+                                                                                   class="text-dark">—</span>
                                     </p>
                                     <p class="mb-2" style="font-size: larger;">
-                                        <strong>@Localizer["Owner"]:</strong> <span id="m_owner" class="text-dark">—</span>
+                                        <strong>@Localizer["Owner"]:</strong> <span id="m_owner"
+                                                                                    class="text-dark">—</span>
                                     </p>
                                     <p class="mb-2" style="font-size: larger;">
-                                        <strong>@Localizer["Editor"]:</strong> <span id="m_editor" class="text-dark">—</span>
+                                        <strong>@Localizer["Editor"]:</strong> <span id="m_editor"
+                                                                                     class="text-dark">—</span>
                                     </p>
                                     <p class="mb-2" style="font-size: larger;">
-                                        <strong>@Localizer["Frequency"]:</strong> <span id="m_frequency" class="text-dark">—</span>
+                                        <strong>@Localizer["Frequency"]:</strong> <span id="m_frequency"
+                                                                                        class="text-dark">—</span>
                                     </p>
                                     <p class="mb-2" style="font-size: larger;">
-                                        <strong>@Localizer["Unit"]:</strong> <span id="m_unit" class="text-dark">—</span>
+                                        <strong>@Localizer["Unit"]:</strong> <span id="m_unit"
+                                                                                   class="text-dark">—</span>
                                     </p>
                                 </div>
                                 <div class="mt-auto">
@@ -1098,7 +1117,7 @@
                                     </div>
                                     <div class="text-center mt-3">
                                         <button id="btnAddAction" class="btn btn-primary@(isAdmin ? "" : " d-none")"
-                                            type="button" onclick="openAddAction()" disabled>
+                                                type="button" onclick="openAddAction()" disabled>
                                             ➕ @Localizer["AddAction"]
                                         </button>
                                     </div>
@@ -1135,7 +1154,7 @@
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <h5 class="mb-0">@Localizer["Decisions"]</h5>
                         <button id="btnAddGeneralAction" type="button"
-                            class="btn btn-primary btn-sm@(isAdmin ? "" : " d-none")">
+                                class="btn btn-primary btn-sm@(isAdmin ? "" : " d-none")">
                             @Localizer["AddGeneralAction"]
                         </button>
                     </div>
@@ -1152,7 +1171,8 @@
             <div class="modal-content rounded-3">
                 <div class="modal-header">
                     <h5 class="modal-title" id="addActionLabel">@Localizer["AddAction"]</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@Localizer["Close"]"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            aria-label="@Localizer["Close"]"></button>
                 </div>
                 <form id="addActionForm" method="post" onsubmit="submitAddAction(event)">
                     @Html.AntiForgeryToken()
@@ -1163,7 +1183,7 @@
                             <select class="form-select" name="Owner" id="af_owner" required>
                                 <option value="">@Localizer["Select"]</option>
                                 @foreach (var e in employees ??
-                                                                Enumerable.Empty<KPIMonitor.ViewModels.EmployeePickDto>())
+                                                                                                                                Enumerable.Empty<KPIMonitor.ViewModels.EmployeePickDto>())
                                 {
                                     var display = e.Label ?? "";
                                     var idx = display.IndexOf('(');
@@ -1180,7 +1200,7 @@
                         <div class="mb-3">
                             <label class="form-label">@Localizer["Action"]</label>
                             <textarea class="form-control" name="Description" id="af_description" rows="3"
-                                required></textarea>
+                                      required></textarea>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">@Localizer["DueDate"]</label>
@@ -1197,7 +1217,8 @@
                         <input type="hidden" name="ExtensionCount" value="0" />
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@Localizer["Cancel"]</button>
+                        <button type="button" class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">@Localizer["Cancel"]</button>
                         <button type="submit" class="btn btn-primary">@Localizer["SaveAction"]</button>
                     </div>
                 </form>
@@ -1210,7 +1231,8 @@
             <div class="modal-content rounded-3">
                 <div class="modal-header">
                     <h5 class="modal-title" id="moveDeadlineLabel">@Localizer["MoveDeadline"]</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@Localizer["Close"]"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            aria-label="@Localizer["Close"]"></button>
                 </div>
                 <form id="moveDeadlineForm" method="post" onsubmit="submitMoveDeadline(event)">
                     @Html.AntiForgeryToken()
@@ -1227,7 +1249,8 @@
                         <div class="text-muted small">@Localizer["MaxThreeExtensionsEnforced"]</div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@Localizer["Cancel"]</button>
+                        <button type="button" class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">@Localizer["Cancel"]</button>
                         <button type="submit" class="btn btn-primary">@Localizer["Move"]</button>
                     </div>
                 </form>
@@ -1241,7 +1264,8 @@
             <div class="modal-content rounded-3">
                 <div class="modal-header">
                     <h5 class="modal-title" id="arrangeModalLabel">@Localizer["ArrangeRedIndicators"]</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@Localizer["Close"]"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            aria-label="@Localizer["Close"]"></button>
                 </div>
                 <form id="arrangeForm" onsubmit="saveArrangeOrder(event)">
                     @Html.AntiForgeryToken()
@@ -1259,7 +1283,7 @@
                                 <div class="d-flex justify-content-between align-items-center">
                                     <h6 class="mb-0">@Localizer["AvailableRedKpis"]</h6>
                                     <button type="button" class="btn btn-outline-secondary btn-sm"
-                                        onclick="clearAllOrder()">
+                                            onclick="clearAllOrder()">
                                         @Localizer["ClearOrder"]
                                     </button>
                                 </div>
@@ -1275,7 +1299,8 @@
                     </div>
                     <div class="modal-footer">
                         <span class="text-muted small me-auto">@Localizer["ArrangeChangesAffectOnlyRedBoard"]</span>
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@Localizer["Cancel"]</button>
+                        <button type="button" class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">@Localizer["Cancel"]</button>
                         <button type="submit" class="btn btn-primary">@Localizer["SaveArrangement"]</button>
                     </div>
                 </form>

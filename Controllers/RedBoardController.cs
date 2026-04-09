@@ -379,7 +379,8 @@ namespace KPIMonitor.Controllers
                 ExtensionCount = 0,
                 StatusCode = "todo"
             };
-            ViewBag.KpiTitle = $"{kpi.KpiCode} — {LocalizationHelper.Get(kpi.KpiNameAr, kpi.KpiName ?? "")}"; return PartialView("_ActionForm", vm);
+            ViewBag.KpiTitle = $"{kpi.KpiCode} — {LocalizationHelper.Get(kpi.KpiNameAr, kpi.KpiName ?? "")}";
+            return PartialView("_ActionForm", vm);
         }
 
         [HttpPost]
