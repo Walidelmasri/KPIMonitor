@@ -90,20 +90,36 @@ namespace KPIMonitor.Controllers
                 select new
                 {
                     lw.KpiId,
-                    KpiName = LocalizationHelper.Get(k.KpiNameAr, k.KpiName ?? ""),
+                    KpiName = k.KpiName,
+                    KpiNameAr = k.KpiNameAr,
                     KpiCode = k.KpiCode,
                     lw.Priority,
                     PillarCode = p != null ? p.PillarCode : "",
-                    PillarName = p != null ? LocalizationHelper.Get(p.PillarNameAr, p.PillarName ?? "") : "",
+                    PillarName = p != null ? p.PillarName : "",
+                    PillarNameAr = p != null ? p.PillarNameAr : "",
                     ObjectiveCode = o != null ? o.ObjectiveCode : "",
-                    ObjectiveName = o != null ? LocalizationHelper.Get(o.ObjectiveNameAr, o.ObjectiveName ?? "") : ""
+                    ObjectiveName = o != null ? o.ObjectiveName : "",
+                    ObjectiveNameAr = o != null ? o.ObjectiveNameAr : ""
                 };
 
             // 1) Load all current red KPIs (no ordering yet)
-            var redList = await redLatest
+            var redListRaw = await redLatest
                 .AsNoTracking()
                 .ToListAsync();
 
+            var redList = redListRaw
+                .Select(x => new
+                {
+                    x.KpiId,
+                    KpiName = LocalizationHelper.Get(x.KpiNameAr, x.KpiName ?? ""),
+                    x.KpiCode,
+                    x.Priority,
+                    x.PillarCode,
+                    PillarName = LocalizationHelper.Get(x.PillarNameAr, x.PillarName ?? ""),
+                    x.ObjectiveCode,
+                    ObjectiveName = LocalizationHelper.Get(x.ObjectiveNameAr, x.ObjectiveName ?? "")
+                })
+                .ToList();
             // 2) Load any saved manual order (with hidden flag)
             var orders = await _db.RedBoardOrders
                 .AsNoTracking()
