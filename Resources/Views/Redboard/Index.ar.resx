@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="RedBoard" xml:space="preserve">
+    <value>لوحة المؤشرات الحرجة</value>
+  </data>
+  <data name="TargetAchieved" xml:space="preserve">
+    <value>تم تحقيق الهدف</value>
+  </data>
+  <data name="OnForecast" xml:space="preserve">
+    <value>على المسار</value>
+  </data>
+  <data name="TargetMissed" xml:space="preserve">
+    <value>لم يتحقق الهدف</value>
+  </data>
+  <data name="DataMissingNoChanges" xml:space="preserve">
+    <value>لا توجد بيانات (بدون تغييرات)</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>جاري التحميل…</value>
+  </data>
+  <data name="SelectKpiToViewComments" xml:space="preserve">
+    <value>اختر مؤشراً لعرض الملاحظات.</value>
+  </data>
+  <data name="FailedToLoadComment" xml:space="preserve">
+    <value>فشل تحميل الملاحظة.</value>
+  </data>
+  <data name="FailedToLoadActions" xml:space="preserve">
+    <value>فشل تحميل الإجراءات.</value>
+  </data>
+  <data name="FailedToUpdateStatus" xml:space="preserve">
+    <value>فشل تحديث الحالة.</value>
+  </data>
+  <data name="SaveFailed" xml:space="preserve">
+    <value>فشل الحفظ.</value>
+  </data>
+  <data name="FailedToMoveDeadline" xml:space="preserve">
+    <value>فشل تعديل الموعد النهائي (تحقق من الحد الأقصى للتمديدات وهو 3).</value>
+  </data>
+  <data name="FailedToLoadDecisions" xml:space="preserve">
+    <value>فشل تحميل القرارات.</value>
+  </data>
+  <data name="NoRedKpisToArrange" xml:space="preserve">
+    <value>لا توجد مؤشرات حمراء لترتيبها.</value>
+  </data>
+  <data name="NoKpisInSlideshowOrHiddenConfirm" xml:space="preserve">
+    <value>لا توجد مؤشرات في العرض أو في المخفي. هل تريد المتابعة؟</value>
+  </data>
+  <data name="FailedToSaveArrangement" xml:space="preserve">
+    <value>فشل حفظ الترتيب.</value>
+  </data>
+  <data name="BadgeSingular" xml:space="preserve">
+    <value>{0} مؤشر يحتاج إلى انتباه</value>
+  </data>
+  <data name="BadgePlural" xml:space="preserve">
+    <value>{0} مؤشرات تحتاج إلى انتباه</value>
+  </data>
+  <data name="AdminsOnly" xml:space="preserve">
+    <value>للمسؤولين فقط</value>
+  </data>
+  <data name="Remove" xml:space="preserve">
+    <value>إزالة</value>
+  </data>
+  <data name="Hide" xml:space="preserve">
+    <value>إخفاء</value>
+  </data>
+  <data name="Add" xml:space="preserve">
+    <value>إضافة</value>
+  </data>
+  <data name="Unhide" xml:space="preserve">
+    <value>إظهار</value>
+  </data>
+
+  <data name="NoKpisMarkedRed" xml:space="preserve">
+    <value>لا توجد مؤشرات حالياً بحالة انحراف (أحمر).</value>
+  </data>
+  <data name="RedKpis" xml:space="preserve">
+    <value>المؤشرات الحمراء</value>
+  </data>
+  <data name="GoToFirstSlide" xml:space="preserve">
+    <value>الانتقال إلى الشريحة الأولى</value>
+  </data>
+  <data name="GoToLastSlide" xml:space="preserve">
+    <value>الانتقال إلى الشريحة الأخيرة</value>
+  </data>
+  <data name="Previous" xml:space="preserve">
+    <value>السابق</value>
+  </data>
+  <data name="Next" xml:space="preserve">
+    <value>التالي</value>
+  </data>
+  <data name="ArrangeIndicators" xml:space="preserve">
+    <value>ترتيب المؤشرات</value>
+  </data>
+  <data name="Priority" xml:space="preserve">
+    <value>الأولوية</value>
+  </data>
+  <data name="UseArrowsToViewKpis" xml:space="preserve">
+    <value>استخدم الأسهم لعرض المؤشرات.</value>
+  </data>
+  <data name="KpiChart" xml:space="preserve">
+    <value>مخطط المؤشر</value>
+  </data>
+  <data name="KpiDetails" xml:space="preserve">
+    <value>تفاصيل المؤشر</value>
+  </data>
+  <data name="Kpi" xml:space="preserve">
+    <value>المؤشر</value>
+  </data>
+  <data name="Code" xml:space="preserve">
+    <value>الرمز</value>
+  </data>
+  <data name="Owner" xml:space="preserve">
+    <value>المسؤول</value>
+  </data>
+  <data name="Editor" xml:space="preserve">
+    <value>المحرر</value>
+  </data>
+  <data name="Frequency" xml:space="preserve">
+    <value>التكرار</value>
+  </data>
+  <data name="Unit" xml:space="preserve">
+    <value>الوحدة</value>
+  </data>
+  <data name="Status" xml:space="preserve">
+    <value>الحالة</value>
+  </data>
+  <data name="AddAction" xml:space="preserve">
+    <value>إضافة إجراء</value>
+  </data>
+  <data name="Comments" xml:space="preserve">
+    <value>الملاحظات</value>
+  </data>
+  <data name="ActionsForThisKpi" xml:space="preserve">
+    <value>الإجراءات لهذا المؤشر</value>
+  </data>
+  <data name="Decisions" xml:space="preserve">
+    <value>القرارات</value>
+  </data>
+  <data name="AddGeneralAction" xml:space="preserve">
+    <value>إضافة إجراء عام</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>إغلاق</value>
+  </data>
+  <data name="Select" xml:space="preserve">
+    <value>— اختر —</value>
+  </data>
+  <data name="AssignedAt" xml:space="preserve">
+    <value>تاريخ الإسناد</value>
+  </data>
+  <data name="Action" xml:space="preserve">
+    <value>الإجراء</value>
+  </data>
+  <data name="DueDate" xml:space="preserve">
+    <value>تاريخ الاستحقاق</value>
+  </data>
+  <data name="ToDo" xml:space="preserve">
+    <value>للقيام به</value>
+  </data>
+  <data name="InProgress" xml:space="preserve">
+    <value>قيد التنفيذ</value>
+  </data>
+  <data name="Done" xml:space="preserve">
+    <value>مكتمل</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>إلغاء</value>
+  </data>
+  <data name="SaveAction" xml:space="preserve">
+    <value>حفظ الإجراء</value>
+  </data>
+  <data name="MoveDeadline" xml:space="preserve">
+    <value>تعديل الموعد النهائي</value>
+  </data>
+  <data name="NewDueDate" xml:space="preserve">
+    <value>الموعد النهائي الجديد</value>
+  </data>
+  <data name="ReasonOptional" xml:space="preserve">
+    <value>السبب (اختياري)</value>
+  </data>
+  <data name="MaxThreeExtensionsEnforced" xml:space="preserve">
+    <value>الحد الأقصى 3 تمديدات.</value>
+  </data>
+  <data name="Move" xml:space="preserve">
+    <value>تعديل</value>
+  </data>
+  <data name="ArrangeRedIndicators" xml:space="preserve">
+    <value>ترتيب المؤشرات الحمراء</value>
+  </data>
+  <data name="ArrangeIndicatorsHelp" xml:space="preserve">
+    <value>استخدم إخفاء لاستبعاد المؤشرات من العرض بالكامل. واستخدم مسح الترتيب لإعادة كل العناصر من العرض إلى القائمة المتاحة.</value>
+  </data>
+  <data name="HiddenWontAppear" xml:space="preserve">
+    <value>مخفية (لن تظهر)</value>
+  </data>
+  <data name="AvailableRedKpis" xml:space="preserve">
+    <value>المؤشرات الحمراء المتاحة</value>
+  </data>
+  <data name="ClearOrder" xml:space="preserve">
+    <value>مسح الترتيب</value>
+  </data>
+  <data name="SlideshowOrder" xml:space="preserve">
+    <value>ترتيب العرض</value>
+  </data>
+  <data name="ArrangeChangesAffectOnlyRedBoard" xml:space="preserve">
+    <value>تنطبق التغييرات على عرض RedBoard فقط.</value>
+  </data>
+  <data name="SaveArrangement" xml:space="preserve">
+    <value>حفظ الترتيب</value>
+  </data>
+</root>

@@ -5,7 +5,7 @@ using KPIMonitor.Models;
 using System.Text;
 using System.Net;
 using System.Linq;
-
+using KPIMonitor.Helpers;
 
 namespace KPIMonitor.Controllers
 {
@@ -90,13 +90,13 @@ namespace KPIMonitor.Controllers
                 select new
                 {
                     lw.KpiId,
-                    KpiName = k.KpiName,
+                    KpiName = LocalizationHelper.Get(k.KpiNameAr, k.KpiName ?? ""),
                     KpiCode = k.KpiCode,
                     lw.Priority,
                     PillarCode = p != null ? p.PillarCode : "",
-                    PillarName = p != null ? p.PillarName : "",
+                    PillarName = p != null ? LocalizationHelper.Get(p.PillarNameAr, p.PillarName ?? "") : "",
                     ObjectiveCode = o != null ? o.ObjectiveCode : "",
-                    ObjectiveName = o != null ? o.ObjectiveName : ""
+                    ObjectiveName = o != null ? LocalizationHelper.Get(o.ObjectiveNameAr, o.ObjectiveName ?? "") : ""
                 };
 
             // 1) Load all current red KPIs (no ordering yet)
@@ -332,7 +332,7 @@ namespace KPIMonitor.Controllers
             {
                 planId = plan.KpiYearPlanId, // THIS (so frontend can fetch the comment)
 
-                title = kpi?.KpiName ?? "—",
+                title = kpi != null ? LocalizationHelper.Get(kpi.KpiNameAr, kpi.KpiName ?? "") : "—",
                 code = kpi?.KpiCode ?? "—",
                 owner = plan.Owner ?? "—",
                 editor = plan.Editor ?? "—",
@@ -342,7 +342,6 @@ namespace KPIMonitor.Controllers
                 statusLabel = status.label,
                 statusColor = status.color
             };
-
             return Json(new
             {
                 meta,
@@ -364,8 +363,7 @@ namespace KPIMonitor.Controllers
                 ExtensionCount = 0,
                 StatusCode = "todo"
             };
-            ViewBag.KpiTitle = $"{kpi.KpiCode} — {kpi.KpiName}";
-            return PartialView("_ActionForm", vm);
+            ViewBag.KpiTitle = $"{kpi.KpiCode} — {LocalizationHelper.Get(kpi.KpiNameAr, kpi.KpiName ?? "")}"; return PartialView("_ActionForm", vm);
         }
 
         [HttpPost]
@@ -546,9 +544,9 @@ namespace KPIMonitor.Controllers
                         else
                         {
                             var kpiCode = $"{H(a.Kpi?.Pillar?.PillarCode ?? "")}.{H(a.Kpi?.Objective?.ObjectiveCode ?? "")} {H(a.Kpi?.KpiCode ?? "")}";
-                            var kpiName = H(a.Kpi?.KpiName ?? "-");
-                            var pillarName = H(a.Kpi?.Pillar?.PillarName ?? "");
-                            var objectiveName = H(a.Kpi?.Objective?.ObjectiveName ?? "");
+                            var kpiName = H(a.Kpi != null ? LocalizationHelper.Get(a.Kpi.KpiNameAr, a.Kpi.KpiName ?? "") : "-");
+                            var pillarName = H(a.Kpi?.Pillar != null ? LocalizationHelper.Get(a.Kpi.Pillar.PillarNameAr, a.Kpi.Pillar.PillarName ?? "") : "");
+                            var objectiveName = H(a.Kpi?.Objective != null ? LocalizationHelper.Get(a.Kpi.Objective.ObjectiveNameAr, a.Kpi.Objective.ObjectiveName ?? "") : "");
 
                             infoBlock = @$"
       <div class='small text-muted mt-1'>

@@ -1,8 +1,9 @@
 @using KPIMonitor.Services
 @inject IAdminAuthorizer AdminAuthorizer
 @inject IEmployeeDirectory EmpDir
+@inject Microsoft.AspNetCore.Mvc.Localization.IViewLocalizer Localizer
 @{
-    ViewData["Title"] = "RedBoard";
+    ViewData["Title"] = Localizer["RedBoard"];
     var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User);
 
     // EmployeePickDto => EmpId, Label (same as ActionPlans page)
@@ -37,6 +38,31 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <script>
+        const rbText = {
+            targetAchieved: '@Localizer["TargetAchieved"]',
+            onForecast: '@Localizer["OnForecast"]',
+            targetMissed: '@Localizer["TargetMissed"]',
+            dataMissingNoChanges: '@Localizer["DataMissingNoChanges"]',
+            loading: '@Localizer["Loading"]',
+            selectKpiToViewComments: '@Localizer["SelectKpiToViewComments"]',
+            failedToLoadComment: '@Localizer["FailedToLoadComment"]',
+            failedToLoadActions: '@Localizer["FailedToLoadActions"]',
+            failedToUpdateStatus: '@Localizer["FailedToUpdateStatus"]',
+            saveFailed: '@Localizer["SaveFailed"]',
+            failedToMoveDeadline: '@Localizer["FailedToMoveDeadline"]',
+            failedToLoadDecisions: '@Localizer["FailedToLoadDecisions"]',
+            noRedKpisToArrange: '@Localizer["NoRedKpisToArrange"]',
+            noKpisInSlideshowOrHiddenConfirm: '@Localizer["NoKpisInSlideshowOrHiddenConfirm"]',
+            failedToSaveArrangement: '@Localizer["FailedToSaveArrangement"]',
+            badgeSingular: '@Localizer["BadgeSingular"]',
+            badgePlural: '@Localizer["BadgePlural"]',
+            adminsOnly: '@Localizer["AdminsOnly"]',
+            remove: '@Localizer["Remove"]',
+            hide: '@Localizer["Hide"]',
+            add: '@Localizer["Add"]',
+            unhide: '@Localizer["Unhide"]'
+        };
+
         // ---------------------------
         // Admin flag + Helpers
         // ---------------------------
@@ -53,19 +79,19 @@
                 case 'green':
                 case 'conforme':
                 case 'ok':
-                    return 'Target Achieved';
+                    return rbText.targetAchieved;
                 case 'orange':
                 case 'rattrapage':
                 case 'catching up':
-                    return 'On Forecast';
+                    return rbText.onForecast;
                 case 'red':
                 case 'ecart':
                 case 'needs attention':
-                    return 'Target Missed';
+                    return rbText.targetMissed;
                 case 'blue':
                 case 'attente':
                 case 'data missing':
-                    return 'Data Missing (No Changes)';
+                    return rbText.dataMissingNoChanges;
                 default:
                     return '—';
             }
@@ -89,7 +115,7 @@
                 body: fd,
                 headers: { 'Accept': 'text/html', 'X-Requested-With': 'XMLHttpRequest' }
             });
-            if (!res.ok) throw new Error('Save failed');
+            if (!res.ok) throw new Error(rbText.saveFailed);
             return res.text();
         }
 
@@ -111,7 +137,7 @@
             root.querySelectorAll('select[data-action="set-status"]').forEach(sel => {
                 sel.disabled = true;
                 sel.classList.add('disabled');
-                sel.title = 'Admins only';
+                sel.title = rbText.adminsOnly;
             });
 
             root.querySelectorAll('.btn-group, .ap-actions, .card-actions').forEach(group => {
@@ -135,7 +161,6 @@
             // full number, with thousands separators (e.g. 1,234,567)
             return n.toLocaleString();
         }
-
 
         // === SmartValueLabels plugin ===
         const SmartValueLabels = {
@@ -270,7 +295,9 @@
             const badge = $('redCountBadge');
             if (badge) {
                 const n = Array.isArray(redList) ? redList.length : 0;
-                badge.textContent = `${n} KPI${n === 1 ? '' : 's'} need attention`;
+                badge.textContent = n === 1
+                    ? rbText.badgeSingular.replace('{0}', n)
+                    : rbText.badgePlural.replace('{0}', n);
                 badge.classList.toggle('d-none', n === 0);
             }
 
@@ -311,11 +338,11 @@
             if (!el) return;
 
             if (!planId) {
-                el.textContent = 'Select a KPI to view comments.';
+                el.textContent = rbText.selectKpiToViewComments;
                 return;
             }
 
-            el.textContent = 'Loading…';
+            el.textContent = rbText.loading;
             try {
                 // This endpoint already exists in HomeController (used in Dashboard)
                 const url = '@Url.Action("GetYearPlanComment", "Home")' + '?planId=' + encodeURIComponent(planId);
@@ -327,7 +354,7 @@
                 const text = (data?.text ?? '').toString();
                 el.textContent = text.trim() ? text : '—';
             } catch {
-                el.textContent = 'Failed to load comment.';
+                el.textContent = rbText.failedToLoadComment;
             }
         }
 
@@ -553,13 +580,13 @@
         // Actions Block (HTML fetch)
         // ---------------------------
         async function loadActionsHtml(kpiId) {
-            $('actionsList').innerHTML = "<div class='text-muted small'>Loading…</div>";
+            $('actionsList').innerHTML = "<div class='text-muted small'>" + rbText.loading + "</div>";
             try {
                 const html = await getHTML('@Url.Action("ActionsListHtml", "RedBoard")?kpiId=' + encodeURIComponent(kpiId));
                 $('actionsList').innerHTML = html;
                 stripAdminControlsInActions();
             } catch {
-                $('actionsList').innerHTML = "<div class='text-danger small'>Failed to load actions.</div>";
+                $('actionsList').innerHTML = "<div class='text-danger small'>" + rbText.failedToLoadActions + "</div>";
             }
         }
 
@@ -596,7 +623,7 @@
                 });
                 if (!res.ok) throw 0;
                 await loadActionsHtml(currentKpiId);
-            } catch { alert('Failed to update status.'); }
+            } catch { alert(rbText.failedToUpdateStatus); }
         });
 
         // ---------------------------
@@ -627,7 +654,7 @@
                 isGeneralCreate = false;
                 await loadActionsHtml(currentKpiId);
             } catch {
-                alert('Save failed.');
+                alert(rbText.saveFailed);
             }
         }
 
@@ -651,7 +678,7 @@
                 bootstrap.Modal.getInstance(document.getElementById('moveDeadlineModal')).hide();
                 await loadActionsHtml(currentKpiId);
             } catch {
-                alert('Failed to move deadline (check max 3 extensions).');
+                alert(rbText.failedToMoveDeadline);
             }
         }
 
@@ -661,7 +688,7 @@
         async function showDecisions() {
             if (!runKpiIds.length) return;
             $('decisionsWrap').classList.remove('d-none');
-            $('decisionsBody').innerHTML = "<div class='text-muted small'>Loading…</div>";
+            $('decisionsBody').innerHTML = "<div class='text-muted small'>" + rbText.loading + "</div>";
             try {
                 const res = await fetch('@Url.Action("DecisionsBoardHtml", "RedBoard")', {
                     method: 'POST',
@@ -677,7 +704,7 @@
                 $('decisionsWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
                 stripAdminControlsInActions();
             } catch {
-                $('decisionsBody').innerHTML = "<div class='text-danger small'>Failed to load decisions.</div>";
+                $('decisionsBody').innerHTML = "<div class='text-danger small'>" + rbText.failedToLoadDecisions + "</div>";
             }
         }
 
@@ -712,8 +739,8 @@
             btns.innerHTML = `
                                                                 <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeUp(this)">↑</button>
                                                                 <button type="button" class="btn btn-outline-secondary" onclick="moveArrangeDown(this)">↓</button>
-                                                                <button type="button" class="btn btn-outline-danger" onclick="removeFromSelected(this)">✕</button>
-                                                                <button type="button" class="btn btn-outline-warning" onclick="hideFromSelected(this)">Hide</button>
+                                                                <button type="button" class="btn btn-outline-danger" onclick="removeFromSelected(this)">${rbText.remove}</button>
+                                                                <button type="button" class="btn btn-outline-warning" onclick="hideFromSelected(this)">${rbText.hide}</button>
                                                             `;
 
             li.appendChild(info);
@@ -740,8 +767,8 @@
             const btns = document.createElement('div');
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
-                                                                <button type="button" class="btn btn-outline-primary" onclick="addToSelected(this)">Add</button>
-                                                                <button type="button" class="btn btn-outline-warning" onclick="hideFromAvailable(this)">Hide</button>
+                                                                <button type="button" class="btn btn-outline-primary" onclick="addToSelected(this)">${rbText.add}</button>
+                                                                <button type="button" class="btn btn-outline-warning" onclick="hideFromAvailable(this)">${rbText.hide}</button>
                                                             `;
 
             li.appendChild(info);
@@ -768,7 +795,7 @@
             const btns = document.createElement('div');
             btns.className = 'btn-group btn-group-sm';
             btns.innerHTML = `
-                                                                <button type="button" class="btn btn-outline-success" onclick="unhideIndicator(this)">Unhide</button>
+                                                                <button type="button" class="btn btn-outline-success" onclick="unhideIndicator(this)">${rbText.unhide}</button>
                                                             `;
 
             li.appendChild(info);
@@ -851,7 +878,7 @@
         function openArrangeModal() {
             if (!IS_ADMIN) return;
             if (!redList || redList.length === 0) {
-                alert('No red KPIs to arrange.');
+                alert(rbText.noRedKpisToArrange);
                 return;
             }
 
@@ -911,7 +938,7 @@
             const hiddenLis = qsa('li[data-kpi-id]', hiddenList);
 
             if (!selectedLis.length && !hiddenLis.length) {
-                if (!confirm('You have no KPIs in the slideshow or hidden. Continue?')) return;
+                if (!confirm(rbText.noKpisInSlideshowOrHiddenConfirm)) return;
             }
 
             const fd = new FormData();
@@ -936,7 +963,7 @@
                 if (arrangeModalInstance) arrangeModalInstance.hide();
                 await loadRedList();
             } catch {
-                alert('Failed to save arrangement.');
+                alert(rbText.failedToSaveArrangement);
             }
         }
 
@@ -977,7 +1004,7 @@
     @section PageHeader {
         <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
             <div class="page-hero-content">
-                <h1 class="page-title">RedBoard</h1>
+                <h1 class="page-title">@Localizer["RedBoard"]</h1>
             </div>
         </div>
     }
@@ -987,7 +1014,7 @@
         </form>
 
         <div id="emptyMsg" class="alert alert-secondary rounded-4 d-none">
-            No KPIs are currently marked <strong>Écart (red)</strong>.
+            @Localizer["NoKpisMarkedRed"]
         </div>
 
         <div id="slideWrap" class="d-none">
@@ -1000,13 +1027,15 @@
                 <div class="d-flex align-items-center gap-2">
                     <span class="text-muted" id="slideCounter">0 / 0</span>
                     <span id="redCountBadge" class="badge rounded-pill text-bg-danger d-none px-3 py-2"
-                        title="Red KPIs">0 KPIs need attention</span>
+                        title="@Localizer["RedKpis"]">0 KPIs need attention</span>
                     <button id="btnFirst" class="btn btn-outline-secondary" type="button" onclick="firstSlide()"
-                        title="Go to first slide">⏮</button>
-                    <button class="btn btn-outline-secondary" type="button" onclick="prevSlide()">◀</button>
-                    <button class="btn btn-outline-secondary" type="button" onclick="nextSlide()">▶</button>
+                        title="@Localizer["GoToFirstSlide"]">⏮</button>
+                    <button class="btn btn-outline-secondary" type="button" onclick="prevSlide()"
+                        title="@Localizer["Previous"]">◀</button>
+                    <button class="btn btn-outline-secondary" type="button" onclick="nextSlide()"
+                        title="@Localizer["Next"]">▶</button>
                     <button id="btnLast" class="btn btn-outline-secondary" type="button" onclick="lastSlide()"
-                        title="Go to last slide">⏭</button>
+                        title="@Localizer["GoToLastSlide"]">⏭</button>
                 </div>
             </div>
 
@@ -1014,16 +1043,16 @@
             {
                 <div class="d-flex justify-content-end mb-3">
                     <button type="button" class="btn btn-outline-primary btn-sm" onclick="openArrangeModal()">
-                        Arrange indicators
+                        @Localizer["ArrangeIndicators"]
                     </button>
                 </div>
             }
 
             <div id="titleSlide" class="text-center py-5 d-none">
                 <div class="bg-white border rounded shadow-sm p-5">
-                    <div class="display-4 fw-bold mb-3">Priority</div>
+                    <div class="display-4 fw-bold mb-3">@Localizer["Priority"]</div>
                     <div class="display-1 fw-bolder" id="titlePriority"></div>
-                    <div class="lead text-muted mt-3">Use the arrows to view KPIs.</div>
+                    <div class="lead text-muted mt-3">@Localizer["UseArrowsToViewKpis"]</div>
                 </div>
             </div>
 
@@ -1031,46 +1060,46 @@
                 <div class="row g-4 mb-4">
                     <div class="col-md-9">
                         <div class="bg-white border rounded shadow-sm p-3 alert-tint" style="height:550px;">
-                            <canvas id="rbChart" role="img" aria-label="KPI Chart"></canvas>
+                            <canvas id="rbChart" role="img" aria-label="@Localizer["KpiChart"]"></canvas>
                         </div>
                     </div>
                     <div class="col-md-3 d-flex">
                         <div class="card shadow-sm rounded-3 w-100">
                             <div class="card-body d-flex flex-column justify-content-between h-100">
                                 <div>
-                                    <h6 class="card-title text-secondary fw-bold mb-3">KPI Details</h6>
+                                    <h6 class="card-title text-secondary fw-bold mb-3">@Localizer["KpiDetails"]</h6>
                                     <p class="mb-2" style="font-size: larger;">
-                                        <strong>KPI:</strong> <span id="m_title" class="text-dark">—</span>
+                                        <strong>@Localizer["Kpi"]:</strong> <span id="m_title" class="text-dark">—</span>
                                     </p>
                                     <p class="mb-2" style="font-size: larger;">
-                                        <strong>Code:</strong> <span id="m_code" class="text-dark">—</span>
+                                        <strong>@Localizer["Code"]:</strong> <span id="m_code" class="text-dark">—</span>
                                     </p>
                                     <p class="mb-2" style="font-size: larger;">
-                                        <strong>Owner:</strong> <span id="m_owner" class="text-dark">—</span>
+                                        <strong>@Localizer["Owner"]:</strong> <span id="m_owner" class="text-dark">—</span>
                                     </p>
                                     <p class="mb-2" style="font-size: larger;">
-                                        <strong>Editor:</strong> <span id="m_editor" class="text-dark">—</span>
+                                        <strong>@Localizer["Editor"]:</strong> <span id="m_editor" class="text-dark">—</span>
                                     </p>
                                     <p class="mb-2" style="font-size: larger;">
-                                        <strong>Frequency:</strong> <span id="m_frequency" class="text-dark">—</span>
+                                        <strong>@Localizer["Frequency"]:</strong> <span id="m_frequency" class="text-dark">—</span>
                                     </p>
                                     <p class="mb-2" style="font-size: larger;">
-                                        <strong>Unit:</strong> <span id="m_unit" class="text-dark">—</span>
+                                        <strong>@Localizer["Unit"]:</strong> <span id="m_unit" class="text-dark">—</span>
                                     </p>
                                 </div>
                                 <div class="mt-auto">
                                     <div class="mb-4 text-center">
-                                        <div class="text-muted">Priority</div>
+                                        <div class="text-muted">@Localizer["Priority"]</div>
                                         <div id="m_priority" class="display-6 fw-bold text-dark">—</div>
                                     </div>
                                     <div class="text-center">
-                                        <div class="text-muted mb-1">Status</div>
+                                        <div class="text-muted mb-1">@Localizer["Status"]</div>
                                         <span id="m_status" class="status-pill">—</span>
                                     </div>
                                     <div class="text-center mt-3">
                                         <button id="btnAddAction" class="btn btn-primary@(isAdmin ? "" : " d-none")"
                                             type="button" onclick="openAddAction()" disabled>
-                                            ➕ Add Action
+                                            ➕ @Localizer["AddAction"]
                                         </button>
                                     </div>
                                 </div>
@@ -1083,11 +1112,11 @@
             <div class="card shadow-sm rounded-4 mt-3 mb-4" id="commentsCard">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="m-0 text-secondary">Comments</h6>
+                        <h6 class="m-0 text-secondary">@Localizer["Comments"]</h6>
                     </div>
 
                     <div id="commentRead" class="text-muted" style="white-space: pre-wrap;">
-                        Select a KPI to view comments.
+                        @Localizer["SelectKpiToViewComments"]
                     </div>
                 </div>
             </div>
@@ -1095,7 +1124,7 @@
             <div id="actionsBlock" class="mt-3 d-none">
                 <div class="bg-white border rounded-3 p-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="mb-0 text-secondary fw-bold">Actions for this KPI</h6>
+                        <h6 class="mb-0 text-secondary fw-bold">@Localizer["ActionsForThisKpi"]</h6>
                     </div>
                     <div id="actionsList"></div>
                 </div>
@@ -1104,10 +1133,10 @@
             <div id="decisionsWrap" class="mt-4 d-none">
                 <div class="bg-white border rounded-3 p-3">
                     <div class="d-flex align-items-center justify-content-between mb-3">
-                        <h5 class="mb-0">Decisions</h5>
+                        <h5 class="mb-0">@Localizer["Decisions"]</h5>
                         <button id="btnAddGeneralAction" type="button"
                             class="btn btn-primary btn-sm@(isAdmin ? "" : " d-none")">
-                            Add General Action
+                            @Localizer["AddGeneralAction"]
                         </button>
                     </div>
                     <div id="decisionsBody"></div>
@@ -1122,17 +1151,17 @@
         <div class="modal-dialog">
             <div class="modal-content rounded-3">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="addActionLabel">Add Action</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title" id="addActionLabel">@Localizer["AddAction"]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@Localizer["Close"]"></button>
                 </div>
                 <form id="addActionForm" method="post" onsubmit="submitAddAction(event)">
                     @Html.AntiForgeryToken()
                     <div class="modal-body">
                         <input type="hidden" name="KpiId" id="af_kpiId" />
                         <div class="mb-3">
-                            <label class="form-label">Owner</label>
+                            <label class="form-label">@Localizer["Owner"]</label>
                             <select class="form-select" name="Owner" id="af_owner" required>
-                                <option value="">— Select —</option>
+                                <option value="">@Localizer["Select"]</option>
                                 @foreach (var e in employees ??
                                                                 Enumerable.Empty<KPIMonitor.ViewModels.EmployeePickDto>())
                                 {
@@ -1145,31 +1174,31 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Assigned At</label>
+                            <label class="form-label">@Localizer["AssignedAt"]</label>
                             <input type="datetime-local" class="form-control" name="AssignedAt" />
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Action</label>
+                            <label class="form-label">@Localizer["Action"]</label>
                             <textarea class="form-control" name="Description" id="af_description" rows="3"
                                 required></textarea>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Due Date</label>
+                            <label class="form-label">@Localizer["DueDate"]</label>
                             <input type="datetime-local" class="form-control" name="DueDate" id="af_due" />
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Status</label>
+                            <label class="form-label">@Localizer["Status"]</label>
                             <select class="form-select" name="StatusCode" id="af_status">
-                                <option value="todo">To Do</option>
-                                <option value="inprogress">In Progress</option>
-                                <option value="done">Done</option>
+                                <option value="todo">@Localizer["ToDo"]</option>
+                                <option value="inprogress">@Localizer["InProgress"]</option>
+                                <option value="done">@Localizer["Done"]</option>
                             </select>
                         </div>
                         <input type="hidden" name="ExtensionCount" value="0" />
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save Action</button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@Localizer["Cancel"]</button>
+                        <button type="submit" class="btn btn-primary">@Localizer["SaveAction"]</button>
                     </div>
                 </form>
             </div>
@@ -1180,26 +1209,26 @@
         <div class="modal-dialog">
             <div class="modal-content rounded-3">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="moveDeadlineLabel">Move Deadline</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title" id="moveDeadlineLabel">@Localizer["MoveDeadline"]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@Localizer["Close"]"></button>
                 </div>
                 <form id="moveDeadlineForm" method="post" onsubmit="submitMoveDeadline(event)">
                     @Html.AntiForgeryToken()
                     <div class="modal-body">
                         <input type="hidden" name="actionId" id="md_actionId" />
                         <div class="mb-3">
-                            <label class="form-label">New Due Date</label>
+                            <label class="form-label">@Localizer["NewDueDate"]</label>
                             <input type="datetime-local" class="form-control" name="newDueDate" id="md_due" required />
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Reason (optional)</label>
+                            <label class="form-label">@Localizer["ReasonOptional"]</label>
                             <textarea class="form-control" name="reason" id="md_reason" rows="2"></textarea>
                         </div>
-                        <div class="text-muted small">Max 3 extensions enforced.</div>
+                        <div class="text-muted small">@Localizer["MaxThreeExtensionsEnforced"]</div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Move</button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@Localizer["Cancel"]</button>
+                        <button type="submit" class="btn btn-primary">@Localizer["Move"]</button>
                     </div>
                 </form>
             </div>
@@ -1211,44 +1240,43 @@
         <div class="modal-dialog modal-xl modal-dialog-scrollable arrange-modal-dialog">
             <div class="modal-content rounded-3">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="arrangeModalLabel">Arrange Red Indicators</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title" id="arrangeModalLabel">@Localizer["ArrangeRedIndicators"]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@Localizer["Close"]"></button>
                 </div>
                 <form id="arrangeForm" onsubmit="saveArrangeOrder(event)">
                     @Html.AntiForgeryToken()
                     <div class="modal-body">
                         <p class="text-muted small">
-                            Use <strong>Hide</strong> to exclude indicators from the slideshow completely.
-                            Use <strong>Clear order</strong> to move everything from the slideshow back to Available.
+                            @Localizer["ArrangeIndicatorsHelp"]
                         </p>
                         <div class="row">
                             <div class="col-md-4">
-                                <h6>Hidden (won’t appear)</h6>
+                                <h6>@Localizer["HiddenWontAppear"]</h6>
                                 <ul id="arrangeHiddenList" class="list-group small"
                                     style="max-height: 360px; overflow-y: auto;"></ul>
                             </div>
                             <div class="col-md-4">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0">Available red KPIs</h6>
+                                    <h6 class="mb-0">@Localizer["AvailableRedKpis"]</h6>
                                     <button type="button" class="btn btn-outline-secondary btn-sm"
                                         onclick="clearAllOrder()">
-                                        Clear order
+                                        @Localizer["ClearOrder"]
                                     </button>
                                 </div>
                                 <ul id="arrangeAvailableList" class="list-group small"
                                     style="max-height: 360px; overflow-y: auto;"></ul>
                             </div>
                             <div class="col-md-4">
-                                <h6>Slideshow order</h6>
+                                <h6>@Localizer["SlideshowOrder"]</h6>
                                 <ul id="arrangeSelectedList" class="list-group small"
                                     style="max-height: 360px; overflow-y: auto;"></ul>
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <span class="text-muted small me-auto">Changes affect only the RedBoard slideshow.</span>
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save arrangement</button>
+                        <span class="text-muted small me-auto">@Localizer["ArrangeChangesAffectOnlyRedBoard"]</span>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@Localizer["Cancel"]</button>
+                        <button type="submit" class="btn btn-primary">@Localizer["SaveArrangement"]</button>
                     </div>
                 </form>
             </div>

@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="RedBoard" xml:space="preserve">
+    <value>RedBoard</value>
+  </data>
+  <data name="TargetAchieved" xml:space="preserve">
+    <value>Target Achieved</value>
+  </data>
+  <data name="OnForecast" xml:space="preserve">
+    <value>On Forecast</value>
+  </data>
+  <data name="TargetMissed" xml:space="preserve">
+    <value>Target Missed</value>
+  </data>
+  <data name="DataMissingNoChanges" xml:space="preserve">
+    <value>Data Missing (No Changes)</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Loading…</value>
+  </data>
+  <data name="SelectKpiToViewComments" xml:space="preserve">
+    <value>Select a KPI to view comments.</value>
+  </data>
+  <data name="FailedToLoadComment" xml:space="preserve">
+    <value>Failed to load comment.</value>
+  </data>
+  <data name="FailedToLoadActions" xml:space="preserve">
+    <value>Failed to load actions.</value>
+  </data>
+  <data name="FailedToUpdateStatus" xml:space="preserve">
+    <value>Failed to update status.</value>
+  </data>
+  <data name="SaveFailed" xml:space="preserve">
+    <value>Save failed.</value>
+  </data>
+  <data name="FailedToMoveDeadline" xml:space="preserve">
+    <value>Failed to move deadline (check max 3 extensions).</value>
+  </data>
+  <data name="FailedToLoadDecisions" xml:space="preserve">
+    <value>Failed to load decisions.</value>
+  </data>
+  <data name="NoRedKpisToArrange" xml:space="preserve">
+    <value>No red KPIs to arrange.</value>
+  </data>
+  <data name="NoKpisInSlideshowOrHiddenConfirm" xml:space="preserve">
+    <value>You have no KPIs in the slideshow or hidden. Continue?</value>
+  </data>
+  <data name="FailedToSaveArrangement" xml:space="preserve">
+    <value>Failed to save arrangement.</value>
+  </data>
+  <data name="BadgeSingular" xml:space="preserve">
+    <value>{0} KPI needs attention</value>
+  </data>
+  <data name="BadgePlural" xml:space="preserve">
+    <value>{0} KPIs need attention</value>
+  </data>
+  <data name="AdminsOnly" xml:space="preserve">
+    <value>Admins only</value>
+  </data>
+  <data name="Remove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="Hide" xml:space="preserve">
+    <value>Hide</value>
+  </data>
+  <data name="Add" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="Unhide" xml:space="preserve">
+    <value>Unhide</value>
+  </data>
+
+  <data name="NoKpisMarkedRed" xml:space="preserve">
+    <value>No KPIs are currently marked Écart (red).</value>
+  </data>
+  <data name="RedKpis" xml:space="preserve">
+    <value>Red KPIs</value>
+  </data>
+  <data name="GoToFirstSlide" xml:space="preserve">
+    <value>Go to first slide</value>
+  </data>
+  <data name="GoToLastSlide" xml:space="preserve">
+    <value>Go to last slide</value>
+  </data>
+  <data name="Previous" xml:space="preserve">
+    <value>Previous</value>
+  </data>
+  <data name="Next" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="ArrangeIndicators" xml:space="preserve">
+    <value>Arrange indicators</value>
+  </data>
+  <data name="Priority" xml:space="preserve">
+    <value>Priority</value>
+  </data>
+  <data name="UseArrowsToViewKpis" xml:space="preserve">
+    <value>Use the arrows to view KPIs.</value>
+  </data>
+  <data name="KpiChart" xml:space="preserve">
+    <value>KPI Chart</value>
+  </data>
+  <data name="KpiDetails" xml:space="preserve">
+    <value>KPI Details</value>
+  </data>
+  <data name="Kpi" xml:space="preserve">
+    <value>KPI</value>
+  </data>
+  <data name="Code" xml:space="preserve">
+    <value>Code</value>
+  </data>
+  <data name="Owner" xml:space="preserve">
+    <value>Owner</value>
+  </data>
+  <data name="Editor" xml:space="preserve">
+    <value>Editor</value>
+  </data>
+  <data name="Frequency" xml:space="preserve">
+    <value>Frequency</value>
+  </data>
+  <data name="Unit" xml:space="preserve">
+    <value>Unit</value>
+  </data>
+  <data name="Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="AddAction" xml:space="preserve">
+    <value>Add Action</value>
+  </data>
+  <data name="Comments" xml:space="preserve">
+    <value>Comments</value>
+  </data>
+  <data name="ActionsForThisKpi" xml:space="preserve">
+    <value>Actions for this KPI</value>
+  </data>
+  <data name="Decisions" xml:space="preserve">
+    <value>Decisions</value>
+  </data>
+  <data name="AddGeneralAction" xml:space="preserve">
+    <value>Add General Action</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Select" xml:space="preserve">
+    <value>— Select —</value>
+  </data>
+  <data name="AssignedAt" xml:space="preserve">
+    <value>Assigned At</value>
+  </data>
+  <data name="Action" xml:space="preserve">
+    <value>Action</value>
+  </data>
+  <data name="DueDate" xml:space="preserve">
+    <value>Due Date</value>
+  </data>
+  <data name="ToDo" xml:space="preserve">
+    <value>To Do</value>
+  </data>
+  <data name="InProgress" xml:space="preserve">
+    <value>In Progress</value>
+  </data>
+  <data name="Done" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="SaveAction" xml:space="preserve">
+    <value>Save Action</value>
+  </data>
+  <data name="MoveDeadline" xml:space="preserve">
+    <value>Move Deadline</value>
+  </data>
+  <data name="NewDueDate" xml:space="preserve">
+    <value>New Due Date</value>
+  </data>
+  <data name="ReasonOptional" xml:space="preserve">
+    <value>Reason (optional)</value>
+  </data>
+  <data name="MaxThreeExtensionsEnforced" xml:space="preserve">
+    <value>Max 3 extensions enforced.</value>
+  </data>
+  <data name="Move" xml:space="preserve">
+    <value>Move</value>
+  </data>
+  <data name="ArrangeRedIndicators" xml:space="preserve">
+    <value>Arrange Red Indicators</value>
+  </data>
+  <data name="ArrangeIndicatorsHelp" xml:space="preserve">
+    <value>Use Hide to exclude indicators from the slideshow completely. Use Clear order to move everything from the slideshow back to Available.</value>
+  </data>
+  <data name="HiddenWontAppear" xml:space="preserve">
+    <value>Hidden (won’t appear)</value>
+  </data>
+  <data name="AvailableRedKpis" xml:space="preserve">
+    <value>Available red KPIs</value>
+  </data>
+  <data name="ClearOrder" xml:space="preserve">
+    <value>Clear order</value>
+  </data>
+  <data name="SlideshowOrder" xml:space="preserve">
+    <value>Slideshow order</value>
+  </data>
+  <data name="ArrangeChangesAffectOnlyRedBoard" xml:space="preserve">
+    <value>Changes affect only the RedBoard slideshow.</value>
+  </data>
+  <data name="SaveArrangement" xml:space="preserve">
+    <value>Save arrangement</value>
+  </data>
+</root>
