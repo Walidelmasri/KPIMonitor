@@ -11,6 +11,7 @@ namespace KPIMonitor.Models
         public DateTime? AssignedAt { get; set; }
 
         public string Description { get; set; } = null!;
+        public string? DescriptionAr { get; set; }
         public DateTime? DueDate { get; set; }
 
         public string StatusCode { get; set; } = null!;

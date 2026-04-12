@@ -493,7 +493,7 @@ namespace KPIMonitor.Controllers
     </div>
 
   </div>
-  <div class='mt-2'>{H(a.Description)}</div>
+<div class='mt-2'>{H(LocalizationHelper.Get(a.DescriptionAr, a.Description ?? ""))}</div>
   <div class='small text-muted mt-1'>Due: {Fmt(a.DueDate)} • Ext: {a.ExtensionCount}</div>
 </div>");
             }
@@ -580,8 +580,7 @@ namespace KPIMonitor.Controllers
         <span class='badge rounded-pill {badgeClass}'>{H(title)}</span>
       </div>
       {infoBlock}
-      <div class='mt-1'>Description: {H(a.Description)}</div>
-      <div class='text-muted small mt-1'>Due: {Fmt(a.DueDate)}</div>
+<div class='mt-1'>Description: {H(a.Description)}</div>      <div class='text-muted small mt-1'>Due: {Fmt(a.DueDate)}</div>
       <div class='text-muted small mt-1'>Ext: {a.ExtensionCount}</div>
     </div>");
                     }

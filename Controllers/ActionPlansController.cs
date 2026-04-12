@@ -4,6 +4,7 @@ using KPIMonitor.Data;
 using KPIMonitor.Models;
 using System.Text;
 using System.Net;
+using KPIMonitor.Helpers;
 
 namespace KPIMonitor.Controllers
 {
@@ -179,8 +180,7 @@ var ownersLookup = ownersByActionId
 
   {info}
 
-  <div class='mt-1'>{H(a.Description)}</div>
-
+<div class='mt-1'>{H(LocalizationHelper.Get(a.DescriptionAr, a.Description ?? ""))}</div>
   <div class='text-muted small mt-1'>
     Due: {F(a.DueDate)}{extPart}
   </div>
