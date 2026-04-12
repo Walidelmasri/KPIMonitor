@@ -1,49 +1,74 @@
-<data name="ActionPlans" xml:space="preserve"><value>Action Plans</value></data>
-<data name="AddActionPlan" xml:space="preserve"><value>Add action plan</value></data>
-<data name="Loading" xml:space="preserve"><value>Loading…</value></data>
-<data name="MoveDeadline" xml:space="preserve"><value>Move Deadline</value></data>
-<data name="NewDueDate" xml:space="preserve"><value>New Due Date</value></data>
-<data name="ReasonOptional" xml:space="preserve"><value>Reason (optional)</value></data>
-<data name="MaxThreeExtensions" xml:space="preserve"><value>Max 3 Extensions.</value></data>
-<data name="Cancel" xml:space="preserve"><value>Cancel</value></data>
-<data name="Move" xml:space="preserve"><value>Move</value></data>
-<data name="EditActionPlan" xml:space="preserve"><value>Edit Action Plan</value></data>
-<data name="Owners" xml:space="preserve"><value>Owners</value></data>
-<data name="SelectOption" xml:space="preserve"><value>— Select —</value></data>
-<data name="Add" xml:space="preserve"><value>Add</value></data>
-<data name="OwnersHelp" xml:space="preserve"><value>Add one or more owners. The tile will display: First Owner (+N).</value></data>
-<data name="AssignedAt" xml:space="preserve"><value>Assigned At</value></data>
-<data name="DueDate" xml:space="preserve"><value>Due Date</value></data>
-<data name="Status" xml:space="preserve"><value>Status</value></data>
-<data name="Description" xml:space="preserve"><value>Description</value></data>
-<data name="ToDo" xml:space="preserve"><value>To Do</value></data>
-<data name="InProgress" xml:space="preserve"><value>In Progress</value></data>
-<data name="Done" xml:space="preserve"><value>Done</value></data>
-<data name="Save" xml:space="preserve"><value>Save</value></data>
-<data name="ArchiveActionPlan" xml:space="preserve"><value>Archive action plan</value></data>
-<data name="ArchiveConfirm" xml:space="preserve"><value>Are you sure you want to archive this action plan?</value></data>
-<data name="Archive" xml:space="preserve"><value>Archive</value></data>
-<data name="GeneralActionNotTiedToKpi" xml:space="preserve"><value>General action (not tied to a KPI)</value></data>
-<data name="LinkToKpi" xml:space="preserve"><value>Link to KPI</value></data>
-<data name="PillarOption" xml:space="preserve"><value>— Pillar —</value></data>
-<data name="ObjectiveOption" xml:space="preserve"><value>— Objective —</value></data>
-<data name="KpiOption" xml:space="preserve"><value>— KPI —</value></data>
-<data name="GeneralActionHelp" xml:space="preserve"><value>Leave as General above if this action is not for a specific KPI.</value></data>
-<data name="ActionPlan" xml:space="preserve"><value>Action Plan</value></data>
-<data name="Due" xml:space="preserve"><value>Due</value></data>
-<data name="Comments" xml:space="preserve"><value>Comments</value></data>
-<data name="WriteAComment" xml:space="preserve"><value>Write a comment...</value></data>
-<data name="Post" xml:space="preserve"><value>Post</value></data>
-<data name="CommentsCannotBeEdited" xml:space="preserve"><value>Once posted, comments cannot be edited.</value></data>
-<data name="Close" xml:space="preserve"><value>Close</value></data>
-<data name="FailedToLoadActions" xml:space="preserve"><value>Failed to load actions.</value></data>
-<data name="FailedToLoadDetails" xml:space="preserve"><value>Failed to load details.</value></data>
-<data name="FailedToPostComment" xml:space="preserve"><value>Failed to post comment.</value></data>
-<data name="NoCommentsYet" xml:space="preserve"><value>No comments yet.</value></data>
-<data name="OnlyOwnersCanComment" xml:space="preserve"><value>Only owners can post comments.</value></data>
-<data name="Posting" xml:space="preserve"><value>Posting</value></data>
-<data name="Saving" xml:space="preserve"><value>Saving</value></data>
-<data name="Archiving" xml:space="preserve"><value>Archiving</value></data>
-<data name="Adding" xml:space="preserve"><value>Adding</value></data>
-<data name="FailedToLoadAction" xml:space="preserve"><value>Failed to load the action.</value></data>
-<data name="SelectKpiOrGeneral" xml:space="preserve"><value>Please select a KPI, or mark the action as General.</value></data>
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+
+  <data name="ActionPlans"><value>Action Plans</value></data>
+  <data name="AddActionPlan"><value>Add action plan</value></data>
+  <data name="Loading"><value>Loading…</value></data>
+
+  <data name="ToDo"><value>To Do</value></data>
+  <data name="InProgress"><value>In Progress</value></data>
+  <data name="Done"><value>Done</value></data>
+
+  <data name="MoveDeadline"><value>Move Deadline</value></data>
+  <data name="NewDueDate"><value>New Due Date</value></data>
+  <data name="ReasonOptional"><value>Reason (optional)</value></data>
+  <data name="MaxThreeExtensions"><value>Max 3 extensions</value></data>
+
+  <data name="Cancel"><value>Cancel</value></data>
+  <data name="Move"><value>Move</value></data>
+
+  <data name="EditActionPlan"><value>Edit Action Plan</value></data>
+  <data name="Owners"><value>Owners</value></data>
+  <data name="SelectOption"><value>— Select —</value></data>
+  <data name="Add"><value>Add</value></data>
+  <data name="OwnersHelp"><value>Add one or more owners. First owner (+N)</value></data>
+
+  <data name="AssignedAt"><value>Assigned At</value></data>
+  <data name="DueDate"><value>Due Date</value></data>
+  <data name="Status"><value>Status</value></data>
+  <data name="Description"><value>Description</value></data>
+
+  <data name="Save"><value>Save</value></data>
+
+  <data name="ArchiveActionPlan"><value>Archive action plan</value></data>
+  <data name="ArchiveConfirm"><value>Are you sure you want to archive this action plan?</value></data>
+  <data name="Archive"><value>Archive</value></data>
+
+  <data name="GeneralActionNotTiedToKpi"><value>General action (not tied to a KPI)</value></data>
+  <data name="LinkToKpi"><value>Link to KPI</value></data>
+
+  <data name="PillarOption"><value>— Pillar —</value></data>
+  <data name="ObjectiveOption"><value>— Objective —</value></data>
+  <data name="KpiOption"><value>— KPI —</value></data>
+
+  <data name="GeneralActionHelp"><value>Leave as General if not tied to a KPI</value></data>
+
+  <data name="ActionPlan"><value>Action Plan</value></data>
+  <data name="Due"><value>Due</value></data>
+
+  <data name="Comments"><value>Comments</value></data>
+  <data name="WriteAComment"><value>Write a comment...</value></data>
+  <data name="Post"><value>Post</value></data>
+  <data name="CommentsCannotBeEdited"><value>Comments cannot be edited after posting</value></data>
+
+  <data name="Close"><value>Close</value></data>
+
+  <data name="FailedToLoadActions"><value>Failed to load actions</value></data>
+  <data name="FailedToLoadDetails"><value>Failed to load details</value></data>
+  <data name="FailedToPostComment"><value>Failed to post comment</value></data>
+  <data name="NoCommentsYet"><value>No comments yet</value></data>
+  <data name="OnlyOwnersCanComment"><value>Only owners can comment</value></data>
+
+  <data name="Posting"><value>Posting</value></data>
+  <data name="Saving"><value>Saving</value></data>
+  <data name="Archiving"><value>Archiving</value></data>
+  <data name="Adding"><value>Adding</value></data>
+
+  <data name="FailedToLoadAction"><value>Failed to load action</value></data>
+  <data name="SelectKpiOrGeneral"><value>Please select a KPI or mark as general</value></data>
+
+</root>

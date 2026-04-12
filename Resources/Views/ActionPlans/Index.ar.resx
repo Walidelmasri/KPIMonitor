@@ -1,49 +1,74 @@
-<data name="ActionPlans" xml:space="preserve"><value>خطط العمل</value></data>
-<data name="AddActionPlan" xml:space="preserve"><value>إضافة خطة عمل</value></data>
-<data name="Loading" xml:space="preserve"><value>جاري التحميل…</value></data>
-<data name="MoveDeadline" xml:space="preserve"><value>تغيير الموعد النهائي</value></data>
-<data name="NewDueDate" xml:space="preserve"><value>الموعد النهائي الجديد</value></data>
-<data name="ReasonOptional" xml:space="preserve"><value>السبب (اختياري)</value></data>
-<data name="MaxThreeExtensions" xml:space="preserve"><value>الحد الأقصى 3 تمديدات.</value></data>
-<data name="Cancel" xml:space="preserve"><value>إلغاء</value></data>
-<data name="Move" xml:space="preserve"><value>نقل</value></data>
-<data name="EditActionPlan" xml:space="preserve"><value>تعديل خطة العمل</value></data>
-<data name="Owners" xml:space="preserve"><value>المسؤولون</value></data>
-<data name="SelectOption" xml:space="preserve"><value>— اختر —</value></data>
-<data name="Add" xml:space="preserve"><value>إضافة</value></data>
-<data name="OwnersHelp" xml:space="preserve"><value>أضف مسؤولاً واحداً أو أكثر. ستعرض البطاقة: المسؤول الأول (+N).</value></data>
-<data name="AssignedAt" xml:space="preserve"><value>تاريخ الإسناد</value></data>
-<data name="DueDate" xml:space="preserve"><value>تاريخ الاستحقاق</value></data>
-<data name="Status" xml:space="preserve"><value>الحالة</value></data>
-<data name="Description" xml:space="preserve"><value>الوصف</value></data>
-<data name="ToDo" xml:space="preserve"><value>المطلوب تنفيذها</value></data>
-<data name="InProgress" xml:space="preserve"><value>قيد التنفيذ</value></data>
-<data name="Done" xml:space="preserve"><value>المنجزة</value></data>
-<data name="Save" xml:space="preserve"><value>حفظ</value></data>
-<data name="ArchiveActionPlan" xml:space="preserve"><value>أرشفة خطة العمل</value></data>
-<data name="ArchiveConfirm" xml:space="preserve"><value>هل أنت متأكد أنك تريد أرشفة خطة العمل هذه؟</value></data>
-<data name="Archive" xml:space="preserve"><value>أرشفة</value></data>
-<data name="GeneralActionNotTiedToKpi" xml:space="preserve"><value>إجراء عام غير مرتبط بمؤشر</value></data>
-<data name="LinkToKpi" xml:space="preserve"><value>الربط بمؤشر</value></data>
-<data name="PillarOption" xml:space="preserve"><value>— الركيزة —</value></data>
-<data name="ObjectiveOption" xml:space="preserve"><value>— الهدف —</value></data>
-<data name="KpiOption" xml:space="preserve"><value>— المؤشر —</value></data>
-<data name="GeneralActionHelp" xml:space="preserve"><value>اتركه كإجراء عام أعلاه إذا لم يكن هذا الإجراء مرتبطاً بمؤشر محدد.</value></data>
-<data name="ActionPlan" xml:space="preserve"><value>خطة العمل</value></data>
-<data name="Due" xml:space="preserve"><value>الاستحقاق</value></data>
-<data name="Comments" xml:space="preserve"><value>التعليقات</value></data>
-<data name="WriteAComment" xml:space="preserve"><value>اكتب تعليقاً...</value></data>
-<data name="Post" xml:space="preserve"><value>نشر</value></data>
-<data name="CommentsCannotBeEdited" xml:space="preserve"><value>بعد النشر لا يمكن تعديل التعليقات.</value></data>
-<data name="Close" xml:space="preserve"><value>إغلاق</value></data>
-<data name="FailedToLoadActions" xml:space="preserve"><value>تعذر تحميل الإجراءات.</value></data>
-<data name="FailedToLoadDetails" xml:space="preserve"><value>تعذر تحميل التفاصيل.</value></data>
-<data name="FailedToPostComment" xml:space="preserve"><value>تعذر نشر التعليق.</value></data>
-<data name="NoCommentsYet" xml:space="preserve"><value>لا توجد تعليقات بعد.</value></data>
-<data name="OnlyOwnersCanComment" xml:space="preserve"><value>فقط المسؤولون يمكنهم إضافة تعليقات.</value></data>
-<data name="Posting" xml:space="preserve"><value>جارٍ النشر</value></data>
-<data name="Saving" xml:space="preserve"><value>جارٍ الحفظ</value></data>
-<data name="Archiving" xml:space="preserve"><value>جارٍ الأرشفة</value></data>
-<data name="Adding" xml:space="preserve"><value>جارٍ الإضافة</value></data>
-<data name="FailedToLoadAction" xml:space="preserve"><value>تعذر تحميل الإجراء.</value></data>
-<data name="SelectKpiOrGeneral" xml:space="preserve"><value>يرجى اختيار مؤشر أو تحديد الإجراء كعام.</value></data>
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+
+  <data name="ActionPlans"><value>خطط العمل</value></data>
+  <data name="AddActionPlan"><value>إضافة خطة عمل</value></data>
+  <data name="Loading"><value>جاري التحميل…</value></data>
+
+  <data name="ToDo"><value>المطلوب تنفيذها</value></data>
+  <data name="InProgress"><value>قيد التنفيذ</value></data>
+  <data name="Done"><value>المنجزة</value></data>
+
+  <data name="MoveDeadline"><value>تغيير الموعد النهائي</value></data>
+  <data name="NewDueDate"><value>الموعد النهائي الجديد</value></data>
+  <data name="ReasonOptional"><value>السبب (اختياري)</value></data>
+  <data name="MaxThreeExtensions"><value>الحد الأقصى 3 تمديدات</value></data>
+
+  <data name="Cancel"><value>إلغاء</value></data>
+  <data name="Move"><value>نقل</value></data>
+
+  <data name="EditActionPlan"><value>تعديل خطة العمل</value></data>
+  <data name="Owners"><value>المسؤولون</value></data>
+  <data name="SelectOption"><value>— اختر —</value></data>
+  <data name="Add"><value>إضافة</value></data>
+  <data name="OwnersHelp"><value>أضف مسؤولاً واحداً أو أكثر. ستعرض البطاقة: المسؤول الأول (+N)</value></data>
+
+  <data name="AssignedAt"><value>تاريخ الإسناد</value></data>
+  <data name="DueDate"><value>تاريخ الاستحقاق</value></data>
+  <data name="Status"><value>الحالة</value></data>
+  <data name="Description"><value>الوصف</value></data>
+
+  <data name="Save"><value>حفظ</value></data>
+
+  <data name="ArchiveActionPlan"><value>أرشفة خطة العمل</value></data>
+  <data name="ArchiveConfirm"><value>هل أنت متأكد أنك تريد أرشفة خطة العمل؟</value></data>
+  <data name="Archive"><value>أرشفة</value></data>
+
+  <data name="GeneralActionNotTiedToKpi"><value>إجراء عام غير مرتبط بمؤشر</value></data>
+  <data name="LinkToKpi"><value>الربط بمؤشر</value></data>
+
+  <data name="PillarOption"><value>— الركيزة —</value></data>
+  <data name="ObjectiveOption"><value>— الهدف —</value></data>
+  <data name="KpiOption"><value>— المؤشر —</value></data>
+
+  <data name="GeneralActionHelp"><value>اتركه كإجراء عام إذا لم يكن مرتبطاً بمؤشر</value></data>
+
+  <data name="ActionPlan"><value>خطة العمل</value></data>
+  <data name="Due"><value>الاستحقاق</value></data>
+
+  <data name="Comments"><value>التعليقات</value></data>
+  <data name="WriteAComment"><value>اكتب تعليقاً...</value></data>
+  <data name="Post"><value>نشر</value></data>
+  <data name="CommentsCannotBeEdited"><value>بعد النشر لا يمكن تعديل التعليقات</value></data>
+
+  <data name="Close"><value>إغلاق</value></data>
+
+  <data name="FailedToLoadActions"><value>تعذر تحميل الإجراءات</value></data>
+  <data name="FailedToLoadDetails"><value>تعذر تحميل التفاصيل</value></data>
+  <data name="FailedToPostComment"><value>تعذر نشر التعليق</value></data>
+  <data name="NoCommentsYet"><value>لا توجد تعليقات بعد</value></data>
+  <data name="OnlyOwnersCanComment"><value>فقط المسؤولون يمكنهم التعليق</value></data>
+
+  <data name="Posting"><value>جارٍ النشر</value></data>
+  <data name="Saving"><value>جارٍ الحفظ</value></data>
+  <data name="Archiving"><value>جارٍ الأرشفة</value></data>
+  <data name="Adding"><value>جارٍ الإضافة</value></data>
+
+  <data name="FailedToLoadAction"><value>تعذر تحميل الإجراء</value></data>
+  <data name="SelectKpiOrGeneral"><value>يرجى اختيار مؤشر أو تحديده كإجراء عام</value></data>
+
+</root>
