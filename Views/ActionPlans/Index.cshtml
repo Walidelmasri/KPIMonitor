@@ -1,8 +1,9 @@
 @using KPIMonitor.Services
 @inject IAdminAuthorizer AdminAuthorizer
 @inject IEmployeeDirectory EmpDir
+@inject Microsoft.AspNetCore.Mvc.Localization.IViewLocalizer Localizer
 @{
-  ViewData["Title"] = "Action Plans";
+  ViewData["Title"] = Localizer["ActionPlans"];
   var isAdmin = AdminAuthorizer.IsAdmin(User) || AdminAuthorizer.IsSuperAdmin(User);
 
   // Pull ALL employees once at render (no filtering or preselection)
@@ -80,7 +81,7 @@
   @section PageHeader {
     <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
       <div class="page-hero-content">
-        <h1 class="page-title">Action Plans</h1>
+        <h1 class="page-title">@Localizer["ActionPlans"]</h1>
       </div>
     </div>
   }
@@ -95,7 +96,7 @@
     {
       <div class="d-flex justify-content-end mb-3">
         <button type="button" class="btn btn-sm btn-primary" id="apAddBtn">
-          + Add action plan
+          + @Localizer["AddActionPlan"]
         </button>
       </div>
     }
@@ -111,7 +112,7 @@
   <div class="modal-dialog">
     <div class="modal-content rounded-3">
       <div class="modal-header">
-        <h5 class="modal-title" id="moveDeadlineLabel">Move Deadline</h5>
+        <h5 class="modal-title" id="moveDeadlineLabel">@Localizer["MoveDeadline"]</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form id="moveDeadlineForm" method="post">
@@ -119,18 +120,18 @@
         <div class="modal-body">
           <input type="hidden" name="actionId" id="md_actionId" />
           <div class="mb-3">
-            <label class="form-label">New Due Date</label>
+            <label class="form-label">@Localizer["NewDueDate"]</label>
             <input type="datetime-local" class="form-control" name="newDueDate" id="md_due" required />
           </div>
           <div class="mb-3">
-            <label class="form-label">Reason (optional)</label>
+            <label class="form-label">@Localizer["ReasonOptional"]</label>
             <textarea class="form-control" name="reason" id="md_reason" rows="2"></textarea>
           </div>
-          <div class="text-muted small">Max 3 Extensions.</div>
+          <div class="text-muted small">@Localizer["MaxThreeExtensions"]</div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Move</button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@Localizer["Cancel"]</button>
+          <button type="submit" class="btn btn-primary">@Localizer["Move"]</button>
         </div>
       </form>
     </div>
@@ -142,8 +143,8 @@
   <div class="modal-dialog">
     <div class="modal-content rounded-3">
       <div class="modal-header">
-        <h5 class="modal-title" id="editPlanLabel">Edit Action Plan</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h5 class="modal-title" id="editPlanLabel">@Localizer["EditActionPlan"]</h5> <button type="button"
+                                                                                             class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
 
       <form id="editPlanForm" method="post">
@@ -152,8 +153,7 @@
           <input type="hidden" name="actionId" id="ep_actionId" />
 
           <div class="mb-3">
-            <label class="form-label">Owners</label>
-
+            <label class="form-label">@Localizer["Owners"]</label>
             <div class="d-flex gap-2">
               <select class="form-select" id="ep_ownerPick">
                 <option value="">— Select —</option>
@@ -166,7 +166,7 @@
                 }
               </select>
 
-              <button type="button" class="btn btn-outline-secondary" id="ep_addOwnerBtn">Add</button>
+              <button type="button" class="btn btn-outline-secondary" id="ep_addOwnerBtn">@Localizer["Add"]</button>
             </div>
 
             <div class="form-text">
@@ -281,8 +281,7 @@
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Owners</label>
-
+            <label class="form-label">@Localizer["Owners"]</label>
             <div class="d-flex gap-2">
               <select class="form-select" id="ap_ownerPick">
                 <option value="">— Select —</option>
@@ -299,7 +298,7 @@
             </div>
 
             <div class="form-text">
-              Add one or more owners. The tile will display: <strong>First Owner (+N)</strong>.
+              @Localizer["OwnersHelp"]
             </div>
 
             <div id="ap_ownerList" class="mt-2 d-flex flex-wrap gap-2"></div>
@@ -431,9 +430,9 @@
 
         const label = textOverride || btn.textContent.trim() || 'Saving';
         btn.innerHTML = `
-            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-            ${label}...
-          `;
+                              <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                              ${label}...
+                            `;
       } else {
         btn.disabled = false;
         btn.classList.remove('disabled');
@@ -537,11 +536,11 @@
         pill.className = 'badge rounded-pill text-bg-light border';
         pill.style.padding = '.5rem .6rem';
         pill.innerHTML = `
-            <span class="me-2">${name}</span>
-            <button type="button" class="btn btn-sm btn-link p-0 text-danger"
-                    data-remove-owner="${empId}" data-owner-prefix="${prefix}"
-                    style="text-decoration:none;">✕</button>
-          `;
+                              <span class="me-2">${name}</span>
+                              <button type="button" class="btn btn-sm btn-link p-0 text-danger"
+                                      data-remove-owner="${empId}" data-owner-prefix="${prefix}"
+                                      style="text-decoration:none;">✕</button>
+                            `;
         list.appendChild(pill);
 
         const inp = document.createElement('input');
@@ -605,14 +604,14 @@
       const text = escapeHtml(c.text || '');
 
       return `
-          <div class="border rounded-3 p-2 bg-white">
-            <div class="d-flex justify-content-between">
-              <div class="fw-semibold">${author}</div>
-              <div class="text-muted small">${when}</div>
-            </div>
-            <div class="mt-1">${text}</div>
-          </div>
-        `;
+                            <div class="border rounded-3 p-2 bg-white">
+                              <div class="d-flex justify-content-between">
+                                <div class="fw-semibold">${author}</div>
+                                <div class="text-muted small">${when}</div>
+                              </div>
+                              <div class="mt-1">${text}</div>
+                            </div>
+                          `;
     }
 
     async function openActionDetails(actionId, opts) {
@@ -691,18 +690,18 @@
     });
 
     // Tile click => open details modal
-document.addEventListener('click', async (e) => {
-  // If click started from a button, do nothing here
-  if (e.target.closest('.ap-stop-tile')) return;
+    document.addEventListener('click', async (e) => {
+      // If click started from a button, do nothing here
+      if (e.target.closest('.ap-stop-tile')) return;
 
-  const tile = e.target.closest('[data-action="open-details"]');
-  if (!tile) return;
+      const tile = e.target.closest('[data-action="open-details"]');
+      if (!tile) return;
 
-  const id = tile.getAttribute('data-id');
-  if (!id) return;
+      const id = tile.getAttribute('data-id');
+      if (!id) return;
 
-  await openActionDetails(id, { focusComments: false });
-});
+      await openActionDetails(id, { focusComments: false });
+    });
 
 
     // Comment button => open details modal and focus comments
