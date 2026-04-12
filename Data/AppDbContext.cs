@@ -257,6 +257,7 @@ namespace KPIMonitor.Data
                 e.Property(x => x.Owner).HasColumnName("OWNER").HasMaxLength(100).IsRequired();
                 e.Property(x => x.AssignedAt).HasColumnName("ASSIGNEDAT");
                 e.Property(x => x.Description).HasColumnName("DESCRIPTION").HasMaxLength(400).IsRequired();
+                e.Property(x => x.DescriptionAr).HasColumnName("DESCRIPTIONAR").HasMaxLength(400);
                 e.Property(x => x.DueDate).HasColumnName("DUEDATE");
                 e.Property(x => x.StatusCode).HasColumnName("STATUSCODE").HasMaxLength(20).IsRequired();
                 e.Property(x => x.ExtensionCount).HasColumnName("EXTENSIONCOUNT");
