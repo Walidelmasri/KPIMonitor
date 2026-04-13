@@ -40,4 +40,51 @@
   <data name="ToggleNavigation" xml:space="preserve">
     <value>تبديل القائمة</value>
   </data>
+    <data name="Catalog" xml:space="preserve"><value>الدليل</value></data>
+  <data name="Pillars" xml:space="preserve"><value>الركائز</value></data>
+  <data name="AllPillars" xml:space="preserve"><value>جميع الركائز</value></data>
+  <data name="AddPillar" xml:space="preserve"><value>إضافة ركيزة</value></data>
+  <data name="Objectives" xml:space="preserve"><value>الأهداف</value></data>
+  <data name="AllObjectives" xml:space="preserve"><value>جميع الأهداف</value></data>
+  <data name="AddObjective" xml:space="preserve"><value>إضافة هدف</value></data>
+  <data name="KPIs" xml:space="preserve"><value>المؤشرات</value></data>
+  <data name="AllKPIs" xml:space="preserve"><value>جميع المؤشرات</value></data>
+  <data name="AddKPI" xml:space="preserve"><value>إضافة مؤشر</value></data>
+  <data name="Planning" xml:space="preserve"><value>التخطيط</value></data>
+  <data name="KpiPeriods" xml:space="preserve"><value>فترات المؤشرات</value></data>
+  <data name="ViewKpiPeriods" xml:space="preserve"><value>عرض فترات المؤشرات</value></data>
+  <data name="CreateKpiPeriod" xml:space="preserve"><value>إنشاء فترة مؤشر</value></data>
+  <data name="KpiYearPlans" xml:space="preserve"><value>خطط المؤشرات السنوية</value></data>
+  <data name="ViewYearPlans" xml:space="preserve"><value>عرض الخطط السنوية</value></data>
+  <data name="CreateYearPlan" xml:space="preserve"><value>إنشاء خطة سنوية</value></data>
+  <data name="FiveYearTargets" xml:space="preserve"><value>المستهدفات الخمسية</value></data>
+  <data name="ViewFiveYearTargets" xml:space="preserve"><value>عرض المستهدفات الخمسية</value></data>
+  <data name="AddFiveYearTargets" xml:space="preserve"><value>إضافة مستهدفات خمسية</value></data>
+  <data name="Monitoring" xml:space="preserve"><value>المتابعة</value></data>
+  <data name="KpiFacts" xml:space="preserve"><value>بيانات المؤشرات</value></data>
+  <data name="ViewAll" xml:space="preserve"><value>عرض الكل</value></data>
+  <data name="Create" xml:space="preserve"><value>إنشاء</value></data>
+  <data name="Audit" xml:space="preserve"><value>التدقيق</value></data>
+  <data name="Privacy" xml:space="preserve"><value>الخصوصية</value></data>
+  <data name="Working" xml:space="preserve"><value>جارٍ التنفيذ…</value></data>
+  <data name="Approving" xml:space="preserve"><value>جارٍ الاعتماد…</value></data>
+  <data name="Rejecting" xml:space="preserve"><value>جارٍ الرفض…</value></data>
+  <data name="ApprovedSuccessfully" xml:space="preserve"><value>تم الاعتماد بنجاح</value></data>
+  <data name="RejectedSuccessfully" xml:space="preserve"><value>تم الرفض بنجاح</value></data>
+  <data name="RequestFailed" xml:space="preserve"><value>فشل الطلب</value></data>
+  <data name="Submitting" xml:space="preserve"><value>جارٍ الإرسال…</value></data>
+  <data name="SubmitFailed" xml:space="preserve"><value>فشل الإرسال</value></data>
+  <data name="RequestSentSuccessfully" xml:space="preserve"><value>تم إرسال الطلب بنجاح</value></data>
+  <data name="MissingChangeId" xml:space="preserve"><value>معرف التغيير غير موجود</value></data>
+  <data name="RejectReasonRequired" xml:space="preserve"><value>سبب الرفض مطلوب</value></data>
+  <data name="RejectFailed" xml:space="preserve"><value>فشل الرفض</value></data>
+  <data name="LanguageEnglishShort" xml:space="preserve">
+  <value>EN</value>
+</data>
+<data name="LanguageArabicShort" xml:space="preserve">
+  <value>ع</value>
+</data>
+<data name="PendingApprovalShort" xml:space="preserve">
+  <value>⏳ بانتظار الموافقة</value>
+</data>
 </root>

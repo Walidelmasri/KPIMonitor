@@ -141,41 +141,39 @@
                         {
                             <!-- ===== Catalog ===== -->
                             <li class="nav-item dropdown" asp-admin-only>
-                                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Catalog</a>
+                                <a class="nav-link dropdown-toggle" href="#"
+                                   data-bs-toggle="dropdown">@Localizer["Catalog"]</a>
                                 <ul class="dropdown-menu">
                                     <!-- Pillars submenu -->
                                     <li class="dropdown-submenu">
-                                        <a class="dropdown-item dropdown-toggle" href="#">Pillars</a>
+                                        <a class="dropdown-item dropdown-toggle" href="#">@Localizer["Pillars"]</a>
                                         <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" asp-controller="Pillars" asp-action="Index">All
-                                                Pillars</a></li>
+                                            <li><a class="dropdown-item" asp-controller="Pillars"
+                                                       asp-action="Index">@Localizer["AllPillars"]</a></li>
                                                 <li asp-admin-only><a class="dropdown-item" asp-controller="Pillars"
-                                                                      asp-action="Create">Add
-                                                    Pillar</a></li>
+                                                                          asp-action="Create">@Localizer["AddPillar"]</a></li>
                                                 </ul>
                                             </li>
 
                                             <!-- Objectives submenu -->
                                             <li class="dropdown-submenu">
-                                                <a class="dropdown-item dropdown-toggle" href="#">Objectives</a>
+                                                <a class="dropdown-item dropdown-toggle" href="#">@Localizer["Objectives"]</a>
                                                 <ul class="dropdown-menu">
-                                                    <li><a class="dropdown-item" asp-controller="Objectives" asp-action="Index">All
-                                                        Objectives</a></li>
+                                                    <li><a class="dropdown-item" asp-controller="Objectives"
+                                                               asp-action="Index">@Localizer["AllObjectives"]</a></li>
                                                         <li asp-admin-only><a class="dropdown-item" asp-controller="Objectives"
-                                                                              asp-action="Create">Add
-                                                            Objective</a></li>
+                                                                                  asp-action="Create">@Localizer["AddObjective"]</a></li>
                                                         </ul>
                                                     </li>
 
                                                     <!-- KPIs submenu -->
                                                     <li class="dropdown-submenu">
-                                                        <a class="dropdown-item dropdown-toggle" href="#">KPIs</a>
+                                                        <a class="dropdown-item dropdown-toggle" href="#">@Localizer["KPIs"]</a>
                                                         <ul class="dropdown-menu">
                                                             <li><a class="dropdown-item" asp-controller="Kpis" asp-action="Index">All
                                                                 KPIs</a></li>
                                                                 <li asp-admin-only><a class="dropdown-item" asp-controller="Kpis"
-                                                                                      asp-action="Create">Add
-                                                                    KPI</a></li>
+                                                                                          asp-action="Create">@Localizer["AddKPI"]</a></li>
                                                                 </ul>
                                                             </li>
                                                         </ul>
@@ -183,36 +181,38 @@
 
                                                     <!-- ===== Planning ===== -->
                                                     <li class="nav-item dropdown" asp-admin-only>
-                                                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Planning</a>
+                                                        <a class="nav-link dropdown-toggle" href="#"
+                                                           data-bs-toggle="dropdown">@Localizer["Planning"]</a>
                                                         <ul class="dropdown-menu">
                                                             <!-- KPI Periods -->
                                                             <li class="dropdown-submenu">
-                                                                <a class="dropdown-item dropdown-toggle" href="#">KPI Periods</a>
+                                                                <a class="dropdown-item dropdown-toggle" href="#">@Localizer["KpiPeriods"]</a>
                                                                 <ul class="dropdown-menu">
-                                                                    <li><a class="dropdown-item" asp-controller="KpiPeriods" asp-action="Index">View
-                                                                        KPI Periods</a></li>
+                                                                    <li><a class="dropdown-item" asp-controller="KpiPeriods"
+                                                                               asp-action="Index">@Localizer["ViewKpiPeriods"]</a></li>
                                                                         <li asp-admin-only><a class="dropdown-item" asp-controller="KpiPeriods"
-                                                                                                  asp-action="Create">Create KPI Period</a></li>
+                                                                                                  asp-action="Create">@Localizer["CreateKpiPeriod"]</a></li>
                                                                         </ul>
                                                                     </li>
                                                                     <!-- KPI Year Plans -->
                                                                     <li class="dropdown-submenu">
-                                                                        <a class="dropdown-item dropdown-toggle" href="#">KPI Year Plans</a>
+                                                                        <a class="dropdown-item dropdown-toggle" href="#">@Localizer["KpiYearPlans"]</a>
                                                                         <ul class="dropdown-menu">
                                                                             <li><a class="dropdown-item" asp-controller="KpiYearPlans"
-                                                                                       asp-action="Index">View Year Plans</a></li>
+                                                                                       asp-action="Index">@Localizer["ViewYearPlans"]</a></li>
                                                                                 <li asp-admin-only><a class="dropdown-item" asp-controller="KpiYearPlans"
-                                                                                                          asp-action="Create">Create Year Plan</a></li>
+                                                                                                          asp-action="Create">@Localizer["CreateYearPlan"]</a></li>
 
                                                                                     <!-- Five-Year Targets (nested under KPI Year Plans) -->
                                                                                     <li class="dropdown-submenu">
-                                                                                        <a class="dropdown-item dropdown-toggle" href="#">Five-Year Targets</a>
+                                                                                        <a class="dropdown-item dropdown-toggle"
+                                                                                           href="#">@Localizer["FiveYearTargets"]</a>
                                                                                         <ul class="dropdown-menu">
                                                                                             <li><a class="dropdown-item" asp-controller="KpiFiveYearTargets"
-                                                                                                       asp-action="Index">View Five-Year Targets</a></li>
+                                                                                                       asp-action="Index">@Localizer["ViewFiveYearTargets"]</a></li>
                                                                                                 <li asp-admin-only><a class="dropdown-item"
-                                                                                                                      asp-controller="KpiFiveYearTargets" asp-action="Create">Add
-                                                                                                    Five-Year Targets</a></li>
+                                                                                                                          asp-controller="KpiFiveYearTargets"
+                                                                                                                          asp-action="Create">@Localizer["AddFiveYearTargets"]</a></li>
                                                                                                 </ul>
                                                                                             </li>
                                                                                             <!-- /Five-Year Targets -->
@@ -223,23 +223,24 @@
 
                                                                             <!-- ===== Monitoring ===== -->
                                                                             <li class="nav-item dropdown" asp-admin-only>
-                                                                                <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Monitoring</a>
+                                                                                <a class="nav-link dropdown-toggle" href="#"
+                                                                                   data-bs-toggle="dropdown">@Localizer["Monitoring"]</a>
                                                                                 <ul class="dropdown-menu">
                                                                                     <!-- KPI Facts -->
                                                                                     <li class="dropdown-submenu">
-                                                                                        <a class="dropdown-item dropdown-toggle" href="#">KPI Facts</a>
+                                                                                        <a class="dropdown-item dropdown-toggle" href="#">@Localizer["KpiFacts"]</a>
                                                                                         <ul class="dropdown-menu">
-                                                                                            <li><a class="dropdown-item" asp-controller="KpiFacts" asp-action="Index">View
-                                                                                                All</a></li>
+                                                                                            <li><a class="dropdown-item" asp-controller="KpiFacts"
+                                                                                                       asp-action="Index">@Localizer["ViewAll"]</a></li>
                                                                                                 <li asp-admin-only><a class="dropdown-item" asp-controller="KpiFacts"
-                                                                                                                          asp-action="Create">Create</a></li>
+                                                                                                                          asp-action="Create">@Localizer["Create"]</a></li>
                                                                                                 </ul>
                                                                                             </li>
                                                                                         </ul>
                                                                                     </li>
 
                                                                                     <li class="nav-item" asp-admin-only>
-                                                                                        <a class="nav-link" asp-controller="Audit" asp-action="Index">Audit</a>
+                                                                                        <a class="nav-link" asp-controller="Audit" asp-action="Index">@Localizer["Audit"]</a>
                                                                                     </li>
                                                                                     @* <li class="nav-item">
                                 <a class="nav-link" asp-controller="PresidentBoard" asp-action="Index">President Board</a>
@@ -281,16 +282,18 @@
                                                                                     {
                                                                                         <a class="btn btn-outline-secondary btn-sm"
                                                                                                href="@($"{Url.Content("~/culture/set")}?culture=en&returnUrl={Uri.EscapeDataString(returnUrl)}")">
-                                                                                            EN
+                                                                                            @Localizer["LanguageEnglishShort"]
                                                                                         </a>
-                                                                                        <span class="btn btn-sm btn-secondary disabled" aria-disabled="true">AR</span>
+                                                                                        <span class="btn btn-sm btn-secondary disabled"
+                                                                                              aria-disabled="true">@Localizer["LanguageArabicShort"]</span>
                                                                                     }
                                                                                     else
                                                                                     {
-                                                                                        <span class="btn btn-sm btn-secondary disabled" aria-disabled="true">EN</span>
+                                                                                        <span class="btn btn-sm btn-secondary disabled"
+                                                                                              aria-disabled="true">@Localizer["LanguageEnglishShort"]</span>
                                                                                         <a class="btn btn-outline-secondary btn-sm"
                                                                                                href="@($"{Url.Content("~/culture/set")}?culture=ar&returnUrl={Uri.EscapeDataString(returnUrl)}")">
-                                                                                            AR
+                                                                                            @Localizer["LanguageArabicShort"]
                                                                                         </a>
                                                                                     }
                                                                                 </div>
@@ -339,7 +342,7 @@
 
                                                             <footer class="border-top footer text-muted">
                                                                 <div class="container">
-                                                                    &copy; 2025 - KPIMonitor - <a asp-controller="Home" asp-action="Privacy">Privacy</a>
+                                                                    &copy; 2025 - KPIMonitor - <a asp-controller="Home" asp-action="Privacy">@Localizer["Privacy"]</a>
                                                                 </div>
                                                             </footer>
 
@@ -351,6 +354,20 @@
 
                                                             <!-- Bootstrap 5: enable multi-level submenu with click -->
                                                             <script>
+                                                                const layoutText = {
+                                                                working: '@Localizer["Working"]',
+                                                                approving: '@Localizer["Approving"]',
+                                                                rejecting: '@Localizer["Rejecting"]',
+                                                                approvedSuccessfully: '@Localizer["ApprovedSuccessfully"]',
+                                                                rejectedSuccessfully: '@Localizer["RejectedSuccessfully"]',
+                                                                requestFailed: '@Localizer["RequestFailed"]',
+                                                                submitting: '@Localizer["Submitting"]',
+                                                                submitFailed: '@Localizer["SubmitFailed"]',
+                                                                requestSentSuccessfully: '@Localizer["RequestSentSuccessfully"]',
+                                                                missingChangeId: '@Localizer["MissingChangeId"]',
+                                                                rejectReasonRequired: '@Localizer["RejectReasonRequired"]',
+                                                                rejectFailed: '@Localizer["RejectFailed"]'
+                                                                };
                                                                 // Allow clicking items with .dropdown-toggle inside dropdowns to open submenus (Bootstrap 5)
                                                                 document.querySelectorAll('.dropdown-menu .dropdown-toggle').forEach(function (toggle) {
                                                                 toggle.addEventListener('click', function (e) {
@@ -395,7 +412,7 @@
                                                                 if (busy) {
                                                                 if (!btn.dataset.origHtml) btn.dataset.origHtml = btn.innerHTML;
                                                                 btn.setAttribute('aria-busy', 'true'); btn.disabled = true;
-                                                                btn.innerHTML = `<span class="btn-spinner"></span> <span>${label || 'Working…'}</span>`;
+                                                                btn.innerHTML = `<span class="btn-spinner"></span> <span>${label || layoutText.working}</span>`;
                                                                 } else {
                                                                 btn.removeAttribute('aria-busy'); btn.disabled = false;
                                                                 if (btn.dataset.origHtml) btn.innerHTML = btn.dataset.origHtml;
@@ -440,7 +457,7 @@
                                                                 if (action === 'approve') {
                                                                 url = '/kpimonitor/KpiFactChanges/Approve';
                                                                 payload = { changeId };
-                                                                label = 'Approving…';
+                                                                label = layoutText.approving;
                                                                 } else if (action === 'reject') {
                                                                 // If your reject runs via a separate modal form, that form handler below will run instead.
                                                                 // Leaving prompt as a fallback in case the inline button is used.
@@ -448,17 +465,17 @@
                                                                 if (!reason) return;
                                                                 url = '/kpimonitor/KpiFactChanges/Reject';
                                                                 payload = { changeId, reason };
-                                                                label = 'Rejecting…';
+                                                                label = layoutText.rejecting;
                                                                 } else if (action === 'approve-batch') {
                                                                 url = '/kpimonitor/KpiFactChanges/ApproveBatch';
                                                                 payload = { batchId };
-                                                                label = 'Approving…';
+                                                                label = layoutText.approving;
                                                                 } else if (action === 'reject-batch') {
                                                                 const reason = btn.dataset.reason || prompt('Reject reason:');
                                                                 if (!reason) return;
                                                                 url = '/kpimonitor/KpiFactChanges/RejectBatch';
                                                                 payload = { batchId, reason };
-                                                                label = 'Rejecting…';
+                                                                label = layoutText.rejecting;
                                                                 } else {
                                                                 return;
                                                                 }
@@ -494,9 +511,9 @@
                                                                 await window.loadList('#tab-changes', '/kpimonitor/KpiFactChanges/ListHtml', { status: 'pending' });
                                                                 }
                                                                 }
-                                                                showToast(action.includes('approve') ? 'Approved successfully' : 'Rejected successfully', 'success');
+                                                                showToast(action.includes('approve') ? layoutText.approvedSuccessfully : layoutText.rejectedSuccessfully, 'success');
                                                                 } catch (err) {
-                                                                showToast(err.message || 'Request failed', 'error');
+                                                                showToast(err.message || layoutText.requestFailed, 'error');
                                                                 } finally {
                                                                 setBusyButton(btn, false);
                                                                 sibs.forEach(b => { if (b !== btn) b.disabled = false; });
@@ -514,8 +531,7 @@
                                                                 if (!form) return;
 
                                                                 e.preventDefault();
-                                                                setBusyButton(btn, true, 'Submitting…');
-
+                                                                setBusyButton(btn, true, layoutText.submitting);
                                                                 try {
                                                                 const fd = new FormData(form); // includes the antiforgery token that’s already in your form
                                                                 const r = await fetch(form.action, {
@@ -525,10 +541,8 @@
                                                                 });
                                                                 const ct = (r.headers.get('content-type') || '');
                                                                 const data = ct.includes('application/json') ? await r.json() : await r.text();
-                                                                if (!r.ok || (data && data.ok === false)) throw new Error((data && (data.error || data.message)) || 'Submit failed');
-
-                                                                showToast('Request sent successfully', 'success');
-
+                                                                if (!r.ok || (data && data.ok === false)) throw new Error((data && (data.error || data.message)) || layoutText.submitFailed);
+                                                                showToast(layoutText.requestSentSuccessfully, 'success');
                                                                 // Close the modal if it’s a Bootstrap modal
                                                                 const modalEl = form.closest('.modal');
                                                                 if (modalEl && window.bootstrap) {
@@ -539,7 +553,7 @@
                                                                 const openBtn = document.getElementById('openEditKpiBtn');
                                                                 if (openBtn) {
                                                                 openBtn.disabled = true;
-                                                                openBtn.textContent = '⏳ Pending approval';
+                                                                openBtn.textContent = '@Localizer["PendingApprovalShort"]';
                                                                 }
 
                                                                 // Small pause to let DB commit; then refresh the page summary if available
@@ -579,15 +593,13 @@
                                                                 e.preventDefault();
                                                                 const changeId = changeIdEl?.value;
                                                                 const reason = reasonEl?.value?.trim();
-                                                                if (!changeId) { showToast('Missing change id', 'error'); return; }
-                                                                if (!reason) { showToast('Reject reason is required', 'warning'); return; }
-
-                                                                setBusyButton(submitBtn, true, 'Rejecting…');
+                                                                if (!changeId) { showToast(layoutText.missingChangeId, 'error'); return; }
+                                                                if (!reason) { showToast(layoutText.rejectReasonRequired, 'warning'); return; }
+                                                                setBusyButton(submitBtn, true, layoutText.rejecting);
                                                                 try {
                                                                 const fd = new FormData(form); // includes token
                                                                 const data = await postJson(form.action, fd);
-                                                                showToast('Rejected successfully', 'success');
-
+                                                                showToast(layoutText.rejectedSuccessfully, 'success');
                                                                 // close modal if you use Bootstrap 5
                                                                 const modalEl = form.closest('.modal');
                                                                 if (modalEl && window.bootstrap) {
@@ -602,7 +614,7 @@
                                                                 await window.loadList('#tab-changes', '/kpimonitor/KpiFactChanges/ListHtml', { status: 'pending' });
                                                                 }
                                                                 } catch (err) {
-                                                                showToast(err.message || 'Reject failed', 'error');
+                                                                showToast(err.message || layoutText.rejectFailed, 'error');
                                                                 } finally {
                                                                 setBusyButton(submitBtn, false);
                                                                 }

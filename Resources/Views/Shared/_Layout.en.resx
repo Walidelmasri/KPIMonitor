@@ -40,4 +40,51 @@
   <data name="ToggleNavigation" xml:space="preserve">
     <value>Toggle navigation</value>
   </data>
+    <data name="Catalog" xml:space="preserve"><value>Catalog</value></data>
+  <data name="Pillars" xml:space="preserve"><value>Pillars</value></data>
+  <data name="AllPillars" xml:space="preserve"><value>All Pillars</value></data>
+  <data name="AddPillar" xml:space="preserve"><value>Add Pillar</value></data>
+  <data name="Objectives" xml:space="preserve"><value>Objectives</value></data>
+  <data name="AllObjectives" xml:space="preserve"><value>All Objectives</value></data>
+  <data name="AddObjective" xml:space="preserve"><value>Add Objective</value></data>
+  <data name="KPIs" xml:space="preserve"><value>KPIs</value></data>
+  <data name="AllKPIs" xml:space="preserve"><value>All KPIs</value></data>
+  <data name="AddKPI" xml:space="preserve"><value>Add KPI</value></data>
+  <data name="Planning" xml:space="preserve"><value>Planning</value></data>
+  <data name="KpiPeriods" xml:space="preserve"><value>KPI Periods</value></data>
+  <data name="ViewKpiPeriods" xml:space="preserve"><value>View KPI Periods</value></data>
+  <data name="CreateKpiPeriod" xml:space="preserve"><value>Create KPI Period</value></data>
+  <data name="KpiYearPlans" xml:space="preserve"><value>KPI Year Plans</value></data>
+  <data name="ViewYearPlans" xml:space="preserve"><value>View Year Plans</value></data>
+  <data name="CreateYearPlan" xml:space="preserve"><value>Create Year Plan</value></data>
+  <data name="FiveYearTargets" xml:space="preserve"><value>Five-Year Targets</value></data>
+  <data name="ViewFiveYearTargets" xml:space="preserve"><value>View Five-Year Targets</value></data>
+  <data name="AddFiveYearTargets" xml:space="preserve"><value>Add Five-Year Targets</value></data>
+  <data name="Monitoring" xml:space="preserve"><value>Monitoring</value></data>
+  <data name="KpiFacts" xml:space="preserve"><value>KPI Facts</value></data>
+  <data name="ViewAll" xml:space="preserve"><value>View All</value></data>
+  <data name="Create" xml:space="preserve"><value>Create</value></data>
+  <data name="Audit" xml:space="preserve"><value>Audit</value></data>
+  <data name="Privacy" xml:space="preserve"><value>Privacy</value></data>
+  <data name="Working" xml:space="preserve"><value>Working…</value></data>
+  <data name="Approving" xml:space="preserve"><value>Approving…</value></data>
+  <data name="Rejecting" xml:space="preserve"><value>Rejecting…</value></data>
+  <data name="ApprovedSuccessfully" xml:space="preserve"><value>Approved successfully</value></data>
+  <data name="RejectedSuccessfully" xml:space="preserve"><value>Rejected successfully</value></data>
+  <data name="RequestFailed" xml:space="preserve"><value>Request failed</value></data>
+  <data name="Submitting" xml:space="preserve"><value>Submitting…</value></data>
+  <data name="SubmitFailed" xml:space="preserve"><value>Submit failed</value></data>
+  <data name="RequestSentSuccessfully" xml:space="preserve"><value>Request sent successfully</value></data>
+  <data name="MissingChangeId" xml:space="preserve"><value>Missing change id</value></data>
+  <data name="RejectReasonRequired" xml:space="preserve"><value>Reject reason is required</value></data>
+  <data name="RejectFailed" xml:space="preserve"><value>Reject failed</value></data>
+  <data name="LanguageEnglishShort" xml:space="preserve">
+  <value>EN</value>
+</data>
+<data name="LanguageArabicShort" xml:space="preserve">
+  <value>ع</value>
+</data>
+<data name="PendingApprovalShort" xml:space="preserve">
+  <value>⏳ Pending approval</value>
+</data>
 </root>
