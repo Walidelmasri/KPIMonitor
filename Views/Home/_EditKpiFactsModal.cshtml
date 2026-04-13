@@ -108,7 +108,7 @@
             var canA = Model.EditableActualKeys.Contains(q);
             var canF = Model.EditableForecastKeys.Contains(q);
             <tr>
-              <td>@($"{Localizer["QuarterPrefix"]}{q}")</td>
+              <td>@Localizer["QuarterPrefix"] @q</td>
               <td class="@(canA ? "" : "readonly-cell")">
                 <input class="form-control form-control-sm" type="number" step="any" name="ActualQuarters[@q]"
                        value="@(Model.Actuals.ContainsKey(q) ? Model.Actuals[q] : null)" @(canA ? "" : "readonly          aria-readonly=\"true\" title=\"Not editable (outside grace window)\"") />
