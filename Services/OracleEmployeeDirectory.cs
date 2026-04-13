@@ -3,6 +3,7 @@ using Oracle.ManagedDataAccess.Client;
 using KPIMonitor.ViewModels;
 using KPIMonitor.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace KPIMonitor.Services
 {
@@ -21,21 +22,29 @@ namespace KPIMonitor.Services
 
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
-                SELECT EMP_ID, NAME_ENG, USERID
+                SELECT EMP_ID, NAME_ENG, NAME_AR, USERID
                 FROM   BADEA_ADDONS.EMPLOYEES
-                WHERE  EMP_ID IS NOT NULL
+                WHERE  EMP_ID IS NOT NULL   
                 ORDER  BY NAME_ENG";
             await using var rdr = await cmd.ExecuteReaderAsync(ct);
             while (await rdr.ReadAsync(ct))
             {
                 string empId = rdr.GetString(0);
                 string nameEng = rdr.IsDBNull(1) ? "-" : rdr.GetString(1);
-                string? userId = rdr.IsDBNull(2) ? null : rdr.GetString(2);
+                string nameAr = rdr.IsDBNull(2) ? nameEng : rdr.GetString(2);
+                string? userId = rdr.IsDBNull(3) ? null : rdr.GetString(3);
+
+                var isArabic = CultureInfo.CurrentUICulture.Name
+                    .StartsWith("ar", StringComparison.OrdinalIgnoreCase);
+
+                var displayName = isArabic ? nameAr : nameEng;
 
                 list.Add(new EmployeePickDto
                 {
                     EmpId = empId,
-                    Label = $"{nameEng} ({empId})",
+                    NameEng = nameEng,
+                    NameAr = nameAr,
+                    Label = $"{displayName} ({empId})",
                     UserId = userId
                 });
             }

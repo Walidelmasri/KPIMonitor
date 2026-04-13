@@ -25,5 +25,7 @@ namespace KPIMonitor.ViewModels
         public string EmpId { get; init; } = "";   // BADEA_ADDONS.EMPLOYEES.EMP_ID
         public string Label { get; init; } = "";   // "NAME_ENG (EMP_ID)"
         public string? UserId { get; init; }       // optional for future
+        public string? NameEng { get; init; }
+        public string? NameAr { get; init; }
     }
 }
