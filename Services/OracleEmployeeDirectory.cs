@@ -22,7 +22,7 @@ namespace KPIMonitor.Services
 
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
-                SELECT EMP_ID, NAME_ENG, NAME_AR, USERID
+                SELECT EMP_ID, NAME_ENG, NAME_ARABIC, USERID
                 FROM   BADEA_ADDONS.EMPLOYEES
                 WHERE  EMP_ID IS NOT NULL   
                 ORDER  BY NAME_ENG";
