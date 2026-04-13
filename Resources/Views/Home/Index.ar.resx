@@ -100,4 +100,14 @@
   <data name="FailedToLoadEditor"><value>تعذر تحميل نافذة التعديل.</value></data>
   <data name="NoAccessToEditKpi"><value>ليس لديك صلاحية لتعديل هذا المؤشر.</value></data>
   <data name="FailedToUpdateStatus"><value>تعذر تحديث الحالة</value></data>
+  <data name="QuarterPrefix" xml:space="preserve"><value>الربع </value></data>
+  <data name="Edit" xml:space="preserve"><value>تعديل</value></data>
+<data name="Month" xml:space="preserve"><value>الشهر</value></data>
+<data name="Quarter" xml:space="preserve"><value>الربع</value></data>
+<data name="Actual" xml:space="preserve"><value>الفعلي</value></data>
+<data name="Target" xml:space="preserve"><value>المستهدف</value></data>
+<data name="Forecast" xml:space="preserve"><value>التوقع</value></data>
+<data name="Cancel" xml:space="preserve"><value>إلغاء</value></data>
+<data name="RequestApproval" xml:space="preserve"><value>طلب اعتماد</value></data>
+<data name="Close" xml:space="preserve"><value>إغلاق</value></data>
 </root>

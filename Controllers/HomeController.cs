@@ -638,8 +638,8 @@ namespace KPIMonitor.Controllers
                 string kpiCode = kpi?.KpiCode ?? "";
                 string left = string.Join('.', new[] { pillarCode, objectiveCode }.Where(s => !string.IsNullOrWhiteSpace(s)));
                 string prefix = string.Join(' ', new[] { left, kpiCode }.Where(s => !string.IsNullOrWhiteSpace(s)));
-                string displayTitle = string.IsNullOrWhiteSpace(prefix) ? (kpi?.KpiName ?? "—") : $"{prefix} — {kpi?.KpiName ?? "—"}";
-
+                var localizedKpiName = LocalizationHelper.Get(kpi?.KpiNameAr, kpi?.KpiName ?? "—");
+                string displayTitle = string.IsNullOrWhiteSpace(prefix) ? localizedKpiName : $"{prefix} — {localizedKpiName}";
                 var facts = await _db.KpiFacts
                     .Include(f => f.Period)
                     .AsNoTracking()
@@ -743,7 +743,8 @@ namespace KPIMonitor.Controllers
                 PillarCode = p.Kpi!.Objective!.Pillar!.PillarCode,
                 ObjectiveCode = p.Kpi!.Objective!.ObjectiveCode,
                 KpiCode = p.Kpi!.KpiCode,
-                KpiName = p.Kpi!.KpiName
+                KpiName = p.Kpi!.KpiName,
+                KpiNameAr = p.Kpi!.KpiNameAr
             });
 
             var editorRaw = await baseQuery
@@ -762,14 +763,19 @@ namespace KPIMonitor.Controllers
                     q.OwnerEmpId == myEmp))
                 .ToListAsync(ct);
 
-            static string Label(dynamic x)
+            string Label(dynamic x)
             {
                 var left = string.Join('.',
                     new[] { x.PillarCode as string, x.ObjectiveCode as string }
                     .Where(s => !string.IsNullOrWhiteSpace(s)));
-                var code = string.IsNullOrWhiteSpace(x.KpiCode as string) ? "" : (left?.Length > 0 ? $" {x.KpiCode}" : x.KpiCode);
+
+                var code = string.IsNullOrWhiteSpace(x.KpiCode as string)
+                    ? ""
+                    : (left?.Length > 0 ? $" {x.KpiCode}" : x.KpiCode);
+
                 var head = (left?.Length > 0 ? left : "") + code;
-                var name = string.IsNullOrWhiteSpace(x.KpiName as string) ? "-" : x.KpiName;
+                var name = LocalizationHelper.Get(x.KpiNameAr as string, x.KpiName as string ?? "-");
+
                 return string.IsNullOrWhiteSpace(head) ? name : $"{head} — {name}";
             }
 
@@ -1136,17 +1142,24 @@ namespace KPIMonitor.Controllers
                         PillarCode = k.Objective!.Pillar!.PillarCode,
                         ObjectiveCode = k.Objective!.ObjectiveCode,
                         KpiCode = k.KpiCode,
-                        KpiName = k.KpiName
+                        KpiName = k.KpiName,
+                        KpiNameAr = k.KpiNameAr
                     })
                     .ToListAsync(ct);
 
                 string Label(dynamic x)
                 {
-                    var left = string.Join('.', new[] { x.PillarCode as string, x.ObjectiveCode as string }
+                    var left = string.Join('.',
+                        new[] { x.PillarCode as string, x.ObjectiveCode as string }
                         .Where(s => !string.IsNullOrWhiteSpace(s)));
-                    var code2 = string.IsNullOrWhiteSpace(x.KpiCode as string) ? "" : (left?.Length > 0 ? $" {x.KpiCode}" : x.KpiCode);
+
+                    var code2 = string.IsNullOrWhiteSpace(x.KpiCode as string)
+                        ? ""
+                        : (left?.Length > 0 ? $" {x.KpiCode}" : x.KpiCode);
+
                     var head = (left?.Length > 0 ? left : "") + code2;
-                    var name = string.IsNullOrWhiteSpace(x.KpiName as string) ? "-" : x.KpiName;
+                    var name = LocalizationHelper.Get(x.KpiNameAr as string, x.KpiName as string ?? "-");
+
                     return string.IsNullOrWhiteSpace(head) ? name : $"{head} — {name}";
                 }
 
@@ -1320,16 +1333,17 @@ namespace KPIMonitor.Controllers
                     PillarCode = k.Objective!.Pillar!.PillarCode,
                     ObjectiveCode = k.Objective!.ObjectiveCode,
                     KpiCode = k.KpiCode,
-                    KpiName = k.KpiName
+                    KpiName = k.KpiName,
+                    KpiNameAr = k.KpiNameAr
                 })
                 .ToListAsync(ct);
 
-            static string Label(dynamic x)
+            string Label(dynamic x)
             {
                 var left = string.Join('.', new[] { x.PillarCode as string, x.ObjectiveCode as string }.Where(s => !string.IsNullOrWhiteSpace(s)));
-                var code = string.IsNullOrWhiteSpace(x.KpiCode as string) ? "" : (left?.Length > 0 ? $" {x.KpiCode}" : x.KpiCode);
-                var head = (left?.Length > 0 ? left : "") + code;
-                var name = string.IsNullOrWhiteSpace(x.KpiName as string) ? "-" : x.KpiName;
+                var code2 = string.IsNullOrWhiteSpace(x.KpiCode as string) ? "" : (left?.Length > 0 ? $" {x.KpiCode}" : x.KpiCode);
+                var head = (left?.Length > 0 ? left : "") + code2;
+                var name = LocalizationHelper.Get(x.KpiNameAr as string, x.KpiName as string ?? "-");
                 return string.IsNullOrWhiteSpace(head) ? name : $"{head} — {name}";
             }
 
@@ -1389,16 +1403,18 @@ namespace KPIMonitor.Controllers
                     PillarCode = k.Objective!.Pillar!.PillarCode,
                     ObjectiveCode = k.Objective!.ObjectiveCode,
                     KpiCode = k.KpiCode,
-                    KpiName = k.KpiName
+                    KpiName = k.KpiName,
+                    KpiNameAr = k.KpiNameAr
+
                 })
                 .ToListAsync(ct);
 
-            static string Label(dynamic x)
+            string Label(dynamic x)
             {
                 var left = string.Join('.', new[] { x.PillarCode as string, x.ObjectiveCode as string }.Where(s => !string.IsNullOrWhiteSpace(s)));
-                var code = string.IsNullOrWhiteSpace(x.KpiCode as string) ? "" : (left?.Length > 0 ? $" {x.KpiCode}" : x.KpiCode);
-                var head = (left?.Length > 0 ? left : "") + code;
-                var name = string.IsNullOrWhiteSpace(x.KpiName as string) ? "-" : x.KpiName;
+                var code2 = string.IsNullOrWhiteSpace(x.KpiCode as string) ? "" : (left?.Length > 0 ? $" {x.KpiCode}" : x.KpiCode);
+                var head = (left?.Length > 0 ? left : "") + code2;
+                var name = LocalizationHelper.Get(x.KpiNameAr as string, x.KpiName as string ?? "-");
                 return string.IsNullOrWhiteSpace(head) ? name : $"{head} — {name}";
             }
 
@@ -1594,7 +1610,7 @@ namespace KPIMonitor.Controllers
                 .ToHashSet();
 
             // Chip-ready rows (same fields you use elsewhere to build labels)
-            var items = await _db.DimKpis
+            var itemsRaw = await _db.DimKpis
                 .AsNoTracking()
                 .Include(k => k.Objective!)
                     .ThenInclude(o => o.Pillar)
@@ -1604,12 +1620,40 @@ namespace KPIMonitor.Controllers
                     id = k.KpiId,
                     pillarId = k.Objective!.PillarId,
                     objectiveId = k.ObjectiveId,
-                    // keep it simple; your chip renderer uses .text for display
-                    text = k.KpiName
+                    PillarCode = k.Objective!.Pillar!.PillarCode,
+                    ObjectiveCode = k.Objective!.ObjectiveCode,
+                    KpiCode = k.KpiCode,
+                    KpiName = k.KpiName,
+                    KpiNameAr = k.KpiNameAr
+                })
+                .ToListAsync(ct);
+
+            var items = itemsRaw
+                .Select(x =>
+                {
+                    var left = string.Join('.',
+                        new[] { x.PillarCode, x.ObjectiveCode }
+                        .Where(s => !string.IsNullOrWhiteSpace(s)));
+
+                    var code2 = string.IsNullOrWhiteSpace(x.KpiCode)
+                        ? ""
+                        : (left.Length > 0 ? $" {x.KpiCode}" : x.KpiCode);
+
+                    var head = left + code2;
+                    var name = LocalizationHelper.Get(x.KpiNameAr, x.KpiName ?? "-");
+                    var text = string.IsNullOrWhiteSpace(head) ? name : $"{head} — {name}";
+
+                    return new
+                    {
+                        id = x.id,
+                        pillarId = x.pillarId,
+                        objectiveId = x.objectiveId,
+                        text
+                    };
                 })
                 .OrderBy(x => x.text)
                 .Take(300)
-                .ToListAsync(ct);
+                .ToList();
 
             return Json(new { items });
         }
@@ -1799,18 +1843,24 @@ namespace KPIMonitor.Controllers
                     PillarCode = k.Objective != null && k.Objective.Pillar != null ? k.Objective.Pillar.PillarCode : null,
                     ObjectiveCode = k.Objective != null ? k.Objective.ObjectiveCode : null,
                     KpiCode = k.KpiCode,
-                    KpiName = k.KpiName
+                    KpiName = k.KpiName,
+                    KpiNameAr = k.KpiNameAr
                 })
                 .ToListAsync(ct);
 
-            static string Label(dynamic x)
+            string Label(dynamic x)
             {
                 var left = string.Join('.',
                     new[] { x.PillarCode as string, x.ObjectiveCode as string }
                     .Where(s => !string.IsNullOrWhiteSpace(s)));
-                var code2 = string.IsNullOrWhiteSpace(x.KpiCode as string) ? "" : (left?.Length > 0 ? $" {x.KpiCode}" : x.KpiCode);
+
+                var code2 = string.IsNullOrWhiteSpace(x.KpiCode as string)
+                    ? ""
+                    : (left?.Length > 0 ? $" {x.KpiCode}" : x.KpiCode);
+
                 var head = (left?.Length > 0 ? left : "") + code2;
-                var name = string.IsNullOrWhiteSpace(x.KpiName as string) ? "-" : x.KpiName;
+                var name = LocalizationHelper.Get(x.KpiNameAr as string, x.KpiName as string ?? "-");
+
                 return string.IsNullOrWhiteSpace(head) ? name : $"{head} — {name}";
             }
 
