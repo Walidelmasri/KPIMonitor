@@ -336,7 +336,21 @@ namespace KPIMonitor.Controllers
             }
 
             int planYear = plan.Period.Year;
+            async Task<string> ResolveEmployeeDisplayAsync(string? empId, string? fallback)
+            {
+                if (!string.IsNullOrWhiteSpace(empId))
+                {
+                    var emp = await _dir.TryGetByEmpIdAsync(empId);
+                    if (emp != null)
+                    {
+                        var chosen = LocalizationHelper.Get(emp.Value.NameAr, emp.Value.NameEng);
+                        if (!string.IsNullOrWhiteSpace(chosen))
+                            return chosen;
+                    }
+                }
 
+                return string.IsNullOrWhiteSpace(fallback) ? "—" : fallback!;
+            }
             var facts = await _db.KpiFacts
                 .Include(f => f.Period)
                 .AsNoTracking()
@@ -469,16 +483,20 @@ namespace KPIMonitor.Controllers
 
             var meta = new
             {
-                title = kpi?.KpiName ?? "—",
+                title = LocalizationHelper.Get(kpi?.KpiNameAr, kpi?.KpiName ?? "—"),
                 code = kpi?.KpiCode ?? "",
                 pillarCode = kpi?.Objective?.Pillar?.PillarCode ?? "",
                 objectiveCode = kpi?.Objective?.ObjectiveCode ?? "",
 
-                owner = plan.Owner ?? "—",
-                editor = string.IsNullOrWhiteSpace(plan.Editor2)
-    ? (plan.Editor ?? "—")
-    : $"{(plan.Editor ?? "—")} / {plan.Editor2}",
-                valueType = string.IsNullOrWhiteSpace(plan.Frequency) ? "—" : plan.Frequency,
+                owner = await ResolveEmployeeDisplayAsync(plan.OwnerEmpId, plan.Owner),
+                editor = string.IsNullOrWhiteSpace(plan.Editor2EmpId) && string.IsNullOrWhiteSpace(plan.Editor2)
+    ? await ResolveEmployeeDisplayAsync(plan.EditorEmpId, plan.Editor)
+    : $"{await ResolveEmployeeDisplayAsync(plan.EditorEmpId, plan.Editor)} / {await ResolveEmployeeDisplayAsync(plan.Editor2EmpId, plan.Editor2)}",
+                valueType = string.IsNullOrWhiteSpace(plan.Frequency)
+    ? "—"
+    : (plan.Frequency.Trim().ToLower() == "monthly" ? "شهري"
+       : plan.Frequency.Trim().ToLower() == "quarterly" ? "ربع سنوي"
+       : plan.Frequency),
                 unit = string.IsNullOrWhiteSpace(plan.Unit) ? "—" : plan.Unit,
                 priority = plan.Priority,
                 statusLabel = status.label,
