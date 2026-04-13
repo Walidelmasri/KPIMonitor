@@ -1,7 +1,7 @@
 ﻿@using System.Globalization
 @using Microsoft.AspNetCore.Localization
 @inject Microsoft.AspNetCore.Mvc.Localization.IViewLocalizer Localizer
-
+@inject KPIMonitor.Services.IEmployeeDirectory EmpDir
 @{
     var requestCulture = Context.Features.Get<IRequestCultureFeature>();
     var culture = requestCulture?.RequestCulture.UICulture?.Name ?? CultureInfo.CurrentUICulture.Name;
@@ -80,7 +80,7 @@
 </head>
 
 <body>
-    @{
+    @* @{
         var isAuth = User?.Identity?.IsAuthenticated ?? false;
         var rawName = User?.Identity?.Name ?? "";
 
@@ -103,8 +103,45 @@
 
         var displayName = System.Globalization.CultureInfo.CurrentCulture.TextInfo
         .ToTitleCase(nameCore.ToLower()); // "walid salem" -> "Walid Salem"
-    }
+    } *@
+    @{
+        var isAuth = User?.Identity?.IsAuthenticated ?? false;
+        var rawName = User?.Identity?.Name ?? "";
+        var displayName = "";
 
+        if (isAuth && !string.IsNullOrWhiteSpace(rawName))
+        {
+            var emp = await EmpDir.TryGetByUserIdAsync(rawName);
+
+            if (emp != null)
+            {
+                displayName = isArabic
+                    ? (string.IsNullOrWhiteSpace(emp.Value.NameAr) ? emp.Value.NameEng : emp.Value.NameAr)
+                    : emp.Value.NameEng;
+            }
+
+            if (string.IsNullOrWhiteSpace(displayName))
+            {
+                var nameCore = rawName.Trim();
+
+                var slash = nameCore.LastIndexOf('\\');
+                if (slash >= 0 && slash < nameCore.Length - 1)
+                    nameCore = nameCore[(slash + 1)..];
+
+                var at = nameCore.IndexOf('@');
+                if (at > 0)
+                    nameCore = nameCore[..at];
+
+                nameCore = nameCore.Replace('.', ' ')
+                                   .Replace('_', ' ')
+                                   .Replace('-', ' ');
+
+                nameCore = System.Text.RegularExpressions.Regex.Replace(nameCore, @"\s+", " ").Trim();
+
+                displayName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(nameCore.ToLower());
+            }
+        }
+    }
 
     <header>
         <!-- Fixed bar at top (72px total height, logo 60px) -->

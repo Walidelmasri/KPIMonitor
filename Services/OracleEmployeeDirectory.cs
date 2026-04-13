@@ -1,9 +1,8 @@
 using System.Data;
-using Oracle.ManagedDataAccess.Client;
-using KPIMonitor.ViewModels;
-using KPIMonitor.Data;
-using Microsoft.EntityFrameworkCore;
 using System.Globalization;
+using KPIMonitor.Data;
+using KPIMonitor.ViewModels;
+using Microsoft.EntityFrameworkCore;
 
 namespace KPIMonitor.Services
 {
@@ -24,8 +23,9 @@ namespace KPIMonitor.Services
             cmd.CommandText = @"
                 SELECT EMP_ID, NAME_ENG, NAME_ARABIC, USERID
                 FROM   BADEA_ADDONS.EMPLOYEES
-                WHERE  EMP_ID IS NOT NULL   
+                WHERE  EMP_ID IS NOT NULL
                 ORDER  BY NAME_ENG";
+
             await using var rdr = await cmd.ExecuteReaderAsync(ct);
             while (await rdr.ReadAsync(ct))
             {
@@ -48,10 +48,11 @@ namespace KPIMonitor.Services
                     UserId = userId
                 });
             }
+
             return list;
         }
 
-        public async Task<(string EmpId, string NameEng)?> TryGetByEmpIdAsync(string empId, CancellationToken ct = default)
+        public async Task<(string EmpId, string NameEng, string? NameAr)?> TryGetByEmpIdAsync(string empId, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(empId)) return null;
 
@@ -61,9 +62,10 @@ namespace KPIMonitor.Services
 
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
-                SELECT EMP_ID, NAME_ENG
+                SELECT EMP_ID, NAME_ENG, NAME_ARABIC
                 FROM   BADEA_ADDONS.EMPLOYEES
                 WHERE  EMP_ID = :p_emp";
+
             var p = cmd.CreateParameter();
             p.ParameterName = "p_emp";
             p.Value = empId;
@@ -73,23 +75,30 @@ namespace KPIMonitor.Services
             if (await rdr.ReadAsync(ct))
             {
                 string e = rdr.GetString(0);
-                string n = rdr.IsDBNull(1) ? "-" : rdr.GetString(1);
-                return (e, n);
+                string nEng = rdr.IsDBNull(1) ? "-" : rdr.GetString(1);
+                string? nAr = rdr.IsDBNull(2) ? null : rdr.GetString(2);
+                return (e, nEng, nAr);
             }
+
             return null;
         }
 
-        public async Task<(string EmpId, string NameEng)?> TryGetByUserIdAsync(string userId, CancellationToken ct = default)
+        public async Task<(string EmpId, string NameEng, string? NameAr)?> TryGetByUserIdAsync(string userId, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(userId)) return null;
 
             static string NormalizeSam(string raw)
             {
                 var s = raw.Trim();
-                var bs = s.LastIndexOf('\\');               // DOMAIN\user
-                if (bs >= 0 && bs < s.Length - 1) s = s[(bs + 1)..];
-                var at = s.IndexOf('@');                    // user@domain
-                if (at > 0) s = s[..at];
+
+                var bs = s.LastIndexOf('\\');
+                if (bs >= 0 && bs < s.Length - 1)
+                    s = s[(bs + 1)..];
+
+                var at = s.IndexOf('@');
+                if (at > 0)
+                    s = s[..at];
+
                 return s.Trim();
             }
 
@@ -97,16 +106,17 @@ namespace KPIMonitor.Services
             if (string.IsNullOrWhiteSpace(sam)) return null;
 
             var conn = _db.Database.GetDbConnection();
-            if (conn.State != System.Data.ConnectionState.Open)
+            if (conn.State != ConnectionState.Open)
                 await conn.OpenAsync(ct);
 
-            // 1) Fast path: exact match on USERID (handles cases where USERID is already "john.smith")
+            // 1) Exact USERID match
             await using (var cmd = conn.CreateCommand())
             {
                 cmd.CommandText = @"
-            SELECT EMP_ID, NAME_ENG
-            FROM   BADEA_ADDONS.EMPLOYEES
-            WHERE  UPPER(USERID) = :p_exact";
+                    SELECT EMP_ID, NAME_ENG, NAME_ARABIC
+                    FROM   BADEA_ADDONS.EMPLOYEES
+                    WHERE  UPPER(USERID) = :p_exact";
+
                 var p = cmd.CreateParameter();
                 p.ParameterName = "p_exact";
                 p.Value = sam;
@@ -116,43 +126,57 @@ namespace KPIMonitor.Services
                 if (await r.ReadAsync(ct))
                 {
                     var emp = r.GetString(0);
-                    var name = r.IsDBNull(1) ? "" : r.GetString(1);
-                    return (emp, name);
+                    var nameEng = r.IsDBNull(1) ? "" : r.GetString(1);
+                    string? nameAr = r.IsDBNull(2) ? null : r.GetString(2);
+                    return (emp, nameEng, nameAr);
                 }
             }
 
-            // 2) Fallback: match where USERID contains the SAM (covers BADEA\sam and sam@badea.local)
-            // Prefer endings like '\SAM' or '@' patterns, but also allow '%SAM%'
+            // 2) USERID contains sam
             await using (var cmd = conn.CreateCommand())
             {
                 cmd.CommandText = @"
-            SELECT EMP_ID, NAME_ENG
-            FROM   BADEA_ADDONS.EMPLOYEES
-            WHERE  UPPER(USERID) LIKE :p_like
-               OR  UPPER(USERID) LIKE :p_domLike
-               OR  UPPER(USERID) LIKE :p_mailLike
-            ORDER BY LENGTH(USERID) ASC"; // shorter USERID often means cleaner/specific
-                var p1 = cmd.CreateParameter(); p1.ParameterName = "p_like"; p1.Value = $"%{sam}%";
-                var p2 = cmd.CreateParameter(); p2.ParameterName = "p_domLike"; p2.Value = $"%\\{sam}";      // DOMAIN\sam
-                var p3 = cmd.CreateParameter(); p3.ParameterName = "p_mailLike"; p3.Value = $"{sam}@%";       // sam@domain
-                cmd.Parameters.Add(p1); cmd.Parameters.Add(p2); cmd.Parameters.Add(p3);
+                    SELECT EMP_ID, NAME_ENG, NAME_ARABIC
+                    FROM   BADEA_ADDONS.EMPLOYEES
+                    WHERE  UPPER(USERID) LIKE :p_like
+                       OR  UPPER(USERID) LIKE :p_domLike
+                       OR  UPPER(USERID) LIKE :p_mailLike
+                    ORDER BY LENGTH(USERID) ASC";
+
+                var p1 = cmd.CreateParameter();
+                p1.ParameterName = "p_like";
+                p1.Value = $"%{sam}%";
+
+                var p2 = cmd.CreateParameter();
+                p2.ParameterName = "p_domLike";
+                p2.Value = $"%\\{sam}";
+
+                var p3 = cmd.CreateParameter();
+                p3.ParameterName = "p_mailLike";
+                p3.Value = $"{sam}@%";
+
+                cmd.Parameters.Add(p1);
+                cmd.Parameters.Add(p2);
+                cmd.Parameters.Add(p3);
 
                 await using var r = await cmd.ExecuteReaderAsync(ct);
                 if (await r.ReadAsync(ct))
                 {
                     var emp = r.GetString(0);
-                    var name = r.IsDBNull(1) ? "" : r.GetString(1);
-                    return (emp, name);
+                    var nameEng = r.IsDBNull(1) ? "" : r.GetString(1);
+                    string? nameAr = r.IsDBNull(2) ? null : r.GetString(2);
+                    return (emp, nameEng, nameAr);
                 }
             }
 
-            // 3) Last resort: EMAIL contains sam (some rows may have true mailbox there)
+            // 3) EMAIL contains sam
             await using (var cmd = conn.CreateCommand())
             {
                 cmd.CommandText = @"
-            SELECT EMP_ID, NAME_ENG
-            FROM   BADEA_ADDONS.EMPLOYEES
-            WHERE  UPPER(EMAIL) LIKE :p_mailAny";
+                    SELECT EMP_ID, NAME_ENG, NAME_ARABIC
+                    FROM   BADEA_ADDONS.EMPLOYEES
+                    WHERE  UPPER(EMAIL) LIKE :p_mailAny";
+
                 var p = cmd.CreateParameter();
                 p.ParameterName = "p_mailAny";
                 p.Value = $"%{sam}%";
@@ -162,14 +186,14 @@ namespace KPIMonitor.Services
                 if (await r.ReadAsync(ct))
                 {
                     var emp = r.GetString(0);
-                    var name = r.IsDBNull(1) ? "" : r.GetString(1);
-                    return (emp, name);
+                    var nameEng = r.IsDBNull(1) ? "" : r.GetString(1);
+                    string? nameAr = r.IsDBNull(2) ? null : r.GetString(2);
+                    return (emp, nameEng, nameAr);
                 }
             }
 
             return null;
         }
-
 
         public async Task<string?> TryGetLoginByEmpIdAsync(string empId, CancellationToken ct = default)
         {
@@ -184,6 +208,7 @@ namespace KPIMonitor.Services
                 SELECT USERID
                 FROM   BADEA_ADDONS.EMPLOYEES
                 WHERE  EMP_ID = :p_emp";
+
             var p = cmd.CreateParameter();
             p.ParameterName = "p_emp";
             p.Value = empId;
