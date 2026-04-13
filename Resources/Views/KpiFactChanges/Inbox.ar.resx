@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="ApprovalsInbox" xml:space="preserve">
+    <value>صندوق الاعتمادات</value>
+  </data>
+  <data name="Pending" xml:space="preserve">
+    <value>قيد الانتظار</value>
+  </data>
+  <data name="Approved" xml:space="preserve">
+    <value>تمت الموافقة</value>
+  </data>
+  <data name="Rejected" xml:space="preserve">
+    <value>مرفوض</value>
+  </data>
+  <data name="LatestSubmissions" xml:space="preserve">
+    <value>أحدث الإرسالات</value>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>تحديث</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>جارٍ التحميل…</value>
+  </data>
+  <data name="FailedToLoad" xml:space="preserve">
+    <value>تعذر التحميل.</value>
+  </data>
+
+  <data name="Reject" xml:space="preserve">
+    <value>رفض</value>
+  </data>
+  <data name="Reason" xml:space="preserve">
+    <value>السبب</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>إلغاء</value>
+  </data>
+
+  <data name="ChangeDetails" xml:space="preserve">
+    <value>تفاصيل التغيير</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>إغلاق</value>
+  </data>
+  <data name="ActualPointsCount" xml:space="preserve">
+    <value>عدد نقاط الفعلي:</value>
+  </data>
+  <data name="TargetPointsCount" xml:space="preserve">
+    <value>عدد نقاط المستهدف:</value>
+  </data>
+  <data name="ForecastPointsCount" xml:space="preserve">
+    <value>عدد نقاط التوقع:</value>
+  </data>
+  <data name="Periods" xml:space="preserve">
+    <value>الفترات:</value>
+  </data>
+
+  <data name="IndicatorDetails" xml:space="preserve">
+    <value>تفاصيل المؤشر</value>
+  </data>
+
+  <data name="Details" xml:space="preserve">
+    <value>التفاصيل</value>
+  </data>
+  <data name="Approve" xml:space="preserve">
+    <value>موافقة</value>
+  </data>
+  <data name="ReasonRequired" xml:space="preserve">
+    <value>السبب مطلوب.</value>
+  </data>
+  <data name="ApproveFailed" xml:space="preserve">
+    <value>فشلت الموافقة</value>
+  </data>
+  <data name="RejectFailed" xml:space="preserve">
+    <value>فشل الرفض</value>
+  </data>
+  <data name="FailedToLoadDetails" xml:space="preserve">
+    <value>تعذر تحميل التفاصيل.</value>
+  </data>
+  <data name="FailedToLoadIndicatorDetails" xml:space="preserve">
+    <value>تعذر تحميل تفاصيل المؤشر.</value>
+  </data>
+
+  <data name="Actual" xml:space="preserve">
+    <value>الفعلي</value>
+  </data>
+  <data name="Target" xml:space="preserve">
+    <value>المستهدف</value>
+  </data>
+  <data name="Forecast" xml:space="preserve">
+    <value>التوقع</value>
+  </data>
+  <data name="YearTarget" xml:space="preserve">
+    <value>المستهدف السنوي</value>
+  </data>
+  <data name="ProposedActual" xml:space="preserve">
+    <value>الفعلي المقترح</value>
+  </data>
+  <data name="ProposedTarget" xml:space="preserve">
+    <value>المستهدف المقترح</value>
+  </data>
+  <data name="ProposedForecast" xml:space="preserve">
+    <value>التوقع المقترح</value>
+  </data>
+  <data name="PendingActual" xml:space="preserve">
+    <value>الفعلي المعلق</value>
+  </data>
+  <data name="PendingTarget" xml:space="preserve">
+    <value>المستهدف المعلق</value>
+  </data>
+  <data name="PendingForecast" xml:space="preserve">
+    <value>التوقع المعلق</value>
+  </data>
+
+  <data name="Freq" xml:space="preserve">
+    <value>الدورية:</value>
+  </data>
+  <data name="SubmittedBy" xml:space="preserve">
+    <value>تم الإرسال بواسطة</value>
+  </data>
+  <data name="Owner" xml:space="preserve">
+    <value>المالك:</value>
+  </data>
+  <data name="LatestPendingBy" xml:space="preserve">
+    <value>آخر إرسال معلق بواسطة</value>
+  </data>
+  <data name="At" xml:space="preserve">
+    <value>في</value>
+  </data>
+
+  <data name="All" xml:space="preserve">
+    <value>الكل</value>
+  </data>
+  <data name="ByQuarter" xml:space="preserve">
+    <value>حسب الربع</value>
+  </data>
+  <data name="ByMonth" xml:space="preserve">
+    <value>حسب الشهر</value>
+  </data>
+</root>

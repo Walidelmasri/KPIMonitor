@@ -1,5 +1,7 @@
+@inject Microsoft.AspNetCore.Mvc.Localization.IViewLocalizer Localizer
+
 @{
-  ViewData["Title"] = "Approvals Inbox";
+  ViewData["Title"] = Localizer["ApprovalsInbox"];
 }
 <style>
   .appr-diff {
@@ -15,7 +17,7 @@
   @section PageHeader {
     <div class="page-hero" style="background-image:url('@Url.Content("~/images/pic1.jpg")')">
       <div class="page-hero-content">
-        <h1 class="page-title">Approvals Inbox</h1>
+        <h1 class="page-title">@Localizer["ApprovalsInbox"]</h1>
       </div>
     </div>
   }
@@ -25,12 +27,12 @@
 
   <div class="with-rails">
     <div class="d-flex gap-2 mb-3">
-      <button class="btn btn-sm btn-primary" data-tab="pending">Pending</button>
-      <button class="btn btn-sm btn-outline-secondary" data-tab="approved">Approved</button>
-      <button class="btn btn-sm btn-outline-secondary" data-tab="rejected">Rejected</button>
-
-      <button asp-admin-only class="btn btn-sm btn-outline-secondary" data-tab="editors">Latest Submissions</button>
-      <button class="btn btn-sm btn-outline-secondary ms-auto" id="refreshBtn">↻ Refresh</button>
+      <button class="btn btn-sm btn-primary" data-tab="pending">@Localizer["Pending"]</button>
+      <button class="btn btn-sm btn-outline-secondary" data-tab="approved">@Localizer["Approved"]</button>
+      <button class="btn btn-sm btn-outline-secondary" data-tab="rejected">@Localizer["Rejected"]</button>
+      <button asp-admin-only class="btn btn-sm btn-outline-secondary"
+              data-tab="editors">@Localizer["LatestSubmissions"]</button>
+      <button class="btn btn-sm btn-outline-secondary ms-auto" id="refreshBtn">↻ @Localizer["Refresh"]</button>
     </div>
 
     <div id="apprBody" class="bg-white border rounded-3 p-3">
@@ -44,7 +46,7 @@
   <div class="modal-dialog">
     <div class="modal-content rounded-3">
       <div class="modal-header">
-        <h5 class="modal-title" id="rejectLabel">Reject</h5>
+        <h5 class="modal-title" id="rejectLabel">@Localizer["Reject"]</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form id="rejectForm" method="post">
@@ -53,13 +55,13 @@
           <input type="hidden" id="rej_changeId" name="changeId" />
           <input type="hidden" id="rej_batchId" name="batchId" />
           <div class="mb-3">
-            <label class="form-label">Reason</label>
+            <label class="form-label">@Localizer["Reason"]</label>
             <textarea class="form-control" id="rej_reason" name="reason" rows="3" required></textarea>
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-          <button class="btn btn-danger" type="submit">Reject</button>
+          <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">@Localizer["Cancel"]</button>
+          <button class="btn btn-danger" type="submit">@Localizer["Reject"]</button>
         </div>
       </form>
     </div>
@@ -72,7 +74,7 @@
     <div class="modal-content rounded-3">
       <div class="modal-header">
         <div>
-          <h5 class="modal-title" id="detailsLabel">Change Details</h5>
+          <h5 class="modal-title" id="detailsLabel">@Localizer["ChangeDetails"]</h5>
           <div class="small text-muted" id="detailsSubtitle">—</div>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -84,37 +86,40 @@
 
         <!-- simple summary -->
         <div class="row small mt-3" id="proposedSummary" style="row-gap:.25rem">
-          <div class="col-6 col-md-3"><strong># Actual points:</strong> <span id="pv_count_actual">—</span></div>
-          <div class="col-6 col-md-3"><strong># Target points:</strong> <span id="pv_count_target">—</span></div>
-          <div class="col-6 col-md-3"><strong># Forecast points:</strong> <span id="pv_count_forecast">—</span></div>
-          <div class="col-12 mt-2"><strong>Periods:</strong> <span id="pv_periods">—</span></div>
-        </div>
+          <div class="col-6 col-md-3"><strong>@Localizer["ActualPointsCount"]</strong> <span
+            id="pv_count_actual">—</span></div>
+            <div class="col-6 col-md-3"><strong>@Localizer["TargetPointsCount"]</strong> <span
+              id="pv_count_target">—</span></div>
+              <div class="col-6 col-md-3"><strong>@Localizer["ForecastPointsCount"]</strong> <span
+                id="pv_count_forecast">—</span></div>
+                <div class="col-12 mt-2"><strong>@Localizer["Periods"]</strong> <span id="pv_periods">—</span></div>
+              </div>
 
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
-      </div>
-    </div>
-  </div>
-</div>
-<!-- Latest Submissions Details Modal -->
-<div class="modal fade" id="editorDetailsModal" tabindex="-1" aria-labelledby="editorDetailsLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content rounded-3">
-      <div class="modal-header">
-        <div>
-          <h5 class="modal-title" id="editorDetailsLabel">Indicator Details</h5>
-          <div class="small text-muted" id="editorDetailsSubtitle">—</div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">@Localizer["Close"]</button>
+            </div>
+          </div>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body">
-        <div class="border rounded p-2" style="height:360px">
-          <canvas id="editorApprChart"></canvas>
-        </div>
+      <!-- Latest Submissions Details Modal -->
+      <div class="modal fade" id="editorDetailsModal" tabindex="-1" aria-labelledby="editorDetailsLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content rounded-3">
+            <div class="modal-header">
+              <div>
+                <h5 class="modal-title" id="editorDetailsLabel">@Localizer["IndicatorDetails"]</h5>
+                <div class="small text-muted" id="editorDetailsSubtitle">—</div>
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <div class="border rounded p-2" style="height:360px">
+                <canvas id="editorApprChart"></canvas>
+              </div>
 
-        <div class="row small mt-3" style="row-gap:.4rem">
-          @* <div class="col-6 col-md-3"><strong>Approved Actual:</strong> <span id="ed_approved_actual">—</span></div>
+              <div class="row small mt-3" style="row-gap:.4rem">
+                @* <div class="col-6 col-md-3"><strong>Approved Actual:</strong> <span id="ed_approved_actual">—</span></div>
           <div class="col-6 col-md-3"><strong>Approved Target:</strong> <span id="ed_approved_target">—</span></div>
           <div class="col-6 col-md-3"><strong>Approved Forecast:</strong> <span id="ed_approved_forecast">—</span></div>
           <div class="col-6 col-md-3"><strong>Approved Status:</strong> <span id="ed_approved_status">—</span></div>
@@ -131,59 +136,92 @@
 
           <div class="col-12 mt-2"><strong>Pending periods:</strong> <span id="ed_periods_pending">—</span></div>
           <div class="col-12"><strong>Missing periods:</strong> <span id="ed_periods_missing">—</span></div> *@
+              </div>
+            </div>
+            <div class="modal-footer">
+              <h5 class="modal-title" id="editorDetailsLabel">@Localizer["IndicatorDetails"]</h5>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
-      </div>
-    </div>
-  </div>
-</div>
-@section Scripts {
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    // ---------- tiny helpers ----------
-    const $ = (id) => document.getElementById(id);
-    const qs = (sel, root = document) => root.querySelector(sel);
-    const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-    const anti = () => (qs('input[name="__RequestVerificationToken"]')?.value || '');
+      @section Scripts {
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+          const apprText = {
+          loading: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Loading"].Value)),
+          failedToLoad: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["FailedToLoad"].Value)),
+          approve: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Approve"].Value)),
+          reject: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Reject"].Value)),
+          pending: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Pending"].Value)),
+          approved: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Approved"].Value)),
+          rejected: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Rejected"].Value)),
+          details: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Details"].Value)),
+          changeDetails: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["ChangeDetails"].Value)),
+          indicatorDetails: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["IndicatorDetails"].Value)),
+          reasonRequired: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["RejectReasonRequired"].Value)),
+          approveFailed: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["ApproveFailed"].Value)),
+          rejectFailed: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["RejectFailed"].Value)),
+          failedToLoadDetails: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["FailedToLoadDetails"].Value)),
+          submittedBy: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["SubmittedBy"].Value)),
+          submittedAt: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["SubmittedAt"].Value)),
+          periods: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Periods"].Value)),
+          frequency: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Frequency"].Value)),
+          owner: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Owner"].Value)),
+          latestPendingBy: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["LatestPendingBy"].Value)),
+          at: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["At"].Value)),
+          actual: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Actual"].Value)),
+          target: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Target"].Value)),
+          forecast: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Forecast"].Value)),
+          yearTarget: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["YearTarget"].Value)),
+          proposedActual: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["ProposedActual"].Value)),
+          proposedTarget: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["ProposedTarget"].Value)),
+          proposedForecast: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["ProposedForecast"].Value)),
+          pendingActual: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["PendingActual"].Value)),
+          pendingTarget: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["PendingTarget"].Value)),
+          pendingForecast: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["PendingForecast"].Value))
+          };
+          // ---------- tiny helpers ----------
+          const $ = (id) => document.getElementById(id);
+          const qs = (sel, root = document) => root.querySelector(sel);
+          const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+          const anti = () => (qs('input[name="__RequestVerificationToken"]')?.value || '');
 
-    let currentTab = 'pending';
-    let currentEditorPeriodFilter = 'all';
+          let currentTab = 'pending';
+          let currentEditorPeriodFilter = 'all';
 
-    let apprChart = null;       // existing modal chart
-    let editorApprChart = null; // latest submissions modal chart
-    // ---------- list loader (batches) ----------
-    async function loadList(tab) {
-    currentTab = tab || currentTab || 'pending';
-    const body = $('apprBody');
-    body.innerHTML = "<div class='text-muted small'>Loading…</div>";
-    try {
-    const listUrl = '@Url.Action("ListBatchesHtml", "KpiFactChanges")' + (window.location.search || '');
-    const res = await fetch(listUrl, {
-    method: 'POST',
-    headers: {
-    'Accept': 'text/html',
-    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-    'RequestVerificationToken': anti()
-    },
-    body: new URLSearchParams({ status: currentTab })
-    });
-    if (!res.ok) {
-    const txt = await res.text().catch(() => '');
-    throw new Error(txt || ('HTTP ' + res.status));
-    }
-    body.innerHTML = await res.text();
+          let apprChart = null;       // existing modal chart
+          let editorApprChart = null; // latest submissions modal chart
+          // ---------- list loader (batches) ----------
+          async function loadList(tab) {
+          currentTab = tab || currentTab || 'pending';
+          const body = $('apprBody');
+          body.innerHTML = `<div class='text-muted small'>${apprText.loading}</div>`;
+          try {
+          const listUrl = '@Url.Action("ListBatchesHtml", "KpiFactChanges")' + (window.location.search || '');
+          const res = await fetch(listUrl, {
+          method: 'POST',
+          headers: {
+          'Accept': 'text/html',
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'RequestVerificationToken': anti()
+          },
+          body: new URLSearchParams({ status: currentTab })
+          });
+          if (!res.ok) {
+          const txt = await res.text().catch(() => '');
+          throw new Error(txt || ('HTTP ' + res.status));
+          }
+          body.innerHTML = await res.text();
 
-    // Optionally decorate batch tiles with a Details button if server didn't render one
-    decorateBatchCards();
-    } catch (err) {
-    console.error(err);
-    body.innerHTML = "<div class='text-danger small'>Failed to load.</div>";
-    }
-    }
-    // ---------- editor stats loader ----------
-    @* async function loadEditors() {
+          // Optionally decorate batch tiles with a Details button if server didn't render one
+          decorateBatchCards();
+          } catch (err) {
+          console.error(err);
+          body.innerHTML = `<div class='text-danger small'>${apprText.failedToLoad}</div>`;
+          }
+          }
+          // ---------- editor stats loader ----------
+          @* async function loadEditors() {
     currentTab = 'editors';
     const body = $('apprBody');
     body.innerHTML = "<div class='text-muted small'>Loading…</div>";
@@ -211,477 +249,472 @@
     }
     } *@
 
-    async function loadEditors(periodFilter) {
-    currentTab = 'editors';
-    currentEditorPeriodFilter = periodFilter || currentEditorPeriodFilter || 'all';
+          async function loadEditors(periodFilter) {
+          currentTab = 'editors';
+          currentEditorPeriodFilter = periodFilter || currentEditorPeriodFilter || 'all';
 
-    const body = $('apprBody');
-    body.innerHTML = "<div class='text-muted small'>Loading…</div>";
+          const body = $('apprBody');
+          body.innerHTML = `<div class='text-muted small'>${apprText.loading}</div>`;
+          try {
+          const url = '@Url.Action("EditorStatsHtml", "KpiFactChanges")' + (window.location.search || '');
+          const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+          'Accept': 'text/html',
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'RequestVerificationToken': anti()
+          },
+          body: new URLSearchParams({ periodFilter: currentEditorPeriodFilter })
+          });
 
-    try {
-    const url = '@Url.Action("EditorStatsHtml", "KpiFactChanges")' + (window.location.search || '');
-    const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-    'Accept': 'text/html',
-    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-    'RequestVerificationToken': anti()
-    },
-    body: new URLSearchParams({ periodFilter: currentEditorPeriodFilter })
-    });
+          if (!res.ok) {
+          const txt = await res.text().catch(() => '');
+          throw new Error(txt || ('HTTP ' + res.status));
+          }
 
-    if (!res.ok) {
-    const txt = await res.text().catch(() => '');
-    throw new Error(txt || ('HTTP ' + res.status));
-    }
+          body.innerHTML = await res.text();
+          } catch (err) {
+          console.error(err);
+          body.innerHTML = `<div class='text-danger small'>${apprText.failedToLoad}</div>`;
+          }
+          }
+          // If server tiles lack a unified details button, add it
+          function decorateBatchCards() {
+          const cards = qsa('.appr-card[data-batch-id]');
+          for (const card of cards) {
+          const right = card.querySelector('.text-end') || card;
+          if (!right) continue;
+          const already = right.querySelector('.appr-batch-details');
+          if (already) continue;
 
-    body.innerHTML = await res.text();
-    } catch (err) {
-    console.error(err);
-    body.innerHTML = "<div class='text-danger small'>Failed to load.</div>";
-    }
-    }
-    // If server tiles lack a unified details button, add it
-    function decorateBatchCards() {
-    const cards = qsa('.appr-card[data-batch-id]');
-    for (const card of cards) {
-    const right = card.querySelector('.text-end') || card;
-    if (!right) continue;
-    const already = right.querySelector('.appr-batch-details');
-    if (already) continue;
+          const batchId = card.getAttribute('data-batch-id');
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn btn-sm btn-outline-secondary ms-2 appr-batch-details';
+          btn.setAttribute('data-batch-id', batchId);
+          const kpiId = card.getAttribute('data-kpi-id');
+          if (kpiId) btn.setAttribute('data-kpi-id', kpiId);
+          btn.textContent = apprText.details;
+          right.appendChild(btn);
+          }
+          }
 
-    const batchId = card.getAttribute('data-batch-id');
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'btn btn-sm btn-outline-secondary ms-2 appr-batch-details';
-    btn.setAttribute('data-batch-id', batchId);
-    const kpiId = card.getAttribute('data-kpi-id');
-    if (kpiId) btn.setAttribute('data-kpi-id', kpiId);
-    btn.textContent = 'Details';
-    right.appendChild(btn);
-    }
-    }
+          // ---------- click handlers ----------
+          document.addEventListener('click', async (e) => {
+          // tabs
+          // tabs
+          const tabBtn = e.target.closest('[data-tab]');
+          if (tabBtn) {
+          e.preventDefault();
 
-    // ---------- click handlers ----------
-    document.addEventListener('click', async (e) => {
-    // tabs
-    // tabs
-    const tabBtn = e.target.closest('[data-tab]');
-    if (tabBtn) {
-    e.preventDefault();
+          qsa('[data-tab]').forEach(b => {
+          b.classList.remove('btn-primary');
+          b.classList.add('btn-outline-secondary');
+          });
 
-    qsa('[data-tab]').forEach(b => {
-    b.classList.remove('btn-primary');
-    b.classList.add('btn-outline-secondary');
-    });
+          tabBtn.classList.add('btn-primary');
+          tabBtn.classList.remove('btn-outline-secondary');
 
-    tabBtn.classList.add('btn-primary');
-    tabBtn.classList.remove('btn-outline-secondary');
+          const tab = tabBtn.getAttribute('data-tab');
+          if (tab === 'editors') {
+          await loadEditors();
+          } else {
+          await loadList(tab);
+          }
+          return;
+          }
 
-    const tab = tabBtn.getAttribute('data-tab');
-    if (tab === 'editors') {
-    await loadEditors();
-    } else {
-    await loadList(tab);
-    }
-    return;
-    }
+          const periodBtn = e.target.closest('.js-editor-period');
+          if (periodBtn) {
+          e.preventDefault();
+          const pf = periodBtn.getAttribute('data-period-filter') || 'all';
+          await loadEditors(pf);
+          return;
+          }
+          const btn = e.target.closest('.appr-btn, .appr-batch-details, .appr-details, .appr-editor-details'); if (!btn) return;
 
-    const periodBtn = e.target.closest('.js-editor-period');
-    if (periodBtn) {
-    e.preventDefault();
-    const pf = periodBtn.getAttribute('data-period-filter') || 'all';
-    await loadEditors(pf);
-    return;
-    }
-    const btn = e.target.closest('.appr-btn, .appr-batch-details, .appr-details, .appr-editor-details'); if (!btn) return;
+          // Approve entire batch
+          if (btn.classList.contains('appr-btn') && btn.getAttribute('data-action') === 'approve-batch') {
+          const batchId = btn.getAttribute('data-batch-id');
+          if (!batchId) return;
+          btn.disabled = true;
+          try {
+          const fd = new FormData();
+          fd.append('__RequestVerificationToken', anti());
+          fd.append('batchId', batchId);
+          const res = await fetch('@Url.Action("ApproveBatch", "KpiFactChanges")', {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+          body: fd
+          });
+          if (!res.ok) {
+          const err = await res.json().catch(() => null);
+          throw new Error(err?.error || apprText.approveFailed);
+          }
+          await loadList(currentTab);
+          } catch (err) { alert(err.message); btn.disabled = false; }
+          return;
+          }
 
-    // Approve entire batch
-    if (btn.classList.contains('appr-btn') && btn.getAttribute('data-action') === 'approve-batch') {
-    const batchId = btn.getAttribute('data-batch-id');
-    if (!batchId) return;
-    btn.disabled = true;
-    try {
-    const fd = new FormData();
-    fd.append('__RequestVerificationToken', anti());
-    fd.append('batchId', batchId);
-    const res = await fetch('@Url.Action("ApproveBatch", "KpiFactChanges")', {
-    method: 'POST',
-    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-    body: fd
-    });
-    if (!res.ok) {
-    const err = await res.json().catch(() => null);
-    throw new Error(err?.error || 'Approve failed');
-    }
-    await loadList(currentTab);
-    } catch (err) { alert(err.message); btn.disabled = false; }
-    return;
-    }
+          // Reject entire batch (open modal)
+          if (btn.classList.contains('appr-btn') && btn.getAttribute('data-action') === 'reject-batch') {
+          const batchId = btn.getAttribute('data-batch-id');
+          if (!batchId) return;
+          $('rej_changeId').value = '';
+          $('rej_batchId').value = batchId;
+          $('rej_reason').value = '';
+          new bootstrap.Modal(document.getElementById('rejectModal')).show();
+          return;
+          }
 
-    // Reject entire batch (open modal)
-    if (btn.classList.contains('appr-btn') && btn.getAttribute('data-action') === 'reject-batch') {
-    const batchId = btn.getAttribute('data-batch-id');
-    if (!batchId) return;
-    $('rej_changeId').value = '';
-    $('rej_batchId').value = batchId;
-    $('rej_reason').value = '';
-    new bootstrap.Modal(document.getElementById('rejectModal')).show();
-    return;
-    }
+          // Legacy single-row approve/reject
+          if (btn.classList.contains('appr-btn') && btn.getAttribute('data-action') === 'approve') {
+          const id = btn.getAttribute('data-id');
+          if (!id) return;
+          btn.disabled = true;
+          try {
+          const fd = new FormData();
+          fd.append('__RequestVerificationToken', anti());
+          fd.append('changeId', id);
+          const res = await fetch('@Url.Action("Approve", "KpiFactChanges")', {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+          body: fd
+          });
+          if (!res.ok) {
+          const err = await res.json().catch(() => null);
+          throw new Error(err?.error || apprText.approveFailed);
+          }
+          await loadList(currentTab);
+          } catch (err) { alert(err.message); btn.disabled = false; }
+          return;
+          }
 
-    // Legacy single-row approve/reject
-    if (btn.classList.contains('appr-btn') && btn.getAttribute('data-action') === 'approve') {
-    const id = btn.getAttribute('data-id');
-    if (!id) return;
-    btn.disabled = true;
-    try {
-    const fd = new FormData();
-    fd.append('__RequestVerificationToken', anti());
-    fd.append('changeId', id);
-    const res = await fetch('@Url.Action("Approve", "KpiFactChanges")', {
-    method: 'POST',
-    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-    body: fd
-    });
-    if (!res.ok) {
-    const err = await res.json().catch(() => null);
-    throw new Error(err?.error || 'Approve failed');
-    }
-    await loadList(currentTab);
-    } catch (err) { alert(err.message); btn.disabled = false; }
-    return;
-    }
+          if (btn.classList.contains('appr-btn') && btn.getAttribute('data-action') === 'reject') {
+          const id = btn.getAttribute('data-id');
+          if (!id) return;
+          $('rej_batchId').value = '';
+          $('rej_changeId').value = id;
+          $('rej_reason').value = '';
+          new bootstrap.Modal(document.getElementById('rejectModal')).show();
+          return;
+          }
 
-    if (btn.classList.contains('appr-btn') && btn.getAttribute('data-action') === 'reject') {
-    const id = btn.getAttribute('data-id');
-    if (!id) return;
-    $('rej_batchId').value = '';
-    $('rej_changeId').value = id;
-    $('rej_reason').value = '';
-    new bootstrap.Modal(document.getElementById('rejectModal')).show();
-    return;
-    }
+          // Unified batch Details
+          if (btn.classList.contains('appr-batch-details')) {
+          e.preventDefault();
+          const batchId = btn.getAttribute('data-batch-id');
+          const kpiIdAttr = btn.getAttribute('data-kpi-id'); // optional
+          if (batchId) openBatchDetails(batchId, kpiIdAttr);
+          return;
+          }
+          // Latest submissions details
+          if (btn.classList.contains('appr-editor-details')) {
+          e.preventDefault();
+          const kpiId = btn.getAttribute('data-kpi-id');
+          if (kpiId) openEditorDetails(kpiId);
+          return;
+          }
+          // Fallback: single-row details (if present)
+          if (btn.classList.contains('appr-details')) {
+          e.preventDefault();
+          const changeId = btn.getAttribute('data-id');
+          if (changeId) openRowDetails(changeId);
+          return;
+          }
+          });
 
-    // Unified batch Details
-    if (btn.classList.contains('appr-batch-details')) {
-    e.preventDefault();
-    const batchId = btn.getAttribute('data-batch-id');
-    const kpiIdAttr = btn.getAttribute('data-kpi-id'); // optional
-    if (batchId) openBatchDetails(batchId, kpiIdAttr);
-    return;
-    }
-    // Latest submissions details
-    if (btn.classList.contains('appr-editor-details')) {
-    e.preventDefault();
-    const kpiId = btn.getAttribute('data-kpi-id');
-    if (kpiId) openEditorDetails(kpiId);
-    return;
-    }
-    // Fallback: single-row details (if present)
-    if (btn.classList.contains('appr-details')) {
-    e.preventDefault();
-    const changeId = btn.getAttribute('data-id');
-    if (changeId) openRowDetails(changeId);
-    return;
-    }
-    });
+          // ---------- Reject submit (batch or single) ----------
+          $('rejectForm').addEventListener('submit', async (ev) => {
+          ev.preventDefault();
+          const changeId = $('rej_changeId').value;
+          const batchId = $('rej_batchId').value;
+          const reason = $('rej_reason').value.trim();
+          if (!reason) { alert(apprText.reasonRequired); return; }
+          try {
+          const fd = new FormData(ev.target);
+          let url;
+          if (batchId) {
+          url = '@Url.Action("RejectBatch", "KpiFactChanges")';
+          fd.append('batchId', batchId);
+          } else {
+          url = '@Url.Action("Reject", "KpiFactChanges")';
+          fd.append('changeId', changeId);
+          }
 
-    // ---------- Reject submit (batch or single) ----------
-    $('rejectForm').addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    const changeId = $('rej_changeId').value;
-    const batchId = $('rej_batchId').value;
-    const reason = $('rej_reason').value.trim();
-    if (!reason) { alert('Reason is required.'); return; }
+          const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+          body: fd
+          });
+          if (!res.ok) {
+          const err = await res.json().catch(() => null);
+          throw new Error(err?.error || apprText.rejectFailed);
+          }
+          bootstrap.Modal.getInstance(document.getElementById('rejectModal')).hide();
+          await loadList(currentTab);
+          } catch (err) { alert(err.message); }
+          });
 
-    try {
-    const fd = new FormData(ev.target);
-    let url;
-    if (batchId) {
-    url = '@Url.Action("RejectBatch", "KpiFactChanges")';
-    fd.append('batchId', batchId);
-    } else {
-    url = '@Url.Action("Reject", "KpiFactChanges")';
-    fd.append('changeId', changeId);
-    }
+          $('refreshBtn').addEventListener('click', (e) => {
+          e.preventDefault();
+          if (currentTab === 'editors') {
+          loadEditors(currentEditorPeriodFilter);
+          } else {
+          loadList(currentTab);
+          }
+          });
+          document.addEventListener('DOMContentLoaded', () => loadList('pending'));
 
-    const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-    body: fd
-    });
-    if (!res.ok) {
-    const err = await res.json().catch(() => null);
-    throw new Error(err?.error || 'Reject failed');
-    }
-    bootstrap.Modal.getInstance(document.getElementById('rejectModal')).hide();
-    await loadList(currentTab);
-    } catch (err) { alert(err.message); }
-    });
+          // ---------- details modal helpers ----------
+          const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          const normalize = s => String(s ?? '').toLowerCase().replace(/[—–-]/g, '-').replace(/\s+/g, ' ').trim();
+          function toNum(v) { return (v === null || v === undefined || v === '') ? null : Number(v); }
+          function isFiniteNum(v) { return typeof v === 'number' && isFinite(v); }
+          function joinOrDash(arr) {
+          return Array.isArray(arr) && arr.length ? arr.join(', ') : '—';
+          }
+          function findLabelIndex(labels, period) {
+          const L = labels.map(normalize);
+          const y = period?.year ?? null;
+          const qn = period?.quarter ?? period?.quarterNum ?? null;
+          const mn = period?.month ?? period?.monthNum ?? null;
 
-    $('refreshBtn').addEventListener('click', (e) => {
-    e.preventDefault();
-    if (currentTab === 'editors') {
-    loadEditors(currentEditorPeriodFilter);
-    } else {
-    loadList(currentTab);
-    }
-    });
-    document.addEventListener('DOMContentLoaded', () => loadList('pending'));
+          if (y != null && (qn != null || mn != null)) {
+          const cand = qn != null ? `${y} - q${qn}` : `${y} - ${MONTH_ABBR[(mn - 1) || 0]}`;
+          const idx = L.findIndex(x => x === normalize(cand));
+          if (idx >= 0) return idx;
+          }
 
-    // ---------- details modal helpers ----------
-    const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const normalize = s => String(s ?? '').toLowerCase().replace(/[—–-]/g, '-').replace(/\s+/g, ' ').trim();
-    function toNum(v) { return (v === null || v === undefined || v === '') ? null : Number(v); }
-    function isFiniteNum(v) { return typeof v === 'number' && isFinite(v); }
-    function joinOrDash(arr) {
-    return Array.isArray(arr) && arr.length ? arr.join(', ') : '—';
-    }
-    function findLabelIndex(labels, period) {
-    const L = labels.map(normalize);
-    const y = period?.year ?? null;
-    const qn = period?.quarter ?? period?.quarterNum ?? null;
-    const mn = period?.month ?? period?.monthNum ?? null;
+          const lab = String(period?.label ?? '');
+          let m = lab.match(/(\d{4}).*q\s*([1-4])/i);
+          if (m) {
+          const idx = L.findIndex(x => x === normalize(`${m[1]} - q${m[2]}`));
+          if (idx >= 0) return idx;
+          }
+          m = lab.match(/(\d{4}).*([A-Za-z]{3})/);
+          if (m) {
+          const idx = L.findIndex(x => x === normalize(`${m[1]} - ${m[2]}`));
+          if (idx >= 0) return idx;
+          }
+          return -1;
+          }
 
-    if (y != null && (qn != null || mn != null)) {
-    const cand = qn != null ? `${y} - q${qn}` : `${y} - ${MONTH_ABBR[(mn - 1) || 0]}`;
-    const idx = L.findIndex(x => x === normalize(cand));
-    if (idx >= 0) return idx;
-    }
+          // ---- Batch Details (overlay ALL points in the batch) ----
+          async function openBatchDetails(batchId, kpiIdFromBtn) {
+          try {
+          // 1) fetch batch overlay info
+          const infoUrl = '@Url.Action("ChangeOverlayInfoBatch", "KpiFactChanges")' + '?batchId=' + encodeURIComponent(batchId);
+          const info = await fetch(infoUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+          throw new Error(info?.error || apprText.failedToLoadDetails);
+          const kpiId = kpiIdFromBtn || info.kpiId;
+          if (!kpiId) throw new Error('KPI id missing for chart.');
 
-    const lab = String(period?.label ?? '');
-    let m = lab.match(/(\d{4}).*q\s*([1-4])/i);
-    if (m) {
-    const idx = L.findIndex(x => x === normalize(`${m[1]} - q${m[2]}`));
-    if (idx >= 0) return idx;
-    }
-    m = lab.match(/(\d{4}).*([A-Za-z]{3})/);
-    if (m) {
-    const idx = L.findIndex(x => x === normalize(`${m[1]} - ${m[2]}`));
-    if (idx >= 0) return idx;
-    }
-    return -1;
-    }
+          // 2) base chart data
+          const baseUrl = '@Url.Action("GetKpiPresentation", "RedBoard")' + '?kpiId=' + encodeURIComponent(kpiId);
+          const base = await fetch(baseUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
 
-    // ---- Batch Details (overlay ALL points in the batch) ----
-    async function openBatchDetails(batchId, kpiIdFromBtn) {
-    try {
-    // 1) fetch batch overlay info
-    const infoUrl = '@Url.Action("ChangeOverlayInfoBatch", "KpiFactChanges")' + '?batchId=' + encodeURIComponent(batchId);
-    const info = await fetch(infoUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
-    if (!info?.ok) throw new Error(info?.error || 'Failed to load batch details.');
+          const labelsBase = base?.chart?.labels || [];
+          const actBase = (base?.chart?.actual || []).slice();
+          const tgtBase = (base?.chart?.target || []).slice();   // only for context (not edited)
+          const fctBase = (base?.chart?.forecast || []).slice();
 
-    const kpiId = kpiIdFromBtn || info.kpiId;
-    if (!kpiId) throw new Error('KPI id missing for chart.');
+          const yrs = Array.isArray(base?.chart?.yearTargets) ? base.chart.yearTargets : [];
+          const yearLabels = yrs.map(y => String(y.year));
+          const yearVals = yrs.map(y => (y?.value ?? null));
 
-    // 2) base chart data
-    const baseUrl = '@Url.Action("GetKpiPresentation", "RedBoard")' + '?kpiId=' + encodeURIComponent(kpiId);
-    const base = await fetch(baseUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+          const labels = labelsBase.concat(yearLabels);
+          const pad = new Array(yearLabels.length).fill(null);
+          const leftNulls = new Array(labelsBase.length).fill(null);
 
-    const labelsBase = base?.chart?.labels || [];
-    const actBase = (base?.chart?.actual || []).slice();
-    const tgtBase = (base?.chart?.target || []).slice();   // only for context (not edited)
-    const fctBase = (base?.chart?.forecast || []).slice();
+          const act = actBase.concat(pad);
+          const tgt = tgtBase.concat(pad);
+          const fct = fctBase.concat(pad);
+          const yearBar = leftNulls.concat(yearVals);
 
-    const yrs = Array.isArray(base?.chart?.yearTargets) ? base.chart.yearTargets : [];
-    const yearLabels = yrs.map(y => String(y.year));
-    const yearVals = yrs.map(y => (y?.value ?? null));
+          // 3) Build overlay arrays for ALL proposed points
+          const overlayActual = new Array(labels.length).fill(null);
+          const overlayTarget = new Array(labels.length).fill(null);   // <-- ADD
+          const overlayForecast = new Array(labels.length).fill(null);
+          const changedPeriods = [];
 
-    const labels = labelsBase.concat(yearLabels);
-    const pad = new Array(yearLabels.length).fill(null);
-    const leftNulls = new Array(labelsBase.length).fill(null);
+          const items = Array.isArray(info?.items) ? info.items : [];
+          // expect items like: { period:{year,month|quarter,label}, proposed:{actual,forecast}, submittedBy, submittedAt }
 
-    const act = actBase.concat(pad);
-    const tgt = tgtBase.concat(pad);
-    const fct = fctBase.concat(pad);
-    const yearBar = leftNulls.concat(yearVals);
+          for (const it of items) {
+          const idx = findLabelIndex(labels, it?.period);
+          if (idx < 0) continue;
 
-    // 3) Build overlay arrays for ALL proposed points
-    const overlayActual = new Array(labels.length).fill(null);
-    const overlayTarget = new Array(labels.length).fill(null);   // <-- ADD
-    const overlayForecast = new Array(labels.length).fill(null);
-    const changedPeriods = [];
+          const pa = toNum(it?.proposed?.actual);
+          const pt = toNum(it?.proposed?.target);          // <-- ADD
+          const pf = toNum(it?.proposed?.forecast);
+          if (isFiniteNum(pa)) overlayActual[idx] = pa;
+          if (isFiniteNum(pt)) overlayTarget[idx] = pt;    // <-- ADD
+          if (isFiniteNum(pf)) overlayForecast[idx] = pf;
 
-    const items = Array.isArray(info?.items) ? info.items : [];
-    // expect items like: { period:{year,month|quarter,label}, proposed:{actual,forecast}, submittedBy, submittedAt }
+          changedPeriods.push(it?.period?.label || summarizePeriod(it?.period));
+          }
 
-    for (const it of items) {
-    const idx = findLabelIndex(labels, it?.period);
-    if (idx < 0) continue;
+          // 4) Compose datasets (Target kept for context; no edit on target/status)
+          const overlayColor = '#0d6efd';
+          const datasets = [
+          { type: 'bar', label: 'Actual', data: act, backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
+          { type: 'line', label: 'Target', data: tgt, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
+          { type: 'line', label: 'Forecast', data: fct, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
+          { type: 'bar', label: 'Year Target', data: yearBar, backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
+          ];
+          if (overlayActual.some(v => v != null))
+          datasets.push({ type: 'bar', label: 'Proposed Actual', data: overlayActual, backgroundColor: overlayColor, borderColor: overlayColor, borderWidth: 2, borderSkipped: 'bottom' });
+          if (overlayTarget.some(v => v != null))
+          datasets.push({
+          type: 'line',
+          label: 'Proposed Target',
+          data: overlayTarget,
+          borderColor: overlayColor,
+          pointBackgroundColor: overlayColor,
+          pointBorderColor: overlayColor,
+          borderDash: [3, 3],
+          borderWidth: 2,
+          tension: .3,
+          fill: false
+          });
 
-    const pa = toNum(it?.proposed?.actual);
-    const pt = toNum(it?.proposed?.target);          // <-- ADD
-    const pf = toNum(it?.proposed?.forecast);
-    if (isFiniteNum(pa)) overlayActual[idx] = pa;
-    if (isFiniteNum(pt)) overlayTarget[idx] = pt;    // <-- ADD
-    if (isFiniteNum(pf)) overlayForecast[idx] = pf;
+          if (overlayForecast.some(v => v != null))
+          datasets.push({ type: 'line', label: 'Proposed Forecast', data: overlayForecast, borderColor: overlayColor, pointBackgroundColor: overlayColor, pointBorderColor: overlayColor, borderDash: [2, 2], borderWidth: 2, tension: .3, fill: false });
 
-    changedPeriods.push(it?.period?.label || summarizePeriod(it?.period));
-    }
+          // 5) Header + summary
+          $('detailsLabel').textContent = info.kpiText || apprText.changeDetails;
+          const hdrBits = [];
+          if (info?.frequency) hdrBits.push('Freq: ' + info.frequency);
+          if (info?.submittedBy) hdrBits.push('Submitted by ' + info.submittedBy);
+          if (info?.submittedAt) hdrBits.push('at ' + info.submittedAt);
+          $('detailsSubtitle').textContent = hdrBits.join(' • ') || '—';
 
-    // 4) Compose datasets (Target kept for context; no edit on target/status)
-    const overlayColor = '#0d6efd';
-    const datasets = [
-    { type: 'bar', label: 'Actual', data: act, backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
-    { type: 'line', label: 'Target', data: tgt, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
-    { type: 'line', label: 'Forecast', data: fct, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
-    { type: 'bar', label: 'Year Target', data: yearBar, backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
-    ];
-    if (overlayActual.some(v => v != null))
-    datasets.push({ type: 'bar', label: 'Proposed Actual', data: overlayActual, backgroundColor: overlayColor, borderColor: overlayColor, borderWidth: 2, borderSkipped: 'bottom' });
-    if (overlayTarget.some(v => v != null))
-    datasets.push({
-    type: 'line',
-    label: 'Proposed Target',
-    data: overlayTarget,
-    borderColor: overlayColor,
-    pointBackgroundColor: overlayColor,
-    pointBorderColor: overlayColor,
-    borderDash: [3, 3],
-    borderWidth: 2,
-    tension: .3,
-    fill: false
-    });
+          const aCount = overlayActual.filter(v => v != null).length;
+          const tCount = overlayTarget.filter(v => v != null).length;     // <-- ADD
+          const fCount = overlayForecast.filter(v => v != null).length;
+          $('pv_count_actual').textContent = String(aCount);
+          $('pv_count_target').textContent = String(tCount);              // <-- ADD
+          $('pv_count_forecast').textContent = String(fCount);
+          $('pv_periods').textContent = changedPeriods.length ? changedPeriods.join(', ') : '—';
 
-    if (overlayForecast.some(v => v != null))
-    datasets.push({ type: 'line', label: 'Proposed Forecast', data: overlayForecast, borderColor: overlayColor, pointBackgroundColor: overlayColor, pointBorderColor: overlayColor, borderDash: [2, 2], borderWidth: 2, tension: .3, fill: false });
+          // 6) Show modal + render chart
+          new bootstrap.Modal(document.getElementById('detailsModal')).show();
+          const ctx = $('apprChart').getContext('2d');
+          if (apprChart) apprChart.destroy();
+          apprChart = new Chart(ctx, {
+          type: 'bar',
+          data: { labels, datasets },
+          options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: { x: { grid: { display: false } }, y: { grid: { display: false }, beginAtZero: true } },
+          plugins: {
+          legend: { position: 'top', labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 10, weight: '700' } } },
+          tooltip: { enabled: true }
+          }
+          }
+          });
+          } catch (err) {
+          console.error(err);
+          alert(err.message || 'Failed to load details.');
+          }
+          }
+          // ---- Latest submissions details ----
+          async function openEditorDetails(kpiId) {
+          try {
+          const infoUrl = '@Url.Action("LatestIndicatorDetails", "KpiFactChanges")' + '?kpiId=' + encodeURIComponent(kpiId);
+          const info = await fetch(infoUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+          throw new Error(info?.error || apprText.failedToLoadDetails);
+          const baseUrl = '@Url.Action("GetKpiPresentation", "RedBoard")' + '?kpiId=' + encodeURIComponent(kpiId);
+          const base = await fetch(baseUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
 
-    // 5) Header + summary
-    $('detailsLabel').textContent = info.kpiText || 'Change Details';
-    const hdrBits = [];
-    if (info?.frequency) hdrBits.push('Freq: ' + info.frequency);
-    if (info?.submittedBy) hdrBits.push('Submitted by ' + info.submittedBy);
-    if (info?.submittedAt) hdrBits.push('at ' + info.submittedAt);
-    $('detailsSubtitle').textContent = hdrBits.join(' • ') || '—';
+          const labelsBase = base?.chart?.labels || [];
+          const actBase = (base?.chart?.actual || []).slice();
+          const tgtBase = (base?.chart?.target || []).slice();
+          const fctBase = (base?.chart?.forecast || []).slice();
 
-    const aCount = overlayActual.filter(v => v != null).length;
-    const tCount = overlayTarget.filter(v => v != null).length;     // <-- ADD
-    const fCount = overlayForecast.filter(v => v != null).length;
-    $('pv_count_actual').textContent = String(aCount);
-    $('pv_count_target').textContent = String(tCount);              // <-- ADD
-    $('pv_count_forecast').textContent = String(fCount);
-    $('pv_periods').textContent = changedPeriods.length ? changedPeriods.join(', ') : '—';
+          const yrs = Array.isArray(base?.chart?.yearTargets) ? base.chart.yearTargets : [];
+          const yearLabels = yrs.map(y => String(y.year));
+          const yearVals = yrs.map(y => (y?.value ?? null));
 
-    // 6) Show modal + render chart
-    new bootstrap.Modal(document.getElementById('detailsModal')).show();
-    const ctx = $('apprChart').getContext('2d');
-    if (apprChart) apprChart.destroy();
-    apprChart = new Chart(ctx, {
-    type: 'bar',
-    data: { labels, datasets },
-    options: {
-    responsive: true, maintainAspectRatio: false,
-    scales: { x: { grid: { display: false } }, y: { grid: { display: false }, beginAtZero: true } },
-    plugins: {
-    legend: { position: 'top', labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 10, weight: '700' } } },
-    tooltip: { enabled: true }
-    }
-    }
-    });
-    } catch (err) {
-    console.error(err);
-    alert(err.message || 'Failed to load details.');
-    }
-    }
-    // ---- Latest submissions details ----
-    async function openEditorDetails(kpiId) {
-    try {
-    const infoUrl = '@Url.Action("LatestIndicatorDetails", "KpiFactChanges")' + '?kpiId=' + encodeURIComponent(kpiId);
-    const info = await fetch(infoUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
-    if (!info?.ok) throw new Error(info?.error || 'Failed to load indicator details.');
+          const labels = labelsBase.concat(yearLabels);
+          const pad = new Array(yearLabels.length).fill(null);
+          const leftNulls = new Array(labelsBase.length).fill(null);
 
-    const baseUrl = '@Url.Action("GetKpiPresentation", "RedBoard")' + '?kpiId=' + encodeURIComponent(kpiId);
-    const base = await fetch(baseUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+          const act = actBase.concat(pad);
+          const tgt = tgtBase.concat(pad);
+          const fct = fctBase.concat(pad);
+          const yearBar = leftNulls.concat(yearVals);
 
-    const labelsBase = base?.chart?.labels || [];
-    const actBase = (base?.chart?.actual || []).slice();
-    const tgtBase = (base?.chart?.target || []).slice();
-    const fctBase = (base?.chart?.forecast || []).slice();
+          const overlayActual = new Array(labels.length).fill(null);
+          const overlayTarget = new Array(labels.length).fill(null);
+          const overlayForecast = new Array(labels.length).fill(null);
 
-    const yrs = Array.isArray(base?.chart?.yearTargets) ? base.chart.yearTargets : [];
-    const yearLabels = yrs.map(y => String(y.year));
-    const yearVals = yrs.map(y => (y?.value ?? null));
+          const items = Array.isArray(info?.items) ? info.items : [];
 
-    const labels = labelsBase.concat(yearLabels);
-    const pad = new Array(yearLabels.length).fill(null);
-    const leftNulls = new Array(labelsBase.length).fill(null);
+          for (const it of items) {
+          if (!it?.pending) continue;
 
-    const act = actBase.concat(pad);
-    const tgt = tgtBase.concat(pad);
-    const fct = fctBase.concat(pad);
-    const yearBar = leftNulls.concat(yearVals);
+          const idx = findLabelIndex(labels, it.period);
+          if (idx < 0) continue;
 
-    const overlayActual = new Array(labels.length).fill(null);
-    const overlayTarget = new Array(labels.length).fill(null);
-    const overlayForecast = new Array(labels.length).fill(null);
+          const pa = toNum(it?.pending?.actual);
+          const pt = toNum(it?.pending?.target);
+          const pf = toNum(it?.pending?.forecast);
 
-    const items = Array.isArray(info?.items) ? info.items : [];
+          if (isFiniteNum(pa)) overlayActual[idx] = pa;
+          if (isFiniteNum(pt)) overlayTarget[idx] = pt;
+          if (isFiniteNum(pf)) overlayForecast[idx] = pf;
+          }
 
-    for (const it of items) {
-    if (!it?.pending) continue;
+          const overlayColor = '#0d6efd';
+          const datasets = [
+          { type: 'bar', label: 'Actual', data: act, backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
+          { type: 'line', label: 'Target', data: tgt, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
+          { type: 'line', label: 'Forecast', data: fct, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
+          { type: 'bar', label: 'Year Target', data: yearBar, backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
+          ];
 
-    const idx = findLabelIndex(labels, it.period);
-    if (idx < 0) continue;
+          if (overlayActual.some(v => v != null))
+          datasets.push({ type: 'bar', label: 'Pending Actual', data: overlayActual, backgroundColor: overlayColor, borderColor: overlayColor, borderWidth: 2, borderSkipped: 'bottom' });
 
-    const pa = toNum(it?.pending?.actual);
-    const pt = toNum(it?.pending?.target);
-    const pf = toNum(it?.pending?.forecast);
+          if (overlayTarget.some(v => v != null))
+          datasets.push({
+          type: 'line',
+          label: 'Pending Target',
+          data: overlayTarget,
+          borderColor: overlayColor,
+          pointBackgroundColor: overlayColor,
+          pointBorderColor: overlayColor,
+          borderDash: [3, 3],
+          borderWidth: 2,
+          tension: .3,
+          fill: false
+          });
 
-    if (isFiniteNum(pa)) overlayActual[idx] = pa;
-    if (isFiniteNum(pt)) overlayTarget[idx] = pt;
-    if (isFiniteNum(pf)) overlayForecast[idx] = pf;
-    }
+          if (overlayForecast.some(v => v != null))
+          datasets.push({
+          type: 'line',
+          label: 'Pending Forecast',
+          data: overlayForecast,
+          borderColor: overlayColor,
+          pointBackgroundColor: overlayColor,
+          pointBorderColor: overlayColor,
+          borderDash: [2, 2],
+          borderWidth: 2,
+          tension: .3,
+          fill: false
+          });
 
-    const overlayColor = '#0d6efd';
-    const datasets = [
-    { type: 'bar', label: 'Actual', data: act, backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
-    { type: 'line', label: 'Target', data: tgt, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
-    { type: 'line', label: 'Forecast', data: fct, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
-    { type: 'bar', label: 'Year Target', data: yearBar, backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
-    ];
+          $('editorDetailsLabel').textContent = info.kpiText || apprText.indicatorDetails;
+          const hdrBits = [];
+          if (info?.frequency) hdrBits.push('Freq: ' + info.frequency);
+          if (info?.ownerName) hdrBits.push('Owner: ' + info.ownerName);
+          if (info?.latestPendingSubmittedBy) hdrBits.push('Latest pending by ' + info.latestPendingSubmittedBy);
+          if (info?.latestPendingSubmittedAt) hdrBits.push('at ' + info.latestPendingSubmittedAt);
+          $('editorDetailsSubtitle').textContent = hdrBits.join(' • ') || '—';
 
-    if (overlayActual.some(v => v != null))
-    datasets.push({ type: 'bar', label: 'Pending Actual', data: overlayActual, backgroundColor: overlayColor, borderColor: overlayColor, borderWidth: 2, borderSkipped: 'bottom' });
-
-    if (overlayTarget.some(v => v != null))
-    datasets.push({
-    type: 'line',
-    label: 'Pending Target',
-    data: overlayTarget,
-    borderColor: overlayColor,
-    pointBackgroundColor: overlayColor,
-    pointBorderColor: overlayColor,
-    borderDash: [3, 3],
-    borderWidth: 2,
-    tension: .3,
-    fill: false
-    });
-
-    if (overlayForecast.some(v => v != null))
-    datasets.push({
-    type: 'line',
-    label: 'Pending Forecast',
-    data: overlayForecast,
-    borderColor: overlayColor,
-    pointBackgroundColor: overlayColor,
-    pointBorderColor: overlayColor,
-    borderDash: [2, 2],
-    borderWidth: 2,
-    tension: .3,
-    fill: false
-    });
-
-    $('editorDetailsLabel').textContent = info.kpiText || 'Indicator Details';
-
-    const hdrBits = [];
-    if (info?.frequency) hdrBits.push('Freq: ' + info.frequency);
-    if (info?.ownerName) hdrBits.push('Owner: ' + info.ownerName);
-    if (info?.latestPendingSubmittedBy) hdrBits.push('Latest pending by ' + info.latestPendingSubmittedBy);
-    if (info?.latestPendingSubmittedAt) hdrBits.push('at ' + info.latestPendingSubmittedAt);
-    $('editorDetailsSubtitle').textContent = hdrBits.join(' • ') || '—';
-
-    @* const s = info?.summary || {};
+          @* const s = info?.summary || {};
     $('ed_approved_actual').textContent = String(s.approvedActualCount ?? 0);
     $('ed_approved_target').textContent = String(s.approvedTargetCount ?? 0);
     $('ed_approved_forecast').textContent = String(s.approvedForecastCount ?? 0);
@@ -700,128 +733,127 @@
     $('ed_periods_pending').textContent = joinOrDash(info?.periods?.pending);
     $('ed_periods_missing').textContent = joinOrDash(info?.periods?.missing); *@
 
-    new bootstrap.Modal(document.getElementById('editorDetailsModal')).show();
+          new bootstrap.Modal(document.getElementById('editorDetailsModal')).show();
 
-    const ctx = $('editorApprChart').getContext('2d');
-    if (editorApprChart) editorApprChart.destroy();
+          const ctx = $('editorApprChart').getContext('2d');
+          if (editorApprChart) editorApprChart.destroy();
 
-    editorApprChart = new Chart(ctx, {
-    type: 'bar',
-    data: { labels, datasets },
-    options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-    x: { grid: { display: false } },
-    y: { grid: { display: false }, beginAtZero: true }
-    },
-    plugins: {
-    legend: {
-    position: 'top',
-    labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 10, weight: '700' } }
-    },
-    tooltip: { enabled: true }
-    }
-    }
-    });
-    } catch (err) {
-    console.error(err);
-    alert(err.message || 'Failed to load indicator details.');
-    }
-    }
-    // Fallback single-row details (if needed)
-    async function openRowDetails(changeId) {
-    try {
-    const infoUrl = '@Url.Action("ChangeOverlayInfo", "KpiFactChanges")' + '?changeId=' + encodeURIComponent(changeId);
-    const info = await fetch(infoUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
-    if (!info?.ok) throw new Error(info?.error || 'Failed to load details.');
+          editorApprChart = new Chart(ctx, {
+          type: 'bar',
+          data: { labels, datasets },
+          options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+          x: { grid: { display: false } },
+          y: { grid: { display: false }, beginAtZero: true }
+          },
+          plugins: {
+          legend: {
+          position: 'top',
+          labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 10, weight: '700' } }
+          },
+          tooltip: { enabled: true }
+          }
+          }
+          });
+          } catch (err) {
+          console.error(err);
+          alert(err.message || 'Failed to load indicator details.');
+          }
+          }
+          // Fallback single-row details (if needed)
+          async function openRowDetails(changeId) {
+          try {
+          const infoUrl = '@Url.Action("ChangeOverlayInfo", "KpiFactChanges")' + '?changeId=' + encodeURIComponent(changeId);
+          const info = await fetch(infoUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+          throw new Error(info?.error || apprText.failedToLoadDetails);
+          const baseUrl = '@Url.Action("GetKpiPresentation", "RedBoard")' + '?kpiId=' + encodeURIComponent(info.kpiId);
+          const base = await fetch(baseUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
 
-    const baseUrl = '@Url.Action("GetKpiPresentation", "RedBoard")' + '?kpiId=' + encodeURIComponent(info.kpiId);
-    const base = await fetch(baseUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+          const labelsBase = base?.chart?.labels || [];
+          const actBase = (base?.chart?.actual || []).slice();
+          const tgtBase = (base?.chart?.target || []).slice();
+          const fctBase = (base?.chart?.forecast || []).slice();
 
-    const labelsBase = base?.chart?.labels || [];
-    const actBase = (base?.chart?.actual || []).slice();
-    const tgtBase = (base?.chart?.target || []).slice();
-    const fctBase = (base?.chart?.forecast || []).slice();
+          const yrs = Array.isArray(base?.chart?.yearTargets) ? base.chart.yearTargets : [];
+          const yearLabels = yrs.map(y => String(y.year));
+          const yearVals = yrs.map(y => (y?.value ?? null));
 
-    const yrs = Array.isArray(base?.chart?.yearTargets) ? base.chart.yearTargets : [];
-    const yearLabels = yrs.map(y => String(y.year));
-    const yearVals = yrs.map(y => (y?.value ?? null));
+          const labels = labelsBase.concat(yearLabels);
+          const pad = new Array(yearLabels.length).fill(null);
+          const leftNulls = new Array(labelsBase.length).fill(null);
 
-    const labels = labelsBase.concat(yearLabels);
-    const pad = new Array(yearLabels.length).fill(null);
-    const leftNulls = new Array(labelsBase.length).fill(null);
+          const act = actBase.concat(pad);
+          const tgt = tgtBase.concat(pad);
+          const fct = fctBase.concat(pad);
+          const yearBar = leftNulls.concat(yearVals);
 
-    const act = actBase.concat(pad);
-    const tgt = tgtBase.concat(pad);
-    const fct = fctBase.concat(pad);
-    const yearBar = leftNulls.concat(yearVals);
+          const pActual = toNum(info?.proposed?.actual);
+          const pTarget = toNum(info?.proposed?.target);       // <-- ADD
+          const pForecast = toNum(info?.proposed?.forecast);
 
-    const pActual = toNum(info?.proposed?.actual);
-    const pTarget = toNum(info?.proposed?.target);       // <-- ADD
-    const pForecast = toNum(info?.proposed?.forecast);
+          const pIdx = findLabelIndex(labels, info.period);
 
-    const pIdx = findLabelIndex(labels, info.period);
+          const overlayActual = new Array(labels.length).fill(null);
+          const overlayForecast = new Array(labels.length).fill(null);
+          if (pIdx >= 0) {
+          if (isFiniteNum(pActual)) overlayActual[pIdx] = pActual;
+          if (isFiniteNum(pTarget)) overlayTarget[pIdx] = pTarget;      // <-- ADD
+          if (isFiniteNum(pForecast)) overlayForecast[pIdx] = pForecast;
+          }
 
-    const overlayActual = new Array(labels.length).fill(null);
-    const overlayForecast = new Array(labels.length).fill(null);
-    if (pIdx >= 0) {
-    if (isFiniteNum(pActual)) overlayActual[pIdx] = pActual;
-    if (isFiniteNum(pTarget)) overlayTarget[pIdx] = pTarget;      // <-- ADD
-    if (isFiniteNum(pForecast)) overlayForecast[pIdx] = pForecast;
-    }
+          const overlayColor = '#0d6efd';
+          const datasets = [
+          { type: 'bar', label: 'Actual', data: act, backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
+          { type: 'line', label: 'Target', data: tgt, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
+          { type: 'line', label: 'Forecast', data: fct, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
+          { type: 'bar', label: 'Year Target', data: yearBar, backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
+          ];
+          if (overlayActual.some(v => v != null))
+          datasets.push({ type: 'bar', label: 'Proposed Actual', data: overlayActual, backgroundColor: overlayColor, borderColor: overlayColor, borderWidth: 2, borderSkipped: 'bottom' });
+          if (overlayForecast.some(v => v != null))
+          datasets.push({ type: 'line', label: 'Proposed Forecast', data: overlayForecast, borderColor: overlayColor, pointBackgroundColor: '#0d6efd', pointBorderColor: '#0d6efd', borderDash: [2, 2], borderWidth: 2, tension: .3, fill: false });
 
-    const overlayColor = '#0d6efd';
-    const datasets = [
-    { type: 'bar', label: 'Actual', data: act, backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
-    { type: 'line', label: 'Target', data: tgt, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', borderWidth: 2, tension: .3, fill: false },
-    { type: 'line', label: 'Forecast', data: fct, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], borderWidth: 2, tension: .3, fill: false },
-    { type: 'bar', label: 'Year Target', data: yearBar, backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 }
-    ];
-    if (overlayActual.some(v => v != null))
-    datasets.push({ type: 'bar', label: 'Proposed Actual', data: overlayActual, backgroundColor: overlayColor, borderColor: overlayColor, borderWidth: 2, borderSkipped: 'bottom' });
-    if (overlayForecast.some(v => v != null))
-    datasets.push({ type: 'line', label: 'Proposed Forecast', data: overlayForecast, borderColor: overlayColor, pointBackgroundColor: '#0d6efd', pointBorderColor: '#0d6efd', borderDash: [2, 2], borderWidth: 2, tension: .3, fill: false });
+          $('detailsLabel').textContent = info.kpiText || apprText.changeDetails;
+          $('detailsSubtitle').textContent =
+          'Period: ' + (info.period?.label || '—') +
+          (info.submittedBy ? ` • Submitted by ${info.submittedBy}` : '') +
+          (info.submittedAt ? ` at ${info.submittedAt}` : '');
 
-    $('detailsLabel').textContent = info.kpiText || 'Change Details';
-    $('detailsSubtitle').textContent =
-    'Period: ' + (info.period?.label || '—') +
-    (info.submittedBy ? ` • Submitted by ${info.submittedBy}` : '') +
-    (info.submittedAt ? ` at ${info.submittedAt}` : '');
+          $('pv_count_actual').textContent = overlayActual.filter(v => v != null).length;
+          $('pv_count_target').textContent = overlayTarget.filter(v => v != null).length;   // <-- ADD
+          $('pv_count_forecast').textContent = overlayForecast.filter(v => v != null).length;
+          $('pv_periods').textContent = info?.period?.label || '—';
 
-    $('pv_count_actual').textContent = overlayActual.filter(v => v != null).length;
-    $('pv_count_target').textContent = overlayTarget.filter(v => v != null).length;   // <-- ADD
-    $('pv_count_forecast').textContent = overlayForecast.filter(v => v != null).length;
-    $('pv_periods').textContent = info?.period?.label || '—';
+          new bootstrap.Modal(document.getElementById('detailsModal')).show();
+          const ctx = $('apprChart').getContext('2d');
+          if (apprChart) apprChart.destroy();
+          apprChart = new Chart(ctx, {
+          type: 'bar',
+          data: { labels, datasets },
+          options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: { x: { grid: { display: false } }, y: { grid: { display: false }, beginAtZero: true } },
+          plugins: {
+          legend: { position: 'top', labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 10, weight: '700' } } },
+          tooltip: { enabled: true }
+          }
+          }
+          });
+          } catch (err) {
+          console.error(err);
+          alert('Failed to load details.');
+          }
+          }
 
-    new bootstrap.Modal(document.getElementById('detailsModal')).show();
-    const ctx = $('apprChart').getContext('2d');
-    if (apprChart) apprChart.destroy();
-    apprChart = new Chart(ctx, {
-    type: 'bar',
-    data: { labels, datasets },
-    options: {
-    responsive: true, maintainAspectRatio: false,
-    scales: { x: { grid: { display: false } }, y: { grid: { display: false }, beginAtZero: true } },
-    plugins: {
-    legend: { position: 'top', labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 10, weight: '700' } } },
-    tooltip: { enabled: true }
-    }
-    }
-    });
-    } catch (err) {
-    console.error(err);
-    alert('Failed to load details.');
-    }
-    }
-
-    function summarizePeriod(p) {
-    if (!p) return '';
-    if (p.month) return `${p.year} - ${MONTH_ABBR[(p.month - 1) || 0]}`;
-    if (p.quarter) return `${p.year} - Q${p.quarter}`;
-    if (p.monthNum) return `${p.year} - ${MONTH_ABBR[(p.monthNum - 1) || 0]}`;
-    if (p.quarterNum) return `${p.year} - Q${p.quarterNum}`;
-    return p.label || String(p.year || '');
-    }
-  </script>
-}
+          function summarizePeriod(p) {
+          if (!p) return '';
+          if (p.month) return `${p.year} - ${MONTH_ABBR[(p.month - 1) || 0]}`;
+          if (p.quarter) return `${p.year} - Q${p.quarter}`;
+          if (p.monthNum) return `${p.year} - ${MONTH_ABBR[(p.monthNum - 1) || 0]}`;
+          if (p.quarterNum) return `${p.year} - Q${p.quarterNum}`;
+          return p.label || String(p.year || '');
+          }
+        </script>
+      }

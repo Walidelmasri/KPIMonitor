@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="ApprovalsInbox" xml:space="preserve">
+    <value>Approvals Inbox</value>
+  </data>
+  <data name="Pending" xml:space="preserve">
+    <value>Pending</value>
+  </data>
+  <data name="Approved" xml:space="preserve">
+    <value>Approved</value>
+  </data>
+  <data name="Rejected" xml:space="preserve">
+    <value>Rejected</value>
+  </data>
+  <data name="LatestSubmissions" xml:space="preserve">
+    <value>Latest Submissions</value>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Loading…</value>
+  </data>
+  <data name="FailedToLoad" xml:space="preserve">
+    <value>Failed to load.</value>
+  </data>
+
+  <data name="Reject" xml:space="preserve">
+    <value>Reject</value>
+  </data>
+  <data name="Reason" xml:space="preserve">
+    <value>Reason</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+
+  <data name="ChangeDetails" xml:space="preserve">
+    <value>Change Details</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="ActualPointsCount" xml:space="preserve">
+    <value># Actual points:</value>
+  </data>
+  <data name="TargetPointsCount" xml:space="preserve">
+    <value># Target points:</value>
+  </data>
+  <data name="ForecastPointsCount" xml:space="preserve">
+    <value># Forecast points:</value>
+  </data>
+  <data name="Periods" xml:space="preserve">
+    <value>Periods:</value>
+  </data>
+
+  <data name="IndicatorDetails" xml:space="preserve">
+    <value>Indicator Details</value>
+  </data>
+
+  <data name="Details" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="Approve" xml:space="preserve">
+    <value>Approve</value>
+  </data>
+  <data name="ReasonRequired" xml:space="preserve">
+    <value>Reason is required.</value>
+  </data>
+  <data name="ApproveFailed" xml:space="preserve">
+    <value>Approve failed</value>
+  </data>
+  <data name="RejectFailed" xml:space="preserve">
+    <value>Reject failed</value>
+  </data>
+  <data name="FailedToLoadDetails" xml:space="preserve">
+    <value>Failed to load details.</value>
+  </data>
+  <data name="FailedToLoadIndicatorDetails" xml:space="preserve">
+    <value>Failed to load indicator details.</value>
+  </data>
+
+  <data name="Actual" xml:space="preserve">
+    <value>Actual</value>
+  </data>
+  <data name="Target" xml:space="preserve">
+    <value>Target</value>
+  </data>
+  <data name="Forecast" xml:space="preserve">
+    <value>Forecast</value>
+  </data>
+  <data name="YearTarget" xml:space="preserve">
+    <value>Year Target</value>
+  </data>
+  <data name="ProposedActual" xml:space="preserve">
+    <value>Proposed Actual</value>
+  </data>
+  <data name="ProposedTarget" xml:space="preserve">
+    <value>Proposed Target</value>
+  </data>
+  <data name="ProposedForecast" xml:space="preserve">
+    <value>Proposed Forecast</value>
+  </data>
+  <data name="PendingActual" xml:space="preserve">
+    <value>Pending Actual</value>
+  </data>
+  <data name="PendingTarget" xml:space="preserve">
+    <value>Pending Target</value>
+  </data>
+  <data name="PendingForecast" xml:space="preserve">
+    <value>Pending Forecast</value>
+  </data>
+
+  <data name="Freq" xml:space="preserve">
+    <value>Freq:</value>
+  </data>
+  <data name="SubmittedBy" xml:space="preserve">
+    <value>Submitted by</value>
+  </data>
+  <data name="Owner" xml:space="preserve">
+    <value>Owner:</value>
+  </data>
+  <data name="LatestPendingBy" xml:space="preserve">
+    <value>Latest pending by</value>
+  </data>
+  <data name="At" xml:space="preserve">
+    <value>at</value>
+  </data>
+
+  <data name="All" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="ByQuarter" xml:space="preserve">
+    <value>By Quarter</value>
+  </data>
+  <data name="ByMonth" xml:space="preserve">
+    <value>By Month</value>
+  </data>
+</root>
