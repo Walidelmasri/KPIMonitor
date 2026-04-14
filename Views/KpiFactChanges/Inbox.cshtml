@@ -590,9 +590,9 @@
           // 5) Header + summary
           $('detailsLabel').textContent = info.kpiText || apprText.changeDetails;
           const hdrBits = [];
-          if (info?.frequency) hdrBits.push('Freq: ' + info.frequency);
-          if (info?.submittedBy) hdrBits.push('Submitted by ' + info.submittedBy);
-          if (info?.submittedAt) hdrBits.push('at ' + info.submittedAt);
+          if (info?.frequency) hdrBits.push(apprText.frequency + ': ' + info.frequency);
+          if (info?.submittedBy) hdrBits.push(apprText.submittedBy + ' ' + info.submittedBy);
+          if (info?.submittedAt) hdrBits.push(apprText.at + ' ' + info.submittedAt);
           $('detailsSubtitle').textContent = hdrBits.join(' • ') || '—';
 
           const aCount = overlayActual.filter(v => v != null).length;
@@ -718,10 +718,10 @@
 
           $('editorDetailsLabel').textContent = info.kpiText || apprText.indicatorDetails;
           const hdrBits = [];
-          if (info?.frequency) hdrBits.push('Freq: ' + info.frequency);
-          if (info?.ownerName) hdrBits.push('Owner: ' + info.ownerName);
-          if (info?.latestPendingSubmittedBy) hdrBits.push('Latest pending by ' + info.latestPendingSubmittedBy);
-          if (info?.latestPendingSubmittedAt) hdrBits.push('at ' + info.latestPendingSubmittedAt);
+          if (info?.frequency) hdrBits.push(apprText.frequency + ': ' + info.frequency);
+          if (info?.ownerName) hdrBits.push(apprText.owner + ': ' + info.ownerName);
+          if (info?.latestPendingSubmittedBy) hdrBits.push(apprText.latestPendingBy + ' ' + info.latestPendingSubmittedBy);
+          if (info?.latestPendingSubmittedAt) hdrBits.push(apprText.at + ' ' + info.latestPendingSubmittedAt);
           $('editorDetailsSubtitle').textContent = hdrBits.join(' • ') || '—';
 
           @* const s = info?.summary || {};
@@ -845,9 +845,9 @@
 
           $('detailsLabel').textContent = info.kpiText || apprText.changeDetails;
           $('detailsSubtitle').textContent =
-          'Period: ' + (info.period?.label || '—') +
-          (info.submittedBy ? ` • Submitted by ${info.submittedBy}` : '') +
-          (info.submittedAt ? ` at ${info.submittedAt}` : '');
+          apprText.periods + ': ' + (info.period?.label || '—') +
+          (info.submittedBy ? ` • ${apprText.submittedBy} ${info.submittedBy}` : '') +
+          (info.submittedAt ? ` • ${apprText.at} ${info.submittedAt}` : '');
 
           $('pv_count_actual').textContent = overlayActual.filter(v => v != null).length;
           $('pv_count_target').textContent = overlayTarget.filter(v => v != null).length;   // <-- ADD

@@ -1776,6 +1776,13 @@ namespace KPIMonitor.Controllers
             if (!(_admin.IsAdmin(User) || _admin.IsSuperAdmin(User)))
                 return StatusCode(403, new { ok = false, error = "Not allowed." });
 
+            var isArabic = System.Globalization.CultureInfo.CurrentUICulture.Name
+                .StartsWith("ar", StringComparison.OrdinalIgnoreCase);
+
+            string Pick(string? ar, string? en) => isArabic
+                ? (!string.IsNullOrWhiteSpace(ar) ? ar! : (en ?? "—"))
+                : (!string.IsNullOrWhiteSpace(en) ? en! : (ar ?? "—"));
+
             var plan = await _db.KpiYearPlans
                 .AsNoTracking()
                 .Include(p => p.Period)
@@ -1833,7 +1840,7 @@ namespace KPIMonitor.Controllers
             if (!string.IsNullOrWhiteSpace(plan.OwnerEmpId))
             {
                 var ownerRec = await _dir.TryGetByEmpIdAsync(plan.OwnerEmpId, ct);
-                ownerName = ownerRec?.NameEng ?? plan.OwnerEmpId;
+                ownerName = Pick(ownerRec?.NameAr, ownerRec?.NameEng);
             }
             else if (!string.IsNullOrWhiteSpace(plan.Owner))
             {
@@ -1841,9 +1848,35 @@ namespace KPIMonitor.Controllers
             }
 
             var k = plan.Kpi;
+            var kpiName = Pick(k?.KpiNameAr, k?.KpiName);
             string kpiText = k == null
                 ? $"KPI {kpiId}"
-                : $"{(k.Pillar?.PillarCode ?? "")}.{(k.Objective?.ObjectiveCode ?? "")} {(k.KpiCode ?? "")} — {(k.KpiName ?? "-")}";
+                : $"{(k.Pillar?.PillarCode ?? "")}.{(k.Objective?.ObjectiveCode ?? "")} {(k.KpiCode ?? "")} — {kpiName}";
+
+            var samsToResolve = pendingRaw
+                .Select(x => Sam(x.SubmittedBy))
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var userDisplay = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var sam in samsToResolve)
+            {
+                var rec = await _dir.TryGetByUserIdAsync(sam, ct);
+                var display = Pick(rec?.NameAr, rec?.NameEng);
+                userDisplay[sam] = string.IsNullOrWhiteSpace(display) || display == "—" ? sam : display;
+            }
+
+            string DisplayUser(string? raw)
+            {
+                var sam = Sam(raw);
+                if (string.IsNullOrWhiteSpace(sam))
+                    return "—";
+
+                return userDisplay.TryGetValue(sam, out var display) && !string.IsNullOrWhiteSpace(display)
+                    ? display
+                    : sam;
+            }
 
             var items = facts.Select(f =>
             {
@@ -1876,7 +1909,7 @@ namespace KPIMonitor.Controllers
                         target = pending.ProposedTargetValue,
                         forecast = pending.ProposedForecastValue,
                         status = pending.ProposedStatusCode,
-                        submittedBy = pending.SubmittedBy,
+                        submittedBy = DisplayUser(pending.SubmittedBy),
                         submittedAt = pending.SubmittedAt
                     },
                     missing = new
@@ -1931,7 +1964,7 @@ namespace KPIMonitor.Controllers
                 frequency = plan.Frequency,
                 ownerName,
                 planYear,
-                latestPendingSubmittedBy = latestPending?.SubmittedBy,
+                latestPendingSubmittedBy = latestPending == null ? null : DisplayUser(latestPending.SubmittedBy),
                 latestPendingSubmittedAt = latestPending?.SubmittedAt,
                 summary,
                 periods = new
@@ -2334,6 +2367,10 @@ namespace KPIMonitor.Controllers
                 .StartsWith("ar", StringComparison.OrdinalIgnoreCase);
 
             string T(string en, string ar) => isArabic ? ar : en;
+            string Pick(string? ar, string? en) => isArabic
+                ? (!string.IsNullOrWhiteSpace(ar) ? ar! : (en ?? "—"))
+                : (!string.IsNullOrWhiteSpace(en) ? en! : (ar ?? "—"));
+
             static string H(string? s) => WebUtility.HtmlEncode(s ?? "");
             static string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd") : "—";
 
@@ -2464,7 +2501,7 @@ namespace KPIMonitor.Controllers
                             var pillCode = kpi.Pillar?.PillarCode ?? "";
                             var objCode = kpi.Objective?.ObjectiveCode ?? "";
                             var codePart = $"{pillCode}.{objCode} {kpi.KpiCode}".Trim();
-                            var namePart = kpi.KpiName ?? "";
+                            var namePart = Pick(kpi.KpiNameAr, kpi.KpiName ?? "");
 
                             if (!string.IsNullOrWhiteSpace(codePart) && !string.IsNullOrWhiteSpace(namePart))
                                 indicatorLabel = $"{codePart} — {namePart}";
@@ -2475,14 +2512,14 @@ namespace KPIMonitor.Controllers
                         }
                         else
                         {
-                            indicatorLabel = "(no KPI)";
+                            indicatorLabel = T("(no KPI)", "(لا يوجد مؤشر)");
                         }
 
                         string? ownerName = null;
                         if (!string.IsNullOrWhiteSpace(plan.OwnerEmpId))
                         {
                             var ownerRec = await _dir.TryGetByEmpIdAsync(plan.OwnerEmpId, token);
-                            ownerName = ownerRec?.NameEng ?? plan.OwnerEmpId;
+                            ownerName = Pick(ownerRec?.NameAr, ownerRec?.NameEng);
                         }
                         else if (!string.IsNullOrWhiteSpace(plan.Owner))
                         {
@@ -2504,7 +2541,7 @@ namespace KPIMonitor.Controllers
 
                         var row = (
                             EmpId: empId,
-                            Name: rec?.NameEng ?? empId,
+                            Name: Pick(rec?.NameAr, rec?.NameEng ?? empId),
                             Login: login,
                             KpiId: plan.KpiId,
                             Frequency: plan.Frequency,
