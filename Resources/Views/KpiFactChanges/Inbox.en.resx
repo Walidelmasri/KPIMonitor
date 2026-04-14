@@ -149,4 +149,13 @@
   <data name="ByMonth" xml:space="preserve">
     <value>By Month</value>
   </data>
+  <data name="Frequency" xml:space="preserve">
+  <value>Frequency</value>
+</data>
+<data name="Monthly" xml:space="preserve">
+  <value>Monthly</value>
+</data>
+<data name="Quarterly" xml:space="preserve">
+  <value>Quarterly</value>
+</data>
 </root>
