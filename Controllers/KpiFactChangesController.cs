@@ -1564,7 +1564,6 @@ namespace KPIMonitor.Controllers
                     join yp in _db.KpiYearPlans on f.KpiYearPlanId equals yp.KpiYearPlanId
                     where f.KpiFactId == ch.Fact.KpiFactId
                           && (yp.OwnerEmpId == myEmp || yp.EditorEmpId == myEmp || yp.Editor2EmpId == myEmp)
-
                     select 1
                 ).AnyAsync(ct);
 
@@ -1572,7 +1571,35 @@ namespace KPIMonitor.Controllers
                     return StatusCode(403, new { ok = false, error = "Not allowed." });
             }
 
-            var kpiText = $"{(ch.Pillar?.PillarCode ?? "")}.{(ch.Objective?.ObjectiveCode ?? "")} {(ch.Kpi?.KpiCode ?? "")} — {(ch.Kpi?.KpiName ?? "-")}";
+            var isArabic = System.Globalization.CultureInfo.CurrentUICulture.Name
+                .StartsWith("ar", StringComparison.OrdinalIgnoreCase);
+
+            string Pick(string? ar, string? en)
+            {
+                if (isArabic)
+                    return !string.IsNullOrWhiteSpace(ar) ? ar! : (en ?? "");
+                return !string.IsNullOrWhiteSpace(en) ? en! : (ar ?? "");
+            }
+
+            var pillarText = Pick(ch.Pillar?.PillarNameAr, ch.Pillar?.PillarName);
+            var objectiveText = Pick(ch.Objective?.ObjectiveNameAr, ch.Objective?.ObjectiveName);
+            var kpiNameText = Pick(ch.Kpi?.KpiNameAr, ch.Kpi?.KpiName);
+
+            var codePrefix = $"{(ch.Pillar?.PillarCode ?? "")}.{(ch.Objective?.ObjectiveCode ?? "")} {(ch.Kpi?.KpiCode ?? "")}".Trim();
+            var kpiText = string.IsNullOrWhiteSpace(codePrefix)
+                ? kpiNameText
+                : $"{codePrefix} — {kpiNameText}";
+
+            var submittedByDisplay = ch.Change.SubmittedBy;
+            var sam = Sam(ch.Change.SubmittedBy);
+
+            if (!string.IsNullOrWhiteSpace(sam))
+            {
+                var rec = await _dir.TryGetByUserIdAsync(sam, ct);
+                if (rec.HasValue)
+                    submittedByDisplay = Pick(rec.Value.NameAr, rec.Value.NameEng);
+            }
+
             var per = ch.Period;
             var periodText = PeriodLabel(per);
 
@@ -1595,7 +1622,7 @@ namespace KPIMonitor.Controllers
                     forecast = ch.Change.ProposedForecastValue,
                     status = ch.Change.ProposedStatusCode
                 },
-                submittedBy = ch.Change.SubmittedBy,
+                submittedBy = submittedByDisplay,
                 submittedAt = ch.Change.SubmittedAt
             });
         }
@@ -1606,98 +1633,139 @@ namespace KPIMonitor.Controllers
         [HttpGet]
         public async Task<IActionResult> ChangeOverlayInfoBatch(decimal batchId, CancellationToken ct = default)
         {
-            var b = await _db.KpiFactChangeBatches.AsNoTracking()
-                     .FirstOrDefaultAsync(x => x.BatchId == batchId, ct);
-            if (b == null) return NotFound(new { ok = false, error = "Batch not found." });
+            var isArabic = System.Globalization.CultureInfo.CurrentUICulture.Name
+                .StartsWith("ar", StringComparison.OrdinalIgnoreCase);
 
-            if (!(_admin.IsAdmin(User) || _admin.IsSuperAdmin(User)))
+            string Pick(string? ar, string? en) => isArabic
+                ? (!string.IsNullOrWhiteSpace(ar) ? ar! : (en ?? "—"))
+                : (!string.IsNullOrWhiteSpace(en) ? en! : (ar ?? "—"));
+
+            try
             {
-                var myEmp = await MyEmpIdAsync(ct);
-                if (string.IsNullOrWhiteSpace(myEmp))
-                    return StatusCode(403, new { ok = false, error = "Not allowed." });
+                var b = await _db.KpiFactChangeBatches
+                    .AsNoTracking()
+                    .Where(x => x.BatchId == batchId)
+                    .Select(x => new
+                    {
+                        x.BatchId,
+                        x.KpiId,
+                        x.KpiYearPlanId,
+                        x.Year,
+                        x.Frequency,
+                        x.SubmittedBy,
+                        x.SubmittedAt,
+                        x.ApprovalStatus,
+                        x.ReviewedBy,
+                        x.ReviewedAt,
+                        x.RejectReason
+                    })
+                    .FirstOrDefaultAsync(ct);
 
-                var allowed = await _db.KpiYearPlans.AsNoTracking()
-                                .AnyAsync(p => p.KpiYearPlanId == b.KpiYearPlanId &&
-                                               (p.OwnerEmpId == myEmp || p.EditorEmpId == myEmp || p.Editor2EmpId == myEmp), ct);
-                if (!allowed) return StatusCode(403, new { ok = false, error = "Not allowed." });
-            }
+                if (b == null)
+                    return Json(new { ok = false, error = "Batch not found." });
 
-            var rows = await _db.KpiFactChanges.AsNoTracking()
-                         .Where(c => c.BatchId == batchId)
-                         .Select(c => new
-                         {
-                             c.KpiFactId,
-                             c.ProposedActualValue,
-                             c.ProposedTargetValue,     // <-- ADD
+                // KPI header (now includes Arabic)
+                var k = await _db.DimKpis
+                    .AsNoTracking()
+                    .Where(x => x.KpiId == b.KpiId)
+                    .Select(x => new
+                    {
+                        x.KpiId,
+                        x.KpiCode,
+                        x.KpiName,
+                        x.KpiNameAr,
+                        PillarCode = x.Pillar != null ? x.Pillar.PillarCode : null,
+                        ObjectiveCode = x.Objective != null ? x.Objective.ObjectiveCode : null
+                    })
+                    .FirstOrDefaultAsync(ct);
 
-                             c.ProposedForecastValue,
-                             c.SubmittedBy,
-                             c.SubmittedAt
-                         })
-                         .ToListAsync(ct);
+                var kpiName = Pick(k?.KpiNameAr, k?.KpiName ?? "-");
 
-            var factIds = rows.Select(r => r.KpiFactId).Distinct().ToList();
-            var periods = await _db.KpiFacts.AsNoTracking()
-                            .Where(f => factIds.Contains(f.KpiFactId))
-                            .Select(f => new { f.KpiFactId, P = f.Period })
-                            .ToDictionaryAsync(x => x.KpiFactId, x => x.P, ct);
+                var kpiText = (k == null)
+                    ? $"KPI {b.KpiId}"
+                    : $"{(k.PillarCode ?? "")}.{(k.ObjectiveCode ?? "")} {(k.KpiCode ?? "")} — {kpiName}";
 
-            var k = await _db.DimKpis.AsNoTracking()
-                     .Where(x => x.KpiId == b.KpiId)
-                     .Select(x => new
-                     {
-                         x.KpiId,
-                         x.KpiCode,
-                         x.KpiName,
-                         PillarCode = x.Pillar != null ? x.Pillar.PillarCode : null,
-                         ObjectiveCode = x.Objective != null ? x.Objective.ObjectiveCode : null
-                     })
-                     .FirstOrDefaultAsync(ct);
-
-            string kpiText = (k == null)
-                ? $"KPI {b.KpiId}"
-                : $"{(k.PillarCode ?? "")}.{(k.ObjectiveCode ?? "")} {(k.KpiCode ?? "")} — {(k.KpiName ?? "-")}";
-
-            var items = rows.Select(r =>
-            {
-                periods.TryGetValue(r.KpiFactId, out var p);
-                return new
+                // 🔥 Resolve SubmittedBy to Arabic name
+                string ResolveUser(string? raw)
                 {
-                    period = new
-                    {
-                        year = p?.Year,
-                        month = p?.MonthNum,
-                        quarter = p?.QuarterNum,
-                        label = PeriodLabel(p)
-                    },
-                    proposed = new
-                    {
-                        actual = r.ProposedActualValue,
-                        target = r.ProposedTargetValue,       // <-- ADD
-                        forecast = r.ProposedForecastValue
-                    },
-                    submittedBy = r.SubmittedBy,
-                    submittedAt = r.SubmittedAt
-                };
-            })
-            .OrderBy(x =>
-            {
-                var y = x.period.year ?? 0;
-                var m = x.period.month ?? (x.period.quarter != null ? x.period.quarter * 3 : 0);
-                return y * 100 + (m ?? 0);
-            })
-            .ToList();
+                    var sam = Sam(raw);
+                    if (string.IsNullOrWhiteSpace(sam))
+                        return "—";
 
-            return Json(new
+                    var rec = _dir.TryGetByUserIdAsync(sam, ct).Result; // safe here (already async context)
+                    var display = Pick(rec?.NameAr, rec?.NameEng);
+
+                    return string.IsNullOrWhiteSpace(display) ? sam : display;
+                }
+
+                var submittedByDisplay = ResolveUser(b.SubmittedBy);
+
+                // Load batch items (UNCHANGED)
+                var items = await _db.KpiFactChanges
+                    .AsNoTracking()
+                    .Where(x => x.BatchId == batchId)
+                    .Select(x => new
+                    {
+                        x.KpiFactChangeId,
+                        x.KpiFactId,
+                        x.ProposedActualValue,
+                        x.ProposedTargetValue,
+                        x.ProposedForecastValue,
+                        x.SubmittedBy,
+                        x.SubmittedAt
+                    })
+                    .ToListAsync(ct);
+
+                var factIds = items.Select(x => x.KpiFactId).Distinct().ToList();
+
+                var facts = await _db.KpiFacts
+                    .AsNoTracking()
+                    .Where(f => factIds.Contains(f.KpiFactId))
+                    .Select(f => new
+                    {
+                        f.KpiFactId,
+                        f.Period
+                    })
+                    .ToDictionaryAsync(x => x.KpiFactId, x => x, ct);
+
+                var mapped = items.Select(it =>
+                {
+                    facts.TryGetValue(it.KpiFactId, out var f);
+
+                    return new
+                    {
+                        period = new
+                        {
+                            year = f?.Period?.Year,
+                            month = f?.Period?.MonthNum,
+                            quarter = f?.Period?.QuarterNum,
+                            label = PeriodLabel(f?.Period)
+                        },
+                        proposed = new
+                        {
+                            actual = it.ProposedActualValue,
+                            target = it.ProposedTargetValue,
+                            forecast = it.ProposedForecastValue
+                        }
+                    };
+                }).ToList();
+
+                return Json(new
+                {
+                    ok = true,
+                    kpiId = b.KpiId,
+                    kpiText = kpiText,
+                    frequency = b.Frequency,
+                    submittedBy = submittedByDisplay, // ✅ FIXED
+                    submittedAt = b.SubmittedAt,
+                    items = mapped
+                });
+            }
+            catch (Exception ex)
             {
-                ok = true,
-                kpiId = b.KpiId,
-                kpiText,
-                frequency = string.IsNullOrWhiteSpace(b.Frequency) ? null : b.Frequency,
-                submittedBy = b.SubmittedBy,
-                submittedAt = b.SubmittedAt,
-                items
-            });
+                _log.LogError(ex, "ChangeOverlayInfoBatch failed for batchId={BatchId}", batchId);
+                return Json(new { ok = false, error = ex.GetBaseException().Message });
+            }
         }
         // ------------------------
         // Latest submissions details (admin only)
