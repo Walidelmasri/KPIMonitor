@@ -877,18 +877,9 @@ namespace KPIMonitor.Controllers
                 .StartsWith("ar", StringComparison.OrdinalIgnoreCase);
 
             string T(string en, string ar) => isArabic ? ar : en;
-            static string H(string? s) => WebUtility.HtmlEncode(s ?? "");
-            static string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
-
-            string UiStatus(string? code) => (code ?? "").Trim().ToLowerInvariant() switch
-            {
-                "conforme" or "ok" or "green" => T("Ok", "جيد"),
-                "ecart" or "needs attention" or "red" => T("Needs Attention", "يحتاج انتباه"),
-                "rattrapage" or "catching up" or "orange" => T("Catching Up", "قيد التحسن"),
-                "attente" or "data missing" or "blue" => T("Data Missing", "لا توجد بيانات"),
-                "" => "—",
-                _ => code ?? "—"
-            };
+            string Pick(string? ar, string? en) => isArabic
+                ? (!string.IsNullOrWhiteSpace(ar) ? ar! : (en ?? "—"))
+                : (!string.IsNullOrWhiteSpace(en) ? en! : (ar ?? "—"));
 
             try
             {
@@ -989,12 +980,11 @@ namespace KPIMonitor.Controllers
                     })
                     .ToListAsync(ct);
 
+                static string H(string? s2) => WebUtility.HtmlEncode(s2 ?? "");
+                static string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
+
                 if (batches.Count == 0)
-                {
-                    return Content(
-                        $"<div class='text-muted small'>{H(T("No items.", "لا توجد عناصر."))}</div>",
-                        "text/html; charset=utf-8");
-                }
+                    return Content($"<div class='text-muted small'>{H(T("No items.", "لا توجد عناصر."))}</div>", "text/html");
 
                 var kpiIds = batches.Select(b => b.KpiId).Distinct().ToList();
                 var kpiHead = await _db.DimKpis
@@ -1005,6 +995,7 @@ namespace KPIMonitor.Controllers
                         k.KpiId,
                         k.KpiCode,
                         k.KpiName,
+                        k.KpiNameAr,
                         PillarCode = k.Pillar != null ? k.Pillar.PillarCode : null,
                         ObjectiveCode = k.Objective != null ? k.Objective.ObjectiveCode : null
                     })
@@ -1041,9 +1032,41 @@ namespace KPIMonitor.Controllers
                     })
                     .ToDictionaryAsync(x => x.KpiFactId, x => x, ct);
 
+                var samsToResolve = batches
+                    .SelectMany(x => new[] { x.SubmittedBy, x.ReviewedBy })
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Select(x => Sam(x))
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                var userDisplay = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var sam in samsToResolve)
+                {
+                    var rec = await _dir.TryGetByUserIdAsync(sam, ct);
+                    var display = Pick(rec?.NameAr, rec?.NameEng);
+
+                    if (string.IsNullOrWhiteSpace(display) || display == "—")
+                        display = sam;
+
+                    userDisplay[sam] = display;
+                }
+
+                string DisplayUser(string? raw)
+                {
+                    var sam = Sam(raw);
+                    if (string.IsNullOrWhiteSpace(sam))
+                        return "—";
+
+                    return userDisplay.TryGetValue(sam, out var display) && !string.IsNullOrWhiteSpace(display)
+                        ? display
+                        : sam;
+                }
+
                 string DiffNum(decimal? curV, decimal? newV)
                 {
-                    var changed = newV.HasValue && curV != newV;
+                    var changed = (newV.HasValue && curV != newV);
                     var cls = changed ? "appr-diff" : "text-muted";
                     var cur = curV.HasValue ? curV.Value.ToString("0.###") : "—";
                     var pro = newV.HasValue ? newV.Value.ToString("0.###") : "—";
@@ -1055,9 +1078,17 @@ namespace KPIMonitor.Controllers
                 foreach (var b in batches)
                 {
                     kpiHead.TryGetValue(b.KpiId, out var kh);
+
+                    var localizedKpiName = kh == null
+                        ? "—"
+                        : Pick(kh.KpiNameAr, kh.KpiName ?? "-");
+
                     var code = (kh == null)
                         ? $"KPI {H(b.KpiId.ToString())}"
-                        : $"{H(kh.PillarCode ?? "")}.{H(kh.ObjectiveCode ?? "")} {H(kh.KpiCode ?? "")} — {H(kh.KpiName ?? "-")}";
+                        : $"{H(kh.PillarCode ?? "")}.{H(kh.ObjectiveCode ?? "")} {H(kh.KpiCode ?? "")} — {H(localizedKpiName)}";
+
+                    var submittedByDisplay = DisplayUser(b.SubmittedBy);
+                    var reviewedByDisplay = DisplayUser(b.ReviewedBy);
 
                     var rows = children.Where(c => c.BatchId == b.BatchId).ToList();
 
@@ -1088,42 +1119,38 @@ namespace KPIMonitor.Controllers
                         return da.CompareTo(dz);
                     });
 
-                    var canAct = mode == "owner";
+                    var canAct = (mode == "owner");
 
                     string headerRight;
                     if (b.ApprovalStatus == "pending")
                     {
                         headerRight = $@"
 <div class='btn-group'>
-  {(canAct
-                ? $@"<button type='button' id='btn-approve-all' class='btn btn-success btn-sm appr-btn' data-action='approve-batch' data-batch-id='{b.BatchId}'>{H(T("Approve", "موافقة"))}</button>
-            <button type='button' class='btn btn-outline-danger btn-sm appr-btn' data-action='reject-batch' data-batch-id='{b.BatchId}'>{H(T("Reject", "رفض"))}</button>"
-                : $@"<span class='badge text-bg-warning'>{H(T("Pending", "قيد الانتظار"))}</span>")}
+  {(canAct ? $@"<button type='button' id='btn-approve-all' class='btn btn-success btn-sm appr-btn' data-action='approve-batch' data-batch-id='{b.BatchId}'>{H(T("Approve", "اعتماد"))}</button>
+                <button type='button' class='btn btn-outline-danger btn-sm appr-btn' data-action='reject-batch' data-batch-id='{b.BatchId}'>{H(T("Reject", "رفض"))}</button>"
+                          : $"<span class='badge text-bg-warning'>{H(T("Pending", "قيد الانتظار"))}</span>")}
   <button type='button' class='btn btn-sm btn-outline-secondary ms-2 appr-batch-details' data-batch-id='{b.BatchId}' data-kpi-id='{b.KpiId}'>{H(T("Details", "التفاصيل"))}</button>
 </div>";
                     }
                     else if (b.ApprovalStatus == "approved")
                     {
-                        headerRight = $@"
-<span class='badge text-bg-success'>{H(T("Approved", "تمت الموافقة"))}</span>
+                        headerRight = $@"<span class='badge text-bg-success'>{H(T("Approved", "تمت الموافقة"))}</span>
 <button type='button' class='btn btn-sm btn-outline-secondary ms-2 appr-batch-details' data-batch-id='{b.BatchId}' data-kpi-id='{b.KpiId}'>{H(T("Details", "التفاصيل"))}</button>";
                     }
                     else
                     {
-                        headerRight = $@"
-<span class='badge text-bg-danger'>{H(T("Rejected", "مرفوض"))}</span>
+                        headerRight = $@"<span class='badge text-bg-danger'>{H(T("Rejected", "مرفوض"))}</span>
 <div class='small text-muted mt-1'>{H(T("Reason", "السبب"))}: {H(b.RejectReason)}</div>
 <button type='button' class='btn btn-sm btn-outline-secondary mt-1 appr-batch-details' data-batch-id='{b.BatchId}' data-kpi-id='{b.KpiId}'>{H(T("Details", "التفاصيل"))}</button>";
                     }
 
                     var freq = string.IsNullOrWhiteSpace(b.Frequency)
                         ? "—"
-                        : b.Frequency.Trim().ToLowerInvariant() switch
-                        {
-                            "monthly" => T("Monthly", "شهري"),
-                            "quarterly" => T("Quarterly", "ربع سنوي"),
-                            _ => b.Frequency
-                        };
+                        : (b.Frequency!.Trim().ToLowerInvariant() == "monthly"
+                            ? T("Monthly", "شهري")
+                            : b.Frequency!.Trim().ToLowerInvariant() == "quarterly"
+                                ? T("Quarterly", "ربع سنوي")
+                                : b.Frequency);
 
                     var perText = (b.PeriodMin.HasValue && b.PeriodMax.HasValue)
                         ? $"{b.PeriodMin}–{b.PeriodMax}"
@@ -1134,8 +1161,8 @@ namespace KPIMonitor.Controllers
   <div class='d-flex justify-content-between align-items-start'>
     <div>
       <div class='fw-bold'>{code}</div>
-      <div class='small text-muted'>{H(T("Year", "السنة"))}: {b.Year}, {H(T("Periods", "الفترات"))}: {H(perText)} • {H(T("Frequency", "الدورية"))}: {H(freq)}</div>
-      <div class='small text-muted'>{H(T("Submitted by", "تم الإرسال بواسطة"))} <strong>{H(b.SubmittedBy)}</strong> {H(T("at", "في"))} {F(b.SubmittedAt)}</div>
+      <div class='small text-muted'>{H(T("Year", "السنة"))}: {b.Year}, {H(T("Periods", "الفترات"))} {H(perText)} • {H(T("Frequency", "الدورية"))}: {H(freq)}</div>
+      <div class='small text-muted'>{H(T("Submitted by", "مقدم من"))} <strong>{H(submittedByDisplay)}</strong> {H(T("at", "في"))} {F(b.SubmittedAt)}</div>
     </div>
     <div class='text-end'>{headerRight}</div>
   </div>");
@@ -1172,7 +1199,7 @@ namespace KPIMonitor.Controllers
 <tr>
   <td>
     <div>{H(perLabel)}</div>
-    <div class='small text-muted'>{H(T("Submitted", "تاريخ الإرسال"))}: {F(r.SubmittedAt)}</div>
+    <div class='small text-muted'>{H(T("Submitted", "تم التقديم"))}: {F(r.SubmittedAt)}</div>
   </td>
   <td>{actCell}</td>
   <td>{tarCell}</td>
@@ -1190,14 +1217,14 @@ namespace KPIMonitor.Controllers
                     {
                         sb.Append($@"
   <div class='small text-muted mt-2'>
-    {H(T("Reviewed by", "تمت المراجعة بواسطة"))} <strong>{H(b.ReviewedBy)}</strong> {H(T("at", "في"))} {F(b.ReviewedAt)}
+    {H(T("Reviewed by", "تمت المراجعة بواسطة"))} <strong>{H(reviewedByDisplay)}</strong> {H(T("at", "في"))} {F(b.ReviewedAt)}
   </div>");
                     }
 
                     sb.Append("</div>");
                 }
 
-                return Content(sb.ToString(), "text/html; charset=utf-8");
+                return Content(sb.ToString(), "text/html");
             }
             catch (Exception ex)
             {
