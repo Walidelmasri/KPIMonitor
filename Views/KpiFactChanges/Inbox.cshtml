@@ -505,8 +505,13 @@
           try {
           // 1) fetch batch overlay info
           const infoUrl = '@Url.Action("ChangeOverlayInfoBatch", "KpiFactChanges")' + '?batchId=' + encodeURIComponent(batchId);
-          const info = await fetch(infoUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+          const infoRes = await fetch(infoUrl, { headers: { 'Accept': 'application/json' } });
+          const info = await infoRes.json();
+
+          if (!infoRes.ok || !info?.ok) {
           throw new Error(info?.error || apprText.failedToLoadDetails);
+          }
+
           const kpiId = kpiIdFromBtn || info.kpiId;
           if (!kpiId) throw new Error('KPI id missing for chart.');
 
@@ -623,8 +628,13 @@
           async function openEditorDetails(kpiId) {
           try {
           const infoUrl = '@Url.Action("LatestIndicatorDetails", "KpiFactChanges")' + '?kpiId=' + encodeURIComponent(kpiId);
-          const info = await fetch(infoUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+          const infoRes = await fetch(infoUrl, { headers: { 'Accept': 'application/json' } });
+          const info = await infoRes.json();
+
+          if (!infoRes.ok || !info?.ok) {
           throw new Error(info?.error || apprText.failedToLoadDetails);
+          }
+
           const baseUrl = '@Url.Action("GetKpiPresentation", "RedBoard")' + '?kpiId=' + encodeURIComponent(kpiId);
           const base = await fetch(baseUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
 
@@ -766,8 +776,13 @@
           async function openRowDetails(changeId) {
           try {
           const infoUrl = '@Url.Action("ChangeOverlayInfo", "KpiFactChanges")' + '?changeId=' + encodeURIComponent(changeId);
-          const info = await fetch(infoUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+          const infoRes = await fetch(infoUrl, { headers: { 'Accept': 'application/json' } });
+          const info = await infoRes.json();
+
+          if (!infoRes.ok || !info?.ok) {
           throw new Error(info?.error || apprText.failedToLoadDetails);
+          }
+
           const baseUrl = '@Url.Action("GetKpiPresentation", "RedBoard")' + '?kpiId=' + encodeURIComponent(info.kpiId);
           const base = await fetch(baseUrl, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
 
@@ -794,8 +809,8 @@
           const pForecast = toNum(info?.proposed?.forecast);
 
           const pIdx = findLabelIndex(labels, info.period);
-
           const overlayActual = new Array(labels.length).fill(null);
+          const overlayTarget = new Array(labels.length).fill(null);
           const overlayForecast = new Array(labels.length).fill(null);
           if (pIdx >= 0) {
           if (isFiniteNum(pActual)) overlayActual[pIdx] = pActual;
@@ -812,6 +827,19 @@
           ];
           if (overlayActual.some(v => v != null))
           datasets.push({ type: 'bar', label: 'Proposed Actual', data: overlayActual, backgroundColor: overlayColor, borderColor: overlayColor, borderWidth: 2, borderSkipped: 'bottom' });
+          if (overlayTarget.some(v => v != null))
+          datasets.push({
+          type: 'line',
+          label: 'Proposed Target',
+          data: overlayTarget,
+          borderColor: overlayColor,
+          pointBackgroundColor: overlayColor,
+          pointBorderColor: overlayColor,
+          borderDash: [3, 3],
+          borderWidth: 2,
+          tension: .3,
+          fill: false
+          });
           if (overlayForecast.some(v => v != null))
           datasets.push({ type: 'line', label: 'Proposed Forecast', data: overlayForecast, borderColor: overlayColor, pointBackgroundColor: '#0d6efd', pointBorderColor: '#0d6efd', borderDash: [2, 2], borderWidth: 2, tension: .3, fill: false });
 
