@@ -218,18 +218,18 @@
   <div class="modal-dialog modal-sm">
     <div class="modal-content rounded-3">
       <div class="modal-header">
-        <h5 class="modal-title" id="archiveLabel">Archive action plan</h5>
+        <h5 class="modal-title" id="archiveLabel">@Localizer["ArchiveActionPlan"]</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form id="archiveForm" method="post">
         @Html.AntiForgeryToken()
         <div class="modal-body">
           <input type="hidden" name="actionId" id="arc_actionId" />
-          <p class="mb-0">Are you sure you want to archive this action plan?</p>
+          <p class="mb-0">@Localizer["ArchiveConfirm"]</p>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-danger">Archive</button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@Localizer["Cancel"]</button>
+          <button type="submit" class="btn btn-danger">@Localizer["Archive"]</button>
         </div>
       </form>
     </div>
@@ -241,7 +241,7 @@
   <div class="modal-dialog">
     <div class="modal-content rounded-3">
       <div class="modal-header">
-        <h5 class="modal-title" id="addPlanLabel">Add Action Plan</h5>
+        <h5 class="modal-title" id="addPlanLabel">@Localizer["AddActionPlan"]</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
 
@@ -252,12 +252,12 @@
           <div class="form-check form-switch mb-3">
             <input class="form-check-input" type="checkbox" id="ap_isGeneral" checked>
             <label class="form-check-label" for="ap_isGeneral">
-              General action (not tied to a KPI)
+              @Localizer["GeneralActionNotTiedToKpi"]
             </label>
           </div>
 
           <div class="mb-3" id="ap_kpiBlock">
-            <label class="form-label">Link to KPI</label>
+            <label class="form-label">@Localizer["LinkToKpi"]</label>
             <div class="row g-2">
               <div class="col-md-4">
                 <select class="form-select" id="ap_pillar">
@@ -276,7 +276,7 @@
               </div>
             </div>
             <div class="form-text">
-              Leave as <em>General</em> above if this action is not for a specific KPI.
+              @Localizer["GeneralActionHelp"]
             </div>
           </div>
 
@@ -294,7 +294,7 @@
                 }
               </select>
 
-              <button type="button" class="btn btn-outline-secondary" id="ap_addOwnerBtn">Add</button>
+              <button type="button" class="btn btn-outline-secondary" id="ap_addOwnerBtn">@Localizer["Add"]</button>
             </div>
 
             <div class="form-text">
@@ -334,8 +334,8 @@
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Add</button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@Localizer["Cancel"]</button>
+          <button type="submit" class="btn btn-primary">@Localizer["Add"]</button>
         </div>
       </form>
     </div>
@@ -347,7 +347,7 @@
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content rounded-3">
       <div class="modal-header">
-        <h5 class="modal-title" id="apDetailsLabel">Action Plan</h5>
+        <h5 class="modal-title" id="apDetailsLabel">@Localizer["ActionPlan"]</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
 
@@ -355,23 +355,23 @@
         <input type="hidden" id="ad_actionId" />
 
         <div class="mb-2">
-          <div class="text-muted small">Owners</div>
+          <div class="text-muted small">@Localizer["Owners"]</div>
           <div id="ad_owners" class="fw-semibold">—</div>
         </div>
 
         <div class="row g-2 mb-2">
           <div class="col-md-6">
-            <div class="text-muted small">Status</div>
+            <div class="text-muted small">@Localizer["Status"]</div>
             <div id="ad_status" class="fw-semibold">—</div>
           </div>
           <div class="col-md-6">
-            <div class="text-muted small">Due</div>
+            <div class="text-muted small">@Localizer["Due"]</div>
             <div id="ad_due" class="fw-semibold">—</div>
           </div>
         </div>
 
         <div class="mb-3">
-          <div class="text-muted small">Description</div>
+          <div class="text-muted small">@Localizer["Description"]</div>
           <div id="ad_desc" class="border rounded-2 p-2 bg-light">—</div>
         </div>
 
@@ -380,7 +380,7 @@
         <div id="ad_commentsAnchor"></div>
 
         <div class="d-flex align-items-center justify-content-between mb-2">
-          <h6 class="mb-0">Comments</h6>
+          <h6 class="mb-0">@Localizer["Comments"]</h6>
           <div class="text-muted small" id="ad_commentHint"></div>
         </div>
 
@@ -390,17 +390,18 @@
 
         <div id="ad_addCommentBlock" class="border rounded-3 p-2">
           <div class="mb-2">
-            <textarea class="form-control" id="ad_commentText" rows="3" placeholder="Write a comment..."></textarea>
+            <textarea class="form-control" id="ad_commentText" rows="3"
+                      placeholder="@Localizer["WriteAComment"]"></textarea>
           </div>
           <div class="d-flex justify-content-end">
-            <button type="button" class="btn btn-primary btn-sm" id="ad_postCommentBtn">Post</button>
+            <button type="button" class="btn btn-primary btn-sm" id="ad_postCommentBtn">@Localizer["Post"]</button>
           </div>
-          <div class="fw-bold small mt-1">Once posted, comments cannot be edited.</div>
+          <div class="fw-bold small mt-1">@Localizer["CommentsCannotBeEdited"]</div>
         </div>
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@Localizer["Close"]</button>
       </div>
     </div>
   </div>
@@ -417,7 +418,19 @@
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     });
-
+    const apText = {
+      saving: '@Localizer["Saving"]',
+      posting: '@Localizer["Posting"]',
+      archiving: '@Localizer["Archiving"]',
+      adding: '@Localizer["Adding"]',
+      failedToLoadActions: '@Localizer["FailedToLoadActions"]',
+      failedToLoadDetails: '@Localizer["FailedToLoadDetails"]',
+      failedToPostComment: '@Localizer["FailedToPostComment"]',
+      noCommentsYet: '@Localizer["NoCommentsYet"]',
+      onlyOwnersCanComment: '@Localizer["OnlyOwnersCanComment"]',
+      failedToLoadAction: '@Localizer["FailedToLoadAction"]',
+      selectKpiOrGeneral: '@Localizer["SelectKpiOrGeneral"]'
+    };
     function setBtnLoading(btn, loading, textOverride) {
       if (!btn) return;
 
@@ -428,11 +441,11 @@
         btn.classList.add('disabled');
         btn.style.opacity = '0.75';
 
-        const label = textOverride || btn.textContent.trim() || 'Saving';
+        const label = textOverride || btn.textContent.trim() || apText.saving;
         btn.innerHTML = `
-                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                ${label}...
-                              `;
+                                  <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                  ${label}...
+                                `;
       } else {
         btn.disabled = false;
         btn.classList.remove('disabled');
@@ -492,7 +505,7 @@
         stripAdminControls();
       } catch (err) {
         console.error('[AP] BoardHtml failed:', err);
-        $('apBody').innerHTML = "<div class='text-danger small'>Failed to load actions.</div>";
+        $('apBody').innerHTML = `<div class='text-danger small'>${apText.failedToLoadActions}</div>`;
       }
     }
 
@@ -536,11 +549,11 @@
         pill.className = 'badge rounded-pill text-bg-light border';
         pill.style.padding = '.5rem .6rem';
         pill.innerHTML = `
-                                <span class="me-2">${name}</span>
-                                <button type="button" class="btn btn-sm btn-link p-0 text-danger"
-                                        data-remove-owner="${empId}" data-owner-prefix="${prefix}"
-                                        style="text-decoration:none;">✕</button>
-                              `;
+                                  <span class="me-2">${name}</span>
+                                  <button type="button" class="btn btn-sm btn-link p-0 text-danger"
+                                          data-remove-owner="${empId}" data-owner-prefix="${prefix}"
+                                          style="text-decoration:none;">✕</button>
+                                `;
         list.appendChild(pill);
 
         const inp = document.createElement('input');
@@ -604,14 +617,14 @@
       const text = escapeHtml(c.text || '');
 
       return `
-                              <div class="border rounded-3 p-2 bg-white">
-                                <div class="d-flex justify-content-between">
-                                  <div class="fw-semibold">${author}</div>
-                                  <div class="text-muted small">${when}</div>
+                                <div class="border rounded-3 p-2 bg-white">
+                                  <div class="d-flex justify-content-between">
+                                    <div class="fw-semibold">${author}</div>
+                                    <div class="text-muted small">${when}</div>
+                                  </div>
+                                  <div class="mt-1">${text}</div>
                                 </div>
-                                <div class="mt-1">${text}</div>
-                              </div>
-                            `;
+                              `;
     }
 
     async function openActionDetails(actionId, opts) {
@@ -640,11 +653,10 @@
 
         const canComment = !!d.canComment;
         $('ad_addCommentBlock').style.display = canComment ? '' : 'none';
-        $('ad_commentHint').textContent = canComment ? '' : 'Only owners can post comments.';
-
+        $('ad_commentHint').textContent = canComment ? '' : apText.onlyOwnersCanComment;
         const comments = await getJSON('@Url.Action("GetActionComments", "KpiActions")?actionId=' + encodeURIComponent(actionId));
         if (!comments || comments.length === 0) {
-          $('ad_commentsList').innerHTML = `<div class="text-muted small">No comments yet.</div>`;
+          $('ad_commentsList').innerHTML = `<div class="text-muted small">${apText.noCommentsYet}</div>`;
         } else {
           $('ad_commentsList').innerHTML = comments.map(renderCommentItem).join('');
         }
@@ -657,7 +669,7 @@
         }
       } catch (err) {
         console.error('[AP] openActionDetails failed:', err);
-        $('ad_commentsList').innerHTML = `<div class="text-danger small">Failed to load details.</div>`;
+        $('ad_commentsList').innerHTML = `<div class="text-danger small">${apText.failedToLoadDetails}</div>`;
       }
     }
 
@@ -725,7 +737,7 @@
       const btn = $('ad_postCommentBtn');
 
       try {
-        setBtnLoading(btn, true, 'Posting');
+        setBtnLoading(btn, true, apText.posting);
 
         const fd = new FormData();
         fd.append('__RequestVerificationToken', anti());
@@ -744,14 +756,14 @@
 
         const comments = await getJSON('@Url.Action("GetActionComments", "KpiActions")?actionId=' + encodeURIComponent(actionId));
         if (!comments || comments.length === 0) {
-          $('ad_commentsList').innerHTML = `<div class="text-muted small">No comments yet.</div>`;
+          $('ad_commentsList').innerHTML = `<div class="text-muted small">${apText.noCommentsYet}</div>`;
         } else {
           $('ad_commentsList').innerHTML = comments.map(renderCommentItem).join('');
           $('ad_commentsList')?.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'end' });
         }
       } catch (err) {
         console.error('[AP] Add comment failed:', err);
-        alert('Failed to post comment.');
+        alert(apText.failedToPostComment);
       } finally {
         setBtnLoading(btn, false);
       }
@@ -787,7 +799,7 @@
 
         bootstrap.Modal.getInstance(document.getElementById('moveDeadlineModal')).hide();
         await refreshBoard();
-      }, 'Saving');
+      }, apText.saving);
     });
 
     /* -------------------------
@@ -814,7 +826,7 @@
         new bootstrap.Modal(document.getElementById('editPlanModal')).show();
       } catch (err) {
         console.error('[AP] GetAction failed:', err);
-        alert('Failed to load the action.');
+        alert(apText.failedToLoadAction);
       }
     });
 
@@ -838,7 +850,7 @@
 
         bootstrap.Modal.getInstance(document.getElementById('editPlanModal')).hide();
         await refreshBoard();
-      }, 'Saving');
+      }, apText.saving);
     });
 
     /* -------------------------
@@ -875,7 +887,7 @@
 
         bootstrap.Modal.getInstance(document.getElementById('archiveModal')).hide();
         await refreshBoard();
-      }, 'Archiving');
+      }, apText.archiving);
     });
 
     /* -------------------------
@@ -905,10 +917,10 @@
       const kpi = $('ap_kpi');
       if (!sel || !obj || !kpi) return;
 
-      sel.innerHTML = '<option value="">— Pillar —</option>';
-      obj.innerHTML = '<option value="">— Objective —</option>';
+      sel.innerHTML = '<option value="">@Localizer["PillarOption"]</option>';
+      obj.innerHTML = '<option value="">@Localizer["ObjectiveOption"]</option>';
       obj.disabled = true;
-      kpi.innerHTML = '<option value="">— KPI —</option>';
+      kpi.innerHTML = '<option value="">@Localizer["KpiOption"]</option>';
       kpi.disabled = true;
 
       try {
@@ -928,9 +940,8 @@
       const obj = $('ap_objective');
       const kpi = $('ap_kpi');
       if (!obj || !kpi) return;
-
-      obj.innerHTML = '<option value="">— Objective —</option>';
-      kpi.innerHTML = '<option value="">— KPI —</option>';
+      obj.innerHTML = '<option value="">@Localizer["ObjectiveOption"]</option>';
+      kpi.innerHTML = '<option value="">@Localizer["KpiOption"]</option>';
       kpi.disabled = true;
 
       if (!pillarId) {
@@ -957,8 +968,7 @@
       const kpi = $('ap_kpi');
       if (!kpi) return;
 
-      kpi.innerHTML = '<option value="">— KPI —</option>';
-
+      kpi.innerHTML = '<option value="">@Localizer["KpiOption"]</option>';
       if (!objectiveId) {
         kpi.disabled = true;
         return;
@@ -1024,7 +1034,7 @@
           const kpiSel = $('ap_kpi');
 
           if (!isGeneral && kpiSel && !kpiSel.value) {
-            alert('Please select a KPI, or mark the action as General.');
+            alert(apText.selectKpiOrGeneral);
             return;
           }
 
@@ -1045,7 +1055,7 @@
 
           bootstrap.Modal.getInstance(document.getElementById('addPlanModal')).hide();
           await refreshBoard();
-        }, 'Adding');
+        }, apText.adding);
       });
     });
   </script>

@@ -160,14 +160,14 @@ namespace KPIMonitor.Controllers
                     }
                     else
                     {
-                        string code = $"{H(a.Kpi?.Pillar?.PillarCode ?? "")} {H(a.Kpi?.Objective?.ObjectiveCode ?? "")} {H(a.Kpi?.KpiCode ?? "")}".Trim();
-                        string name = H(a.Kpi != null ? Pick(a.Kpi.KpiNameAr, a.Kpi.KpiName ?? "-") : "-");
-                        string pillar = H(a.Kpi?.Pillar != null ? Pick(a.Kpi.Pillar.PillarNameAr, a.Kpi.Pillar.PillarName ?? "") : "");
-                        string obj = H(a.Kpi?.Objective != null ? Pick(a.Kpi.Objective.ObjectiveNameAr, a.Kpi.Objective.ObjectiveName ?? "") : "");
+string code = $"{H(a.Kpi?.Pillar?.PillarCode ?? "")} {H(a.Kpi?.Objective?.ObjectiveCode ?? "")} {H(a.Kpi?.KpiCode ?? "")}".Trim();
+string name = H(a.Kpi != null ? Pick(a.Kpi.KpiNameAr, a.Kpi.KpiName ?? "-") : "-");
+string pillar = H(a.Kpi?.Pillar != null ? Pick(a.Kpi.Pillar.PillarNameAr, a.Kpi.Pillar.PillarName ?? "") : "");
+string obj = H(a.Kpi?.Objective != null ? Pick(a.Kpi.Objective.ObjectiveNameAr, a.Kpi.Objective.ObjectiveName ?? "") : "");
 
-                        info = $@"
+info = $@"
 <div class='small text-muted mt-1'>
-  {H(T("KPI", "المؤشر"))}: <strong>{code}</strong> — {name}
+  {H(T("KPI", "المؤشر"))}: <strong><span dir='ltr' style='unicode-bidi:isolate;'>{code}</span></strong> — {name}
   {(string.IsNullOrWhiteSpace(pillar) ? "" : $"<div>{H(T("Pillar", "الركيزة"))}: {pillar}</div>")}
   {(string.IsNullOrWhiteSpace(obj) ? "" : $"<div>{H(T("Objective", "الهدف"))}: {obj}</div>")}
 </div>";
