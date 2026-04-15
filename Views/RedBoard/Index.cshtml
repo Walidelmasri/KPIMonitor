@@ -423,8 +423,18 @@
         // Extract only the KPI code from slide.code
         let cleanCode = "—";
         if (slide.code) {
-        const match = slide.code.match(/KPI Code:\s*(.*)/);
-        if (match && match[1]) cleanCode = match[1].trim();
+        const lines = String(slide.code)
+        .split('\n')
+        .map(x => x.trim())
+        .filter(Boolean);
+
+        if (lines.length > 0) {
+        const firstLine = lines[0];
+        const colonIndex = firstLine.indexOf(':');
+        cleanCode = colonIndex >= 0
+        ? firstLine.substring(colonIndex + 1).trim()
+        : firstLine;
+        }
         }
 
         $('m_code').innerText = cleanCode;
@@ -1194,7 +1204,7 @@
                             <select class="form-select" name="Owner" id="af_owner" required>
                                 <option value="">@Localizer["Select"]</option>
                                 @foreach (var e in employees ??
-                                                                                                                                                                                                                                Enumerable.Empty<KPIMonitor.ViewModels.EmployeePickDto>())
+                                                                                                                                                                                                                                                                Enumerable.Empty<KPIMonitor.ViewModels.EmployeePickDto>())
                                 {
                                     var display = e.Label ?? "";
                                     var idx = display.IndexOf('(');
