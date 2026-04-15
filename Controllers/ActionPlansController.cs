@@ -5,16 +5,88 @@ using KPIMonitor.Models;
 using System.Text;
 using System.Net;
 using KPIMonitor.Helpers;
+using KPIMonitor.Services;
 
 namespace KPIMonitor.Controllers
 {
     public class ActionPlansController : Controller
     {
         private readonly AppDbContext _db;
-        public ActionPlansController(AppDbContext db) { _db = db; }
+        private readonly IEmployeeDirectory _empDir;
+
+        public ActionPlansController(AppDbContext db, IEmployeeDirectory empDir)
+        {
+            _db = db;
+            _empDir = empDir;
+        }
+
+        private bool IsArabicUi()
+        {
+            return System.Globalization.CultureInfo.CurrentUICulture.Name
+                .StartsWith("ar", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private async Task<string?> ResolveEmployeeNameAsync(string? empId)
+        {
+            var id = (empId ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(id))
+                return null;
+
+            var pick = await _empDir.TryGetByEmpIdAsync(id);
+            if (!pick.HasValue)
+                return null;
+
+            var value = pick.Value;
+
+            var name = IsArabicUi()
+                ? (!string.IsNullOrWhiteSpace(value.NameAr) ? value.NameAr! : (value.NameEng ?? ""))
+                : (!string.IsNullOrWhiteSpace(value.NameEng) ? value.NameEng : (value.NameAr ?? ""));
+
+            name = (name ?? "").Trim();
+
+            var idx = name.IndexOf('(');
+            if (idx > 0)
+                name = name.Substring(0, idx).Trim();
+
+            return string.IsNullOrWhiteSpace(name) ? null : name;
+        }
+
+        private string LastNameFromFullName(string? full)
+        {
+            var s = (full ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(s)) return "";
+
+            var idx = s.IndexOf('(');
+            if (idx > 0) s = s.Substring(0, idx).Trim();
+
+            var parts = s.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length == 0 ? "" : parts[^1];
+        }
+
+        private string CleanOwner(string? raw)
+        {
+            var s = (raw ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(s)) return "";
+
+            var idx = s.IndexOf('(');
+            if (idx <= 0) return s;
+
+            var end = s.IndexOf(')', idx + 1);
+            if (end < 0) return s;
+
+            var inside = s.Substring(idx + 1, end - idx - 1).Trim();
+
+            if (inside.StartsWith("+")) return s;
+
+            var digitsOnly = inside.All(char.IsDigit);
+            if (digitsOnly) return s.Substring(0, idx).Trim();
+
+            return s;
+        }
 
         [HttpGet]
         public IActionResult Index() => View();
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> BoardHtml([FromBody] decimal[] kpiIds)
@@ -88,51 +160,26 @@ namespace KPIMonitor.Controllers
                 string H(string? s) => WebUtility.HtmlEncode(s ?? "");
                 string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
 
-                string CleanOwner(string? raw)
-                {
-                    var s = (raw ?? "").Trim();
-                    if (string.IsNullOrWhiteSpace(s)) return "";
-
-                    var idx = s.IndexOf('(');
-                    if (idx <= 0) return s;
-
-                    var end = s.IndexOf(')', idx + 1);
-                    if (end < 0) return s;
-
-                    var inside = s.Substring(idx + 1, end - idx - 1).Trim();
-
-                    if (inside.StartsWith("+")) return s;
-
-                    var digitsOnly = inside.All(char.IsDigit);
-                    if (digitsOnly) return s.Substring(0, idx).Trim();
-
-                    return s;
-                }
-
-                string LastNameFromFullName(string? full)
-                {
-                    var s = (full ?? "").Trim();
-                    if (string.IsNullOrWhiteSpace(s)) return "";
-
-                    var idx = s.IndexOf('(');
-                    if (idx > 0) s = s.Substring(0, idx).Trim();
-
-                    var parts = s.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    return parts.Length == 0 ? "" : parts[^1];
-                }
-
-                string TileOwnerHeader(decimal actionId, string? fallbackOwner)
+                async Task<string> TileOwnerHeaderAsync(decimal actionId, string? fallbackOwner)
                 {
                     if (ownersLookup.TryGetValue(actionId, out var owners) && owners != null)
                     {
-                        var names = owners
-                            .Select(o => string.IsNullOrWhiteSpace(o.OwnerName) ? o.OwnerEmpId : o.OwnerName!.Trim())
-                            .Where(x => !string.IsNullOrWhiteSpace(x))
-                            .ToList();
+                        var resolvedNames = new List<string>();
 
-                        if (names.Count >= 2)
+                        foreach (var o in owners)
                         {
-                            var lastNames = names
+                            var name = await ResolveEmployeeNameAsync(o.OwnerEmpId);
+
+                            if (string.IsNullOrWhiteSpace(name))
+                                name = string.IsNullOrWhiteSpace(o.OwnerName) ? o.OwnerEmpId : o.OwnerName!.Trim();
+
+                            if (!string.IsNullOrWhiteSpace(name))
+                                resolvedNames.Add(name);
+                        }
+
+                        if (resolvedNames.Count >= 2)
+                        {
+                            var lastNames = resolvedNames
                                 .Select(LastNameFromFullName)
                                 .Where(x => !string.IsNullOrWhiteSpace(x))
                                 .ToList();
@@ -140,18 +187,18 @@ namespace KPIMonitor.Controllers
                             return lastNames.Count == 0 ? CleanOwner(fallbackOwner) : string.Join(", ", lastNames);
                         }
 
-                        if (names.Count == 1)
+                        if (resolvedNames.Count == 1)
                         {
-                            return names[0];
+                            return resolvedNames[0];
                         }
                     }
 
                     return CleanOwner(fallbackOwner);
                 }
 
-                string Tile(KpiAction a, string title, string badgeClass)
+                async Task<string> TileAsync(KpiAction a, string title, string badgeClass)
                 {
-                    var ownerDisplay = TileOwnerHeader(a.ActionId, a.Owner);
+                    var ownerDisplay = await TileOwnerHeaderAsync(a.ActionId, a.Owner);
 
                     string info;
                     if (a.KpiId == null)
@@ -160,12 +207,12 @@ namespace KPIMonitor.Controllers
                     }
                     else
                     {
-string code = $"{H(a.Kpi?.Pillar?.PillarCode ?? "")} {H(a.Kpi?.Objective?.ObjectiveCode ?? "")} {H(a.Kpi?.KpiCode ?? "")}".Trim();
-string name = H(a.Kpi != null ? Pick(a.Kpi.KpiNameAr, a.Kpi.KpiName ?? "-") : "-");
-string pillar = H(a.Kpi?.Pillar != null ? Pick(a.Kpi.Pillar.PillarNameAr, a.Kpi.Pillar.PillarName ?? "") : "");
-string obj = H(a.Kpi?.Objective != null ? Pick(a.Kpi.Objective.ObjectiveNameAr, a.Kpi.Objective.ObjectiveName ?? "") : "");
+                        string code = $"{H(a.Kpi?.Pillar?.PillarCode ?? "")} {H(a.Kpi?.Objective?.ObjectiveCode ?? "")} {H(a.Kpi?.KpiCode ?? "")}".Trim();
+                        string name = H(a.Kpi != null ? Pick(a.Kpi.KpiNameAr, a.Kpi.KpiName ?? "-") : "-");
+                        string pillar = H(a.Kpi?.Pillar != null ? Pick(a.Kpi.Pillar.PillarNameAr, a.Kpi.Pillar.PillarName ?? "") : "");
+                        string obj = H(a.Kpi?.Objective != null ? Pick(a.Kpi.Objective.ObjectiveNameAr, a.Kpi.Objective.ObjectiveName ?? "") : "");
 
-info = $@"
+                        info = $@"
 <div class='small text-muted mt-1'>
   {H(T("KPI", "المؤشر"))}: <strong><span dir='ltr' style='unicode-bidi:isolate;'>{code}</span></strong> — {name}
   {(string.IsNullOrWhiteSpace(pillar) ? "" : $"<div>{H(T("Pillar", "الركيزة"))}: {pillar}</div>")}
@@ -231,7 +278,7 @@ info = $@"
 </div>";
                 }
 
-                string Column(string title, string key, IReadOnlyList<KpiAction> items)
+                async Task<string> ColumnAsync(string title, string key, IReadOnlyList<KpiAction> items)
                 {
                     var headerClass = key switch
                     {
@@ -254,7 +301,7 @@ info = $@"
                         foreach (var a in items)
                         {
                             sb.Append("<div class='mt-2'>");
-                            sb.Append(Tile(
+                            sb.Append(await TileAsync(
                                 a,
                                 title,
                                 key == "todo"
@@ -273,9 +320,9 @@ info = $@"
 
                 var html =
                     "<div class='row g-3'>" +
-                    Column(T("To Do", "المطلوب تنفيذها"), "todo", todo) +
-                    Column(T("In Progress", "قيد التنفيذ"), "prog", prog) +
-                    Column(T("Done", "المنجزة"), "done", done) +
+                    await ColumnAsync(T("To Do", "المطلوب تنفيذها"), "todo", todo) +
+                    await ColumnAsync(T("In Progress", "قيد التنفيذ"), "prog", prog) +
+                    await ColumnAsync(T("Done", "المنجزة"), "done", done) +
                     "</div>";
 
                 return Content(html, "text/html");
@@ -291,311 +338,5 @@ info = $@"
                 return StatusCode(500, msg);
             }
         }
-        //     [HttpPost]
-        //     [ValidateAntiForgeryToken]
-        //     public async Task<IActionResult> BoardHtml([FromBody] decimal[] kpiIds)
-        //     {
-        //       // Optional filter: if kpiIds are provided, we filter; otherwise we show ALL KPI-linked actions.
-        //       IEnumerable<decimal> filter = kpiIds ?? Array.Empty<decimal>();
-
-        //       // KPI-scoped actions
-        //       var kpiQuery = _db.KpiActions
-        //           .AsNoTracking()
-        //           .Include(a => a.Kpi)!.ThenInclude(k => k.Objective)
-        //           .Include(a => a.Kpi)!.ThenInclude(k => k.Pillar)
-        //           .Where(a => a.KpiId.HasValue);
-
-        //       if (filter.Any())
-        //       {
-        //         kpiQuery = kpiQuery.Where(a => a.KpiId.HasValue && filter.Contains(a.KpiId.Value));
-        //       }
-
-        //       var kpiScoped = await kpiQuery
-        //           .OrderBy(a => a.StatusCode)
-        //           .ThenBy(a => a.DueDate)
-        //           .ToListAsync();
-
-        //       // // General actions (no KPI) — include on this page
-        //       // var general = await _db.KpiActions
-        //       //     .AsNoTracking()
-        //       //     .Where(a => a.KpiId == null || a.IsGeneral)
-        //       //     .OrderBy(a => a.StatusCode)
-        //       //     .ThenBy(a => a.DueDate)
-        //       //     .ToListAsync();
-        // var general = await _db.KpiActions
-        //     .AsNoTracking()
-        //     .Where(a => a.KpiId == null)
-        //     .OrderBy(a => a.StatusCode)
-        //     .ThenBy(a => a.DueDate)
-        //     .ToListAsync();
-        //       // Combine and drop archived
-        //       var actions = kpiScoped
-        //           .Concat(general)
-        //           .Where(a => !string.Equals(a.StatusCode, "archived", StringComparison.OrdinalIgnoreCase))
-        //           .ToList();
-        //       // Pull owners for the actions shown on the board (1 query)
-        //       var actionIds = actions.Select(a => a.ActionId).ToList();
-
-        //       var ownersByActionId = await _db.KpiActionOwners
-        //           .AsNoTracking()
-        //           .Where(o => actionIds.Contains(o.ActionId))
-        //           .OrderBy(o => o.KpiActionOwnerId)
-        //           .ToListAsync();
-
-        //       var ownersLookup = ownersByActionId
-        //           .GroupBy(o => o.ActionId)
-        //           .ToDictionary(g => g.Key, g => g.ToList());
-
-        //       var todo = actions
-        //           .Where(a => string.Equals(a.StatusCode, "todo", StringComparison.OrdinalIgnoreCase))
-        //           .ToList();
-        //       var prog = actions
-        //           .Where(a => string.Equals(a.StatusCode, "inprogress", StringComparison.OrdinalIgnoreCase))
-        //           .ToList();
-        //       var done = actions
-        //           .Where(a => string.Equals(a.StatusCode, "done", StringComparison.OrdinalIgnoreCase))
-        //           .ToList();
-
-        //       // ----- CARD RENDERING (back to original layout, but with archive + cleaned owner) -----
-        //       string Tile(KpiAction a, string title, string badgeClass)
-        //       {
-        //         string H(string? s) => WebUtility.HtmlEncode(s ?? "");
-        //         string F(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") : "—";
-
-        //         // Clean owner: strip "(12345)" if present
-        //         string CleanOwner(string? raw)
-        //         {
-        //           var s = (raw ?? "").Trim();
-        //           if (string.IsNullOrWhiteSpace(s)) return "";
-
-        //           var idx = s.IndexOf('(');
-        //           if (idx <= 0) return s;
-
-        //           // Look at what's inside the parentheses
-        //           var end = s.IndexOf(')', idx + 1);
-        //           if (end < 0) return s; // malformed, keep as-is
-
-        //           var inside = s.Substring(idx + 1, end - idx - 1).Trim();
-
-        //           // Keep "(+N)" style
-        //           if (inside.StartsWith("+")) return s;
-
-        //           // Strip only if it looks like an EmpId "(12345)" (digits only)
-        //           var digitsOnly = inside.All(char.IsDigit);
-        //           if (digitsOnly) return s.Substring(0, idx).Trim();
-
-        //           // Otherwise keep (don’t guess)
-        //           return s;
-        //         }
-        //         string LastNameFromFullName(string? full)
-        //         {
-        //           var s = (full ?? "").Trim();
-        //           if (string.IsNullOrWhiteSpace(s)) return "";
-
-        //           // strip "(12345)" etc if present
-        //           var idx = s.IndexOf('(');
-        //           if (idx > 0) s = s.Substring(0, idx).Trim();
-
-        //           var parts = s.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        //           return parts.Length == 0 ? "" : parts[^1];
-        //         }
-
-        //         string TileOwnerHeader(decimal actionId, string? fallbackOwner)
-        //         {
-        //           // Use the real owners list for this action
-        //           if (ownersLookup.TryGetValue(actionId, out var owners) && owners != null)
-        //           {
-        //             var names = owners
-        //                 .Select(o => string.IsNullOrWhiteSpace(o.OwnerName) ? o.OwnerEmpId : o.OwnerName!.Trim())
-        //                 .Where(x => !string.IsNullOrWhiteSpace(x))
-        //                 .ToList();
-
-        //             // MULTI OWNER => last names only
-        //             if (names.Count >= 2)
-        //             {
-        //               var lastNames = names
-        //                   .Select(LastNameFromFullName)
-        //                   .Where(x => !string.IsNullOrWhiteSpace(x))
-        //                   .ToList();
-
-        //               return lastNames.Count == 0 ? CleanOwner(fallbackOwner) : string.Join(", ", lastNames);
-        //             }
-
-        //             // SINGLE OWNER => FULL NAME
-        //             if (names.Count == 1)
-        //             {
-        //               return names[0];
-        //             }
-        //           }
-
-        //           // fallback if owners table has nothing
-        //           return CleanOwner(fallbackOwner);
-        //         }
-
-        //         var ownerDisplay = TileOwnerHeader(a.ActionId, a.Owner);
-
-        //         // string TileOwnerLastNames(string? raw)
-        //         // {
-        //         //   var s = (raw ?? "").Trim();
-        //         //   if (string.IsNullOrWhiteSpace(s)) return "";
-
-        //         //   // remove "(+N)" if present
-        //         //   var plusIdx = s.IndexOf("(+");
-        //         //   if (plusIdx > 0) s = s.Substring(0, plusIdx).Trim();
-
-        //         //   // IMPORTANT: your Owner field is typically "First Owner" only,
-        //         //   // so this returns ONE last name.
-        //         //   // If you later store comma-separated names, this will handle that too.
-        //         //   var pieces = s.Split(',', StringSplitOptions.RemoveEmptyEntries);
-
-        //         //   var lastNames = pieces
-        //         //       .Select(p =>
-        //         //       {
-        //         //         var words = p.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        //         //         return words.Length > 0 ? words[^1] : "";
-        //         //       })
-        //         //       .Where(x => !string.IsNullOrWhiteSpace(x));
-
-        //         //   return string.Join(", ", lastNames);
-        //         // }
-
-        //         // var ownerDisplay = TileOwnerLastNames(CleanOwner(a.Owner));
-
-        //         // KPI vs General info block
-        //         string info;
-        // if (a.KpiId == null)
-        // {
-        //     info = "<div class='small text-muted mt-1'><span class='badge text-bg-info me-1'>General</span>General Action</div>";
-        // }
-        //         else
-        //         {
-        //           string code = $"{H(a.Kpi?.Pillar?.PillarCode ?? "")} {H(a.Kpi?.Objective?.ObjectiveCode ?? "")} {H(a.Kpi?.KpiCode ?? "")}";
-        //           string name = H(a.Kpi?.KpiName ?? "-");
-        //           string pillar = H(a.Kpi?.Pillar?.PillarName ?? "");
-        //           string obj = H(a.Kpi?.Objective?.ObjectiveName ?? "");
-
-        //           info = $@"
-        // <div class='small text-muted mt-1'>
-        //   KPI: <strong>{code}</strong> — {name}
-        //   {(string.IsNullOrWhiteSpace(pillar) ? "" : $"<div>Pillar: {pillar}</div>")}
-        //   {(string.IsNullOrWhiteSpace(obj) ? "" : $"<div>Objective: {obj}</div>")}
-        // </div>";
-        //         }
-
-        //         // Extension label only if > 0
-        //         var extPart = a.ExtensionCount > 0
-        //           ? $" • Ext: {a.ExtensionCount}"
-        //           : "";
-
-        //         return $@"
-        // <div class='border rounded-3 p-2 bg-white ap-tile'
-        //      role='button'
-        //      tabindex='0'
-        //      data-action='open-details'
-        //      data-id='{a.ActionId}'
-        //      style='cursor:pointer;'>
-        //   <div class='d-flex justify-content-between align-items-center'>
-        //     <strong>{H(ownerDisplay)}</strong>
-        //     <span class='badge rounded-pill {badgeClass}'>{H(title)}</span>
-        //   </div>
-
-        //   {info}
-
-        //   <div class='mt-1'>{H(a.Description)}</div>
-
-        //   <div class='text-muted small mt-1'>
-        //     Due: {F(a.DueDate)}{extPart}
-        //   </div>
-
-        //   <!-- buttons row at the bottom -->
-        //   <div class='d-flex justify-content-end gap-2 mt-2'>
-        //     <button type='button'
-        //             class='btn btn-sm btn-outline-secondary ap-action-btn ap-stop-tile'
-        //             data-action='comment'
-        //             data-id='{a.ActionId}'>
-        //       Comment
-        //     </button>
-
-        //     <button type='button'
-        //             class='btn btn-sm btn-outline-secondary ap-action-btn ap-stop-tile'
-        //             data-action='edit-plan'
-        //             data-id='{a.ActionId}'
-        //             asp-admin-only>
-        //       Edit
-        //     </button>
-
-        //     <button type='button'
-        //             class='btn btn-sm btn-outline-secondary ap-action-btn ap-stop-tile'
-        //             data-action='move-deadline'
-        //             data-id='{a.ActionId}'
-        //             asp-admin-only>
-        //       Move deadline
-        //     </button>
-
-        //     <button type='button'
-        //             class='btn btn-sm btn-outline-secondary ap-action-btn ap-stop-tile'
-        //             data-action='archive-action'
-        //             data-id='{a.ActionId}'
-        //             asp-admin-only>
-        //       Archive
-        //     </button>
-        //   </div>
-        // </div>";
-
-        //       }
-
-        //       string Column(string title, string key, IReadOnlyList<KpiAction> items)
-        //       {
-        //         var headerClass = key switch
-        //         {
-        //           "todo" => "ap-col-header ap-col-header--todo",
-        //           "prog" => "ap-col-header ap-col-header--prog",
-        //           _ => "ap-col-header ap-col-header--done"
-        //         };
-
-        //         var sb = new StringBuilder();
-        //         sb.Append("<div class='col-md-4'>");
-        //         sb.Append("<div class='ap-col'>");
-
-        //         // the coloured bar at the top of each column
-        //         sb.Append($"<div class='{headerClass}'>{WebUtility.HtmlEncode(title)}</div>");
-
-        //         if (!items.Any())
-        //         {
-        //           sb.Append("<div class='text-muted small mt-2'>No items.</div>");
-        //         }
-        //         else
-        //         {
-        //           foreach (var a in items)
-        //           {
-        //             sb.Append("<div class='mt-2'>");
-        //             sb.Append(Tile(
-        //               a,
-        //               title,
-        //               key == "todo"
-        //                 ? "text-bg-secondary"
-        //                 : key == "prog"
-        //                   ? "text-bg-warning"
-        //                   : "text-bg-success"));
-        //             sb.Append("</div>");
-        //           }
-        //         }
-
-        //         sb.Append("</div>");   // .ap-col
-        //         sb.Append("</div>");   // .col-md-4
-        //         return sb.ToString();
-        //       }
-
-
-        //       var html =
-        //           "<div class='row g-3'>" +
-        //           Column("To Do", "todo", todo) +
-        //           Column("In Progress", "prog", prog) +
-        //           Column("Done", "done", done) +
-        //           "</div>";
-
-        //       return Content(html, "text/html");
-        //     }
-
     }
 }
