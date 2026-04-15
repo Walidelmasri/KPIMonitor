@@ -62,6 +62,12 @@
         hide: @Html.Raw(JsonSerializer.Serialize(Localizer["Hide"].Value)),
         add: @Html.Raw(JsonSerializer.Serialize(Localizer["Add"].Value)),
         unhide: @Html.Raw(JsonSerializer.Serialize(Localizer["Unhide"].Value))
+        kpiName: @Html.Raw(JsonSerializer.Serialize(Localizer["KpiName"].Value)),
+        kpiCode: @Html.Raw(JsonSerializer.Serialize(Localizer["KpiCode"].Value)),
+        pillar: @Html.Raw(JsonSerializer.Serialize(Localizer["Pillar"].Value)),
+        objective: @Html.Raw(JsonSerializer.Serialize(Localizer["Objective"].Value)),
+        monthly: @Html.Raw(JsonSerializer.Serialize(Localizer["Monthly"].Value)),
+        quarterly: @Html.Raw(JsonSerializer.Serialize(Localizer["Quarterly"].Value)),
         };
 
         // ---------------------------
@@ -97,7 +103,12 @@
         return '—';
         }
         }
-
+        function localizeFrequency(value) {
+        const v = String(value || '').trim().toLowerCase();
+        if (v === 'monthly') return rbText.monthly;
+        if (v === 'quarterly') return rbText.quarterly;
+        return value || '—';
+        }
         // Antiforgery token (we render it below in a hidden form)
         const anti = () => (qs('input[name="__RequestVerificationToken"]')?.value || '');
 
@@ -396,7 +407,7 @@
         $('actionsBlock').classList.remove('d-none');
 
         currentKpiId = slide.kpiId;
-        $('kpiHeading').innerText = `KPI Name: ${slide.name}`;
+        $('kpiHeading').innerText = `${rbText.kpiName}: ${slide.name}`;
         $('kpiSub').innerText = `${slide.code}`;
 
         const addBtn = $('btnAddAction');
@@ -419,7 +430,7 @@
         $('m_code').innerText = cleanCode;
         $('m_owner').innerText = data?.meta?.owner ?? '—';
         $('m_editor').innerText = data?.meta?.editor ?? '—';
-        $('m_frequency').innerText = data?.meta?.valueType ?? '—';
+        $('m_frequency').innerText = localizeFrequency(data?.meta?.valueType);
         $('m_unit').innerText = data?.meta?.unit ?? '—';
         $('m_priority').innerText = data?.meta?.priority ?? '—';
         const status = $('m_status');
@@ -1183,7 +1194,7 @@
                             <select class="form-select" name="Owner" id="af_owner" required>
                                 <option value="">@Localizer["Select"]</option>
                                 @foreach (var e in employees ??
-                                                                                                                                Enumerable.Empty<KPIMonitor.ViewModels.EmployeePickDto>())
+                                                                                                                                                                                                                                Enumerable.Empty<KPIMonitor.ViewModels.EmployeePickDto>())
                                 {
                                     var display = e.Label ?? "";
                                     var idx = display.IndexOf('(');

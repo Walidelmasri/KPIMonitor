@@ -6,14 +6,19 @@ using System.Text;
 using System.Net;
 using System.Linq;
 using KPIMonitor.Helpers;
+using KPIMonitor.Services;
 
 namespace KPIMonitor.Controllers
 {
     public class RedBoardController : Controller
     {
         private readonly AppDbContext _db;
-        public RedBoardController(AppDbContext db) { _db = db; }
-
+        private readonly IEmployeeDirectory _dir;
+        public RedBoardController(AppDbContext db, IEmployeeDirectory dir)
+        {
+            _db = db;
+            _dir = dir;
+        }
         // Page
         [HttpGet]
         public IActionResult Index() => View();
@@ -184,9 +189,14 @@ namespace KPIMonitor.Controllers
                     string pillName = (x.PillarName ?? "").Trim();
                     string objName = (x.ObjectiveName ?? "").Trim();
 
-                    var line1 = $"KPI Code: {pillCode}.{objCode} {kpiCode}";
-                    var line2 = string.IsNullOrEmpty(pillName) ? "" : $"Pillar: {pillName}";
-                    var line3 = string.IsNullOrEmpty(objName) ? "" : $"Objective: {objName}";
+                    var isArabic = System.Globalization.CultureInfo.CurrentUICulture.Name
+                        .StartsWith("ar", StringComparison.OrdinalIgnoreCase);
+
+                    string T(string en, string ar) => isArabic ? ar : en;
+
+                    var line1 = $"{T("KPI Code", "رمز المؤشر")}: {pillCode}.{objCode} {kpiCode}";
+                    var line2 = string.IsNullOrEmpty(pillName) ? "" : $"{T("Pillar", "الركيزة")}: {pillName}";
+                    var line3 = string.IsNullOrEmpty(objName) ? "" : $"{T("Objective", "الهدف")}: {objName}";
 
                     var subtitle = string.Join("\n", new[] { line1, line2, line3 }
                         .Where(s => !string.IsNullOrWhiteSpace(s)));
@@ -344,14 +354,34 @@ namespace KPIMonitor.Controllers
             }).ToList();
 
             var kpi = await _db.DimKpis.AsNoTracking().FirstOrDefaultAsync(x => x.KpiId == kpiId);
+            var isArabic = System.Globalization.CultureInfo.CurrentUICulture.Name
+    .StartsWith("ar", StringComparison.OrdinalIgnoreCase);
+
+            string Pick(string? ar, string? en) => isArabic
+                ? (!string.IsNullOrWhiteSpace(ar) ? ar! : (en ?? "—"))
+                : (!string.IsNullOrWhiteSpace(en) ? en! : (ar ?? "—"));
+
+            string ownerText = plan.Owner ?? "—";
+            if (!string.IsNullOrWhiteSpace(plan.OwnerEmpId))
+            {
+                var ownerRec = await _dir.TryGetByEmpIdAsync(plan.OwnerEmpId);
+                ownerText = Pick(ownerRec?.NameAr, ownerRec?.NameEng);
+            }
+
+            string editorText = plan.Editor ?? "—";
+            if (!string.IsNullOrWhiteSpace(plan.EditorEmpId))
+            {
+                var editorRec = await _dir.TryGetByEmpIdAsync(plan.EditorEmpId);
+                editorText = Pick(editorRec?.NameAr, editorRec?.NameEng);
+            }
             var meta = new
             {
                 planId = plan.KpiYearPlanId, // THIS (so frontend can fetch the comment)
 
                 title = kpi != null ? LocalizationHelper.Get(kpi.KpiNameAr, kpi.KpiName ?? "") : "—",
                 code = kpi?.KpiCode ?? "—",
-                owner = plan.Owner ?? "—",
-                editor = plan.Editor ?? "—",
+                owner = ownerText,
+                editor = editorText,
                 valueType = string.IsNullOrWhiteSpace(plan.Frequency) ? "—" : plan.Frequency,
                 unit = string.IsNullOrWhiteSpace(plan.Unit) ? "—" : plan.Unit,
                 priority = plan.Priority,

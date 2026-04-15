@@ -221,4 +221,22 @@
   <data name="SaveArrangement" xml:space="preserve">
     <value>Save arrangement</value>
   </data>
+    <data name="KpiName" xml:space="preserve">
+    <value>KPI Name</value>
+  </data>
+  <data name="KpiCode" xml:space="preserve">
+    <value>KPI Code</value>
+  </data>
+  <data name="Pillar" xml:space="preserve">
+    <value>Pillar</value>
+  </data>
+  <data name="Objective" xml:space="preserve">
+    <value>Objective</value>
+  </data>
+  <data name="Monthly" xml:space="preserve">
+    <value>Monthly</value>
+  </data>
+  <data name="Quarterly" xml:space="preserve">
+    <value>Quarterly</value>
+  </data>
 </root>
