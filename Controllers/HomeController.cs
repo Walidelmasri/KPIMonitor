@@ -751,8 +751,10 @@ namespace KPIMonitor.Controllers
                 .Where(p => _db.KpiYearPlans.Any(q =>
                     q.IsActive == 1 &&
                     q.KpiId == p.KpiId &&
-                    q.EditorEmpId != null && q.EditorEmpId == myEmp ||
- q.Editor2EmpId != null && q.Editor2EmpId == myEmp))
+                    (
+                        (q.EditorEmpId != null && q.EditorEmpId == myEmp) ||
+                        (q.Editor2EmpId != null && q.Editor2EmpId == myEmp)
+                    )))
                 .ToListAsync(ct);
 
             var ownerRaw = await baseQuery
