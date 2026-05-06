@@ -109,4 +109,6 @@
 <data name="Cancel" xml:space="preserve"><value>Cancel</value></data>
 <data name="RequestApproval" xml:space="preserve"><value>Request Approval</value></data>
 <data name="Close" xml:space="preserve"><value>Close</value></data>
+<data name="Monthly"><value>Monthly</value></data>
+<data name="Quarterly"><value>Quarterly</value></data>
 </root>

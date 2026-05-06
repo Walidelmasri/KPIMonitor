@@ -4,158 +4,158 @@
   ViewData["Title"] = Localizer["Dashboard"];
 }
 <style>
-  /* =========================
-     Core tokens
-  ========================= */
-  :root {
-    --app-font: 'Tajawal', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+/* =========================
+   Core tokens
+========================= */
+:root {
+  --app-font: 'Tajawal', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 
-    /* Type scale knobs */
-    --font-turned-bullets: 1rem;
-    --font-turned-number: 1.1em;
-    --font-indicators-total: 1.6rem;
-    --font-summary-number: 1.6rem;
-    --font-summary-label: 0.9rem;
-    --font-chip: 0.95rem;
+       /* Type scale knobs */
+       --font-turned-bullets: 1rem;
+       --font-turned-number: 1.1em;
+       --font-indicators-total: 1.6rem;
+       --font-summary-number: 1.6rem;
+       --font-summary-label: 0.9rem;
+       --font-chip: 0.95rem;
 
-    /* Charts (same-size pies) */
-    --pie-height: 220px;
-    --pie-header-h: 92px;
-    /* <- fixed height for title + counts row (3 vs 4 rows equalized) */
-    --pie-legend-h: 26px;
-    /* <- fixed height for the DOM legend row */
-    --bar-panel-height: 220px;
-    /* middle card matches pie height for alignment */
-  }
+       /* Charts (same-size pies) */
+       --pie-height: 220px;
+       --pie-header-h: 92px;
+       /* <- fixed height for title + counts row (3 vs 4 rows equalized) */
+         --pie-legend-h: 26px;
+       /* <- fixed height for the DOM legend row */
+         --bar-panel-height: 220px;
+       /* middle card matches pie height for alignment */
+         }
 
-  /* =========================
-     Base
-  ========================= */
-  body,
-  .card,
-  .form-select,
-  .btn {
-    font-family: var(--app-font);
-  }
-
-  #factsTbody td {
-    background-color: inherit !important;
-  }
-
-  /* Match table header titles with chart colors */
-  th.th-actual {
-    color: #800080;
-    /* Actual (purple bars) */
-  }
-
-  th.th-target {
-    color: #7a7a7a;
-    /* Target (grey line / year target) */
-  }
-
-  th.th-forecast {
-    color: #fd7e14;
-    /* Forecast (orange line) */
-  }
-
-  /* =========================
-     Summary counters (left/right of pies)
+     /* =========================
+        Base
      ========================= */
-  #summaryCard .kpi {
+         body,
+         .card,
+         .form-select,
+         .btn {
+         font-family: var(--app-font);
+         }
+
+         #factsTbody td {
+         background-color: inherit !important;
+         }
+
+     /* Match table header titles with chart colors */
+         th.th-actual {
+         color: #800080;
+       /* Actual (purple bars) */
+         }
+
+         th.th-target {
+         color: #7a7a7a;
+       /* Target (grey line / year target) */
+         }
+
+         th.th-forecast {
+         color: #fd7e14;
+       /* Forecast (orange line) */
+         }
+
+     /* =========================
+        Summary counters (left/right of pies)
+        ========================= */
+    #summaryCard .kpi {
     display: flex;
     align-items: center;
     gap: 6px;
     line-height: 1;
-  }
+    }
 
-  #summaryCard .kpi .n {
-    font-size: var(--font-summary-number);
-    font-weight: 800;
-    line-height: 1;
-  }
+      #summaryCard .kpi .n {
+      font-size: var(--font-summary-number);
+      font-weight: 800;
+      line-height: 1;
+      }
 
-  #summaryCard .kpi .lbl {
-    color: #6c757d;
-    font-weight: 600;
-    font-size: var(--font-summary-label);
-  }
+      #summaryCard .kpi .lbl {
+      color: #6c757d;
+      font-weight: 600;
+      font-size: var(--font-summary-label);
+      }
 
-  #cntTotal {
-    font-size: var(--font-indicators-total);
-    font-weight: 800 !important;
-  }
+      #cntTotal {
+      font-size: var(--font-indicators-total);
+      font-weight: 800 !important;
+      }
 
   /* =========================
      Role chips
   ========================= */
-  .role-chip {
-    display: inline-block;
-    margin: 2px 6px 2px 0;
-    padding: 4px 8px;
-    border-radius: 999px;
-    background: #f1f3f5;
-    border: 1px solid #e3e7eb;
-    white-space: nowrap;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    cursor: pointer;
-    user-select: none;
-    font-size: var(--font-chip);
-  }
+      .role-chip {
+      display: inline-block;
+      margin: 2px 6px 2px 0;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #f1f3f5;
+      border: 1px solid #e3e7eb;
+      white-space: nowrap;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+      user-select: none;
+      font-size: var(--font-chip);
+      }
 
-  .role-chip:hover {
-    background: #e9ecef;
-  }
+      .role-chip:hover {
+      background: #e9ecef;
+      }
 
-  .role-chip.active {
-    background: #dbeafe;
-    border-color: #93c5fd;
-    color: #0b5ed7;
-    font-weight: 600;
-  }
+      .role-chip.active {
+      background: #dbeafe;
+      border-color: #93c5fd;
+      color: #0b5ed7;
+      font-weight: 600;
+      }
 
-  #roleSummaryCard .role-list {
-    max-height: none;
-    overflow: visible;
-  }
+      #roleSummaryCard .role-list {
+      max-height: none;
+      overflow: visible;
+      }
 
-  #segmentKpiList .role-list {
-    max-height: 132px;
-    overflow: auto;
-  }
+      #segmentKpiList .role-list {
+      max-height: 132px;
+      overflow: auto;
+      }
 
   /* =========================
      Turned-to bullets
   ========================= */
-  #turnedBullets {
-    font-size: var(--font-turned-bullets);
-    line-height: 1.3;
-    margin-top: .25rem;
-  }
+      #turnedBullets {
+      font-size: var(--font-turned-bullets);
+      line-height: 1.3;
+      margin-top: .25rem;
+      }
 
-  #turnedBullets ul {
-    margin: 0;
-    padding-left: 1.1rem;
-  }
+      #turnedBullets ul {
+      margin: 0;
+      padding-left: 1.1rem;
+      }
 
-  #turnedBullets li {
-    cursor: pointer;
-  }
+      #turnedBullets li {
+      cursor: pointer;
+      }
 
-  #turnedBullets li:hover {
-    text-decoration: underline;
-  }
+      #turnedBullets li:hover {
+      text-decoration: underline;
+      }
 
-  #turnedBullets strong {
-    font-size: var(--font-turned-number);
-    font-weight: 600;
-  }
+      #turnedBullets strong {
+      font-size: var(--font-turned-number);
+      font-weight: 600;
+      }
 
   /* =========================
      Summary row (3 cards)
   ========================= */
-  #summaryPies>[class*="col-"]>.border {
+      #summaryPies>[class*="col-"]>.border {
     display: flex;
     flex-direction: column;
     padding-top: .6rem;
@@ -279,1216 +279,1238 @@
                 </div>
                 <div class="d-flex flex-column align-items-end gap-1 summary-counts-vertical">
                   <div class="kpi"><span class="lbl">@Localizer["TargetAchieved"]</span><span class="n ms-1"
-                      id="cntGreen">0</span></div>
-                  <div class="kpi"><span class="lbl">@Localizer["OnForecast"]</span><span class="n ms-1" id="cntOrange">0</span>
-                  </div>
-                  <div class="kpi"><span class="lbl">@Localizer["TargetMissed"]</span><span class="n ms-1" id="cntRed">0</span>
-                  </div>
-                  <div class="kpi"><span class="lbl">@Localizer["DataMissing"]</span><span class="n ms-1" id="cntBlue">0</span>
+                                                                                                id="cntGreen">0</span></div>
+                    <div class="kpi"><span class="lbl">@Localizer["OnForecast"]</span><span class="n ms-1"
+                                                                                              id="cntOrange">0</span>
+                    </div>
+                    <div class="kpi"><span class="lbl">@Localizer["TargetMissed"]</span><span class="n ms-1"
+                                                                                                id="cntRed">0</span>
+                    </div>
+                    <div class="kpi"><span class="lbl">@Localizer["DataMissing"]</span><span class="n ms-1"
+                                                                                               id="cntBlue">0</span>
+                    </div>
                   </div>
                 </div>
+                <div class="pie">
+                  <canvas id="pieKpiStatus" aria-label="@Localizer["IndicatorsByStatus"]" role="img"></canvas>
+                </div>
               </div>
-              <div class="pie">
-                <canvas id="pieKpiStatus" aria-label="@Localizer["IndicatorsByStatus"]" role="img"></canvas>
+            </div>
+
+            <!-- MIDDLE: Red Share by Pillar -->
+            <div class="col-lg-4">
+              <div class="border rounded-3 p-3 h-100 bar-share">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <div class="fw-bold text-secondary">@Localizer["PillarsWithRedIndicators"]</div>
+                  <span class="text-muted small" id="redShareLoading">@Localizer["Loading"]</span>
+                </div>
+                <div class="pie">
+                  <canvas id="barRedShare" aria-label="@Localizer["RedShareByPillar"]" role="img"></canvas>
+                </div>
+
+                <!-- Turned-to bullets -->
+                <div id="turnedBullets" class="text-muted">
+                  <ul id="turnedList"></ul>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT: Action status doughnut -->
+            <div class="col-lg-4">
+              <div class="border rounded-3 p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <div class="fw-bold text-secondary">@Localizer["ActionPlansByStatus"]</div>
+                  <div class="d-flex flex-column align-items-end gap-1 summary-counts-vertical">
+                    <div class="kpi"><span class="lbl">@Localizer["ToDo"]</span><span class="n ms-1" id="cntTodo">0</span>
+                    </div>
+                    <div class="kpi"><span class="lbl">@Localizer["InProgress"]</span><span class="n ms-1"
+                                                                                              id="cntProg">0</span>
+                    </div>
+                    <div class="kpi"><span class="lbl">@Localizer["Done"]</span><span class="n ms-1" id="cntDone">0</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="pie">
+                  <canvas id="pieActionStatus" aria-label="@Localizer["ActionsByStatus"]" role="img"></canvas>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- MIDDLE: Red Share by Pillar -->
-          <div class="col-lg-4">
-            <div class="border rounded-3 p-3 h-100 bar-share">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="fw-bold text-secondary">@Localizer["PillarsWithRedIndicators"]</div>
-                <span class="text-muted small" id="redShareLoading">@Localizer["Loading"]</span>
-              </div>
-              <div class="pie">
-                <canvas id="barRedShare" aria-label="@Localizer["RedShareByPillar"]" role="img"></canvas>
-              </div>
-
-              <!-- Turned-to bullets -->
-              <div id="turnedBullets" class="text-muted">
-                <ul id="turnedList"></ul>
-              </div>
+          <!-- KPIs from clicked segment -->
+          <div id="segmentKpiList" class="mt-3 d-none">
+            <div class="d-flex align-items-center justify-content-between mb-1">
+              <div class="text-muted small" id="segmentTitle">@Localizer["KPIs"]</div>
+              <button class="btn btn-sm btn-outline-secondary" id="clearSegmentBtn">@Localizer["Clear"]</button>
             </div>
+            <div class="role-list" id="segmentKpiRows"></div>
           </div>
 
-          <!-- RIGHT: Action status doughnut -->
-          <div class="col-lg-4">
-            <div class="border rounded-3 p-3 h-100">
-              <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="fw-bold text-secondary">@Localizer["ActionPlansByStatus"]</div>
-                <div class="d-flex flex-column align-items-end gap-1 summary-counts-vertical">
-                  <div class="kpi"><span class="lbl">@Localizer["ToDo"]</span><span class="n ms-1" id="cntTodo">0</span></div>
-                  <div class="kpi"><span class="lbl">@Localizer["InProgress"]</span><span class="n ms-1" id="cntProg">0</span>
-                  </div>
-                  <div class="kpi"><span class="lbl">@Localizer["Done"]</span><span class="n ms-1" id="cntDone">0</span></div>
-                </div>
-              </div>
-              <div class="pie">
-                <canvas id="pieActionStatus" aria-label="@Localizer["ActionsByStatus"]" role="img"></canvas>
-              </div>
+          <!-- Red monthly trend (under pies) -->
+          <div class="mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="fw-bold text-secondary">@Localizer["RedKpisThisYear"]</div>
+              <span class="text-muted small" id="trendLoading">@Localizer["Loading"]</span>
+            </div>
+            <div style="min-height:160px">
+              <canvas id="lineRedTrend" aria-label="@Localizer["RedKpisThisYear"]" role="img"></canvas>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- KPIs from clicked segment -->
-        <div id="segmentKpiList" class="mt-3 d-none">
+      <!-- ======= Roles summary card ======= -->
+      <div class="card shadow-sm rounded-4 mb-4" id="roleSummaryCard">
+        <div class="card-body">
           <div class="d-flex align-items-center justify-content-between mb-1">
-            <div class="text-muted small" id="segmentTitle">@Localizer["KPIs"]</div>
-            <button class="btn btn-sm btn-outline-secondary" id="clearSegmentBtn">@Localizer["Clear"]</button>
+            <div class="text-muted small">@Localizer["YourRoleOnIndicators"]</div>
+            <span class="badge rounded-pill text-bg-light" id="roleSummaryBadge">—</span>
           </div>
-          <div class="role-list" id="segmentKpiRows"></div>
-        </div>
-
-        <!-- Red monthly trend (under pies) -->
-        <div class="mt-3">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <div class="fw-bold text-secondary">@Localizer["RedKpisThisYear"]</div>
-            <span class="text-muted small" id="trendLoading">@Localizer["Loading"]</span>
-          </div>
-          <div style="min-height:160px">
-            <canvas id="lineRedTrend" aria-label="@Localizer["RedKpisThisYear"]" role="img"></canvas>
+          <div class="row g-3 small" id="roleSummaryRows">
+            <div class="col-12 text-muted small" id="roleSummaryPlaceholder">@Localizer["LoadingYourIndicators"]</div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- ======= Roles summary card ======= -->
-    <div class="card shadow-sm rounded-4 mb-4" id="roleSummaryCard">
-      <div class="card-body">
-        <div class="d-flex align-items-center justify-content-between mb-1">
-          <div class="text-muted small">@Localizer["YourRoleOnIndicators"]</div>
-          <span class="badge rounded-pill text-bg-light" id="roleSummaryBadge">—</span>
-        </div>
-        <div class="row g-3 small" id="roleSummaryRows">
-          <div class="col-12 text-muted small" id="roleSummaryPlaceholder">@Localizer["LoadingYourIndicators"]</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ======= Selector row ======= -->
-    <div class="card shadow-sm rounded-4 mb-4">
-      <div class="card-body" id="scrollHere">
-        <div class="row g-3 align-items-end">
-          <div class="col-md-3">
-            <label for="pillarSelector" class="form-label">@Localizer["Pillar"]</label>
-            <select id="pillarSelector" class="form-select">
-              <option value="">-- @Localizer["Pillar"] --</option>
-            </select>
-          </div>
-
-          <div class="col-md-3">
-            <label for="objectiveSelector" class="form-label">@Localizer["Objective"]</label>
-            <select id="objectiveSelector" class="form-select" disabled>
-              <option value="">-- @Localizer["Objective"] --</option>
-            </select>
-          </div>
-
-          <div class="col-md-3">
-            <label for="kpiSelector" class="form-label">@Localizer["KPI"]</label>
-            <select id="kpiSelector" class="form-select" disabled>
-              <option value="">-- @Localizer["KPI"] --</option>
-            </select>
-          </div>
-
-          <div class="col-md-3">
-            <label for="yearPlanSelector" class="form-label">@Localizer["Year"]</label>
-            <select id="yearPlanSelector" class="form-select" disabled>
-              <option value="">-- @Localizer["Latest"] --</option>
-            </select>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- ======= Chart + side card ======= -->
-    <div class="row mb-5 g-4">
-      <div class="col-md-9">
-        <div id="chartSection" class="bg-white border rounded shadow-sm p-3" style="height: 550px;">
-          <h6 id="kpiTitle" class="text-center text-secondary mb-2">@Localizer["KpiTitle"]</h6>
-          <canvas id="kpiChart" aria-label="@Localizer["KpiChart"]" role="img"></canvas>
-        </div>
-      </div>
-
-      <div class="col-md-3 d-flex">
-        <div class="card shadow-sm rounded-3 w-100 align-self-stretch">
-          <div class="card-body d-flex flex-column justify-content-between h-100">
-            <div>
-              <h6 class="card-title text-secondary fw-bold mb-3">@Localizer["KpiDetails"]</h6>
-              <p class="mb-2" style="font-size: larger;"><strong>@Localizer["Owner"]:</strong> <span id="metaOwner"
-                  class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>@Localizer["Editor"]:</strong> <span id="metaEditor"
-                  class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>@Localizer["Frequency"]:</strong> <span id="metaFrequency"
-                  class="text-dark">—</span></p>
-              <p class="mb-2" style="font-size: larger;"><strong>@Localizer["Unit"]:</strong> <span id="metaUnit"
-                  class="text-dark">—</span></p>
+      <!-- ======= Selector row ======= -->
+      <div class="card shadow-sm rounded-4 mb-4">
+        <div class="card-body" id="scrollHere">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+              <label for="pillarSelector" class="form-label">@Localizer["Pillar"]</label>
+              <select id="pillarSelector" class="form-select">
+                <option value="">-- @Localizer["Pillar"] --</option>
+              </select>
             </div>
-            <div class="mt-auto">
-              <div class="mb-4 text-center">
-                <div class="text-muted">@Localizer["Priority"]</div>
-                <div id="metaPriority" class="display-6 fw-bold text-dark">—</div>
+
+            <div class="col-md-3">
+              <label for="objectiveSelector" class="form-label">@Localizer["Objective"]</label>
+              <select id="objectiveSelector" class="form-select" disabled>
+                <option value="">-- @Localizer["Objective"] --</option>
+              </select>
+            </div>
+
+            <div class="col-md-3">
+              <label for="kpiSelector" class="form-label">@Localizer["KPI"]</label>
+              <select id="kpiSelector" class="form-select" disabled>
+                <option value="">-- @Localizer["KPI"] --</option>
+              </select>
+            </div>
+
+            <div class="col-md-3">
+              <label for="yearPlanSelector" class="form-label">@Localizer["Year"]</label>
+              <select id="yearPlanSelector" class="form-select" disabled>
+                <option value="">-- @Localizer["Latest"] --</option>
+              </select>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ======= Chart + side card ======= -->
+      <div class="row mb-5 g-4">
+        <div class="col-md-9">
+          <div id="chartSection" class="bg-white border rounded shadow-sm p-3" style="height: 550px;">
+            <h6 id="kpiTitle" class="text-center text-secondary mb-2">@Localizer["KpiTitle"]</h6>
+            <canvas id="kpiChart" aria-label="@Localizer["KpiChart"]" role="img"></canvas>
+          </div>
+        </div>
+
+        <div class="col-md-3 d-flex">
+          <div class="card shadow-sm rounded-3 w-100 align-self-stretch">
+            <div class="card-body d-flex flex-column justify-content-between h-100">
+              <div>
+                <h6 class="card-title text-secondary fw-bold mb-3">@Localizer["KpiDetails"]</h6>
+                <p class="mb-2" style="font-size: larger;"><strong>@Localizer["Owner"]:</strong> <span id="metaOwner"
+                                                                                                         class="text-dark">—</span></p>
+                  <p class="mb-2" style="font-size: larger;"><strong>@Localizer["Editor"]:</strong> <span id="metaEditor"
+                                                                                                            class="text-dark">—</span></p>
+                    <p class="mb-2" style="font-size: larger;"><strong>@Localizer["Frequency"]:</strong> <span
+                      id="metaFrequency" class="text-dark">—</span></p>
+                      <p class="mb-2" style="font-size: larger;"><strong>@Localizer["Unit"]:</strong> <span id="metaUnit"
+                                                                                                              class="text-dark">—</span></p>
+                      </div>
+                      <div class="mt-auto">
+                        <div class="mb-4 text-center">
+                          <div class="text-muted">@Localizer["Priority"]</div>
+                          <div id="metaPriority" class="display-6 fw-bold text-dark">—</div>
+                        </div>
+                        <div class="text-center">
+                          <div class="text-muted mb-1">@Localizer["Status"]</div>
+                          <span id="metaStatus" class="status-pill">—</span>
+                          <div class="mt-2">
+                            <button asp-admin-only id="btnAdminSetStatus" type="button"
+                                    class="btn btn-outline-secondary btn-sm">@Localizer["SetStatus"]</button>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div class="text-center">
-                <div class="text-muted mb-1">@Localizer["Status"]</div>
-                <span id="metaStatus" class="status-pill">—</span>
-                <div class="mt-2">
-                  <button asp-admin-only id="btnAdminSetStatus" type="button"
-                    class="btn btn-outline-secondary btn-sm">@Localizer["SetStatus"]</button>
+            </div>
+            <!-- ======= Comments (Editor-only edit) ======= -->
+            <div class="card shadow-sm rounded-4 mt-3 mb-4" id="commentsCard">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="m-0 text-secondary">@Localizer["Comments"]</h6>
+                  <div class="d-flex gap-2">
+                    <button id="btnEditComment" type="button"
+                            class="btn btn-outline-secondary btn-sm d-none">@Localizer["Edit"]</button>
+                    <button id="btnSaveComment" type="button" class="btn btn-primary btn-sm d-none">@Localizer["Save"]</button>
+                    <button id="btnCancelComment" type="button" class="btn btn-light btn-sm d-none">@Localizer["Cancel"]</button>
+                  </div>
+                </div>
+
+                <div id="commentRead" class="text-muted" style="white-space: pre-wrap;">@Localizer["SelectKpiToViewComments"]
+                </div>
+
+                <div id="commentEditWrap" class="d-none">
+                  <textarea id="commentEdit" class="form-control" rows="4" placeholder="@Localizer["AddComment"]"></textarea>
+                  <div class="form-text text-muted">@Localizer["OnlyAssignedEditorCanEditComment"]</div>
                 </div>
               </div>
             </div>
 
+            <!-- KPI-level Edit Button -->
+            <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
+              <h6 class="m-0 text-secondary">@Localizer["Facts"]</h6>
+
+              <div class="d-flex gap-2 align-items-center">
+                <!-- Global Target Lock Toggle (Super Admin only) -->
+                <button asp-admin-only id="btnToggleTargetLock" type="button" class="btn btn-outline-secondary btn-sm d-none">
+                  @Localizer["LoadingTargetLock"]
+                </button>
+
+                <button id="openEditKpiBtn" class="btn btn-primary btn-sm" disabled>
+                  @Localizer["EditDataActualForecast"]
+                </button>
+              </div>
+            </div>
+
+            <!-- Data Table -->
+            <div class="table-responsive shadow-sm rounded-4 mt-4">
+              <table class="table table-striped table-bordered mb-0 align-middle" aria-describedby="dataTableCaption">
+                <caption id="dataTableCaption">@Localizer["KpiFactsForSelectedYearPlan"]</caption>
+                <thead class="table-light">
+                  <tr>
+                    <th>@Localizer["Period"]</th>
+                    <th>@Localizer["Start"]</th>
+                    <th>@Localizer["End"]</th>
+                    <th class="th-actual">@Localizer["Actual"]</th>
+                    <th class="th-target">@Localizer["Target"]</th>
+                    <th class="th-forecast">@Localizer["Forecast"]</th>
+                  </tr>
+                </thead>
+                <tbody id="factsTbody">
+                  <tr>
+                    <td colspan="6" class="text-center text-muted">—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <!-- ======= Comments (Editor-only edit) ======= -->
-  <div class="card shadow-sm rounded-4 mt-3 mb-4" id="commentsCard">
-    <div class="card-body">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <h6 class="m-0 text-secondary">@Localizer["Comments"]</h6>
-        <div class="d-flex gap-2">
-          <button id="btnEditComment" type="button" class="btn btn-outline-secondary btn-sm d-none">@Localizer["Edit"]</button>
-          <button id="btnSaveComment" type="button" class="btn btn-primary btn-sm d-none">@Localizer["Save"]</button>
-          <button id="btnCancelComment" type="button" class="btn btn-light btn-sm d-none">@Localizer["Cancel"]</button>
-        </div>
-      </div>
 
-      <div id="commentRead" class="text-muted" style="white-space: pre-wrap;">@Localizer["SelectKpiToViewComments"]</div>
+          <!-- Bulk Edit Modal -->
+          <div class="modal fade" id="editKpiModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+              <div class="modal-content"></div>
+            </div>
+          </div>
 
-      <div id="commentEditWrap" class="d-none">
-        <textarea id="commentEdit" class="form-control" rows="4" placeholder="@Localizer["AddComment"]"></textarea>
-        <div class="form-text text-muted">@Localizer["OnlyAssignedEditorCanEditComment"]</div>
-      </div>
-    </div>
-  </div>
+          <!-- Admin: Manual KPI Status Modal -->
+          <div class="modal fade" id="adminStatusModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-sm">
+              <div class="modal-content">
+                <div class="modal-header py-2">
+                  <h6 class="modal-title">@Localizer["SetKpiStatus"]</h6>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@Localizer["Close"]"></button>
+                </div>
+                <form id="adminStatusForm" class="p-3">
+                  <div class="mb-2">
+                    <label for="adminStatusSelect" class="form-label small text-muted">@Localizer["Status"]</label>
+                    <select id="adminStatusSelect" class="form-select form-select-sm">
+                      <option value="green">@Localizer["TargetAchieved"]</option>
+                      <option value="orange">@Localizer["OnForecast"]</option>
+                      <option value="red">@Localizer["TargetMissed"]</option>
+                      <option value="blue">@Localizer["DataMissing"]</option>
+                    </select>
+                  </div>
+                  <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">@Localizer["Cancel"]</button>
+                    <button type="submit" class="btn btn-primary btn-sm">@Localizer["Save"]</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          @section Scripts {
+            <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;800&display=swap" rel="stylesheet">
+            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 
-  <!-- KPI-level Edit Button -->
-  <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
-    <h6 class="m-0 text-secondary">@Localizer["Facts"]</h6>
+            <script>
+              const t = {
+              loading: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Loading"].Value)),
+              updated: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Updated"].Value)),
+              targetAchieved: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["TargetAchieved"].Value)),
+              onForecast: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["OnForecast"].Value)),
+              targetMissed: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["TargetMissed"].Value)),
+              dataMissing: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["DataMissing"].Value)),
+              toDo: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["ToDo"].Value)),
+              inProgress: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["InProgress"].Value)),
+              done: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Done"].Value)),
+              kpis: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["KPIs"].Value)),
+              clear: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Clear"].Value)),
+              selectKpiToViewComments: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["SelectKpiToViewComments"].Value)),
+              failedToLoadComment: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["FailedToLoadComment"].Value)),
+              noIndicatorsAvailable: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["NoIndicatorsAvailable"].Value)),
+              couldNotLoadYourIndicators: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["CouldNotLoadYourIndicators"].Value)),
+              editorFor: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["EditorFor"].Value)),
+              ownerFor: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["OwnerFor"].Value)),
+              more: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["More"].Value)),
+              noKpisFound: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["NoKpisFound"].Value)),
+              failedToLoadKpis: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["FailedToLoadKpis"].Value)),
+              noRedKpis: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["NoRedKpis"].Value)),
+              couldNotLoadLatestChanges: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["CouldNotLoadLatestChanges"].Value)),
+              couldNotLoadTrend: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["CouldNotLoadTrend"].Value)),
+              couldNotLoadSummary: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["CouldNotLoadSummary"].Value)),
+              loadingTargetLock: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["LoadingTargetLock"].Value)),
+              lockTargets: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["LockTargets"].Value)),
+              unlockTargets: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["UnlockTargets"].Value)),
+              superAdminOnly: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["SuperAdminOnly"].Value)),
+              failedToToggleTargetLock: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["FailedToToggleTargetLock"].Value)),
+              noFactsForThisPlanYear: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["NoFactsForThisPlanYear"].Value)),
+              pending: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Pending"].Value)),
+              latest: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Latest"].Value)),
+              pillar: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Pillar"].Value)),
+              objective: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Objective"].Value)),
+              kpi: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["KPI"].Value)),
+              year: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Year"].Value)),
+              editDataActualForecast: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["EditDataActualForecast"].Value)),
+              editKpiNoAccess: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["EditKpiNoAccess"].Value)),
+              pendingApproval: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["PendingApproval"].Value)),
+              redKpis: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["RedKpis"].Value)),
+              redKpisForPillar: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["RedKpisForPillar"].Value)),
+              kpisWithStatus: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["KpisWithStatus"].Value)),
+              kpisWithActions: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["KpisWithActions"].Value)),
+              turnedTo: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["TurnedTo"].Value)),
+              indicatorsTurnedToTargetAchieved: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["IndicatorsTurnedToTargetAchieved"].Value)),
+              indicatorsTurnedToOnForecast: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["IndicatorsTurnedToOnForecast"].Value)),
+              indicatorsTurnedToTargetMissed: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["IndicatorsTurnedToTargetMissed"].Value)),
+              indicatorsTurnedToDataMissing: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["IndicatorsTurnedToDataMissing"].Value)),
+              actual: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Actual"].Value)),
+              target: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Target"].Value)),
+              forecast: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Forecast"].Value)),
+              yearTarget: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["YearTarget"].Value)),
+              yearActual: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["YearActual"].Value)),
+              saveFailed: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["SaveFailed"].Value)),
+              submittedChanges: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["SubmittedChanges"].Value)),
+              skipped: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Skipped"].Value)),
+              savedAutoApproved: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["SavedAutoApproved"].Value)),
+              submittedForApproval: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["SubmittedForApproval"].Value)),
+              failedToLoadEditor: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["FailedToLoadEditor"].Value)),
+              noAccessToEditKpi: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["NoAccessToEditKpi"].Value)),
+              failedToUpdateStatus: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["FailedToUpdateStatus"].Value)),
+              status: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Status"].Value)),
+              monthly: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Monthly"].Value)),
+              quarterly: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Quarterly"].Value))
+              };
 
-    <div class="d-flex gap-2 align-items-center">
-      <!-- Global Target Lock Toggle (Super Admin only) -->
-      <button asp-admin-only id="btnToggleTargetLock" type="button" class="btn btn-outline-secondary btn-sm d-none">
-        @Localizer["LoadingTargetLock"]
-      </button>
-
-      <button id="openEditKpiBtn" class="btn btn-primary btn-sm" disabled>
-        @Localizer["EditDataActualForecast"]
-      </button>
-    </div>
-  </div>
-
-  <!-- Data Table -->
-  <div class="table-responsive shadow-sm rounded-4 mt-4">
-    <table class="table table-striped table-bordered mb-0 align-middle" aria-describedby="dataTableCaption">
-      <caption id="dataTableCaption">@Localizer["KpiFactsForSelectedYearPlan"]</caption>
-      <thead class="table-light">
-        <tr>
-          <th>@Localizer["Period"]</th>
-          <th>@Localizer["Start"]</th>
-          <th>@Localizer["End"]</th>
-          <th class="th-actual">@Localizer["Actual"]</th>
-          <th class="th-target">@Localizer["Target"]</th>
-          <th class="th-forecast">@Localizer["Forecast"]</th>
-        </tr>
-      </thead>
-      <tbody id="factsTbody">
-        <tr>
-          <td colspan="6" class="text-center text-muted">—</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Bulk Edit Modal -->
-<div class="modal fade" id="editKpiModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content"></div>
-  </div>
-</div>
-
-<!-- Admin: Manual KPI Status Modal -->
-<div class="modal fade" id="adminStatusModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-sm">
-    <div class="modal-content">
-      <div class="modal-header py-2">
-        <h6 class="modal-title">@Localizer["SetKpiStatus"]</h6>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@Localizer["Close"]"></button>
-      </div>
-      <form id="adminStatusForm" class="p-3">
-        <div class="mb-2">
-          <label for="adminStatusSelect" class="form-label small text-muted">@Localizer["Status"]</label>
-          <select id="adminStatusSelect" class="form-select form-select-sm">
-            <option value="green">@Localizer["TargetAchieved"]</option>
-            <option value="orange">@Localizer["OnForecast"]</option>
-            <option value="red">@Localizer["TargetMissed"]</option>
-            <option value="blue">@Localizer["DataMissing"]</option>
-          </select>
-        </div>
-        <div class="d-flex justify-content-end gap-2">
-          <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">@Localizer["Cancel"]</button>
-          <button type="submit" class="btn btn-primary btn-sm">@Localizer["Save"]</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-@section Scripts {
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-
-  <script>
-    const t = {
-      loading: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Loading"].Value)),
-      updated: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Updated"].Value)),
-      targetAchieved: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["TargetAchieved"].Value)),
-      onForecast: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["OnForecast"].Value)),
-      targetMissed: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["TargetMissed"].Value)),
-      dataMissing: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["DataMissing"].Value)),
-      toDo: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["ToDo"].Value)),
-      inProgress: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["InProgress"].Value)),
-      done: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Done"].Value)),
-      kpis: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["KPIs"].Value)),
-      clear: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Clear"].Value)),
-      selectKpiToViewComments: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["SelectKpiToViewComments"].Value)),
-      failedToLoadComment: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["FailedToLoadComment"].Value)),
-      noIndicatorsAvailable: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["NoIndicatorsAvailable"].Value)),
-      couldNotLoadYourIndicators: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["CouldNotLoadYourIndicators"].Value)),
-      editorFor: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["EditorFor"].Value)),
-      ownerFor: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["OwnerFor"].Value)),
-      more: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["More"].Value)),
-      noKpisFound: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["NoKpisFound"].Value)),
-      failedToLoadKpis: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["FailedToLoadKpis"].Value)),
-      noRedKpis: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["NoRedKpis"].Value)),
-      couldNotLoadLatestChanges: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["CouldNotLoadLatestChanges"].Value)),
-      couldNotLoadTrend: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["CouldNotLoadTrend"].Value)),
-      couldNotLoadSummary: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["CouldNotLoadSummary"].Value)),
-      loadingTargetLock: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["LoadingTargetLock"].Value)),
-      lockTargets: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["LockTargets"].Value)),
-      unlockTargets: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["UnlockTargets"].Value)),
-      superAdminOnly: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["SuperAdminOnly"].Value)),
-      failedToToggleTargetLock: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["FailedToToggleTargetLock"].Value)),
-      noFactsForThisPlanYear: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["NoFactsForThisPlanYear"].Value)),
-      pending: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Pending"].Value)),
-      latest: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Latest"].Value)),
-      pillar: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Pillar"].Value)),
-      objective: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Objective"].Value)),
-      kpi: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["KPI"].Value)),
-      year: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Year"].Value)),
-      editDataActualForecast: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["EditDataActualForecast"].Value)),
-      editKpiNoAccess: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["EditKpiNoAccess"].Value)),
-      pendingApproval: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["PendingApproval"].Value)),
-      redKpis: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["RedKpis"].Value)),
-      redKpisForPillar: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["RedKpisForPillar"].Value)),
-      kpisWithStatus: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["KpisWithStatus"].Value)),
-      kpisWithActions: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["KpisWithActions"].Value)),
-      turnedTo: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["TurnedTo"].Value)),
-      indicatorsTurnedToTargetAchieved: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["IndicatorsTurnedToTargetAchieved"].Value)),
-      indicatorsTurnedToOnForecast: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["IndicatorsTurnedToOnForecast"].Value)),
-      indicatorsTurnedToTargetMissed: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["IndicatorsTurnedToTargetMissed"].Value)),
-      indicatorsTurnedToDataMissing: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["IndicatorsTurnedToDataMissing"].Value)),
-      actual: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Actual"].Value)),
-      target: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Target"].Value)),
-      forecast: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Forecast"].Value)),
-      yearTarget: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["YearTarget"].Value)),
-      yearActual: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["YearActual"].Value)),
-      saveFailed: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["SaveFailed"].Value)),
-      submittedChanges: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["SubmittedChanges"].Value)),
-      skipped: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Skipped"].Value)),
-      savedAutoApproved: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["SavedAutoApproved"].Value)),
-      submittedForApproval: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["SubmittedForApproval"].Value)),
-      failedToLoadEditor: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["FailedToLoadEditor"].Value)),
-      noAccessToEditKpi: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["NoAccessToEditKpi"].Value)),
-      failedToUpdateStatus: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["FailedToUpdateStatus"].Value)),
-      status: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Status"].Value))
-    };
-
-    /* ========= Utilities ========= */
-    function _fmtShort(v) {
-      const n = Number(v);
-      if (!isFinite(n)) return '';
-      return n.toLocaleString();
-    }
-
-    Chart.defaults.font.family = 'Tajawal, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
-    Chart.defaults.font.size = 12;
-
-    let _pendingScrollToChart = false;
-    const byId = (id) => document.getElementById(id);
-    function _scrollToChart() { byId('scrollHere')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-
-    /* ========= Smart value labels (unchanged) ========= */
-    const SmartValueLabels = {
-      id: 'smartValueLabels',
-      afterDatasetsDraw(chart, _args, opts) {
-        const { ctx, data, chartArea } = chart;
-        const o = opts || {};
-        const fmt = typeof o.formatter === 'function' ? o.formatter : (v) => String(v);
-        const fontSize = o.fontSize || 12, fontWeight = o.fontWeight || '700';
-        const minGap = o.minGap || 14, padTop = o.padTop || 4, padBottom = o.padBottom || 4, maxShift = o.maxShift || 40;
-        const barDY = (o.barDY != null ? o.barDY : -12), barDYNeg = (o.barDYNeg != null ? o.barDYNeg : 14), lineDY = (o.lineDY != null ? o.lineDY : -12);
-        const perDataset = o.perDataset || [], lineStepDefault = o.lineStep || 1, onlyLastForLinesDefault = !!o.onlyLastForLines;
-
-        ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-        ctx.font = `${fontWeight} ${fontSize}px Tajawal, system-ui,-apple-system,Segoe UI,Roboto,Arial`;
-        const byIndex = new Map();
-
-        data.datasets.forEach((ds, di) => {
-          if (!chart.isDatasetVisible(di)) return;
-          const meta = chart.getDatasetMeta(di);
-          const type = ds.type || meta.type, isBar = (type === 'bar'), isLine = (type === 'line');
-          const per = perDataset[di] || {}, step = Number.isInteger(per.step) ? Math.max(1, per.step) : lineStepDefault;
-          let lastIdx = null;
-          if (isLine && (onlyLastForLinesDefault || per.onlyLast)) {
-            for (let i = ds.data.length - 1; i >= 0; i--) { const v = ds.data[i]; if (v != null && !Number.isNaN(+v)) { lastIdx = i; break; } }
-          }
-          meta.data.forEach((el, i) => {
-            const raw = ds.data[i], val = Number(raw); if (raw == null || Number.isNaN(val)) return;
-            if (isLine) { if ((onlyLastForLinesDefault || per.onlyLast) && i !== lastIdx) return; if ((i % step) !== 0) return; }
-            const { x, y } = el.getProps(['x', 'y'], true);
-            let dy = isBar ? (val < 0 ? barDYNeg : barDY) : lineDY; if (typeof per.dy === 'number') dy = per.dy;
-            const dx = (typeof per.dx === 'number') ? per.dx : 0;
-            const text = fmt(val), w = ctx.measureText(text).width, h = fontSize * 1.2;
-            const item = { x: x + dx, y: y + dy, baseY: y + dy, val, text, color: per.color || o.color || '#111', w, h, priority: isBar ? 0 : 1 };
-            const arr = byIndex.get(i); if (arr) arr.push(item); else byIndex.set(i, [item]);
-          });
-        });
-
-        const topLimitBase = chartArea.top + padTop, botLimit = chartArea.bottom - padBottom;
-        byIndex.forEach(items => {
-          const clamp = (it) => {
-            const topLimit = topLimitBase + it.h;
-            if (it.y < topLimit) it.y = topLimit;
-            const low = it.baseY - maxShift, high = it.baseY + maxShift;
-            if (it.y < low) it.y = low; if (it.y > high) it.y = high; if (it.y > botLimit) it.y = botLimit;
-          };
-          items.forEach(it => { it.y = it.baseY; clamp(it); });
-          let guard = 0; while (guard++ < 10) {
-            let changed = false;
-            for (let i = 0; i < items.length; i++) {
-              for (let j = i + 1; j < items.length; j++) {
-                const a = items[i], b = items[j];
-                const aL = a.x - a.w / 2, aR = a.x + a.w / 2, aT = a.y - a.h, aB = a.y;
-                const bL = b.x - b.w / 2, bR = b.x + b.w / 2, bT = b.y - b.h, bB = b.y;
-                const overlap = !(aR < bL || aL > bR || aB < bT || aT > bB);
-                if (overlap) {
-                  const hi = (a.val >= b.val) ? a : b, lo = (hi === a) ? b : a;
-                  hi.y -= minGap; lo.y += Math.min(4, minGap / 2); clamp(hi); clamp(lo); changed = true;
-                }
+              /* ========= Utilities ========= */
+              function _fmtShort(v) {
+              const n = Number(v);
+              if (!isFinite(n)) return '';
+              return n.toLocaleString();
               }
-            }
-            if (!changed) break;
-          }
-          items.sort((a, b) => a.priority - b.priority);
-          items.forEach(it => {
-            ctx.fillStyle = it.color;
-            if (o.outline) { ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.strokeText(it.text, it.x, it.y); }
-            ctx.fillText(it.text, it.x, it.y);
-          });
-        });
-        ctx.restore();
-      }
-    };
-    Chart.register(SmartValueLabels);
-    Chart.register(ChartDataLabels);
-    Chart.defaults.set('plugins.datalabels', { display: false, color: '#111', font: { family: Chart.defaults.font.family, weight: 'bold' } });
 
-    /* ========= Small helpers ========= */
-    function uiStatus(code) {
-      const s = String(code || '').trim().toLowerCase();
-      switch (s) {
-        case 'green': case 'conforme': case 'ok': return t.targetAchieved;
-        case 'orange': case 'rattrapage': case 'catching up': return t.onForecast;
-        case 'red': case 'ecart': case 'needs attention': return t.targetMissed;
-        case 'blue': case 'attente': case 'data missing': return t.dataMissing;
-        default: return '—';
-      }
-    }
-    function canonStatusForUi(raw) {
-      const s = String(raw || '').trim().toLowerCase();
-      if (['green', 'conforme', 'ok'].includes(s)) return 'green';
-      if (['orange', 'rattrapage', 'catching up'].includes(s)) return 'orange';
-      if (['red', 'ecart', 'needs attention'].includes(s)) return 'red';
-      if (['blue', 'attente', 'data missing'].includes(s)) return 'blue';
-      return 'green';
-    }
-    const api = (path) => {
-      const u = new URL(path, window.location.origin); u.searchParams.set('_ts', Date.now().toString());
-      return fetch(u.toString(), { headers: { 'Accept': 'application/json' }, cache: 'no-store' })
-        .then(r => { if (!r.ok) throw new Error('Network error'); return r.json(); });
-    };
+              Chart.defaults.font.family = 'Tajawal, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+              Chart.defaults.font.size = 12;
 
-    /* ========= Build fixed DOM legends ========= */
-    function ensureLegendHost(canvasEl, id) {
-      const pie = canvasEl.closest('.pie');
-      const card = canvasEl.closest('.border');
-      if (!pie || !card) return null;
-      let host = card.querySelector('.pie-legend[data-for="' + id + '"]');
-      if (host) return host;
-      host = document.createElement('div');
-      host.className = 'pie-legend';
-      host.dataset.for = id;
-      card.insertBefore(host, pie);
-      return host;
-    }
-    function renderLegend(host, labels, colors) {
-      if (!host) return;
-      host.innerHTML = '';
-      labels.forEach((lbl, i) => {
-        const item = document.createElement('div'); item.className = 'leg';
-        item.innerHTML = `<span class="sw" style="background:${colors[i]}"></span><span>${lbl}</span>`;
-        host.appendChild(item);
-      });
-    }
+              let _pendingScrollToChart = false;
+              const byId = (id) => document.getElementById(id);
+              function _scrollToChart() { byId('scrollHere')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 
-    /* ===== Elements ===== */
-    const selPillar = byId('pillarSelector'),
-      selObjective = byId('objectiveSelector'),
-      selKpi = byId('kpiSelector'),
-      selYearPlan = byId('yearPlanSelector');
+              /* ========= Smart value labels (unchanged) ========= */
+              const SmartValueLabels = {
+              id: 'smartValueLabels',
+              afterDatasetsDraw(chart, _args, opts) {
+              const { ctx, data, chartArea } = chart;
+              const o = opts || {};
+              const fmt = typeof o.formatter === 'function' ? o.formatter : (v) => String(v);
+              const fontSize = o.fontSize || 12, fontWeight = o.fontWeight || '700';
+              const minGap = o.minGap || 14, padTop = o.padTop || 4, padBottom = o.padBottom || 4, maxShift = o.maxShift || 40;
+              const barDY = (o.barDY != null ? o.barDY : -12), barDYNeg = (o.barDYNeg != null ? o.barDYNeg : 14), lineDY = (o.lineDY != null ? o.lineDY : -12);
+              const perDataset = o.perDataset || [], lineStepDefault = o.lineStep || 1, onlyLastForLinesDefault = !!o.onlyLastForLines;
 
-    const metaOwner = byId('metaOwner'), metaEditor = byId('metaEditor'), metaFrequency = byId('metaFrequency'), metaUnit = byId('metaUnit'), metaPriority = byId('metaPriority'), metaStatus = byId('metaStatus');
-    const tableBody = byId('factsTbody'); const btnEditKpi = byId('openEditKpiBtn');
-    const segWrap = byId('segmentKpiList'), segRows = byId('segmentKpiRows'), segTitle = byId('segmentTitle');
-    byId('clearSegmentBtn').addEventListener('click', () => { segRows.innerHTML = ''; segWrap.classList.add('d-none'); });
+              ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+              ctx.font = `${fontWeight} ${fontSize}px Tajawal, system-ui,-apple-system,Segoe UI,Roboto,Arial`;
+              const byIndex = new Map();
 
-    let currentPlanId = null, canEditFacts = false;
+              data.datasets.forEach((ds, di) => {
+              if (!chart.isDatasetVisible(di)) return;
+              const meta = chart.getDatasetMeta(di);
+              const type = ds.type || meta.type, isBar = (type === 'bar'), isLine = (type === 'line');
+              const per = perDataset[di] || {}, step = Number.isInteger(per.step) ? Math.max(1, per.step) : lineStepDefault;
+              let lastIdx = null;
+              if (isLine && (onlyLastForLinesDefault || per.onlyLast)) {
+              for (let i = ds.data.length - 1; i >= 0; i--) { const v = ds.data[i]; if (v != null && !Number.isNaN(+v)) { lastIdx = i; break; } }
+              }
+              meta.data.forEach((el, i) => {
+              const raw = ds.data[i], val = Number(raw); if (raw == null || Number.isNaN(val)) return;
+              if (isLine) { if ((onlyLastForLinesDefault || per.onlyLast) && i !== lastIdx) return; if ((i % step) !== 0) return; }
+              const { x, y } = el.getProps(['x', 'y'], true);
+              let dy = isBar ? (val < 0 ? barDYNeg : barDY) : lineDY; if (typeof per.dy === 'number') dy = per.dy;
+              const dx = (typeof per.dx === 'number') ? per.dx : 0;
+              const text = fmt(val), w = ctx.measureText(text).width, h = fontSize * 1.2;
+              const item = { x: x + dx, y: y + dy, baseY: y + dy, val, text, color: per.color || o.color || '#111', w, h, priority: isBar ? 0 : 1 };
+              const arr = byIndex.get(i); if (arr) arr.push(item); else byIndex.set(i, [item]);
+              });
+              });
 
-    // ===== Comments (Year Plan) =====
-    const commentRead = byId('commentRead');
-    const commentEditWrap = byId('commentEditWrap');
-    const commentEdit = byId('commentEdit');
-    const btnEditComment = byId('btnEditComment');
-    const btnSaveComment = byId('btnSaveComment');
-    const btnCancelComment = byId('btnCancelComment');
+              const topLimitBase = chartArea.top + padTop, botLimit = chartArea.bottom - padBottom;
+              byIndex.forEach(items => {
+              const clamp = (it) => {
+              const topLimit = topLimitBase + it.h;
+              if (it.y < topLimit) it.y = topLimit;
+              const low = it.baseY - maxShift, high = it.baseY + maxShift;
+              if (it.y < low) it.y = low; if (it.y > high) it.y = high; if (it.y > botLimit) it.y = botLimit;
+              };
+              items.forEach(it => { it.y = it.baseY; clamp(it); });
+              let guard = 0; while (guard++ < 10) {
+              let changed = false;
+              for (let i = 0; i < items.length; i++) {
+              for (let j = i + 1; j < items.length; j++) {
+              const a = items[i], b = items[j];
+              const aL = a.x - a.w / 2, aR = a.x + a.w / 2, aT = a.y - a.h, aB = a.y;
+              const bL = b.x - b.w / 2, bR = b.x + b.w / 2, bT = b.y - b.h, bB = b.y;
+              const overlap = !(aR < bL || aL > bR || aB < bT || aT > bB);
+              if (overlap) {
+              const hi = (a.val >= b.val) ? a : b, lo = (hi === a) ? b : a;
+              hi.y -= minGap; lo.y += Math.min(4, minGap / 2); clamp(hi); clamp(lo); changed = true;
+              }
+              }
+              }
+              if (!changed) break;
+              }
+              items.sort((a, b) => a.priority - b.priority);
+              items.forEach(it => {
+              ctx.fillStyle = it.color;
+              if (o.outline) { ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.strokeText(it.text, it.x, it.y); }
+              ctx.fillText(it.text, it.x, it.y);
+              });
+              });
+              ctx.restore();
+              }
+              };
+              Chart.register(SmartValueLabels);
+              Chart.register(ChartDataLabels);
+              Chart.defaults.set('plugins.datalabels', { display: false, color: '#111', font: { family: Chart.defaults.font.family, weight: 'bold' } });
 
-    let _commentCache = '';
+              /* ========= Small helpers ========= */
+              function uiStatus(code) {
+              const s = String(code || '').trim().toLowerCase();
+              switch (s) {
+              case 'green': case 'conforme': case 'ok': return t.targetAchieved;
+              case 'orange': case 'rattrapage': case 'catching up': return t.onForecast;
+              case 'red': case 'ecart': case 'needs attention': return t.targetMissed;
+              case 'blue': case 'attente': case 'data missing': return t.dataMissing;
+              default: return '—';
+              }
+              }
+              function uiFrequency(value) {
+  const s = String(value || '').trim().toLowerCase();
 
-    function setCommentUiReadMode() {
-      commentEditWrap.classList.add('d-none');
-      btnSaveComment.classList.add('d-none');
-      btnCancelComment.classList.add('d-none');
-      btnEditComment.classList.toggle('d-none', !canEditFacts);
-    }
+  switch (s) {
+    case 'monthly':
+      return t.monthly;
+    case 'quarterly':
+      return t.quarterly;
+    default:
+      return value || '—';
+  }
+}
+              function canonStatusForUi(raw) {
+              const s = String(raw || '').trim().toLowerCase();
+              if (['green', 'conforme', 'ok'].includes(s)) return 'green';
+              if (['orange', 'rattrapage', 'catching up'].includes(s)) return 'orange';
+              if (['red', 'ecart', 'needs attention'].includes(s)) return 'red';
+              if (['blue', 'attente', 'data missing'].includes(s)) return 'blue';
+              return 'green';
+              }
+              const api = (path) => {
+              const u = new URL(path, window.location.origin); u.searchParams.set('_ts', Date.now().toString());
+              return fetch(u.toString(), { headers: { 'Accept': 'application/json' }, cache: 'no-store' })
+              .then(r => { if (!r.ok) throw new Error('Network error'); return r.json(); });
+              };
 
-    function setCommentUiEditMode() {
-      commentEditWrap.classList.remove('d-none');
-      btnSaveComment.classList.remove('d-none');
-      btnCancelComment.classList.remove('d-none');
-      btnEditComment.classList.add('d-none');
-      commentEdit.value = _commentCache || '';
-      commentEdit.focus();
-    }
+              /* ========= Build fixed DOM legends ========= */
+              function ensureLegendHost(canvasEl, id) {
+              const pie = canvasEl.closest('.pie');
+              const card = canvasEl.closest('.border');
+              if (!pie || !card) return null;
+              let host = card.querySelector('.pie-legend[data-for="' + id + '"]');
+              if (host) return host;
+              host = document.createElement('div');
+              host.className = 'pie-legend';
+              host.dataset.for = id;
+              card.insertBefore(host, pie);
+              return host;
+              }
+              function renderLegend(host, labels, colors) {
+              if (!host) return;
+              host.innerHTML = '';
+              labels.forEach((lbl, i) => {
+              const item = document.createElement('div'); item.className = 'leg';
+              item.innerHTML = `<span class="sw" style="background:${colors[i]}"></span><span>${lbl}</span>`;
+              host.appendChild(item);
+              });
+              }
 
-    async function loadYearPlanComment() {
-      if (!currentPlanId) {
-        _commentCache = '';
-        commentRead.textContent = t.selectKpiToViewComments;
-        setCommentUiReadMode();
-        return;
-      }
+              /* ===== Elements ===== */
+              const selPillar = byId('pillarSelector'),
+              selObjective = byId('objectiveSelector'),
+              selKpi = byId('kpiSelector'),
+              selYearPlan = byId('yearPlanSelector');
 
-      try {
-        const res = await api('@Url.Action("GetYearPlanComment", "Home")' + '?planId=' + encodeURIComponent(currentPlanId));
-        _commentCache = (res?.text ?? '').toString();
-        commentRead.textContent = _commentCache.trim() ? _commentCache : '—';
-        setCommentUiReadMode();
-      } catch {
-        commentRead.textContent = t.failedToLoadComment;
-        setCommentUiReadMode();
-      }
-    }
+              const metaOwner = byId('metaOwner'), metaEditor = byId('metaEditor'), metaFrequency = byId('metaFrequency'), metaUnit = byId('metaUnit'), metaPriority = byId('metaPriority'), metaStatus = byId('metaStatus');
+              const tableBody = byId('factsTbody'); const btnEditKpi = byId('openEditKpiBtn');
+              const segWrap = byId('segmentKpiList'), segRows = byId('segmentKpiRows'), segTitle = byId('segmentTitle');
+              byId('clearSegmentBtn').addEventListener('click', () => { segRows.innerHTML = ''; segWrap.classList.add('d-none'); });
 
-    btnEditComment?.addEventListener('click', () => setCommentUiEditMode());
+              let currentPlanId = null, canEditFacts = false;
 
-    btnCancelComment?.addEventListener('click', () => {
-      commentEdit.value = _commentCache || '';
-      setCommentUiReadMode();
-    });
+              // ===== Comments (Year Plan) =====
+              const commentRead = byId('commentRead');
+              const commentEditWrap = byId('commentEditWrap');
+              const commentEdit = byId('commentEdit');
+              const btnEditComment = byId('btnEditComment');
+              const btnSaveComment = byId('btnSaveComment');
+              const btnCancelComment = byId('btnCancelComment');
 
-    btnSaveComment?.addEventListener('click', function () {
-      if (!currentPlanId) return;
+              let _commentCache = '';
 
-      $.ajax({
-        url: '@Url.Action("SaveYearPlanComment", "Home")',
-        type: 'POST',
-        data: {
-          planId: currentPlanId,
-          text: commentEdit.value ?? ''
-        },
-        success: function () {
-          _commentCache = commentEdit.value ?? '';
-          commentRead.textContent = _commentCache.trim() ? _commentCache : '—';
-          setCommentUiReadMode();
-        },
-        error: function (xhr) {
-          if (xhr.status === 403) {
-            alert('You do not have access to edit this comment.');
-          } else {
-            alert('Failed to save comment.');
-          }
-        }
-      });
-    });
+              function setCommentUiReadMode() {
+              commentEditWrap.classList.add('d-none');
+              btnSaveComment.classList.add('d-none');
+              btnCancelComment.classList.add('d-none');
+              btnEditComment.classList.toggle('d-none', !canEditFacts);
+              }
 
-    /* ===== Summary Card ===== */
-    let pieKpis, pieActs, lineTrend, _barRedShare;
-    async function loadYearPlansForKpi(kpiId, selectedPlanId) {
-      selYearPlan.innerHTML = `<option value="">-- ${t.latest} --</option>`;
-      selYearPlan.disabled = true;
+              function setCommentUiEditMode() {
+              commentEditWrap.classList.remove('d-none');
+              btnSaveComment.classList.remove('d-none');
+              btnCancelComment.classList.remove('d-none');
+              btnEditComment.classList.add('d-none');
+              commentEdit.value = _commentCache || '';
+              commentEdit.focus();
+              }
 
-      if (!kpiId) return;
+              async function loadYearPlanComment() {
+              if (!currentPlanId) {
+              _commentCache = '';
+              commentRead.textContent = t.selectKpiToViewComments;
+              setCommentUiReadMode();
+              return;
+              }
 
-      const plans = await api('@Url.Action("GetKpiYearPlans", "Home")' + '?kpiId=' + encodeURIComponent(kpiId));
+              try {
+              const res = await api('@Url.Action("GetYearPlanComment", "Home")' + '?planId=' + encodeURIComponent(currentPlanId));
+              _commentCache = (res?.text ?? '').toString();
+              commentRead.textContent = _commentCache.trim() ? _commentCache : '—';
+              setCommentUiReadMode();
+              } catch {
+              commentRead.textContent = t.failedToLoadComment;
+              setCommentUiReadMode();
+              }
+              }
 
-      for (const p of (plans || [])) {
-        const opt = document.createElement('option');
-        opt.value = p.planId;
-        opt.textContent = p.label || String(p.year || p.planId);
-        selYearPlan.appendChild(opt);
-      }
+              btnEditComment?.addEventListener('click', () => setCommentUiEditMode());
 
-      if (selectedPlanId) selYearPlan.value = String(selectedPlanId);
-      selYearPlan.disabled = (selYearPlan.options.length <= 1);
-    }
+              btnCancelComment?.addEventListener('click', () => {
+              commentEdit.value = _commentCache || '';
+              setCommentUiReadMode();
+              });
 
-    async function loadSummary() {
-      await (document.fonts?.ready ?? Promise.resolve());
-      await new Promise(r => requestAnimationFrame(r));
-      const loadingEl = byId('summaryLoading');
+              btnSaveComment?.addEventListener('click', function () {
+              if (!currentPlanId) return;
 
-      try {
-        const data = await api('@Url.Action("GetDashboardSummary", "Home")');
-        const k = data?.kpiStatus ?? {}; const a = data?.actionStatus ?? {};
+              $.ajax({
+              url: '@Url.Action("SaveYearPlanComment", "Home")',
+              type: 'POST',
+              data: {
+              planId: currentPlanId,
+              text: commentEdit.value ?? ''
+              },
+              success: function () {
+              _commentCache = commentEdit.value ?? '';
+              commentRead.textContent = _commentCache.trim() ? _commentCache : '—';
+              setCommentUiReadMode();
+              },
+              error: function (xhr) {
+              if (xhr.status === 403) {
+              alert('You do not have access to edit this comment.');
+              } else {
+              alert('Failed to save comment.');
+              }
+              }
+              });
+              });
 
-        byId('cntGreen').textContent = k.green ?? 0;
-        byId('cntOrange').textContent = k.orange ?? 0;
-        byId('cntRed').textContent = k.red ?? 0;
-        byId('cntBlue').textContent = k.blue ?? 0;
+              /* ===== Summary Card ===== */
+              let pieKpis, pieActs, lineTrend, _barRedShare;
+              async function loadYearPlansForKpi(kpiId, selectedPlanId) {
+              selYearPlan.innerHTML = `<option value="">-- ${t.latest} --</option>`;
+              selYearPlan.disabled = true;
 
-        byId('cntTodo').textContent = a.todo ?? 0;
-        byId('cntProg').textContent = a.inprogress ?? 0;
-        byId('cntDone').textContent = a.done ?? 0;
+              if (!kpiId) return;
 
-        byId('summaryUpdated').textContent = data?.updatedAt ? (`${t.updated} ${data.updatedAt}`) : '—';
-        if (loadingEl) loadingEl.textContent = '';
+              const plans = await api('@Url.Action("GetKpiYearPlans", "Home")' + '?kpiId=' + encodeURIComponent(kpiId));
 
-        const kpiVals = [k.green ?? 0, k.orange ?? 0, k.red ?? 0, k.blue ?? 0];
-        const actVals = [a.todo ?? 0, a.inprogress ?? 0, a.done ?? 0];
-        byId('cntTotal').textContent = kpiVals.reduce((s, v) => s + (+v || 0), 0);
+              for (const p of (plans || [])) {
+              const opt = document.createElement('option');
+              opt.value = p.planId;
+              opt.textContent = p.label || String(p.year || p.planId);
+              selYearPlan.appendChild(opt);
+              }
 
-        const kpiCtx = byId('pieKpiStatus').getContext('2d');
-        const actCtx = byId('pieActionStatus').getContext('2d');
-        if (pieKpis) pieKpis.destroy(); if (pieActs) pieActs.destroy();
+              if (selectedPlanId) selYearPlan.value = String(selectedPlanId);
+              selYearPlan.disabled = (selYearPlan.options.length <= 1);
+              }
 
-        const kpiLegendHost = ensureLegendHost(byId('pieKpiStatus'), 'kpi');
-        const actLegendHost = ensureLegendHost(byId('pieActionStatus'), 'act');
-        const kpiLabels = [t.targetAchieved, t.onForecast, t.targetMissed, t.dataMissing];
-        const kpiColors = ['#28a745', '#fd7e14', '#dc3545', '#0d6efd'];
-        const actLabels = [t.toDo, t.inProgress, t.done];
-        const actColors = ['#6c757d', '#ffc107', '#198754'];
-        renderLegend(kpiLegendHost, kpiLabels, kpiColors);
-        renderLegend(actLegendHost, actLabels, actColors);
+              async function loadSummary() {
+              await (document.fonts?.ready ?? Promise.resolve());
+              await new Promise(r => requestAnimationFrame(r));
+              const loadingEl = byId('summaryLoading');
 
-        const doughnutOpts = {
-          responsive: true, maintainAspectRatio: false, resizeDelay: 0, cutout: '62%',
-          animation: { duration: 0 },
-          plugins: {
-            legend: { display: false },
-            tooltip: { enabled: true, callbacks: { label: (c) => `${c.label}: ${c.raw}` } },
-            datalabels: false, smartValueLabels: false
-          }
-        };
+              try {
+              const data = await api('@Url.Action("GetDashboardSummary", "Home")');
+              const k = data?.kpiStatus ?? {}; const a = data?.actionStatus ?? {};
 
-        const kpiOpts = { ...doughnutOpts, onClick: (evt, _els, chart) => onPieClick(evt, chart, 'kpi') };
-        const actOpts = { ...doughnutOpts, onClick: (evt, _els, chart) => onPieClick(evt, chart, 'action') };
+              byId('cntGreen').textContent = k.green ?? 0;
+              byId('cntOrange').textContent = k.orange ?? 0;
+              byId('cntRed').textContent = k.red ?? 0;
+              byId('cntBlue').textContent = k.blue ?? 0;
 
-        pieKpis = new Chart(kpiCtx, {
-          type: 'doughnut',
-          data: { labels: kpiLabels, datasets: [{ data: kpiVals, backgroundColor: kpiColors, borderColor: '#fff', borderWidth: 2 }] },
-          options: kpiOpts
-        });
+              byId('cntTodo').textContent = a.todo ?? 0;
+              byId('cntProg').textContent = a.inprogress ?? 0;
+              byId('cntDone').textContent = a.done ?? 0;
 
-        pieActs = new Chart(actCtx, {
-          type: 'doughnut',
-          data: { labels: actLabels, datasets: [{ data: actVals, backgroundColor: actColors, borderColor: '#fff', borderWidth: 2 }] },
-          options: actOpts
-        });
+              byId('summaryUpdated').textContent = data?.updatedAt ? (`${t.updated} ${data.updatedAt}`) : '—';
+              if (loadingEl) loadingEl.textContent = '';
 
-        const shareCtx = byId('barRedShare').getContext('2d');
-        if (_barRedShare) _barRedShare.destroy();
+              const kpiVals = [k.green ?? 0, k.orange ?? 0, k.red ?? 0, k.blue ?? 0];
+              const actVals = [a.todo ?? 0, a.inprogress ?? 0, a.done ?? 0];
+              byId('cntTotal').textContent = kpiVals.reduce((s, v) => s + (+v || 0), 0);
 
-        const resp = await api('@Url.Action("GetRedShareByPillar", "Home")');
-        const items = Array.isArray(resp?.items) ? resp.items : [];
-        items.sort((a, b) => {
-          const parse = (x) => { const code = (x?.pillarCode || '').toString(); const d = (code.match(/\d+(\.\d+)?/) || [])[0]; return d ? parseFloat(d) : Number.MAX_SAFE_INTEGER; };
-          const da = parse(a), db = parse(b); if (da !== db) return da - db;
-          return String(a?.pillarName || '').localeCompare(String(b?.pillarName || ''), 'en', { numeric: true });
-        });
+              const kpiCtx = byId('pieKpiStatus').getContext('2d');
+              const actCtx = byId('pieActionStatus').getContext('2d');
+              if (pieKpis) pieKpis.destroy(); if (pieActs) pieActs.destroy();
 
-        const labels = items.map(x => x.pillarName);
-        const redCounts = items.map(x => +x.red || 0);
-        const totals = items.map(x => +x.total || 0);
-        const pillarIds = items.map(x => x.pillarId);
+              const kpiLegendHost = ensureLegendHost(byId('pieKpiStatus'), 'kpi');
+              const actLegendHost = ensureLegendHost(byId('pieActionStatus'), 'act');
+              const kpiLabels = [t.targetAchieved, t.onForecast, t.targetMissed, t.dataMissing];
+              const kpiColors = ['#28a745', '#fd7e14', '#dc3545', '#0d6efd'];
+              const actLabels = [t.toDo, t.inProgress, t.done];
+              const actColors = ['#6c757d', '#ffc107', '#198754'];
+              renderLegend(kpiLegendHost, kpiLabels, kpiColors);
+              renderLegend(actLegendHost, actLabels, actColors);
 
-        const short = (s) => (String(s).length > 26 ? String(s).slice(0, 23) + '…' : s);
-        const yLabels = labels.map(short);
-        const maxTotal = Math.max(1, ...totals);
+              const doughnutOpts = {
+              responsive: true, maintainAspectRatio: false, resizeDelay: 0, cutout: '62%',
+              animation: { duration: 0 },
+              plugins: {
+              legend: { display: false },
+              tooltip: { enabled: true, callbacks: { label: (c) => `${c.label}: ${c.raw}` } },
+              datalabels: false, smartValueLabels: false
+              }
+              };
 
-        _barRedShare = new Chart(shareCtx, {
-          type: 'bar',
-          data: {
-            labels: yLabels,
-            datasets: [{
+              const kpiOpts = { ...doughnutOpts, onClick: (evt, _els, chart) => onPieClick(evt, chart, 'kpi') };
+              const actOpts = { ...doughnutOpts, onClick: (evt, _els, chart) => onPieClick(evt, chart, 'action') };
+
+              pieKpis = new Chart(kpiCtx, {
+              type: 'doughnut',
+              data: { labels: kpiLabels, datasets: [{ data: kpiVals, backgroundColor: kpiColors, borderColor: '#fff', borderWidth: 2 }] },
+              options: kpiOpts
+              });
+
+              pieActs = new Chart(actCtx, {
+              type: 'doughnut',
+              data: { labels: actLabels, datasets: [{ data: actVals, backgroundColor: actColors, borderColor: '#fff', borderWidth: 2 }] },
+              options: actOpts
+              });
+
+              const shareCtx = byId('barRedShare').getContext('2d');
+              if (_barRedShare) _barRedShare.destroy();
+
+              const resp = await api('@Url.Action("GetRedShareByPillar", "Home")');
+              const items = Array.isArray(resp?.items) ? resp.items : [];
+              items.sort((a, b) => {
+              const parse = (x) => { const code = (x?.pillarCode || '').toString(); const d = (code.match(/\d+(\.\d+)?/) || [])[0]; return d ? parseFloat(d) : Number.MAX_SAFE_INTEGER; };
+              const da = parse(a), db = parse(b); if (da !== db) return da - db;
+              return String(a?.pillarName || '').localeCompare(String(b?.pillarName || ''), 'en', { numeric: true });
+              });
+
+              const labels = items.map(x => x.pillarName);
+              const redCounts = items.map(x => +x.red || 0);
+              const totals = items.map(x => +x.total || 0);
+              const pillarIds = items.map(x => x.pillarId);
+
+              const short = (s) => (String(s).length > 26 ? String(s).slice(0, 23) + '…' : s);
+              const yLabels = labels.map(short);
+              const maxTotal = Math.max(1, ...totals);
+
+              _barRedShare = new Chart(shareCtx, {
+              type: 'bar',
+              data: {
+              labels: yLabels,
+              datasets: [{
               label: 'Red / Total',
               data: redCounts,
               backgroundColor: '#dc3545', borderColor: '#dc3545', borderWidth: 1,
               barThickness: 12, maxBarThickness: 14, categoryPercentage: .9, barPercentage: .8
-            }]
-          },
-          options: {
-            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
-            animation: { duration: 0 }, resizeDelay: 0,
-            layout: { padding: { top: 6, right: 6, bottom: 0, left: 0 } },
-            scales: {
+              }]
+              },
+              options: {
+              responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+              animation: { duration: 0 }, resizeDelay: 0,
+              layout: { padding: { top: 6, right: 6, bottom: 0, left: 0 } },
+              scales: {
               x: { beginAtZero: true, max: maxTotal, ticks: { padding: 4, font: { size: 11 } }, grid: { color: 'rgba(0,0,0,.06)' } },
               y: { ticks: { padding: 6, font: { size: 12 } }, grid: { display: false } }
-            },
-            plugins: {
+              },
+              plugins: {
               legend: { display: false },
               tooltip: {
-                enabled: true, callbacks: {
-                  label: (ctx) => {
-                    const i = ctx.dataIndex, r = redCounts[i], t = totals[i], p = t ? Math.round((r / t) * 100) : 0;
-                    return `${r} of ${t} (${p}%)`;
-                  }
-                }
+              enabled: true, callbacks: {
+              label: (ctx) => {
+              const i = ctx.dataIndex, r = redCounts[i], t = totals[i], p = t ? Math.round((r / t) * 100) : 0;
+              return `${r} of ${t} (${p}%)`;
+              }
+              }
               },
               datalabels: {
-                display: (ctx) => Number(ctx.dataset.data[ctx.dataIndex] ?? 0) > 0,
-                formatter: (_v, ctx) => { const i = ctx.dataIndex; const r = +redCounts[i] || 0, t = +totals[i] || 0; return `${r}/${t || '-'}`; },
-                anchor: 'end', align: 'right', offset: 6, clamp: false, clip: false,
-                color: '#111', font: { family: Chart.defaults.font.family, size: 12, weight: '700' }
+              display: (ctx) => Number(ctx.dataset.data[ctx.dataIndex] ?? 0) > 0,
+              formatter: (_v, ctx) => { const i = ctx.dataIndex; const r = +redCounts[i] || 0, t = +totals[i] || 0; return `${r}/${t || '-'}`; },
+              anchor: 'end', align: 'right', offset: 6, clamp: false, clip: false,
+              color: '#111', font: { family: Chart.defaults.font.family, size: 12, weight: '700' }
               },
               smartValueLabels: false
-            },
-            onClick: async (evt, _els, chart) => {
+              },
+              onClick: async (evt, _els, chart) => {
               const pts = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
               if (!pts?.length) return;
               const idx = pts[0].index, pillarId = pillarIds[idx], pillarName = labels[idx];
               segRows.innerHTML = `<span class="text-muted small ms-1">${t.loading}</span>`;
               segWrap.classList.remove('d-none'); segTitle.textContent = `${t.redKpisForPillar} — ${pillarName}`;
               try {
-                const data = await api('@Url.Action("GetRedKpisForPillar", "Home")' + `?pillarId=${encodeURIComponent(pillarId)}`);
-                const list = Array.isArray(data?.items) ? data.items : [];
-                segRows.innerHTML = list.length
-                  ? list.map(it => `<span class="role-chip" data-kpi-id="${it.id}" data-pillar-id="${it.pillarId}" data-objective-id="${it.objectiveId}" title="${it.text}">${it.text}</span>`).join('')
-                  : `<span class="text-muted small ms-1">${t.noRedKpis}</span>`;
+              const data = await api('@Url.Action("GetRedKpisForPillar", "Home")' + `?pillarId=${encodeURIComponent(pillarId)}`);
+              const list = Array.isArray(data?.items) ? data.items : [];
+              segRows.innerHTML = list.length
+              ? list.map(it => `<span class="role-chip" data-kpi-id="${it.id}" data-pillar-id="${it.pillarId}" data-objective-id="${it.objectiveId}" title="${it.text}">${it.text}</span>`).join('')
+              : `<span class="text-muted small ms-1">${t.noRedKpis}</span>`;
               } catch {
-                segRows.innerHTML = `<span class="text-danger small ms-1">${t.failedToLoadKpis}</span>`;
+              segRows.innerHTML = `<span class="text-danger small ms-1">${t.failedToLoadKpis}</span>`;
               }
-            }
-          }
-        });
+              }
+              }
+              });
 
-        try {
-          const ch = await api('@Url.Action("GetLatestStatusChanges", "Home")');
-          const list = [
-            { code: 'green', label: t.indicatorsTurnedToTargetAchieved, count: ch?.toGreen || 0 },
-            { code: 'orange', label: t.indicatorsTurnedToOnForecast, count: ch?.toOrange || 0 },
-            { code: 'red', label: t.indicatorsTurnedToTargetMissed, count: ch?.toRed || 0 },
-            { code: 'blue', label: t.indicatorsTurnedToDataMissing, count: ch?.toBlue || 0 },
-          ];
-          const ul = byId('turnedList'); ul.innerHTML = '';
-          for (const x of list) {
-            const li = document.createElement('li'); li.dataset.code = x.code; li.innerHTML = `${x.label}: <strong>${x.count}</strong>`;
-            ul.appendChild(li);
-          }
-        } catch { byId('turnedList').innerHTML = `<li class="text-danger">${t.couldNotLoadLatestChanges}</li>`; }
-        byId('redShareLoading').textContent = '';
+              try {
+              const ch = await api('@Url.Action("GetLatestStatusChanges", "Home")');
+              const list = [
+              { code: 'green', label: t.indicatorsTurnedToTargetAchieved, count: ch?.toGreen || 0 },
+              { code: 'orange', label: t.indicatorsTurnedToOnForecast, count: ch?.toOrange || 0 },
+              { code: 'red', label: t.indicatorsTurnedToTargetMissed, count: ch?.toRed || 0 },
+              { code: 'blue', label: t.indicatorsTurnedToDataMissing, count: ch?.toBlue || 0 },
+              ];
+              const ul = byId('turnedList'); ul.innerHTML = '';
+              for (const x of list) {
+              const li = document.createElement('li'); li.dataset.code = x.code; li.innerHTML = `${x.label}: <strong>${x.count}</strong>`;
+              ul.appendChild(li);
+              }
+              } catch { byId('turnedList').innerHTML = `<li class="text-danger">${t.couldNotLoadLatestChanges}</li>`; }
+              byId('redShareLoading').textContent = '';
 
-        try {
-          const trend = await api('@Url.Action("GetRedMonthlyTrend", "Home")');
-          const trendCtx = byId('lineRedTrend').getContext('2d');
-          if (lineTrend) lineTrend.destroy();
-          const labelsT = Array.isArray(trend?.labels) ? trend.labels : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          const vals = Array.isArray(trend?.redCounts) ? trend.redCounts : new Array(12).fill(0);
-          const now = new Date();
-          const yr = Number(trend?.year) || now.getFullYear();
+              try {
+              const trend = await api('@Url.Action("GetRedMonthlyTrend", "Home")');
+              const trendCtx = byId('lineRedTrend').getContext('2d');
+              if (lineTrend) lineTrend.destroy();
+              const labelsT = Array.isArray(trend?.labels) ? trend.labels : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+              const vals = Array.isArray(trend?.redCounts) ? trend.redCounts : new Array(12).fill(0);
+              const now = new Date();
+              const yr = Number(trend?.year) || now.getFullYear();
 
-          let maxMonth;
-          if (yr === now.getFullYear()) {
-            maxMonth = now.getMonth();
-            if (maxMonth < 1) maxMonth = 1;
-          } else {
-            maxMonth = 12;
-          }
+              let maxMonth;
+              if (yr === now.getFullYear()) {
+              maxMonth = now.getMonth();
+              if (maxMonth < 1) maxMonth = 1;
+              } else {
+              maxMonth = 12;
+              }
 
-          lineTrend = new Chart(trendCtx, {
-            type: 'line',
-            data: { labels: labelsT.slice(0, maxMonth), datasets: [{ label: t.redKpis, data: vals.slice(0, maxMonth), borderWidth: 2, tension: .3, pointRadius: 3, pointHoverRadius: 4, borderColor: '#dc3545', pointBackgroundColor: '#dc3545', pointBorderColor: '#dc3545', fill: false }] },
-            options: {
+              lineTrend = new Chart(trendCtx, {
+              type: 'line',
+              data: { labels: labelsT.slice(0, maxMonth), datasets: [{ label: t.redKpis, data: vals.slice(0, maxMonth), borderWidth: 2, tension: .3, pointRadius: 3, pointHoverRadius: 4, borderColor: '#dc3545', pointBackgroundColor: '#dc3545', pointBorderColor: '#dc3545', fill: false }] },
+              options: {
               responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18, bottom: 0 } },
               animation: { duration: 0 },
               scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,.06)' } } },
               plugins: {
-                legend: { display: false }, tooltip: { enabled: true },
-                datalabels: { display: (ctx) => Number.isFinite(ctx.raw), formatter: (v) => v, anchor: 'end', align: 'top', offset: 6, clamp: true, color: '#111', font: { family: Chart.defaults.font.family, size: 14, weight: '700' } }
+              legend: { display: false }, tooltip: { enabled: true },
+              datalabels: { display: (ctx) => Number.isFinite(ctx.raw), formatter: (v) => v, anchor: 'end', align: 'top', offset: 6, clamp: true, color: '#111', font: { family: Chart.defaults.font.family, size: 14, weight: '700' } }
               }
-            }
-          });
-          byId('trendLoading').textContent = '';
-        } catch { byId('trendLoading').textContent = t.couldNotLoadTrend; }
+              }
+              });
+              byId('trendLoading').textContent = '';
+              } catch { byId('trendLoading').textContent = t.couldNotLoadTrend; }
 
-      } catch { if (loadingEl) loadingEl.textContent = t.couldNotLoadSummary; }
-    }
+              } catch { if (loadingEl) loadingEl.textContent = t.couldNotLoadSummary; }
+              }
 
-    /* ===== Segment interactions ===== */
-    function mapLabel(kind, label) {
-      const s = String(label || '').trim();
-      if (kind === 'kpi') {
-        if (s === t.targetAchieved) return 'green';
-        if (s === t.onForecast) return 'orange';
-        if (s === t.targetMissed) return 'red';
-        if (s === t.dataMissing) return 'blue';
-        return 'unknown';
-      } else {
-        if (s === t.toDo) return 'todo';
-        if (s === t.inProgress) return 'inprogress';
-        if (s === t.done) return 'done';
-        return 'other';
-      }
-    }
+              /* ===== Segment interactions ===== */
+              function mapLabel(kind, label) {
+              const s = String(label || '').trim();
+              if (kind === 'kpi') {
+              if (s === t.targetAchieved) return 'green';
+              if (s === t.onForecast) return 'orange';
+              if (s === t.targetMissed) return 'red';
+              if (s === t.dataMissing) return 'blue';
+              return 'unknown';
+              } else {
+              if (s === t.toDo) return 'todo';
+              if (s === t.inProgress) return 'inprogress';
+              if (s === t.done) return 'done';
+              return 'other';
+              }
+              }
 
-    async function onPieClick(evt, chart, kind) {
-      const pts = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
-      if (!pts?.length) return;
-      const idx = pts[0].index, label = chart.data.labels[idx], code = mapLabel(kind, label);
-      segRows.innerHTML = `<span class="text-muted small ms-1">${t.loading}</span>`;
-      segWrap.classList.remove('d-none');
-      segTitle.textContent = (kind === 'kpi' ? `${t.kpisWithStatus}: ` : `${t.kpisWithActions}: `) + label;
-      try {
-        const data = await api('@Url.Action("GetKpisForSummarySegment", "Home")' + `?kind=${encodeURIComponent(kind)}&code=${encodeURIComponent(code)}`);
-        const items = Array.isArray(data?.items) ? data.items : [];
-        segRows.innerHTML = items.length
-          ? items.map(it => `<span class="role-chip" data-kpi-id="${it.id}" data-pillar-id="${it.pillarId}" data-objective-id="${it.objectiveId}" title="${it.text}">${it.text}</span>`).join('')
-          : `<span class="text-muted small ms-1">${t.noKpisFound}</span>`;
-      } catch { segRows.innerHTML = `<span class="text-danger small ms-1">${t.failedToLoadKpis}</span>`; }
-    }
+              async function onPieClick(evt, chart, kind) {
+              const pts = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+              if (!pts?.length) return;
+              const idx = pts[0].index, label = chart.data.labels[idx], code = mapLabel(kind, label);
+              segRows.innerHTML = `<span class="text-muted small ms-1">${t.loading}</span>`;
+              segWrap.classList.remove('d-none');
+              segTitle.textContent = (kind === 'kpi' ? `${t.kpisWithStatus}: ` : `${t.kpisWithActions}: `) + label;
+              try {
+              const data = await api('@Url.Action("GetKpisForSummarySegment", "Home")' + `?kind=${encodeURIComponent(kind)}&code=${encodeURIComponent(code)}`);
+              const items = Array.isArray(data?.items) ? data.items : [];
+              segRows.innerHTML = items.length
+              ? items.map(it => `<span class="role-chip" data-kpi-id="${it.id}" data-pillar-id="${it.pillarId}" data-objective-id="${it.objectiveId}" title="${it.text}">${it.text}</span>`).join('')
+              : `<span class="text-muted small ms-1">${t.noKpisFound}</span>`;
+              } catch { segRows.innerHTML = `<span class="text-danger small ms-1">${t.failedToLoadKpis}</span>`; }
+              }
 
-    byId('turnedBullets').addEventListener('click', async (e) => {
-      const li = e.target.closest('li[data-code]'); if (!li) return;
-      const code = li.dataset.code, labelMap = { green: t.targetAchieved, orange: t.onForecast, red: t.targetMissed, blue: t.dataMissing };
-      segRows.innerHTML = `<span class="text-muted small ms-1">${t.loading}</span>`;
-      segWrap.classList.remove('d-none'); segTitle.textContent = `${t.turnedTo}: ${labelMap[code]}`;
-      try {
-        const resp = await api('@Url.Action("GetKpisTurned", "Home")' + `?to=${encodeURIComponent(code)}`);
-        const list = Array.isArray(resp?.items) ? resp.items : [];
-        segRows.innerHTML = list.length
-          ? list.map(it => `<span class="role-chip" data-kpi-id="${it.id}" data-pillar-id="${it.pillarId}" data-objective-id="${it.objectiveId}" title="${it.text}">${it.text}</span>`).join('')
-          : `<span class="text-muted small ms-1">${t.noKpisFound}</span>`;
-      } catch { segRows.innerHTML = `<span class="text-danger small ms-1">${t.failedToLoadKpis}</span>`; }
-    });
+              byId('turnedBullets').addEventListener('click', async (e) => {
+              const li = e.target.closest('li[data-code]'); if (!li) return;
+              const code = li.dataset.code, labelMap = { green: t.targetAchieved, orange: t.onForecast, red: t.targetMissed, blue: t.dataMissing };
+              segRows.innerHTML = `<span class="text-muted small ms-1">${t.loading}</span>`;
+              segWrap.classList.remove('d-none'); segTitle.textContent = `${t.turnedTo}: ${labelMap[code]}`;
+              try {
+              const resp = await api('@Url.Action("GetKpisTurned", "Home")' + `?to=${encodeURIComponent(code)}`);
+              const list = Array.isArray(resp?.items) ? resp.items : [];
+              segRows.innerHTML = list.length
+              ? list.map(it => `<span class="role-chip" data-kpi-id="${it.id}" data-pillar-id="${it.pillarId}" data-objective-id="${it.objectiveId}" title="${it.text}">${it.text}</span>`).join('')
+              : `<span class="text-muted small ms-1">${t.noKpisFound}</span>`;
+              } catch { segRows.innerHTML = `<span class="text-danger small ms-1">${t.failedToLoadKpis}</span>`; }
+              });
 
-    byId('segmentKpiRows').addEventListener('click', async (e) => {
-      const chip = e.target.closest('.role-chip'); if (!chip) return;
-      const { kpiId, pillarId, objectiveId } = chip.dataset; if (!kpiId) return;
-      _pendingScrollToChart = true; await selectKpiByIds(pillarId, objectiveId, kpiId);
-      document.querySelectorAll('#segmentKpiRows .role-chip').forEach(x => x.classList.remove('active'));
-      chip.classList.add('active');
-    });
+              byId('segmentKpiRows').addEventListener('click', async (e) => {
+              const chip = e.target.closest('.role-chip'); if (!chip) return;
+              const { kpiId, pillarId, objectiveId } = chip.dataset; if (!kpiId) return;
+              _pendingScrollToChart = true; await selectKpiByIds(pillarId, objectiveId, kpiId);
+              document.querySelectorAll('#segmentKpiRows .role-chip').forEach(x => x.classList.remove('active'));
+              chip.classList.add('active');
+              });
 
-    /* ===== Role summary ===== */
-    const roleCard = byId('roleSummaryCard'), roleBadge = byId('roleSummaryBadge'), roleRows = byId('roleSummaryRows');
-    function _mkChip(item) {
-      const s = document.createElement('span'); s.className = 'role-chip';
-      s.title = item.text || String(item.id); s.textContent = item.text || String(item.id);
-      if (item.id != null) s.dataset.kpiId = item.id; if (item.pillarId != null) s.dataset.pillarId = item.pillarId; if (item.objectiveId != null) s.dataset.objectiveId = item.objectiveId;
-      return s;
-    }
-    function renderRoleSummary(data) {
-      const ed = Array.isArray(data?.editor) ? data.editor : [], ow = Array.isArray(data?.owner) ? data.owner : [];
-      const ph = byId('roleSummaryPlaceholder'); if (ph) ph.remove();
-      if (!ed.length && !ow.length) { roleRows.innerHTML = `<div class="col-12 text-muted small">${t.noIndicatorsAvailable}</div>`; roleBadge.textContent = '—'; return; }
-      roleRows.innerHTML = '';
-      const makeCol = (title, items) => {
-        const col = document.createElement('div'); col.className = 'col-md-6';
-        const h = document.createElement('div'); h.className = 'fw-bold mb-1'; h.textContent = title;
-        const list = document.createElement('div'); list.className = 'role-list';
-        const MAX = 20; items.slice(0, MAX).forEach(it => list.appendChild(_mkChip(it)));
-        if (items.length > MAX) list.appendChild(_mkChip({ text: `+${items.length - MAX} ${t.more}` }));
-        col.appendChild(h); col.appendChild(list); return col;
-      };
-      if (ed.length) roleRows.appendChild(makeCol(t.editorFor, ed));
-      if (ow.length) roleRows.appendChild(makeCol(t.ownerFor, ow));
-      roleBadge.textContent = (ed.length && ow.length) ? `${t.editorFor} • ${t.ownerFor}` : (ed.length ? t.editorFor : t.ownerFor);
-      roleCard.classList.remove('d-none'); markActiveRoleChip(selKpi.value);
-    }
-    async function loadRoleSummary() {
-      try {
-        const r = await fetch('@Url.Action("MyKpiRoles", "Home")', { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
-        if (!r.ok) throw 0; renderRoleSummary(await r.json());
-      } catch {
-        const ph = byId('roleSummaryPlaceholder'); if (ph) ph.textContent = t.couldNotLoadYourIndicators; roleBadge.textContent = '—';
-      }
-    }
-    roleRows.addEventListener('click', async (e) => {
-      const chip = e.target.closest('.role-chip'); if (!chip) return;
-      const { pillarId, objectiveId, kpiId } = chip.dataset; if (!kpiId) return;
-      _pendingScrollToChart = true; await selectKpiByIds(pillarId, objectiveId, kpiId); markActiveRoleChip(kpiId);
-    });
-    function markActiveRoleChip(currentKpiId) {
-      document.querySelectorAll('#roleSummaryRows .role-chip').forEach(el => {
-        el.classList.toggle('active', currentKpiId && (el.dataset.kpiId === String(currentKpiId)));
-      });
-    }
+              /* ===== Role summary ===== */
+              const roleCard = byId('roleSummaryCard'), roleBadge = byId('roleSummaryBadge'), roleRows = byId('roleSummaryRows');
+              function _mkChip(item) {
+              const s = document.createElement('span'); s.className = 'role-chip';
+              s.title = item.text || String(item.id); s.textContent = item.text || String(item.id);
+              if (item.id != null) s.dataset.kpiId = item.id; if (item.pillarId != null) s.dataset.pillarId = item.pillarId; if (item.objectiveId != null) s.dataset.objectiveId = item.objectiveId;
+              return s;
+              }
+              function renderRoleSummary(data) {
+              const ed = Array.isArray(data?.editor) ? data.editor : [], ow = Array.isArray(data?.owner) ? data.owner : [];
+              const ph = byId('roleSummaryPlaceholder'); if (ph) ph.remove();
+              if (!ed.length && !ow.length) { roleRows.innerHTML = `<div class="col-12 text-muted small">${t.noIndicatorsAvailable}</div>`; roleBadge.textContent = '—'; return; }
+              roleRows.innerHTML = '';
+              const makeCol = (title, items) => {
+              const col = document.createElement('div'); col.className = 'col-md-6';
+              const h = document.createElement('div'); h.className = 'fw-bold mb-1'; h.textContent = title;
+              const list = document.createElement('div'); list.className = 'role-list';
+              const MAX = 20; items.slice(0, MAX).forEach(it => list.appendChild(_mkChip(it)));
+              if (items.length > MAX) list.appendChild(_mkChip({ text: `+${items.length - MAX} ${t.more}` }));
+              col.appendChild(h); col.appendChild(list); return col;
+              };
+              if (ed.length) roleRows.appendChild(makeCol(t.editorFor, ed));
+              if (ow.length) roleRows.appendChild(makeCol(t.ownerFor, ow));
+              roleBadge.textContent = (ed.length && ow.length) ? `${t.editorFor} • ${t.ownerFor}` : (ed.length ? t.editorFor : t.ownerFor);
+              roleCard.classList.remove('d-none'); markActiveRoleChip(selKpi.value);
+              }
+              async function loadRoleSummary() {
+              try {
+              const r = await fetch('@Url.Action("MyKpiRoles", "Home")', { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+              if (!r.ok) throw 0; renderRoleSummary(await r.json());
+              } catch {
+              const ph = byId('roleSummaryPlaceholder'); if (ph) ph.textContent = t.couldNotLoadYourIndicators; roleBadge.textContent = '—';
+              }
+              }
+              roleRows.addEventListener('click', async (e) => {
+              const chip = e.target.closest('.role-chip'); if (!chip) return;
+              const { pillarId, objectiveId, kpiId } = chip.dataset; if (!kpiId) return;
+              _pendingScrollToChart = true; await selectKpiByIds(pillarId, objectiveId, kpiId); markActiveRoleChip(kpiId);
+              });
+              function markActiveRoleChip(currentKpiId) {
+              document.querySelectorAll('#roleSummaryRows .role-chip').forEach(el => {
+              el.classList.toggle('active', currentKpiId && (el.dataset.kpiId === String(currentKpiId)));
+              });
+              }
 
-    /* ===== Cascading dropdowns & KPI chart ===== */
-    function resetSelect(sel, ph) { sel.innerHTML = ''; const o = document.createElement('option'); o.value = ''; o.textContent = ph; sel.appendChild(o); sel.disabled = true; }
-    async function loadPillars() {
-      resetSelect(selPillar, `-- ${t.pillar} --`); resetSelect(selObjective, `-- ${t.objective} --`); resetSelect(selKpi, `-- ${t.kpi} --`);
-      const items = await api('@Url.Action("GetPillars", "Home")'); for (const it of items) { const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; selPillar.appendChild(o); }
-      selPillar.disabled = false;
-    }
-    selPillar.addEventListener('change', async () => {
-      resetSelect(selObjective, `-- ${t.objective} --`); resetSelect(selKpi, `-- ${t.kpi} --`); clearMeta(); clearChartAndTable();
-      const pid = selPillar.value; if (!pid) return;
-      const items = await api('@Url.Action("GetObjectives", "Home")?pillarId=' + encodeURIComponent(pid));
-      for (const it of items) { const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; selObjective.appendChild(o); }
-      selObjective.disabled = items.length === 0;
-    });
-    selObjective.addEventListener('change', async () => {
-      resetSelect(selKpi, `-- ${t.kpi} --`); clearMeta(); clearChartAndTable();
-      const oid = selObjective.value; if (!oid) return;
-      const items = await api('@Url.Action("GetKpis", "Home")?objectiveId=' + encodeURIComponent(oid));
-      for (const it of items) { const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; selKpi.appendChild(o); }
-      selKpi.disabled = items.length === 0;
-    });
-    selKpi.addEventListener('change', () => { loadKpiSummary().catch(console.error); });
-    if (selYearPlan) {
-      selYearPlan.addEventListener('change', async () => {
-        await loadKpiSummary();
-      });
-    }
-    function waitForOption(selectEl, value, timeout = 4000) {
-      return new Promise((resolve, reject) => {
-        const target = String(value); const t0 = performance.now();
-        const i = setInterval(() => {
-          const has = Array.from(selectEl.options).some(o => String(o.value) === target);
-          if (has) { clearInterval(i); resolve(); }
-          if (performance.now() - t0 > timeout) { clearInterval(i); reject(new Error('Option not found: ' + target)); }
-        }, 80);
-      });
-    }
-    async function selectKpiByIds(pillarId, objectiveId, kpiId) {
-      if (pillarId) {
-        if (!selPillar.options.length || selPillar.disabled) { await loadPillars(); }
-        await waitForOption(selPillar, pillarId);
-        if (selPillar.value !== String(pillarId)) { selPillar.value = String(pillarId); selPillar.dispatchEvent(new Event('change')); }
-      }
-      if (objectiveId) {
-        await waitForOption(selObjective, objectiveId);
-        if (selObjective.value !== String(objectiveId)) { selObjective.value = String(objectiveId); selObjective.dispatchEvent(new Event('change')); }
-      }
-      if (kpiId) {
-        await waitForOption(selKpi, kpiId);
-        if (selKpi.value !== String(kpiId)) { selKpi.value = String(kpiId); selKpi.dispatchEvent(new Event('change')); }
-      }
-    }
-    function clearChartAndTable() {
-      kpiChart.data.labels = []; for (const ds of kpiChart.data.datasets) ds.data = []; kpiChart.update();
-      tableBody.innerHTML = '<tr class="placeholder-row"><td colspan="6" class="text-center text-muted">—</td></tr>';
-    }
-    function clearMeta() {
-      metaOwner.textContent = '—'; metaEditor.textContent = '—'; metaFrequency.textContent = '—';
-      metaUnit.textContent = '—'; metaPriority.textContent = '—'; metaStatus.textContent = '—';
-      metaStatus.className = 'status-pill'; metaStatus.style.background = '';
-      btnEditKpi.disabled = true; btnEditKpi.textContent = t.editDataActualForecast;
-    }
+              /* ===== Cascading dropdowns & KPI chart ===== */
+              function resetSelect(sel, ph) { sel.innerHTML = ''; const o = document.createElement('option'); o.value = ''; o.textContent = ph; sel.appendChild(o); sel.disabled = true; }
+              async function loadPillars() {
+              resetSelect(selPillar, `-- ${t.pillar} --`); resetSelect(selObjective, `-- ${t.objective} --`); resetSelect(selKpi, `-- ${t.kpi} --`);
+              const items = await api('@Url.Action("GetPillars", "Home")'); for (const it of items) { const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; selPillar.appendChild(o); }
+              selPillar.disabled = false;
+              }
+              selPillar.addEventListener('change', async () => {
+              resetSelect(selObjective, `-- ${t.objective} --`); resetSelect(selKpi, `-- ${t.kpi} --`); clearMeta(); clearChartAndTable();
+              const pid = selPillar.value; if (!pid) return;
+              const items = await api('@Url.Action("GetObjectives", "Home")?pillarId=' + encodeURIComponent(pid));
+              for (const it of items) { const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; selObjective.appendChild(o); }
+              selObjective.disabled = items.length === 0;
+              });
+              selObjective.addEventListener('change', async () => {
+              resetSelect(selKpi, `-- ${t.kpi} --`); clearMeta(); clearChartAndTable();
+              const oid = selObjective.value; if (!oid) return;
+              const items = await api('@Url.Action("GetKpis", "Home")?objectiveId=' + encodeURIComponent(oid));
+              for (const it of items) { const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; selKpi.appendChild(o); }
+              selKpi.disabled = items.length === 0;
+              });
+              selKpi.addEventListener('change', () => { loadKpiSummary().catch(console.error); });
+              if (selYearPlan) {
+              selYearPlan.addEventListener('change', async () => {
+              await loadKpiSummary();
+              });
+              }
+              function waitForOption(selectEl, value, timeout = 4000) {
+              return new Promise((resolve, reject) => {
+              const target = String(value); const t0 = performance.now();
+              const i = setInterval(() => {
+              const has = Array.from(selectEl.options).some(o => String(o.value) === target);
+              if (has) { clearInterval(i); resolve(); }
+              if (performance.now() - t0 > timeout) { clearInterval(i); reject(new Error('Option not found: ' + target)); }
+              }, 80);
+              });
+              }
+              async function selectKpiByIds(pillarId, objectiveId, kpiId) {
+              if (pillarId) {
+              if (!selPillar.options.length || selPillar.disabled) { await loadPillars(); }
+              await waitForOption(selPillar, pillarId);
+              if (selPillar.value !== String(pillarId)) { selPillar.value = String(pillarId); selPillar.dispatchEvent(new Event('change')); }
+              }
+              if (objectiveId) {
+              await waitForOption(selObjective, objectiveId);
+              if (selObjective.value !== String(objectiveId)) { selObjective.value = String(objectiveId); selObjective.dispatchEvent(new Event('change')); }
+              }
+              if (kpiId) {
+              await waitForOption(selKpi, kpiId);
+              if (selKpi.value !== String(kpiId)) { selKpi.value = String(kpiId); selKpi.dispatchEvent(new Event('change')); }
+              }
+              }
+              function clearChartAndTable() {
+              kpiChart.data.labels = []; for (const ds of kpiChart.data.datasets) ds.data = []; kpiChart.update();
+              tableBody.innerHTML = '<tr class="placeholder-row"><td colspan="6" class="text-center text-muted">—</td></tr>';
+              }
+              function clearMeta() {
+              metaOwner.textContent = '—'; metaEditor.textContent = '—'; metaFrequency.textContent = '—';
+              metaUnit.textContent = '—'; metaPriority.textContent = '—'; metaStatus.textContent = '—';
+              metaStatus.className = 'status-pill'; metaStatus.style.background = '';
+              btnEditKpi.disabled = true; btnEditKpi.textContent = t.editDataActualForecast;
+              }
 
-    const ctx = document.getElementById('kpiChart').getContext('2d');
-    let kpiChart = new Chart(ctx, {
-      data: {
-        labels: [],
-        datasets: [
-          { type: 'bar', label: t.actual, data: [], backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
-          { type: 'line', label: t.target, data: [], borderWidth: 2, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', tension: .3, fill: false },
-          { type: 'line', label: t.forecast, data: [], borderWidth: 2, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], tension: .3, fill: false },
-          { type: 'bar', label: t.yearTarget, data: [], backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 },
-          { type: 'bar', label: t.yearActual, data: [], backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2 }
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false, layout: { padding: { top: 28, bottom: 8 } },
-        animation: { duration: 0 },
-        scales: {
-          x: { grid: { display: false }, ticks: { padding: 8, callback: function (v) { const l = this.getLabelForValue(v); return String(l).replace(/^\s*\d{4}\s*[\-–—]\s*/, ''); } } },
-          y: { display: false, grid: { display: false }, beginAtZero: true }
-        },
-        plugins: {
-          datalabels: false,
-          smartValueLabels: {
-            formatter: _fmtShort, fontSize: 12, fontWeight: '700', minGap: 14, padTop: 12, padBottom: 4, outline: true,
-            perDataset: [{ dy: -12, dx: 0, color: '#800080' }, { dy: 12, dx: -8, color: '#7a7a7a' }, { dy: -16, dx: 8, color: '#fd7e14' }, { dy: -12, dx: 0, color: '#7a7a7a' }]
-          },
-          tooltip: { enabled: true },
-          legend: { position: 'top', labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 8, weight: '700', family: Chart.defaults.font.family } } }
-        }
-      }
-    });
+              const ctx = document.getElementById('kpiChart').getContext('2d');
+              let kpiChart = new Chart(ctx, {
+              data: {
+              labels: [],
+              datasets: [
+              { type: 'bar', label: t.actual, data: [], backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2, borderSkipped: 'bottom' },
+              { type: 'line', label: t.target, data: [], borderWidth: 2, borderColor: '#7a7a7a', pointBackgroundColor: '#7a7a7a', pointBorderColor: '#7a7a7a', tension: .3, fill: false },
+              { type: 'line', label: t.forecast, data: [], borderWidth: 2, borderColor: '#fd7e14', pointBackgroundColor: '#fd7e14', pointBorderColor: '#fd7e14', borderDash: [5, 5], tension: .3, fill: false },
+              { type: 'bar', label: t.yearTarget, data: [], backgroundColor: '#7a7a7a', borderColor: '#7a7a7a', borderWidth: 1 },
+              { type: 'bar', label: t.yearActual, data: [], backgroundColor: '#800080', borderColor: '#800080', borderWidth: 2 }
+              ]
+              },
+              options: {
+              responsive: true, maintainAspectRatio: false, layout: { padding: { top: 28, bottom: 8 } },
+              animation: { duration: 0 },
+              scales: {
+              x: { grid: { display: false }, ticks: { padding: 8, callback: function (v) { const l = this.getLabelForValue(v); return String(l).replace(/^\s*\d{4}\s*[\-–—]\s*/, ''); } } },
+              y: { display: false, grid: { display: false }, beginAtZero: true }
+              },
+              plugins: {
+              datalabels: false,
+              smartValueLabels: {
+              formatter: _fmtShort, fontSize: 12, fontWeight: '700', minGap: 14, padTop: 12, padBottom: 4, outline: true,
+              perDataset: [{ dy: -12, dx: 0, color: '#800080' }, { dy: 12, dx: -8, color: '#7a7a7a' }, { dy: -16, dx: 8, color: '#fd7e14' }, { dy: -12, dx: 0, color: '#7a7a7a' }]
+              },
+              tooltip: { enabled: true },
+              legend: { position: 'top', labels: { boxWidth: 12, boxHeight: 10, padding: 12, font: { size: 8, weight: '700', family: Chart.defaults.font.family } } }
+              }
+              }
+              });
 
-    /* ===== Edit modal wiring (unchanged) ===== */
-    function wireKpiModalAjax() {
-      const modal = document.getElementById('editKpiModal');
-      const form = modal ? modal.querySelector('#kpi-edit-form') : null;
-      if (!form || form.dataset.wired === '1') return;
-      form.dataset.wired = '1';
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const url = form.getAttribute('action'); const fd = new FormData(form);
-        try {
-          const res = await fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: fd });
-          const text = await res.text(); let data = null; try { data = JSON.parse(text); } catch { }
-          if (!res.ok) { const msg = (data && data.error) ? data.error : (`${t.saveFailed} (${res.status})`); throw new Error(msg); }
-          if (data && typeof data === 'object') {
-            const created = (typeof data.created === 'number') ? data.created : data.createdCount;
-            const skipped = (typeof data.skipped === 'number') ? data.skipped : data.skippedCount;
-            if (typeof created === 'number') { alert(`${t.submittedChanges}: ${created} change(s)` + (skipped ? `, ${t.skipped}: ${skipped}` : '')); }
-            else if (data.status) { alert(data.status === 'approved' ? t.savedAutoApproved : t.submittedForApproval); }
+              /* ===== Edit modal wiring (unchanged) ===== */
+              function wireKpiModalAjax() {
+              const modal = document.getElementById('editKpiModal');
+              const form = modal ? modal.querySelector('#kpi-edit-form') : null;
+              if (!form || form.dataset.wired === '1') return;
+              form.dataset.wired = '1';
+              form.addEventListener('submit', async (e) => {
+              e.preventDefault();
+              const url = form.getAttribute('action'); const fd = new FormData(form);
+              try {
+              const res = await fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, body: fd });
+              const text = await res.text(); let data = null; try { data = JSON.parse(text); } catch { }
+              if (!res.ok) { const msg = (data && data.error) ? data.error : (`${t.saveFailed} (${res.status})`); throw new Error(msg); }
+              if (data && typeof data === 'object') {
+              const created = (typeof data.created === 'number') ? data.created : data.createdCount;
+              const skipped = (typeof data.skipped === 'number') ? data.skipped : data.skippedCount;
+              if (typeof created === 'number') { alert(`${t.submittedChanges}: ${created} change(s)` + (skipped ? `, ${t.skipped}: ${skipped}` : '')); }
+              else if (data.status) { alert(data.status === 'approved' ? t.savedAutoApproved : t.submittedForApproval); }
+              }
+              bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).hide();
+              if (btnEditKpi) { btnEditKpi.disabled = true; btnEditKpi.textContent = `⏳ ${t.pendingApproval}`; }
+              await new Promise(r => setTimeout(r, 350)); await loadKpiSummary();
+              } catch (err) { alert(err?.message || t.saveFailed); }
+              });
+              }
+
+              const editModalEl = document.getElementById('editKpiModal');
+              const editModalContentEl = editModalEl ? editModalEl.querySelector('.modal-content') : null;
+
+              if (btnEditKpi && editModalEl && editModalContentEl) {
+              btnEditKpi.addEventListener('click', async () => {
+              const kpiId = selKpi.value;
+              if (!kpiId) return;
+
+              const qs = new URLSearchParams({ kpiId: kpiId });
+              if (currentPlanId) {
+              qs.append('planId', currentPlanId);
+              }
+
+              const url = '@Url.Action("EditKpiFactsModal", "Home")' + '?' + qs.toString();
+
+              editModalContentEl.innerHTML = `<div class="p-3 text-center text-muted">${t.loading}</div>`;
+
+              try {
+              const res = await fetch(url, {
+              headers: { 'X-Requested-With': 'XMLHttpRequest' }
+              });
+
+              if (res.status === 403) {
+              editModalContentEl.innerHTML = `<div class="p-3 text-danger">${t.noAccessToEditKpi}</div>`;
+              bootstrap.Modal.getOrCreateInstance(editModalEl).show();
+              return;
+              }
+
+              const html = await res.text();
+
+              if (!res.ok) {
+              throw new Error(`${t.failedToLoadEditor} (${res.status})`);
+              }
+
+              editModalContentEl.innerHTML = html;
+              wireKpiModalAjax();
+              bootstrap.Modal.getOrCreateInstance(editModalEl).show();
+              } catch (err) {
+              alert(err?.message || t.failedToLoadEditor);
+              }
+              });
+              }
+
+              async function loadKpiSummary() {
+              clearMeta(); clearChartAndTable();
+              const kpiId = selKpi.value; if (!kpiId) return;
+              const qs = new URLSearchParams({ kpiId: kpiId });
+              if (selYearPlan && selYearPlan.value) qs.append('planId', selYearPlan.value);
+              const res = await api('@Url.Action("GetKpiSummary", "Home")' + '?' + qs.toString());
+
+              currentPlanId = res?.meta?.planId ?? null; canEditFacts = !!res?.meta?.canEdit;
+              await loadYearPlansForKpi(kpiId, currentPlanId);
+              await loadYearPlanComment();
+
+              const leftParts = []; if (res?.meta?.pillarCode) leftParts.push(res.meta.pillarCode); if (res?.meta?.objectiveCode) leftParts.push(res.meta.objectiveCode);
+              let left = leftParts.join('.'); if (res?.meta?.code) left = left ? `${left} ${res.meta.code}` : res.meta.code;
+              byId('kpiTitle').textContent = (left ? `${left} — ` : '') + (res?.meta?.title || '—');
+
+              metaOwner.textContent = res?.meta?.owner || '—';
+              metaEditor.textContent = res?.meta?.editor || '—';
+              metaFrequency.textContent = uiFrequency(res?.meta?.valueType);
+              metaUnit.textContent = res?.meta?.unit || '—';
+              metaPriority.textContent = (res?.meta?.priority ?? '—');
+              const raw = res?.meta?.statusRaw ?? res?.meta?.statusLabel;
+              const color = (res?.meta?.statusColor || '');
+              metaStatus.textContent = uiStatus(raw); metaStatus.className = 'status-pill'; if (color) metaStatus.style.background = color;
+
+              const baseLabels = res?.chart?.labels || [];
+              const actual = res?.chart?.actual || [];
+              const target = res?.chart?.target || [];
+              const forecast = res?.chart?.forecast || [];
+              const yrArr = Array.isArray(res?.chart?.yearTargets) ? res.chart.yearTargets : [];
+
+              const yearLabels = yrArr.map(y => String(y.year));
+              const yearTargetVals = yrArr.map(y => (y?.isActual ? null : (y.value ?? null)));
+              const yearActualVals = yrArr.map(y => (y?.isActual ? (y.value ?? null) : null));
+
+              const allLabels = baseLabels.concat(yearLabels);
+              const pad = new Array(yearLabels.length).fill(null);
+              const leftNulls = new Array(baseLabels.length).fill(null);
+
+              kpiChart.data.labels = allLabels;
+              kpiChart.data.datasets[0].data = actual.concat(pad);
+              kpiChart.data.datasets[1].data = target.concat(pad);
+              kpiChart.data.datasets[2].data = forecast.concat(pad);
+              kpiChart.data.datasets[3].data = leftNulls.concat(yearTargetVals);
+              kpiChart.data.datasets[4].data = leftNulls.concat(yearActualVals);
+              kpiChart.update();
+
+              const rows = res?.table || [];
+              if (!rows.length) {
+              tableBody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">${t.noFactsForThisPlanYear}</td></tr>`;
+              } else {
+              tableBody.innerHTML = '';
+              for (const r of rows) {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `<td>${r.period ?? '—'} ${r.hasPending ? `<span class="badge text-bg-warning ms-1">${t.pending}</span>` : ''}</td><td>${r.startDate ?? '—'}</td><td>${r.endDate ?? '—'}</td><td>${r.actual ?? '—'}</td><td>${r.target ?? '—'}</td><td>${r.forecast ?? '—'}</td>`;
+              tableBody.appendChild(tr);
+              }
+              }
+
+              const anyPending = Array.isArray(res?.table) && res.table.some(r => r.hasPending);
+              if (!selKpi.value) { btnEditKpi.disabled = true; btnEditKpi.textContent = t.editDataActualForecast; }
+              else if (!canEditFacts) { btnEditKpi.disabled = true; btnEditKpi.textContent = t.editKpiNoAccess; }
+              else if (anyPending) { btnEditKpi.disabled = true; btnEditKpi.textContent = t.pendingApproval; }
+              else { btnEditKpi.disabled = false; btnEditKpi.textContent = t.editDataActualForecast; }
+
+              markActiveRoleChip(selKpi.value);
+              if (_pendingScrollToChart) { _pendingScrollToChart = false; _scrollToChart(); }
+              }
+
+              /* ===== Admin Set Status (unchanged) ===== */
+              const btnAdminSetStatus = byId('btnAdminSetStatus'),
+              adminStatusModalEl = document.getElementById('adminStatusModal'),
+              adminStatusForm = document.getElementById('adminStatusForm'),
+              adminStatusSelect = document.getElementById('adminStatusSelect');
+              const _loadKpiSummary_orig = loadKpiSummary;
+              loadKpiSummary = async function () {
+              await _loadKpiSummary_orig();
+              try {
+              const kpiId = selKpi.value;
+              const res = await api('@Url.Action("GetKpiSummary", "Home")' + '?kpiId=' + encodeURIComponent(kpiId));
+              const canAdmin = !!res?.meta?.canAdminSetStatus;
+              if (btnAdminSetStatus) {
+              btnAdminSetStatus.classList.toggle('d-none', !canAdmin);
+              btnAdminSetStatus.dataset.kpiId = kpiId || '';
+              btnAdminSetStatus.dataset.status = canonStatusForUi(res?.meta?.statusRaw ?? res?.meta?.statusLabel);
+              }
+              } catch { }
+              };
+              if (btnAdminSetStatus) {
+              btnAdminSetStatus.addEventListener('click', () => {
+              const rawStatus = btnAdminSetStatus.dataset.status || 'green';
+              adminStatusSelect.value = rawStatus;
+              adminStatusForm.dataset.kpiId = selKpi.value || '';
+              bootstrap.Modal.getOrCreateInstance(adminStatusModalEl).show();
+              });
+              }
+              if (adminStatusForm) {
+              adminStatusForm.addEventListener('submit', async (e) => {
+              e.preventDefault();
+              const kpiId = adminStatusForm.dataset.kpiId || selKpi.value; const status = adminStatusSelect.value;
+              try {
+              const res = await fetch('@Url.Action("AdminSetKpiStatus", "Home")', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ kpiId, status }).toString() });
+              const data = await res.json();
+              if (!res.ok || !data.ok) throw new Error(data?.error || `Failed (${res.status})`);
+              byId('metaStatus').textContent = uiStatus(data.raw || status);
+              byId('metaStatus').style.background = data.color || '';
+              loadSummary();
+              bootstrap.Modal.getOrCreateInstance(adminStatusModalEl).hide();
+              } catch (err) { alert(err?.message || t.failedToUpdateStatus); }
+              });
+              }
+
+              /* ===== Admin: Target Lock Toggle ===== */
+              const btnToggleTargetLock = byId('btnToggleTargetLock');
+
+              async function refreshTargetLockButton() {
+              if (!btnToggleTargetLock) return;
+
+              try {
+              const res = await fetch('@Url.Action("GetTargetLockState", "Home")', {
+              headers: { 'Accept': 'application/json' },
+              cache: 'no-store'
+              });
+
+              if (res.status === 403) {
+              btnToggleTargetLock.classList.add('d-none');
+              return;
+              }
+
+              if (!res.ok) throw new Error('Failed to load target lock');
+
+              const data = await res.json();
+              const unlocked = !!data.unlocked;
+
+              btnToggleTargetLock.textContent = unlocked
+              ? t.lockTargets
+              : t.unlockTargets;
+
+              btnToggleTargetLock.classList.remove('d-none');
+              } catch {
+              btnToggleTargetLock.classList.add('d-none');
+              }
+              }
+
+              btnToggleTargetLock?.addEventListener('click', async () => {
+              try {
+              btnToggleTargetLock.disabled = true;
+
+              const res = await fetch('@Url.Action("ToggleTargetLock", "Home")', {
+              method: 'POST',
+              cache: 'no-store'
+              });
+
+              if (res.status === 403) {
+              alert(t.superAdminOnly);
+              return;
+              }
+
+              const data = await res.json();
+              if (!res.ok || !data.ok) throw new Error(data?.error || 'Toggle failed');
+
+              await refreshTargetLockButton();
+              } catch (e) {
+              alert(e?.message || t.failedToToggleTargetLock);
+              } finally {
+              btnToggleTargetLock.disabled = false;
+              }
+              });
+
+              /* ===== Init ===== */
+              function getQS(name) { const u = new URL(window.location.href); return u.searchParams.get(name); }
+              async function initPage() {
+              loadSummary(); loadRoleSummary(); await loadPillars(); refreshTargetLockButton();
+              const qP = getQS('pillarId'), qO = getQS('objectiveId'), qK = getQS('kpiId');
+              if (qP) { selPillar.value = qP; selPillar.dispatchEvent(new Event('change')); }
+              if (qO) { await new Promise(r => setTimeout(r, 150)); selObjective.value = qO; selObjective.dispatchEvent(new Event('change')); }
+              if (qK) { await new Promise(r => setTimeout(r, 150)); selKpi.value = qK; selKpi.dispatchEvent(new Event('change')); }
+              }
+              initPage().catch(console.error);
+            </script>
           }
-          bootstrap.Modal.getOrCreateInstance(document.getElementById('editKpiModal')).hide();
-          if (btnEditKpi) { btnEditKpi.disabled = true; btnEditKpi.textContent = `⏳ ${t.pendingApproval}`; }
-          await new Promise(r => setTimeout(r, 350)); await loadKpiSummary();
-        } catch (err) { alert(err?.message || t.saveFailed); }
-      });
-    }
-
-    const editModalEl = document.getElementById('editKpiModal');
-    const editModalContentEl = editModalEl ? editModalEl.querySelector('.modal-content') : null;
-
-    if (btnEditKpi && editModalEl && editModalContentEl) {
-      btnEditKpi.addEventListener('click', async () => {
-        const kpiId = selKpi.value;
-        if (!kpiId) return;
-
-        const qs = new URLSearchParams({ kpiId: kpiId });
-        if (currentPlanId) {
-          qs.append('planId', currentPlanId);
-        }
-
-        const url = '@Url.Action("EditKpiFactsModal", "Home")' + '?' + qs.toString();
-
-        editModalContentEl.innerHTML = `<div class="p-3 text-center text-muted">${t.loading}</div>`;
-
-        try {
-          const res = await fetch(url, {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-          });
-
-          if (res.status === 403) {
-            editModalContentEl.innerHTML = `<div class="p-3 text-danger">${t.noAccessToEditKpi}</div>`;
-            bootstrap.Modal.getOrCreateInstance(editModalEl).show();
-            return;
-          }
-
-          const html = await res.text();
-
-          if (!res.ok) {
-            throw new Error(`${t.failedToLoadEditor} (${res.status})`);
-          }
-
-          editModalContentEl.innerHTML = html;
-          wireKpiModalAjax();
-          bootstrap.Modal.getOrCreateInstance(editModalEl).show();
-        } catch (err) {
-          alert(err?.message || t.failedToLoadEditor);
-        }
-      });
-    }
-
-    async function loadKpiSummary() {
-      clearMeta(); clearChartAndTable();
-      const kpiId = selKpi.value; if (!kpiId) return;
-      const qs = new URLSearchParams({ kpiId: kpiId });
-      if (selYearPlan && selYearPlan.value) qs.append('planId', selYearPlan.value);
-      const res = await api('@Url.Action("GetKpiSummary", "Home")' + '?' + qs.toString());
-
-      currentPlanId = res?.meta?.planId ?? null; canEditFacts = !!res?.meta?.canEdit;
-      await loadYearPlansForKpi(kpiId, currentPlanId);
-      await loadYearPlanComment();
-
-      const leftParts = []; if (res?.meta?.pillarCode) leftParts.push(res.meta.pillarCode); if (res?.meta?.objectiveCode) leftParts.push(res.meta.objectiveCode);
-      let left = leftParts.join('.'); if (res?.meta?.code) left = left ? `${left} ${res.meta.code}` : res.meta.code;
-      byId('kpiTitle').textContent = (left ? `${left} — ` : '') + (res?.meta?.title || '—');
-
-      metaOwner.textContent = res?.meta?.owner || '—';
-      metaEditor.textContent = res?.meta?.editor || '—';
-      metaFrequency.textContent = res?.meta?.valueType || '—';
-      metaUnit.textContent = res?.meta?.unit || '—';
-      metaPriority.textContent = (res?.meta?.priority ?? '—');
-      const raw = res?.meta?.statusRaw ?? res?.meta?.statusLabel;
-      const color = (res?.meta?.statusColor || '');
-      metaStatus.textContent = uiStatus(raw); metaStatus.className = 'status-pill'; if (color) metaStatus.style.background = color;
-
-      const baseLabels = res?.chart?.labels || [];
-      const actual = res?.chart?.actual || [];
-      const target = res?.chart?.target || [];
-      const forecast = res?.chart?.forecast || [];
-      const yrArr = Array.isArray(res?.chart?.yearTargets) ? res.chart.yearTargets : [];
-
-      const yearLabels = yrArr.map(y => String(y.year));
-      const yearTargetVals = yrArr.map(y => (y?.isActual ? null : (y.value ?? null)));
-      const yearActualVals = yrArr.map(y => (y?.isActual ? (y.value ?? null) : null));
-
-      const allLabels = baseLabels.concat(yearLabels);
-      const pad = new Array(yearLabels.length).fill(null);
-      const leftNulls = new Array(baseLabels.length).fill(null);
-
-      kpiChart.data.labels = allLabels;
-      kpiChart.data.datasets[0].data = actual.concat(pad);
-      kpiChart.data.datasets[1].data = target.concat(pad);
-      kpiChart.data.datasets[2].data = forecast.concat(pad);
-      kpiChart.data.datasets[3].data = leftNulls.concat(yearTargetVals);
-      kpiChart.data.datasets[4].data = leftNulls.concat(yearActualVals);
-      kpiChart.update();
-
-      const rows = res?.table || [];
-      if (!rows.length) {
-        tableBody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">${t.noFactsForThisPlanYear}</td></tr>`;
-      } else {
-        tableBody.innerHTML = '';
-        for (const r of rows) {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${r.period ?? '—'} ${r.hasPending ? `<span class="badge text-bg-warning ms-1">${t.pending}</span>` : ''}</td><td>${r.startDate ?? '—'}</td><td>${r.endDate ?? '—'}</td><td>${r.actual ?? '—'}</td><td>${r.target ?? '—'}</td><td>${r.forecast ?? '—'}</td>`;
-          tableBody.appendChild(tr);
-        }
-      }
-
-      const anyPending = Array.isArray(res?.table) && res.table.some(r => r.hasPending);
-      if (!selKpi.value) { btnEditKpi.disabled = true; btnEditKpi.textContent = t.editDataActualForecast; }
-      else if (!canEditFacts) { btnEditKpi.disabled = true; btnEditKpi.textContent = t.editKpiNoAccess; }
-      else if (anyPending) { btnEditKpi.disabled = true; btnEditKpi.textContent = t.pendingApproval; }
-      else { btnEditKpi.disabled = false; btnEditKpi.textContent = t.editDataActualForecast; }
-
-      markActiveRoleChip(selKpi.value);
-      if (_pendingScrollToChart) { _pendingScrollToChart = false; _scrollToChart(); }
-    }
-
-    /* ===== Admin Set Status (unchanged) ===== */
-    const btnAdminSetStatus = byId('btnAdminSetStatus'),
-      adminStatusModalEl = document.getElementById('adminStatusModal'),
-      adminStatusForm = document.getElementById('adminStatusForm'),
-      adminStatusSelect = document.getElementById('adminStatusSelect');
-    const _loadKpiSummary_orig = loadKpiSummary;
-    loadKpiSummary = async function () {
-      await _loadKpiSummary_orig();
-      try {
-        const kpiId = selKpi.value;
-        const res = await api('@Url.Action("GetKpiSummary", "Home")' + '?kpiId=' + encodeURIComponent(kpiId));
-        const canAdmin = !!res?.meta?.canAdminSetStatus;
-        if (btnAdminSetStatus) {
-          btnAdminSetStatus.classList.toggle('d-none', !canAdmin);
-          btnAdminSetStatus.dataset.kpiId = kpiId || '';
-          btnAdminSetStatus.dataset.status = canonStatusForUi(res?.meta?.statusRaw ?? res?.meta?.statusLabel);
-        }
-      } catch { }
-    };
-    if (btnAdminSetStatus) {
-      btnAdminSetStatus.addEventListener('click', () => {
-        const rawStatus = btnAdminSetStatus.dataset.status || 'green';
-        adminStatusSelect.value = rawStatus;
-        adminStatusForm.dataset.kpiId = selKpi.value || '';
-        bootstrap.Modal.getOrCreateInstance(adminStatusModalEl).show();
-      });
-    }
-    if (adminStatusForm) {
-      adminStatusForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const kpiId = adminStatusForm.dataset.kpiId || selKpi.value; const status = adminStatusSelect.value;
-        try {
-          const res = await fetch('@Url.Action("AdminSetKpiStatus", "Home")', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ kpiId, status }).toString() });
-          const data = await res.json();
-          if (!res.ok || !data.ok) throw new Error(data?.error || `Failed (${res.status})`);
-          byId('metaStatus').textContent = uiStatus(data.raw || status);
-          byId('metaStatus').style.background = data.color || '';
-          loadSummary();
-          bootstrap.Modal.getOrCreateInstance(adminStatusModalEl).hide();
-        } catch (err) { alert(err?.message || t.failedToUpdateStatus); }
-      });
-    }
-
-    /* ===== Admin: Target Lock Toggle ===== */
-    const btnToggleTargetLock = byId('btnToggleTargetLock');
-
-    async function refreshTargetLockButton() {
-      if (!btnToggleTargetLock) return;
-
-      try {
-        const res = await fetch('@Url.Action("GetTargetLockState", "Home")', {
-          headers: { 'Accept': 'application/json' },
-          cache: 'no-store'
-        });
-
-        if (res.status === 403) {
-          btnToggleTargetLock.classList.add('d-none');
-          return;
-        }
-
-        if (!res.ok) throw new Error('Failed to load target lock');
-
-        const data = await res.json();
-        const unlocked = !!data.unlocked;
-
-        btnToggleTargetLock.textContent = unlocked
-          ? t.lockTargets
-          : t.unlockTargets;
-
-        btnToggleTargetLock.classList.remove('d-none');
-      } catch {
-        btnToggleTargetLock.classList.add('d-none');
-      }
-    }
-
-    btnToggleTargetLock?.addEventListener('click', async () => {
-      try {
-        btnToggleTargetLock.disabled = true;
-
-        const res = await fetch('@Url.Action("ToggleTargetLock", "Home")', {
-          method: 'POST',
-          cache: 'no-store'
-        });
-
-        if (res.status === 403) {
-          alert(t.superAdminOnly);
-          return;
-        }
-
-        const data = await res.json();
-        if (!res.ok || !data.ok) throw new Error(data?.error || 'Toggle failed');
-
-        await refreshTargetLockButton();
-      } catch (e) {
-        alert(e?.message || t.failedToToggleTargetLock);
-      } finally {
-        btnToggleTargetLock.disabled = false;
-      }
-    });
-
-    /* ===== Init ===== */
-    function getQS(name) { const u = new URL(window.location.href); return u.searchParams.get(name); }
-    async function initPage() {
-      loadSummary(); loadRoleSummary(); await loadPillars(); refreshTargetLockButton();
-      const qP = getQS('pillarId'), qO = getQS('objectiveId'), qK = getQS('kpiId');
-      if (qP) { selPillar.value = qP; selPillar.dispatchEvent(new Event('change')); }
-      if (qO) { await new Promise(r => setTimeout(r, 150)); selObjective.value = qO; selObjective.dispatchEvent(new Event('change')); }
-      if (qK) { await new Promise(r => setTimeout(r, 150)); selKpi.value = qK; selKpi.dispatchEvent(new Event('change')); }
-    }
-    initPage().catch(console.error);
-  </script>
-}

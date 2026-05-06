@@ -494,9 +494,7 @@ namespace KPIMonitor.Controllers
     : $"{await ResolveEmployeeDisplayAsync(plan.EditorEmpId, plan.Editor)} / {await ResolveEmployeeDisplayAsync(plan.Editor2EmpId, plan.Editor2)}",
                 valueType = string.IsNullOrWhiteSpace(plan.Frequency)
     ? "—"
-    : (plan.Frequency.Trim().ToLower() == "monthly" ? "شهري"
-       : plan.Frequency.Trim().ToLower() == "quarterly" ? "ربع سنوي"
-       : plan.Frequency),
+    : plan.Frequency.Trim(),
                 unit = string.IsNullOrWhiteSpace(plan.Unit) ? "—" : plan.Unit,
                 priority = plan.Priority,
                 statusLabel = status.label,
