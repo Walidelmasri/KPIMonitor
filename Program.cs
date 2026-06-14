@@ -8,6 +8,7 @@ using KPIMonitor.Services;
 using KPIMonitor.Services.Abstractions;
 using System.Globalization;
 using Microsoft.AspNetCore.Localization;
+using Oracle.EntityFrameworkCore.Infrastructure;
 
 // alias to avoid clash with KPIMonitor.Services.StatusCodes
 using HttpStatusCodes = Microsoft.AspNetCore.Http.StatusCodes;
@@ -16,8 +17,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 // DB
 string oracleConnStr = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<AppDbContext>(options => options.UseOracle(oracleConnStr));
-
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseOracle(oracleConnStr, oracleOptions =>
+    {
+        oracleOptions.UseOracleSQLCompatibility(OracleSQLCompatibility.DatabaseVersion19);
+    }));
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
