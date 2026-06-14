@@ -1032,19 +1032,19 @@ namespace KPIMonitor.Controllers
                 var batchIds = batches.Select(b => b.BatchId).ToList();
                 var children = await _db.KpiFactChanges
                     .AsNoTracking()
-                    .Where(c => c.BatchId != null && batchIds.Contains(c.BatchId.Value) && c.ApprovalStatus == s)
-                    .Select(c => new
-                    {
-                        c.KpiFactChangeId,
-                        c.BatchId,
-                        c.KpiFactId,
-                        c.ProposedActualValue,
-                        c.ProposedTargetValue,
-                        c.ProposedForecastValue,
-                        c.SubmittedBy,
-                        c.SubmittedAt
-                    })
-                    .ToListAsync(ct);
+                    .Where(c => c.BatchId != null && batchIds.Contains(c.BatchId.Value))
+                                    .Select(c => new
+                                    {
+                                        c.KpiFactChangeId,
+                                        c.BatchId,
+                                        c.KpiFactId,
+                                        c.ProposedActualValue,
+                                        c.ProposedTargetValue,
+                                        c.ProposedForecastValue,
+                                        c.SubmittedBy,
+                                        c.SubmittedAt
+                                    })
+                                    .ToListAsync(ct);
 
                 var factIds = children.Select(c => c.KpiFactId).Distinct().ToList();
                 var facts = await _db.KpiFacts
