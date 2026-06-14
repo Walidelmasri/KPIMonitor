@@ -11,8 +11,8 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Oracle.EntityFrameworkCore" Version="9.23.90" />
-    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.9.1" />
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="21.15.0" />
+    <PackageReference Include="Oracle.EntityFrameworkCore" Version="9.21.100" />
     <PackageReference Include="QuestPDF" Version="2025.7.1" />
     <PackageReference Include="System.DirectoryServices.Protocols" Version="9.0.8" />
   </ItemGroup>

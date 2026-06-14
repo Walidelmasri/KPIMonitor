@@ -52,11 +52,11 @@
             },
             "Oracle.EntityFrameworkCore": {
               "target": "Package",
-              "version": "[9.23.90, )"
+              "version": "[9.21.100, )"
             },
             "Oracle.ManagedDataAccess.Core": {
               "target": "Package",
-              "version": "[23.9.1, )"
+              "version": "[21.15.0, )"
             },
             "QuestPDF": {
               "target": "Package",

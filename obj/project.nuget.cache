@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "dgSpecHash": "K6vQwE/SfFs=",
-  "success": true,
+  "dgSpecHash": "zd24Bio+n5E=",
+  "success": false,
   "projectFilePath": "/Users/walidsalem/BADEA/KPIMonitor/KPIMonitor.csproj",
   "expectedPackageFiles": [
     "/Users/walidsalem/.nuget/packages/humanizer.core/2.14.1/humanizer.core.2.14.1.nupkg.sha512",
@@ -30,8 +30,8 @@
     "/Users/walidsalem/.nuget/packages/microsoft.extensions.options/9.0.8/microsoft.extensions.options.9.0.8.nupkg.sha512",
     "/Users/walidsalem/.nuget/packages/microsoft.extensions.primitives/9.0.8/microsoft.extensions.primitives.9.0.8.nupkg.sha512",
     "/Users/walidsalem/.nuget/packages/mono.texttemplating/3.0.0/mono.texttemplating.3.0.0.nupkg.sha512",
-    "/Users/walidsalem/.nuget/packages/oracle.entityframeworkcore/9.23.90/oracle.entityframeworkcore.9.23.90.nupkg.sha512",
-    "/Users/walidsalem/.nuget/packages/oracle.manageddataaccess.core/23.9.1/oracle.manageddataaccess.core.23.9.1.nupkg.sha512",
+    "/Users/walidsalem/.nuget/packages/oracle.entityframeworkcore/9.23.60/oracle.entityframeworkcore.9.23.60.nupkg.sha512",
+    "/Users/walidsalem/.nuget/packages/oracle.manageddataaccess.core/23.4.0/oracle.manageddataaccess.core.23.4.0.nupkg.sha512",
     "/Users/walidsalem/.nuget/packages/questpdf/2025.7.1/questpdf.2025.7.1.nupkg.sha512",
     "/Users/walidsalem/.nuget/packages/system.codedom/6.0.0/system.codedom.6.0.0.nupkg.sha512",
     "/Users/walidsalem/.nuget/packages/system.collections.immutable/7.0.0/system.collections.immutable.7.0.0.nupkg.sha512",
@@ -45,12 +45,11 @@
     "/Users/walidsalem/.nuget/packages/system.diagnostics.eventlog/8.0.0/system.diagnostics.eventlog.8.0.0.nupkg.sha512",
     "/Users/walidsalem/.nuget/packages/system.diagnostics.performancecounter/8.0.0/system.diagnostics.performancecounter.8.0.0.nupkg.sha512",
     "/Users/walidsalem/.nuget/packages/system.directoryservices.protocols/9.0.8/system.directoryservices.protocols.9.0.8.nupkg.sha512",
-    "/Users/walidsalem/.nuget/packages/system.formats.asn1/8.0.1/system.formats.asn1.8.0.1.nupkg.sha512",
+    "/Users/walidsalem/.nuget/packages/system.formats.asn1/8.0.0/system.formats.asn1.8.0.0.nupkg.sha512",
     "/Users/walidsalem/.nuget/packages/system.io.pipelines/7.0.0/system.io.pipelines.7.0.0.nupkg.sha512",
-    "/Users/walidsalem/.nuget/packages/system.memory/4.6.0/system.memory.4.6.0.nupkg.sha512",
     "/Users/walidsalem/.nuget/packages/system.reflection.metadata/7.0.0/system.reflection.metadata.7.0.0.nupkg.sha512",
     "/Users/walidsalem/.nuget/packages/system.runtime.compilerservices.unsafe/6.0.0/system.runtime.compilerservices.unsafe.6.0.0.nupkg.sha512",
-    "/Users/walidsalem/.nuget/packages/system.security.cryptography.pkcs/8.0.1/system.security.cryptography.pkcs.8.0.1.nupkg.sha512",
+    "/Users/walidsalem/.nuget/packages/system.security.cryptography.pkcs/8.0.0/system.security.cryptography.pkcs.8.0.0.nupkg.sha512",
     "/Users/walidsalem/.nuget/packages/system.security.cryptography.protecteddata/8.0.0/system.security.cryptography.protecteddata.8.0.0.nupkg.sha512",
     "/Users/walidsalem/.nuget/packages/system.text.json/9.0.8/system.text.json.9.0.8.nupkg.sha512",
     "/Users/walidsalem/.nuget/packages/system.threading.channels/7.0.0/system.threading.channels.7.0.0.nupkg.sha512",
@@ -58,5 +57,41 @@
     "/Users/walidsalem/.nuget/packages/microsoft.aspnetcore.app.ref/9.0.11/microsoft.aspnetcore.app.ref.9.0.11.nupkg.sha512",
     "/Users/walidsalem/.nuget/packages/microsoft.netcore.app.host.osx-arm64/9.0.11/microsoft.netcore.app.host.osx-arm64.9.0.11.nupkg.sha512"
   ],
-  "logs": []
+  "logs": [
+    {
+      "code": "NU1603",
+      "level": "Warning",
+      "message": "KPIMonitor depends on Oracle.EntityFrameworkCore (>= 9.21.100) but Oracle.EntityFrameworkCore 9.21.100 was not found. Oracle.EntityFrameworkCore 9.23.60 was resolved instead.",
+      "projectPath": "/Users/walidsalem/BADEA/KPIMonitor/KPIMonitor.csproj",
+      "warningLevel": 1,
+      "filePath": "/Users/walidsalem/BADEA/KPIMonitor/KPIMonitor.csproj",
+      "libraryId": "Oracle.EntityFrameworkCore",
+      "targetGraphs": [
+        "net9.0"
+      ]
+    },
+    {
+      "code": "NU1603",
+      "level": "Warning",
+      "message": "KPIMonitor depends on Oracle.ManagedDataAccess.Core (>= 21.15.0) but Oracle.ManagedDataAccess.Core 21.15.0 was not found. Oracle.ManagedDataAccess.Core 23.4.0 was resolved instead.",
+      "projectPath": "/Users/walidsalem/BADEA/KPIMonitor/KPIMonitor.csproj",
+      "warningLevel": 1,
+      "filePath": "/Users/walidsalem/BADEA/KPIMonitor/KPIMonitor.csproj",
+      "libraryId": "Oracle.ManagedDataAccess.Core",
+      "targetGraphs": [
+        "net9.0"
+      ]
+    },
+    {
+      "code": "NU1605",
+      "level": "Error",
+      "message": "Warning As Error: Detected package downgrade: Oracle.ManagedDataAccess.Core from 23.6.1 to 23.4.0. Reference the package directly from the project to select a different version. \n KPIMonitor -> Oracle.EntityFrameworkCore 9.23.60 -> Oracle.ManagedDataAccess.Core (>= 23.6.1 && < 24.0.0) \n KPIMonitor -> Oracle.ManagedDataAccess.Core (>= 21.15.0)",
+      "projectPath": "/Users/walidsalem/BADEA/KPIMonitor/KPIMonitor.csproj",
+      "filePath": "/Users/walidsalem/BADEA/KPIMonitor/KPIMonitor.csproj",
+      "libraryId": "Oracle.ManagedDataAccess.Core",
+      "targetGraphs": [
+        "net9.0"
+      ]
+    }
+  ]
 }

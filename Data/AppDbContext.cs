@@ -266,9 +266,10 @@ namespace KPIMonitor.Data
                 e.Property(x => x.LastChangedBy).HasColumnName("LASTCHANGEDBY").HasMaxLength(100);
                 e.Property(x => x.LastChangedDate).HasColumnName("LASTCHANGEDDATE");
                 e.Property(a => a.IsGeneral)
-                .HasColumnName("ISGENERAL")
-                .HasColumnType("NUMBER(1)")
-                .HasDefaultValue(false);
+                   .HasColumnName("ISGENERAL")
+                   .HasColumnType("NUMBER(1)")
+                   .HasConversion<int>()
+                   .HasDefaultValue(0);
                 e.HasOne(x => x.Kpi)
                  .WithMany()                       // (no back-collection on DimKpi; keeps your existing models intact)
                  .HasForeignKey(x => x.KpiId)
@@ -406,7 +407,9 @@ namespace KPIMonitor.Data
                 e.Property(x => x.SortOrder)
                     .HasColumnName("SORTORDER");
                 e.Property(x => x.IsHidden)
-                .HasColumnName("IS_HIDDEN");
+                    .HasColumnName("IS_HIDDEN")
+                    .HasColumnType("NUMBER(1)")
+                    .HasConversion<int>();
             });
             modelBuilder.Entity<KpiYearPlanComment>(e =>
             {
