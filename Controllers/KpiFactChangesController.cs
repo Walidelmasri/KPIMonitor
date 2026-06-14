@@ -707,8 +707,29 @@ namespace KPIMonitor.Controllers
                     }
                 }
 
-                if (created == 0 && errors.Count > 0)
-                    return BadRequest(new { ok = false, created, skipped, errors, traceId });
+                if (created == 0)
+                {
+                    var emptyBatch = await _db.KpiFactChangeBatches
+                        .FirstOrDefaultAsync(x => x.BatchId == batchId, ct);
+
+                    if (emptyBatch != null)
+                    {
+                        _db.KpiFactChangeBatches.Remove(emptyBatch);
+                        await _db.SaveChangesAsync(ct);
+                    }
+
+                    return BadRequest(new
+                    {
+                        ok = false,
+                        error = errors.Count > 0
+                            ? "No changes were submitted because all rows failed or were skipped."
+                            : "No changes were submitted. The values may be unchanged, locked, outside the editable period, or already pending.",
+                        created,
+                        skipped,
+                        errors,
+                        traceId
+                    });
+                }
 
                 // finalize batch counts + range
                 var b = await _db.KpiFactChangeBatches.FirstOrDefaultAsync(x => x.BatchId == batchId, ct);
@@ -777,7 +798,14 @@ namespace KPIMonitor.Controllers
 <p>Year: <strong>{year}</strong> • Frequency: <strong>{(monthly ? "Month" : "Quarter")}</strong> • Periods: <strong>{WebUtility.HtmlEncode(perText)}</strong></p>
 <p>Submitted by <strong>{WebUtility.HtmlEncode(submittedBy)}</strong>.</p>";
 
-                    await _email.SendEmailAsync(ownerEmail, subject, HtmlEmail(subject, bodyHtml));
+                    try
+                    {
+                        await _email.SendEmailAsync(ownerEmail, subject, HtmlEmail(subject, bodyHtml));
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.LogError(ex, "Failed sending owner batch approval email. BatchId={BatchId}", batchId);
+                    }
                 }
 
                 return Json(new
